@@ -1,0 +1,18 @@
+# Локальный PostgreSQL для разработки (опционально).
+# Запуск: docker compose up -d
+# Затем в apps/api/.env: DATABASE_URL=postgresql://birzha:birzha@localhost:5432/birzha
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: birzha
+      POSTGRES_PASSWORD: birzha
+      POSTGRES_DB: birzha
+    ports:
+      - "5432:5432"
+    volumes:
+      - birzha_pgdata:/var/lib/postgresql/data
+
+volumes:
+  birzha_pgdata:

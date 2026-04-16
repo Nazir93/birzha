@@ -1,0 +1,181 @@
+{
+  "id": "6adc9bb2-aa7d-44f2-aac3-f9e3722f16bd",
+  "prevId": "0dcb148b-9926-48b3-977f-0a7d77b6846d",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.batches": {
+      "name": "batches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "purchase_id": {
+          "name": "purchase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_grams": {
+          "name": "total_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pending_inbound_grams": {
+          "name": "pending_inbound_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "on_warehouse_grams": {
+          "name": "on_warehouse_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "in_transit_grams": {
+          "name": "in_transit_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sold_grams": {
+          "name": "sold_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "written_off_grams": {
+          "name": "written_off_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price_per_kg": {
+          "name": "price_per_kg",
+          "type": "numeric(18, 6)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trip_batch_shipments": {
+      "name": "trip_batch_shipments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grams": {
+          "name": "grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "trip_batch_shipments_trip_id_trips_id_fk": {
+          "name": "trip_batch_shipments_trip_id_trips_id_fk",
+          "tableFrom": "trip_batch_shipments",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trip_batch_shipments_batch_id_batches_id_fk": {
+          "name": "trip_batch_shipments_batch_id_batches_id_fk",
+          "tableFrom": "trip_batch_shipments",
+          "tableTo": "batches",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trips": {
+      "name": "trips",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trip_number": {
+          "name": "trip_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

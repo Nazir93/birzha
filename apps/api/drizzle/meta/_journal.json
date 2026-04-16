@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776341092663,
+      "tag": "0000_init_batches",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776341607597,
+      "tag": "0001_add_trips",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776342222193,
+      "tag": "0002_trip_batch_shipments",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776342692356,
+      "tag": "0003_trip_batch_sales",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776343042503,
+      "tag": "0004_trip_sale_money",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776343439003,
+      "tag": "0005_trip_batch_shortages",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776344354631,
+      "tag": "0006_jazzy_retro_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776344865053,
+      "tag": "0007_nice_carlie_cooper",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "birzha",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "check": "pnpm test && pnpm build",
+    "dev:api": "pnpm --filter @birzha/api dev",
+    "dev:web": "pnpm --filter @birzha/web dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
+  }
+}

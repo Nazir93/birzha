@@ -1,0 +1,203 @@
+import { OUTBOX_STORAGE_KEY, type EnqueueInput } from "./outbox-queue.js";
+import type { OutboxItem } from "./types.js";
+
+export const OUTBOX_IDB_NAME = "birzha-offline";
+const DB_NAME = OUTBOX_IDB_NAME;
+const DB_VERSION = 1;
+const STORE_OUTBOX = "outbox";
+const STORE_META = "meta";
+const META_KEY_MIGRATED_LS = "migratedFromLocalStorageOutboxV1";
+
+function hasIndexedDb(): boolean {
+  return typeof indexedDB !== "undefined" && indexedDB !== null;
+}
+
+function requestToPromise<T>(req: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB request failed"));
+  });
+}
+
+function txDone(tx: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("IndexedDB transaction failed"));
+    tx.onabort = () => reject(tx.error ?? new Error("IndexedDB transaction aborted"));
+  });
+}
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
+    req.onsuccess = () => resolve(req.result);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_OUTBOX)) {
+        db.createObjectStore(STORE_OUTBOX, { autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains(STORE_META)) {
+        db.createObjectStore(STORE_META, { keyPath: "key" });
+      }
+    };
+  });
+}
+
+async function readMetaFlag(db: IDBDatabase, key: string): Promise<boolean> {
+  const tx = db.transaction(STORE_META, "readonly");
+  const store = tx.objectStore(STORE_META);
+  const row = await requestToPromise(store.get(key));
+  await txDone(tx);
+  return Boolean(row && typeof row === "object" && "value" in row && (row as { value: unknown }).value === true);
+}
+
+async function setMetaFlag(db: IDBDatabase, key: string, value: boolean): Promise<void> {
+  const tx = db.transaction(STORE_META, "readwrite");
+  tx.objectStore(STORE_META).put({ key, value });
+  await txDone(tx);
+}
+
+function readLegacyLocalStorageOutbox(): OutboxItem[] {
+  if (typeof globalThis === "undefined" || !("localStorage" in globalThis) || !globalThis.localStorage) {
+    return [];
+  }
+  const raw = globalThis.localStorage.getItem(OUTBOX_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed as OutboxItem[];
+  } catch {
+    return [];
+  }
+}
+
+async function migrateFromLocalStorageIfNeeded(db: IDBDatabase): Promise<void> {
+  if (await readMetaFlag(db, META_KEY_MIGRATED_LS)) {
+    return;
+  }
+  const legacy = readLegacyLocalStorageOutbox();
+  const tx = db.transaction([STORE_META, STORE_OUTBOX], "readwrite");
+  const outbox = tx.objectStore(STORE_OUTBOX);
+  const meta = tx.objectStore(STORE_META);
+
+  for (const item of legacy) {
+    outbox.add(item);
+  }
+  meta.put({ key: META_KEY_MIGRATED_LS, value: true });
+
+  await txDone(tx);
+
+  if (typeof globalThis !== "undefined" && "localStorage" in globalThis && globalThis.localStorage) {
+    if (globalThis.localStorage.getItem(OUTBOX_STORAGE_KEY) !== null) {
+      globalThis.localStorage.removeItem(OUTBOX_STORAGE_KEY);
+    }
+  }
+}
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+export async function getOutboxIdb(): Promise<IDBDatabase> {
+  if (!hasIndexedDb()) {
+    throw new Error("IndexedDB is not available");
+  }
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const db = await openDb();
+      await migrateFromLocalStorageIfNeeded(db);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+
+export async function idbLoadOutbox(): Promise<OutboxItem[]> {
+  const db = await getOutboxIdb();
+  const tx = db.transaction(STORE_OUTBOX, "readonly");
+  const store = tx.objectStore(STORE_OUTBOX);
+  const all = await requestToPromise(store.getAll() as IDBRequest<OutboxItem[]>);
+  await txDone(tx);
+  return all;
+}
+
+export async function idbEnqueue(input: EnqueueInput): Promise<OutboxItem> {
+  const db = await getOutboxIdb();
+  const row: OutboxItem = {
+    ...input,
+    localActionId: input.localActionId ?? crypto.randomUUID(),
+    createdAt: Date.now(),
+  };
+  const tx = db.transaction(STORE_OUTBOX, "readwrite");
+  tx.objectStore(STORE_OUTBOX).add(row);
+  await txDone(tx);
+  return row;
+}
+
+export async function idbPeekHead(): Promise<OutboxItem | undefined> {
+  const db = await getOutboxIdb();
+  const tx = db.transaction(STORE_OUTBOX, "readonly");
+  const store = tx.objectStore(STORE_OUTBOX);
+  const cursor = await requestToPromise(store.openCursor());
+  await txDone(tx);
+  return cursor?.value as OutboxItem | undefined;
+}
+
+export async function idbDequeueHead(): Promise<OutboxItem | undefined> {
+  const db = await getOutboxIdb();
+  const tx = db.transaction(STORE_OUTBOX, "readwrite");
+  const store = tx.objectStore(STORE_OUTBOX);
+  const cursor = await requestToPromise(store.openCursor());
+  if (!cursor) {
+    await txDone(tx);
+    return undefined;
+  }
+  const value = cursor.value as OutboxItem;
+  await requestToPromise(cursor.delete());
+  await txDone(tx);
+  return value;
+}
+
+export async function idbOutboxLength(): Promise<number> {
+  const db = await getOutboxIdb();
+  const tx = db.transaction(STORE_OUTBOX, "readonly");
+  const store = tx.objectStore(STORE_OUTBOX);
+  const n = await requestToPromise(store.count());
+  await txDone(tx);
+  return n;
+}
+
+export async function idbClearOutbox(): Promise<void> {
+  const db = await getOutboxIdb();
+  const tx = db.transaction(STORE_OUTBOX, "readwrite");
+  tx.objectStore(STORE_OUTBOX).clear();
+  await txDone(tx);
+}
+
+export { hasIndexedDb };
+
+/** Только для тестов: сброс кэша открытой БД и удаление IndexedDB. */
+export async function resetOutboxIdbForTests(): Promise<void> {
+  if (dbPromise && hasIndexedDb()) {
+    try {
+      const db = await dbPromise;
+      db.close();
+    } catch {
+      // игнор: открытие могло не завершиться
+    }
+  }
+  dbPromise = null;
+  if (!hasIndexedDb()) {
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error ?? new Error("deleteDatabase failed"));
+    req.onblocked = () => resolve();
+  });
+}

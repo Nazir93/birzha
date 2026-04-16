@@ -1,0 +1,45 @@
+---
+description: Качество кода
+globs: "**/*.ts"
+alwaysApply: true
+---
+
+# Чистота кода
+
+## Имена
+
+- Переменные: `remainingStock`, `tripId` (camelCase)
+- Классы: `Batch`, `TripReport`, `Money` (PascalCase)
+- Булевы: `isValid`, `canShip`, `hasDebt` (префиксы `is` / `can` / `has`)
+
+## Функции
+
+- Желательно до 30 строк на функцию
+- Не глубже 3 уровней вложенности (`if` / `for` / `while`)
+- 1–3 параметра; если больше — объект: `createSale({ kg, price, customerId })`
+
+## Типы
+
+- Нет `any`. Используем `unknown` + сужение
+- Экспортируем интерфейсы, если нужны снаружи
+- Поля класса — приватные; наружу — методы и геттеры
+
+## Ошибки
+
+```typescript
+try {
+  await batch.shipToTrip(kg, tripId);
+} catch (error) {
+  if (error instanceof InsufficientStockError) {
+    return { error: error.message };
+  }
+  throw error;
+}
+```
+
+Не оставлять «пустые» `catch` и бессмысленный `console.log` без действия.
+
+## Асинхронность
+
+- Предпочтительно `async` / `await`
+- Промисы не игнорировать — `await` или явная обработка ошибок

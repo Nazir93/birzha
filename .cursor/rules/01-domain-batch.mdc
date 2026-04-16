@@ -1,0 +1,52 @@
+---
+description: Правила для партий (Batch)
+globs:
+  - "**/packages/domain/src/batch/**/*.ts"
+  - "**/domain/batch/**/*.ts"
+alwaysApply: false
+---
+
+# Класс Batch
+
+Согласовано с `docs/architecture/business-glossary.md`: поступление на склад переводит количество в подтверждённый остаток — для этого используется `pendingInboundKg`.
+
+Целевое хранение массы — **целые граммы** (см. `06-units-and-precision.mdc`). Поля ниже в **кг** отражают текущую черновую модель в коде до рефакторинга.
+
+## Поля (приватные)
+
+- `id: string`
+- `purchaseId: string`
+- `totalKg: number` (неизменяемо после создания)
+- `pricePerKg: number` (неизменяемо после создания)
+- `pendingInboundKg: number` — ожидает поступления на склад
+- `onWarehouseKg: number`
+- `inTransitKg: number`
+- `soldKg: number`
+- `writtenOffKg: number`
+
+## Публичные методы
+
+- `receiveOnWarehouse(kg: number): void` — из `pendingInboundKg` в `onWarehouseKg`
+- `shipToTrip(kg: number, tripId: string): void`
+- `sellFromTrip(kg: number, saleId: string): void`
+- `receiveBack(kg: number, reason: string): void` — из `inTransitKg` в `onWarehouseKg`
+- `writeOff(kg: number, reason: string): void` — списание со склада (`onWarehouseKg`)
+
+## Геттеры
+
+- `remainingKg(): number` — `onWarehouseKg + inTransitKg`
+- `totalProcessedKg(): number` — `soldKg + writtenOffKg`
+
+## Инварианты (всегда истинны)
+
+- `totalKg === pendingInboundKg + onWarehouseKg + inTransitKg + soldKg + writtenOffKg`
+- Нельзя продать больше, чем `inTransitKg`
+- Нельзя отгрузить в рейс больше, чем `onWarehouseKg`
+- Нельзя оприходовать больше, чем `pendingInboundKg`
+- Все числа неотрицательны
+
+## Запрещено
+
+- Прямое изменение полей извне
+- Создание `Batch` без `purchaseId`
+- Отрицательные аргументы в методах

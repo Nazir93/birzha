@@ -1,0 +1,86 @@
+{
+  "id": "d7bb7668-1fed-41b7-a802-e843ad3b862b",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.batches": {
+      "name": "batches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "purchase_id": {
+          "name": "purchase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_grams": {
+          "name": "total_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pending_inbound_grams": {
+          "name": "pending_inbound_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "on_warehouse_grams": {
+          "name": "on_warehouse_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "in_transit_grams": {
+          "name": "in_transit_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sold_grams": {
+          "name": "sold_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "written_off_grams": {
+          "name": "written_off_grams",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price_per_kg": {
+          "name": "price_per_kg",
+          "type": "numeric(18, 6)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

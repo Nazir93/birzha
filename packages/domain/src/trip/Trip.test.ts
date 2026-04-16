@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+
+import { Trip } from "./Trip.js";
+
+describe("Trip", () => {
+  it("создаётся открытым", () => {
+    const t = Trip.create({ id: "t-1", tripNumber: "Ф-01" });
+    expect(t.getStatus()).toBe("open");
+    expect(t.canAcceptShipments()).toBe(true);
+  });
+
+  it("после close не принимает отгрузки", () => {
+    const t = Trip.create({ id: "t-2", tripNumber: "Ф-02" });
+    t.close();
+    expect(t.getStatus()).toBe("closed");
+    expect(t.canAcceptShipments()).toBe(false);
+  });
+
+  it("restore восстанавливает статус", () => {
+    const t = Trip.restore({
+      id: "t-3",
+      tripNumber: "Ф-03",
+      status: "closed",
+    });
+    expect(t.canAcceptShipments()).toBe(false);
+  });
+});
