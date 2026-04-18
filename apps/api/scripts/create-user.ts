@@ -26,18 +26,24 @@ const ROLE_CODES = [
   "accountant",
 ] as const;
 
+/** Аргументы после `node` / `tsx` и пути к скрипту; `pnpm … --` даёт лишний `--`. */
 function parseArgs(argv: string[]): { login: string; password: string; role: string } {
   let login = "";
   let password = "";
   let role = "admin";
-  for (let i = 2; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "--login" && argv[i + 1]) {
-      login = argv[++i] ?? "";
-    } else if (a === "--password" && argv[i + 1]) {
-      password = argv[++i] ?? "";
-    } else if (a === "--role" && argv[i + 1]) {
-      role = argv[++i] ?? "admin";
+  const args = argv.slice(2).filter((a) => a !== "--");
+  let i = 0;
+  if (args[0]?.endsWith(".ts") || args[0]?.includes("create-user")) {
+    i = 1;
+  }
+  for (; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--login" && args[i + 1]) {
+      login = args[++i] ?? "";
+    } else if (a === "--password" && args[i + 1]) {
+      password = args[++i] ?? "";
+    } else if (a === "--role" && args[i + 1]) {
+      role = args[++i] ?? "admin";
     }
   }
   return { login, password, role };
@@ -89,6 +95,15 @@ try {
   });
 
   console.log(`Создан пользователь: login=${login.trim()}, role=${role}, id=${id}`);
+} catch (e) {
+  const err = e as { code?: string };
+  if (err.code === "42P01") {
+    console.error(
+      'Нет таблицы в БД (схема не применена). Выполните из каталога apps/api: pnpm db:push — затем снова create-user.',
+    );
+    process.exit(1);
+  }
+  throw e;
 } finally {
   await sql.end({ timeout: 5 });
 }
