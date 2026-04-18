@@ -13,6 +13,7 @@ import {
   PurchaseLineTotalMismatchError,
   SalePaymentSplitError,
   TripClosedError,
+  TripNotEmptyError,
   TripNotFoundError,
   TripShortageExceedsNetError,
   WarehouseNotFoundError,
@@ -61,6 +62,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
       lineIndex: error.lineIndex,
       expectedKopecks: error.expectedKopecks,
       actualKopecks: error.actualKopecks,
+    });
+  }
+  if (error instanceof TripNotEmptyError) {
+    return reply.code(409).send({
+      error: "trip_not_empty",
+      tripId: error.tripId,
+      message: error.message,
     });
   }
   if (error instanceof TripClosedError) {

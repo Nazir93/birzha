@@ -10,6 +10,7 @@ import type { TripShipmentRepository } from "../application/ports/trip-shipment-
 import type { TripShortageRepository } from "../application/ports/trip-shortage-repository.port.js";
 import { CloseTripUseCase } from "../application/trip/close-trip.use-case.js";
 import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
+import { DeleteTripUseCase } from "../application/trip/delete-trip.use-case.js";
 import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-case.js";
 
 import { sendMappedError } from "./map-http-error.js";
@@ -28,6 +29,7 @@ export function registerTripRoutes(
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
+  const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
 
   app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
@@ -83,6 +85,16 @@ export function registerTripRoutes(
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await closeTrip.execute(tripId);
       return reply.code(200).send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.delete("/trips/:tripId", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+    try {
+      const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      await deleteTrip.execute(tripId);
+      return reply.code(204).send();
     } catch (error) {
       return sendMappedError(reply, error);
     }

@@ -31,6 +31,20 @@ export class TripClosedError extends Error {
   }
 }
 
+/** Удаление запрещено: по рейсу уже есть отгрузки, продажи или недостачи. */
+export class TripNotEmptyError extends Error {
+  readonly tripId: string;
+
+  constructor(tripId: string) {
+    super(
+      `Рейс ${tripId} нельзя удалить: есть движения по отгрузкам, продажам или недостачам. Сначала отмените операции (в MVP — только пустой рейс).`,
+    );
+    this.name = "TripNotEmptyError";
+    this.tripId = tripId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Масса в рейсе по партии (отгружено − уже продано) меньше запрошенной продажи. */
 /** Запрошена недостача больше, чем остаток по «бюджету» рейса (отгружено − продано − уже списано). */
 export class TripShortageExceedsNetError extends Error {

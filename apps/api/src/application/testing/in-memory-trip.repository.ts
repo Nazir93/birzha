@@ -18,4 +18,8 @@ export class InMemoryTripRepository implements TripRepository {
       a.getTripNumber().localeCompare(b.getTripNumber(), "ru"),
     );
   }
+
+  async deleteById(id: string): Promise<void> {
+    this.byId.delete(id);
+  }
 }

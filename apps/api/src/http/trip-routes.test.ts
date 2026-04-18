@@ -106,4 +106,53 @@ describe("Trip HTTP", () => {
 
     await app.close();
   });
+
+  it("DELETE /trips/:id — удаляет пустой рейс; с отгрузкой — 409 trip_not_empty", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const batches = new InMemoryBatchRepository();
+    const app = await buildApp({ env, db: null, batchRepository: batches, tripRepository: trips });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "t-del-empty", tripNumber: "Ф-DEL-1" },
+    });
+
+    let res = await app.inject({ method: "DELETE", url: "/trips/t-del-empty" });
+    expect(res.statusCode).toBe(204);
+
+    res = await app.inject({ method: "GET", url: "/trips" });
+    const listAfter = JSON.parse(res.body) as { trips: { id: string }[] };
+    expect(listAfter.trips.some((t) => t.id === "t-del-empty")).toBe(false);
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "t-del-busy", tripNumber: "Ф-DEL-2" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches",
+      payload: {
+        id: "b-ship",
+        purchaseId: "p-1",
+        totalKg: 100,
+        pricePerKg: 1,
+        distribution: "on_hand",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches/b-ship/ship-to-trip",
+      payload: { kg: 5, tripId: "t-del-busy" },
+    });
+
+    res = await app.inject({ method: "DELETE", url: "/trips/t-del-busy" });
+    expect(res.statusCode).toBe(409);
+    const err = JSON.parse(res.body) as { error: string };
+    expect(err.error).toBe("trip_not_empty");
+
+    await app.close();
+  });
 });

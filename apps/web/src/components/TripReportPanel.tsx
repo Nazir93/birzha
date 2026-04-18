@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
-import { apiGetJson } from "../api/fetch-api.js";
+import { apiFetch, apiGetJson } from "../api/fetch-api.js";
 import type { ShipmentReportResponse, TripsListResponse } from "../api/types.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
@@ -12,6 +12,7 @@ import {
 } from "../format/trip-report-rows.js";
 import {
   btnSecondary,
+  btnStyle,
   errorText,
   fieldStyleFullWidth,
   muted,
@@ -26,6 +27,7 @@ function sanitizeFilenamePart(s: string): string {
 }
 
 export function TripReportPanel() {
+  const queryClient = useQueryClient();
   const [tripId, setTripId] = useState<string | "">("");
 
   const tripsQuery = useQuery({
@@ -56,6 +58,39 @@ export function TripReportPanel() {
     () => (r ? reconcileBatchTotalsWithReport(r, batchAgg) : null),
     [r, batchAgg],
   );
+
+  const canDeleteTrip = useMemo(() => {
+    if (!r) {
+      return false;
+    }
+    return (
+      r.shipment.totalGrams === "0" &&
+      r.sales.totalGrams === "0" &&
+      r.shortage.totalGrams === "0"
+    );
+  }, [r]);
+
+  const deleteTripMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiFetch(`/api/trips/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (res.status === 409) {
+        const j = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(j?.message ?? "Рейс нельзя удалить: есть движения по рейсу.");
+      }
+      if (res.status === 403) {
+        throw new Error("Недостаточно прав (нужна роль логиста, менеджера или администратора).");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: async () => {
+      setTripId("");
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["shipment-report"] });
+    },
+  });
 
   const reconciliationIssues = useMemo(() => {
     if (!reconciliation) {
@@ -141,6 +176,36 @@ export function TripReportPanel() {
               </option>
             ))}
           </select>
+          <p style={{ ...muted, marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
+            Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны права
+            логиста, менеджера или администратора.
+          </p>
+          {tripId && r && canDeleteTrip && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="no-print"
+                style={{ ...btnStyle, borderColor: "#b91c1c", color: "#991b1b" }}
+                disabled={deleteTripMutation.isPending}
+                onClick={() => {
+                  if (
+                    typeof window !== "undefined" &&
+                    !window.confirm("Удалить этот рейс из системы? Операция необратима.")
+                  ) {
+                    return;
+                  }
+                  deleteTripMutation.mutate(tripId);
+                }}
+              >
+                {deleteTripMutation.isPending ? "Удаление…" : "Удалить пустой рейс"}
+              </button>
+            </div>
+          )}
+          {deleteTripMutation.isError && (
+            <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.5rem", marginBottom: 0 }}>
+              {(deleteTripMutation.error as Error).message}
+            </p>
+          )}
         </div>
       )}
 

@@ -59,4 +59,8 @@ export class DrizzleTripRepository implements TripRepository {
       }),
     );
   }
+
+  async deleteById(id: string): Promise<void> {
+    await this.db.delete(trips).where(eq(trips.id, id));
+  }
 }
