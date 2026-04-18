@@ -1,0 +1,94 @@
+import { useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+
+import { useAuth } from "../auth/auth-context.js";
+import { routes } from "../routes.js";
+import { btnStyle, errorText, fieldStyle, muted } from "../ui/styles.js";
+
+export function LoginPage() {
+  const { ready, meta, user, login, bootstrapError } = useAuth();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? routes.reports;
+
+  const [loginField, setLoginField] = useState("");
+  const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (bootstrapError) {
+    return (
+      <section style={{ maxWidth: 420 }}>
+        <p role="alert" style={errorText}>
+          Нет ответа от API ({bootstrapError.message}). Запустите бэкенд.
+        </p>
+      </section>
+    );
+  }
+
+  if (!ready) {
+    return (
+      <p role="status" aria-live="polite">
+        Загрузка…
+      </p>
+    );
+  }
+
+  if (meta?.requireApiAuth !== "enabled" || user) {
+    return <Navigate to={from} replace />;
+  }
+
+  const submit = () => {
+    setErr(null);
+    setPending(true);
+    void login(loginField.trim(), password)
+      .catch((e: unknown) => {
+        setErr(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <section style={{ maxWidth: 420 }} aria-labelledby="login-heading">
+      <h2 id="login-heading" style={{ fontSize: "1.1rem", marginTop: 0 }}>
+        Вход
+      </h2>
+      <p style={{ ...muted, marginBottom: "1rem" }}>
+        Требуется, когда на сервере включён <code>REQUIRE_API_AUTH</code>.
+      </p>
+      <label htmlFor="login-user" style={{ fontSize: "0.88rem" }}>
+        Логин
+      </label>
+      <input
+        id="login-user"
+        autoComplete="username"
+        value={loginField}
+        onChange={(e) => setLoginField(e.target.value)}
+        style={{ ...fieldStyle, display: "block", width: "100%", marginBottom: "0.75rem" }}
+      />
+      <label htmlFor="login-pass" style={{ fontSize: "0.88rem" }}>
+        Пароль
+      </label>
+      <input
+        id="login-pass"
+        type="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            submit();
+          }
+        }}
+        style={{ ...fieldStyle, display: "block", width: "100%", marginBottom: "1rem" }}
+      />
+      <button type="button" style={btnStyle} disabled={pending} aria-busy={pending ? true : undefined} onClick={submit}>
+        {pending ? "Вход…" : "Войти"}
+      </button>
+      {err && (
+        <p role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
+          {err}
+        </p>
+      )}
+    </section>
+  );
+}

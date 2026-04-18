@@ -5,6 +5,7 @@ import {
 
 import {
   BatchNotFoundError,
+  CounterpartyNotFoundError,
   InsufficientStockForTripError,
   SalePaymentSplitError,
   TripClosedError,
@@ -35,6 +36,14 @@ export function mapErrorToSyncRejection(error: unknown): SyncRejectionFields {
       resolution: "Синхронизируйте справочник рейсов или создайте рейс на сервере.",
       errorCode: "trip_not_found",
       details: { tripId: error.tripId },
+    };
+  }
+  if (error instanceof CounterpartyNotFoundError) {
+    return {
+      reason: `Контрагент не найден или отключён: ${error.counterpartyId}`,
+      resolution: "Обновите справочник контрагентов с сервера или укажите продажу без привязки к справочнику.",
+      errorCode: "counterparty_not_found",
+      details: { counterpartyId: error.counterpartyId },
     };
   }
   if (error instanceof TripClosedError) {

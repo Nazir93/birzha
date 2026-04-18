@@ -2,13 +2,21 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite";
 
+const apiProxyTarget = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "3000"}`;
+
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       injectRegister: false,
       includeAssets: ["pwa-icon.svg"],
+      injectManifest: {
+        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+      },
       manifest: {
         name: "Биржа",
         short_name: "Биржа",
@@ -29,18 +37,24 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api/],
-      },
     }),
   ],
   server: {
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:3000",
+        target: apiProxyTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+  preview: {
+    port: 4173,
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: apiProxyTarget,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },

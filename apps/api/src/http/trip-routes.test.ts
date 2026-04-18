@@ -43,6 +43,7 @@ describe("Trip HTTP", () => {
         totalRevenueKopecks: string;
         totalCashKopecks: string;
         totalDebtKopecks: string;
+        byClient: unknown[];
       };
       shortage: { totalGrams: string };
       financials: {
@@ -62,6 +63,7 @@ describe("Trip HTTP", () => {
     expect(rep.financials.costOfSoldKopecks).toBe("0");
     expect(rep.financials.costOfShortageKopecks).toBe("0");
     expect(rep.financials.grossProfitKopecks).toBe("0");
+    expect(rep.sales.byClient).toEqual([]);
 
     await app.close();
   });

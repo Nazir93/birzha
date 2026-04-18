@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { InsufficientStockForTripError, SalePaymentSplitError } from "../errors.js";
+import { CounterpartyNotFoundError, InsufficientStockForTripError, SalePaymentSplitError } from "../errors.js";
 import { CreatePurchaseUseCase } from "../purchase/create-purchase.use-case.js";
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
 import { InMemoryTripRepository } from "../testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "../testing/in-memory-trip-sale.repository.js";
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripShortageRepository } from "../testing/in-memory-trip-shortage.repository.js";
+import { InMemoryCounterpartyRepository } from "../../infrastructure/persistence/in-memory-counterparty.repository.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
 import { ShipToTripUseCase } from "../trip/ship-to-trip.use-case.js";
 import { SellFromTripUseCase } from "./sell-from-trip.use-case.js";
@@ -18,6 +19,7 @@ describe("SellFromTripUseCase", () => {
     const shipments = new InMemoryTripShipmentRepository();
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
     await new CreateTripUseCase(trips).execute({ id: "t-2", tripNumber: "Ф-02" });
     await new CreatePurchaseUseCase(repo).execute({
       id: "b-1",
@@ -32,7 +34,7 @@ describe("SellFromTripUseCase", () => {
       tripId: "t-2",
     });
 
-    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages).execute({
+    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
       batchId: "b-1",
       tripId: "t-2",
       kg: 100,
@@ -53,12 +55,78 @@ describe("SellFromTripUseCase", () => {
     expect(agg.totalDebtKopecks).toBe(0n);
   });
 
+  it("при counterpartyId пишет снимок имени в отчёт по клиентам", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    const cp = await counterparties.create("  ООО Рога  ");
+    await new CreateTripUseCase(trips).execute({ id: "t-cp", tripNumber: "Ф-CP" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-cp",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-cp",
+      kg: 20,
+      tripId: "t-cp",
+    });
+    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
+      batchId: "b-cp",
+      tripId: "t-cp",
+      kg: 5,
+      saleId: "s-cp",
+      pricePerKg: 2,
+      counterpartyId: cp.id,
+    });
+    const agg = await sales.aggregateByTripId("t-cp");
+    expect(agg.byClient.some((c) => c.clientLabel === "ООО Рога")).toBe(true);
+  });
+
+  it("неизвестный counterpartyId — ошибка", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    await new CreateTripUseCase(trips).execute({ id: "t-bad", tripNumber: "Ф-B" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-bad",
+      purchaseId: "p-1",
+      totalKg: 50,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-bad",
+      kg: 10,
+      tripId: "t-bad",
+    });
+    await expect(
+      new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
+        batchId: "b-bad",
+        tripId: "t-bad",
+        kg: 1,
+        saleId: "s-x",
+        pricePerKg: 1,
+        counterpartyId: "00000000-0000-0000-0000-000000000000",
+      }),
+    ).rejects.toThrow(CounterpartyNotFoundError);
+  });
+
   it("при paymentKind=debt вся выручка в долг", async () => {
     const repo = new InMemoryBatchRepository();
     const trips = new InMemoryTripRepository();
     const shipments = new InMemoryTripShipmentRepository();
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
     await new CreateTripUseCase(trips).execute({ id: "t-d", tripNumber: "Ф-D" });
     await new CreatePurchaseUseCase(repo).execute({
       id: "b-d",
@@ -72,7 +140,7 @@ describe("SellFromTripUseCase", () => {
       kg: 10,
       tripId: "t-d",
     });
-    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages).execute({
+    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
       batchId: "b-d",
       tripId: "t-d",
       kg: 10,
@@ -91,6 +159,7 @@ describe("SellFromTripUseCase", () => {
     const shipments = new InMemoryTripShipmentRepository();
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
     await new CreateTripUseCase(trips).execute({ id: "t-m", tripNumber: "Ф-M" });
     await new CreatePurchaseUseCase(repo).execute({
       id: "b-m",
@@ -105,7 +174,7 @@ describe("SellFromTripUseCase", () => {
       tripId: "t-m",
     });
     await expect(
-      new SellFromTripUseCase(repo, trips, shipments, sales, shortages).execute({
+      new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
         batchId: "b-m",
         tripId: "t-m",
         kg: 5,
@@ -122,6 +191,7 @@ describe("SellFromTripUseCase", () => {
     const shipments = new InMemoryTripShipmentRepository();
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
     await new CreateTripUseCase(trips).execute({ id: "t-x", tripNumber: "Ф-X" });
     await new CreatePurchaseUseCase(repo).execute({
       id: "b-x",
@@ -137,7 +207,7 @@ describe("SellFromTripUseCase", () => {
     });
 
     await expect(
-      new SellFromTripUseCase(repo, trips, shipments, sales, shortages).execute({
+      new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
         batchId: "b-x",
         tripId: "t-x",
         kg: 60,

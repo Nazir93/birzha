@@ -8,6 +8,7 @@ import {
   type EnqueueInput,
 } from "./outbox-queue.js";
 import {
+  getOutboxIdb,
   hasIndexedDb,
   idbClearOutbox,
   idbDequeueHead,
@@ -60,22 +61,62 @@ function createIndexedDbOutboxBackend(): OutboxBackend {
   };
 }
 
+/** Одна попытка: открыть IDB или перейти на `localStorage`/память. */
+let resolvedDefaultBackend: Promise<OutboxBackend> | null = null;
+
+function resolveDefaultBackend(): Promise<OutboxBackend> {
+  if (!resolvedDefaultBackend) {
+    resolvedDefaultBackend = (async (): Promise<OutboxBackend> => {
+      if (!hasIndexedDb()) {
+        return createStorageOutboxBackend(defaultStorage());
+      }
+      try {
+        await getOutboxIdb();
+        return createIndexedDbOutboxBackend();
+      } catch {
+        return createStorageOutboxBackend(defaultStorage());
+      }
+    })();
+  }
+  return resolvedDefaultBackend;
+}
+
+function createLazyDefaultOutboxBackend(): OutboxBackend {
+  return {
+    loadOutbox: async () => (await resolveDefaultBackend()).loadOutbox(),
+    enqueue: async (item) => (await resolveDefaultBackend()).enqueue(item),
+    dequeueHead: async () => (await resolveDefaultBackend()).dequeueHead(),
+    peekHead: async () => (await resolveDefaultBackend()).peekHead(),
+    outboxLength: async () => (await resolveDefaultBackend()).outboxLength(),
+    clearOutbox: async () => (await resolveDefaultBackend()).clearOutbox(),
+  };
+}
+
 let cachedDefault: OutboxBackend | null = null;
 
-/** В браузере — IndexedDB (с миграцией из `localStorage`); иначе — память / `localStorage`. */
+/**
+ * В браузере с IndexedDB — ленивая инициализация: при ошибке открытия БД очередь в `localStorage`/памяти.
+ * Без API IndexedDB — сразу `localStorage`/память.
+ */
 export function getDefaultOutboxBackend(): OutboxBackend {
   if (cachedDefault) {
     return cachedDefault;
   }
   if (hasIndexedDb()) {
-    cachedDefault = createIndexedDbOutboxBackend();
+    cachedDefault = createLazyDefaultOutboxBackend();
   } else {
     cachedDefault = createStorageOutboxBackend(defaultStorage());
   }
   return cachedDefault;
 }
 
-/** Только для тестов: сброс выбранного дефолтного бэкенда (после `resetOutboxIdbForTests` и т.п.). */
-export function resetDefaultOutboxBackendCacheForTests(): void {
+/** Сброс ленивого бэкенда (смена пользователя / области очереди). */
+export function resetDefaultOutboxBackendCache(): void {
   cachedDefault = null;
+  resolvedDefaultBackend = null;
+}
+
+/** @alias resetDefaultOutboxBackendCache */
+export function resetDefaultOutboxBackendCacheForTests(): void {
+  resetDefaultOutboxBackendCache();
 }

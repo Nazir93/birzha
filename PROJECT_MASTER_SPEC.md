@@ -78,7 +78,7 @@
 - Пошаговые роли (закупщик → … → продавец): **`docs/architecture/processes/role-workflows-detailed.md`**
 - Риски и защита (офлайн, долги, округления, возвраты): **`docs/architecture/risks-and-guardrails.md`**
 - Сквозная сходимость цифр: **`docs/testing/golden-scenario.md`**
-- Зафиксированный стек: **`docs/STACK.md`**
+- Зафиксированный стек: **`README.md`**, раздел «Стек (зафиксировано)»
 
 ---
 

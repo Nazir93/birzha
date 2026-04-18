@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { createTripBodySchema } from "@birzha/contracts";
 import { z } from "zod";
 
 import { TripNotFoundError } from "../application/errors.js";
@@ -12,13 +13,9 @@ import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
 import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-case.js";
 
 import { sendMappedError } from "./map-http-error.js";
+import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 import { ledgerAggregateToJson, saleLedgerAggregateToJson, tripFinancialsToJson } from "./trip-report-serialize.js";
 import { tripToJson } from "./trip-serialize.js";
-
-const createTripBodySchema = z.object({
-  id: z.string().min(1),
-  tripNumber: z.string().min(1),
-});
 
 export function registerTripRoutes(
   app: FastifyInstance,
@@ -27,12 +24,13 @@ export function registerTripRoutes(
   sales: TripSaleRepository,
   shortages: TripShortageRepository,
   batches: BatchRepository,
+  routeAuth: BusinessRouteAuth,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
 
-  app.get("/trips", async (_req, reply) => {
+  app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
     try {
       const list = await trips.list();
       return reply.send({ trips: list.map(tripToJson) });
@@ -41,7 +39,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.get("/trips/:tripId/shipment-report", async (req, reply) => {
+  app.get("/trips/:tripId/shipment-report", { ...withPreHandlers(routeAuth.tripReportRead) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(tripId);
@@ -57,7 +55,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.get("/trips/:tripId", async (req, reply) => {
+  app.get("/trips/:tripId", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       const trip = await trips.findById(tripId);
@@ -70,7 +68,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.post("/trips", async (req, reply) => {
+  app.post("/trips", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
     try {
       const body = createTripBodySchema.parse(req.body);
       await createTrip.execute(body);
@@ -80,7 +78,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.post("/trips/:tripId/close", async (req, reply) => {
+  app.post("/trips/:tripId/close", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await closeTrip.execute(tripId);

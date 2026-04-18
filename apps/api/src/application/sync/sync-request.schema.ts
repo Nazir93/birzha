@@ -1,69 +1,37 @@
+import {
+  createTripBodySchema,
+  receiveOnWarehouseSyncPayloadSchema,
+  recordTripShortageSyncPayloadSchema,
+  sellFromTripSyncPayloadSchema,
+  shipToTripSyncPayloadSchema,
+} from "@birzha/contracts";
 import { z } from "zod";
 
-const sellPayloadSchema = z
-  .object({
-    batchId: z.string().min(1),
-    tripId: z.string().min(1),
-    kg: z.number().finite().positive(),
-    saleId: z.string().min(1),
-    pricePerKg: z.number().finite().nonnegative(),
-    paymentKind: z.enum(["cash", "debt", "mixed"]).optional(),
-    cashKopecksMixed: z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]).optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.paymentKind === "mixed" && data.cashKopecksMixed === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "cashKopecksMixed обязателен при paymentKind=mixed",
-      });
-    }
-  });
+const deviceEnvelope = z.object({
+  deviceId: z.string().min(1),
+  localActionId: z.string().min(1),
+});
 
 export const syncRequestSchema = z.discriminatedUnion("actionType", [
-  z.object({
-    deviceId: z.string().min(1),
-    localActionId: z.string().min(1),
+  deviceEnvelope.extend({
     actionType: z.literal("sell_from_trip"),
-    payload: sellPayloadSchema,
+    payload: sellFromTripSyncPayloadSchema,
   }),
-  z.object({
-    deviceId: z.string().min(1),
-    localActionId: z.string().min(1),
+  deviceEnvelope.extend({
     actionType: z.literal("ship_to_trip"),
-    payload: z.object({
-      batchId: z.string().min(1),
-      tripId: z.string().min(1),
-      kg: z.number().finite().positive(),
-    }),
+    payload: shipToTripSyncPayloadSchema,
   }),
-  z.object({
-    deviceId: z.string().min(1),
-    localActionId: z.string().min(1),
+  deviceEnvelope.extend({
     actionType: z.literal("record_trip_shortage"),
-    payload: z.object({
-      batchId: z.string().min(1),
-      tripId: z.string().min(1),
-      kg: z.number().finite().positive(),
-      reason: z.string().min(1),
-    }),
+    payload: recordTripShortageSyncPayloadSchema,
   }),
-  z.object({
-    deviceId: z.string().min(1),
-    localActionId: z.string().min(1),
+  deviceEnvelope.extend({
     actionType: z.literal("receive_on_warehouse"),
-    payload: z.object({
-      batchId: z.string().min(1),
-      kg: z.number().finite().positive(),
-    }),
+    payload: receiveOnWarehouseSyncPayloadSchema,
   }),
-  z.object({
-    deviceId: z.string().min(1),
-    localActionId: z.string().min(1),
+  deviceEnvelope.extend({
     actionType: z.literal("create_trip"),
-    payload: z.object({
-      id: z.string().min(1),
-      tripNumber: z.string().min(1),
-    }),
+    payload: createTripBodySchema,
   }),
 ]);
 

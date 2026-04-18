@@ -5,7 +5,9 @@
 ## Статус реализации
 
 - **Реализовано (частично):** сквозной HTTP-тест сходимости граммов, выручки, **`financials`**, раздельно **нал/долг** в `sales` (`paymentKind: "debt"` в примере) — `apps/api/src/http/golden-scenario.flow.test.ts` (закупка → рейс → отгрузка → **недостача** → продажа → отчёт).
-- **Ещё не в тесте:** смешанная оплата в золотом сценарии (есть в API `paymentKind: "mixed"`); возвраты; частичные оплаты долга.
+- **Дымовой E2E (браузер):** `pnpm e2e` — клиент + прокси + API in-memory (`apps/api/src/e2e-server.ts`): редиректы **`/`**, **несуществующий путь → `/reports`**, **`/login` → `/reports`** при **выключенном** обязательном входе (как в дымовом API без `REQUIRE_API_AUTH`), meta, отчёты (**`shipment-report`**, **`POST …/record-trip-shortage`** → строка **«Недостача (фикс.)»**, продажа **в долг** и **`paymentKind: "mixed"`** → строка **«Выручка: нал / долг»** как в API, **`sales.byClient` в UI** с **`clientLabel`**, **полный числовой сценарий** с теми же кг/копейками, что в **`apps/api/src/http/golden-scenario.flow.test.ts`** (партия 5000 кг, отгрузка 3000 кг, недостача 100 кг, продажа 2900 кг, клиент **«ИП Иванов»**, валовая прибыль в UI), **CSV** после `POST /batches` + `ship-to-trip`), офлайн (**постановка `create_trip` в очередь → синхронизация → очередь пуста**, JSON результата), **`/operations`** (после **POST /api/batches** — строка в таблице партий), навигация вкладками (`e2e/golden-smoke.spec.ts`, хелпер **`e2e/kopecks-label.ts`**, `serial`). Без PostgreSQL.
+- **В золотом HTTP-тесте:** смешанная оплата (`paymentKind: "mixed"`, `cashKopecksMixed`) — отдельный кейс в `apps/api/src/http/golden-scenario.flow.test.ts`.
+- **Ещё не в тесте:** возвраты; частичные оплаты долга.
 - Тест гоняется в CI вместе с `pnpm test` (in-memory репозитории).
 
 ## Шаги сценария (черновик)

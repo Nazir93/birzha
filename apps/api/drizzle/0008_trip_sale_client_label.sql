@@ -1,0 +1,1 @@
+ALTER TABLE "trip_batch_sales" ADD COLUMN "client_label" text;

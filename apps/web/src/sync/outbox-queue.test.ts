@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   clearOutboxSync,
@@ -7,6 +7,11 @@ import {
   outboxLengthSync,
   peekHeadSync,
 } from "./outbox-queue.js";
+import { syncOutboxScopeTo } from "./outbox-scope.js";
+
+beforeEach(() => {
+  syncOutboxScopeTo("default");
+});
 
 function memoryStorage(): Storage {
   const m = new Map<string, string>();

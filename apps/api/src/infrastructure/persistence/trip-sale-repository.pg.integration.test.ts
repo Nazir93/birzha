@@ -72,5 +72,8 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
     expect(agg.byBatch).toEqual([
       { batchId, grams: 25_000n, revenueKopecks: 2500n, cashKopecks: 2500n, debtKopecks: 0n },
     ]);
+    expect(agg.byClient).toEqual([
+      { clientLabel: "", grams: 25_000n, revenueKopecks: 2500n, cashKopecks: 2500n, debtKopecks: 0n },
+    ]);
   });
 });

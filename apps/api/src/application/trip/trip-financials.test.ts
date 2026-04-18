@@ -21,6 +21,15 @@ describe("computeTripFinancials", () => {
           debtKopecks: 0n,
         },
       ],
+      byClient: [
+        {
+          clientLabel: "",
+          grams: 1000n,
+          revenueKopecks: 50_000n,
+          cashKopecks: 50_000n,
+          debtKopecks: 0n,
+        },
+      ],
     };
     const shortage: TripShortageAggregate = {
       totalGrams: 200n,

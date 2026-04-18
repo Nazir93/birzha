@@ -1,7 +1,10 @@
 import { getFallbackStorage } from "./fallback-storage.js";
+import { getOutboxScopeKey } from "./outbox-scope.js";
 import type { StorageLike } from "./storage-types.js";
 
-const DEVICE_KEY = "birzha:deviceId";
+function deviceIdStorageKey(): string {
+  return `birzha:deviceId:${getOutboxScopeKey()}`;
+}
 
 function defaultStorage(): StorageLike {
   if (typeof globalThis !== "undefined" && "localStorage" in globalThis && globalThis.localStorage) {
@@ -12,11 +15,12 @@ function defaultStorage(): StorageLike {
 
 /** Стабильный идентификатор устройства для идемпотентности sync. */
 export function getOrCreateDeviceId(storage: StorageLike = defaultStorage()): string {
-  const existing = storage.getItem(DEVICE_KEY);
+  const key = deviceIdStorageKey();
+  const existing = storage.getItem(key);
   if (existing && existing.length > 0) {
     return existing;
   }
   const id = crypto.randomUUID();
-  storage.setItem(DEVICE_KEY, id);
+  storage.setItem(key, id);
   return id;
 }

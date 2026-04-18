@@ -4,6 +4,7 @@ import type { TripRepository } from "../ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
+import type { CounterpartyRepository } from "../ports/counterparty-repository.port.js";
 import { RecordTripShortageUseCase } from "../trip/record-trip-shortage.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "../trip/record-trip-shortage.use-case.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
@@ -41,11 +42,20 @@ export class ApplySyncActionUseCase {
     shipments: TripShipmentRepository,
     sales: TripSaleRepository,
     shortages: TripShortageRepository,
+    counterparties: CounterpartyRepository,
     runShipInTransaction?: ShipToTripTransactionRunner,
     runSellInTransaction?: SellFromTripTransactionRunner,
     runRecordTripShortageInTransaction?: RecordTripShortageTransactionRunner,
   ) {
-    this.sell = new SellFromTripUseCase(batches, trips, shipments, sales, shortages, runSellInTransaction);
+    this.sell = new SellFromTripUseCase(
+      batches,
+      trips,
+      shipments,
+      sales,
+      shortages,
+      counterparties,
+      runSellInTransaction,
+    );
     this.shipToTrip = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction);
     this.recordShortage = new RecordTripShortageUseCase(
       batches,
@@ -83,6 +93,8 @@ export class ApplySyncActionUseCase {
             pricePerKg: p.pricePerKg,
             paymentKind: p.paymentKind,
             cashKopecksMixed,
+            clientLabel: p.clientLabel,
+            counterpartyId: p.counterpartyId,
           });
           break;
         }

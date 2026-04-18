@@ -7,11 +7,15 @@ import { ZodError } from "zod";
 
 import {
   BatchNotFoundError,
+  CounterpartyNotFoundError,
   InsufficientStockForTripError,
+  ProductGradeNotFoundError,
+  PurchaseLineTotalMismatchError,
   SalePaymentSplitError,
   TripClosedError,
   TripNotFoundError,
   TripShortageExceedsNetError,
+  WarehouseNotFoundError,
 } from "../application/errors.js";
 
 export function sendMappedError(reply: FastifyReply, error: unknown): FastifyReply {
@@ -31,6 +35,32 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "trip_not_found",
       tripId: error.tripId,
+    });
+  }
+  if (error instanceof CounterpartyNotFoundError) {
+    return reply.code(404).send({
+      error: "counterparty_not_found",
+      counterpartyId: error.counterpartyId,
+    });
+  }
+  if (error instanceof WarehouseNotFoundError) {
+    return reply.code(400).send({
+      error: "warehouse_not_found",
+      warehouseId: error.warehouseId,
+    });
+  }
+  if (error instanceof ProductGradeNotFoundError) {
+    return reply.code(400).send({
+      error: "product_grade_not_found",
+      productGradeId: error.productGradeId,
+    });
+  }
+  if (error instanceof PurchaseLineTotalMismatchError) {
+    return reply.code(400).send({
+      error: "purchase_line_total_mismatch",
+      lineIndex: error.lineIndex,
+      expectedKopecks: error.expectedKopecks,
+      actualKopecks: error.actualKopecks,
     });
   }
   if (error instanceof TripClosedError) {

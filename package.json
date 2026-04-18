@@ -10,11 +10,17 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "check": "pnpm test && pnpm build",
+    "e2e": "pnpm --filter @birzha/web build && playwright test",
+    "e2e:run": "playwright test",
+    "e2e:roles": "pnpm --filter @birzha/web build && playwright test e2e/role-nav-auth.spec.ts",
     "dev:api": "pnpm --filter @birzha/api dev",
     "dev:web": "pnpm --filter @birzha/web dev"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "cross-env": "^7.0.3",
     "turbo": "^2.5.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wait-on": "^8.0.1"
   }
 }

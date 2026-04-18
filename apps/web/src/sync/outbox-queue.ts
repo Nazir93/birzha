@@ -1,10 +1,19 @@
 import type { OutboxItem } from "./types.js";
 import { getFallbackStorage } from "./fallback-storage.js";
+import { getOutboxScopeKey } from "./outbox-scope.js";
 import type { StorageLike } from "./storage-types.js";
 
-/** Ключ legacy-очереди в `localStorage` (миграция в IndexedDB в браузере). */
+/** Ключ очереди в `localStorage` для текущей области (без входа — прежний `birzha:outbox:v1`). */
+export function getOutboxStorageKey(): string {
+  const scope = getOutboxScopeKey();
+  if (scope === "default") {
+    return "birzha:outbox:v1";
+  }
+  return `birzha:outbox:v1:${scope}`;
+}
+
+/** Стабильный ключ для тестов при `syncOutboxScopeTo("default")`. */
 export const OUTBOX_STORAGE_KEY = "birzha:outbox:v1";
-const STORAGE_KEY = OUTBOX_STORAGE_KEY;
 
 export type { StorageLike } from "./storage-types.js";
 
@@ -16,7 +25,7 @@ function defaultStorage(): StorageLike {
 }
 
 export function loadOutboxSync(storage: StorageLike = defaultStorage()): OutboxItem[] {
-  const raw = storage.getItem(STORAGE_KEY);
+  const raw = storage.getItem(getOutboxStorageKey());
   if (!raw) {
     return [];
   }
@@ -32,7 +41,7 @@ export function loadOutboxSync(storage: StorageLike = defaultStorage()): OutboxI
 }
 
 function saveOutbox(items: OutboxItem[], storage: StorageLike): void {
-  storage.setItem(STORAGE_KEY, JSON.stringify(items));
+  storage.setItem(getOutboxStorageKey(), JSON.stringify(items));
 }
 
 export type EnqueueInput = Omit<OutboxItem, "createdAt" | "localActionId"> & {
@@ -73,5 +82,5 @@ export function outboxLengthSync(storage: StorageLike = defaultStorage()): numbe
 
 /** Сброс очереди (только для тестов / отладки). */
 export function clearOutboxSync(storage: StorageLike = defaultStorage()): void {
-  storage.setItem(STORAGE_KEY, "[]");
+  storage.setItem(getOutboxStorageKey(), "[]");
 }

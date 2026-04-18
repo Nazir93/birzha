@@ -1,0 +1,74 @@
+import type { FastifyInstance } from "fastify";
+import { createPurchaseDocumentBodySchema } from "@birzha/contracts";
+import { z } from "zod";
+
+import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
+import type { ProductGradeRepository } from "../application/ports/product-grade-repository.port.js";
+import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
+import type { WarehouseRepository } from "../application/ports/warehouse-repository.port.js";
+
+import { sendMappedError } from "./map-http-error.js";
+import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
+
+export function registerPurchaseDocumentRoutes(
+  app: FastifyInstance,
+  deps: {
+    warehouses: WarehouseRepository;
+    grades: ProductGradeRepository;
+    purchaseDocuments: PurchaseDocumentRepository;
+    createPurchaseDocument: CreatePurchaseDocumentUseCase;
+  },
+  routeAuth: BusinessRouteAuth,
+): void {
+  const { warehouses, grades, purchaseDocuments, createPurchaseDocument } = deps;
+
+  app.get("/warehouses", { ...withPreHandlers(routeAuth.catalogRead) }, async (_req, reply) => {
+    try {
+      const list = await warehouses.list();
+      return reply.send({ warehouses: list });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/product-grades", { ...withPreHandlers(routeAuth.catalogRead) }, async (_req, reply) => {
+    try {
+      const list = await grades.list();
+      return reply.send({ productGrades: list });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/purchase-documents", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+    try {
+      const documents = await purchaseDocuments.listSummaries();
+      return reply.send({ purchaseDocuments: documents });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/purchase-documents/:documentId", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
+    try {
+      const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
+      const doc = await purchaseDocuments.findByIdWithLines(params.documentId);
+      if (!doc) {
+        return reply.code(404).send({ error: "purchase_document_not_found", documentId: params.documentId });
+      }
+      return reply.send(doc);
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/purchase-documents", { ...withPreHandlers(routeAuth.batchCreate) }, async (req, reply) => {
+    try {
+      const body = createPurchaseDocumentBodySchema.parse(req.body);
+      const result = await createPurchaseDocument.execute(body);
+      return reply.code(201).send(result);
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+}

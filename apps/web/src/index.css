@@ -1,0 +1,44 @@
+/* Глобальные улучшения фокуса и доступности (остальная вёрстка — inline-стили в компонентах). */
+html {
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Печать отчёта по рейсу: экранный chrome скрыт классом .no-print */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  html {
+    font-size: 11pt;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

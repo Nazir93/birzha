@@ -1,70 +1,67 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 
+import { defaultRouteForUser } from "./auth/role-panels.js";
+import { useAuth } from "./auth/auth-context.js";
+import { AppNav } from "./components/AppNav.js";
+import { CreateTripForm } from "./components/CreateTripForm.js";
+import { LoginPage } from "./components/LoginPage.js";
+import { OperationsPanel } from "./components/OperationsPanel.js";
+import { PurchaseNakladnayaSection } from "./components/PurchaseNakladnayaSection.js";
+import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
+import { RequirePanel } from "./components/RequirePanel.js";
+import { TripReportPanel } from "./components/TripReportPanel.js";
+import { routes } from "./routes.js";
 import {
   enqueue,
   loadOutbox,
   processSyncQueueSerialized,
+  requestOutboxBackgroundSync,
+  subscribeBackgroundSyncMessages,
   subscribeSyncOnOnline,
   type ProcessSyncResult,
 } from "./sync/index.js";
+import { getOutboxScopeKey } from "./sync/outbox-scope.js";
+import { btnStyleInline, errorText, muted, preJson, sectionCard, warnText } from "./ui/styles.js";
 
-type MetaResponse = {
-  name: string;
-  domain?: string;
-  batchesApi: string;
-  tripsApi: string;
-  tripShipmentLedger: string;
-  tripSaleLedger: string;
-  tripShortageLedger: string;
-  syncApi: string;
-};
-
-const sectionStyle: CSSProperties = {
-  marginTop: "1.25rem",
-  fontSize: "0.95rem",
-  padding: "1rem",
-  border: "1px solid #e4e4e7",
-  borderRadius: 8,
-  background: "#fafafa",
-};
-
-const btnStyle: CSSProperties = {
-  marginRight: "0.5rem",
-  marginTop: "0.5rem",
-  padding: "0.45rem 0.85rem",
-  fontSize: "0.9rem",
-  cursor: "pointer",
-  borderRadius: 6,
-  border: "1px solid #d4d4d8",
-  background: "#fff",
-};
+function HomeRedirect() {
+  const { ready, meta, user } = useAuth();
+  if (!ready) {
+    return (
+      <p role="status" aria-live="polite">
+        Загрузка…
+      </p>
+    );
+  }
+  const to = meta?.authApi === "enabled" && user ? defaultRouteForUser(user) : routes.reports;
+  return <Navigate to={to} replace />;
+}
 
 export function App() {
+  const { meta, bootstrapError } = useAuth();
   const [queueTick, setQueueTick] = useState(0);
   const refreshQueue = useCallback(() => setQueueTick((t) => t + 1), []);
 
   const outboxQuery = useQuery({
-    queryKey: ["outbox", queueTick],
+    queryKey: ["outbox", queueTick, getOutboxScopeKey()],
     queryFn: () => loadOutbox(),
-  });
-
-  const meta = useQuery({
-    queryKey: ["meta"],
-    queryFn: async (): Promise<MetaResponse> => {
-      const res = await fetch("/api/meta");
-      if (!res.ok) {
-        throw new Error(`meta ${res.status}`);
-      }
-      return res.json() as Promise<MetaResponse>;
-    },
-    retry: 1,
   });
 
   const [lastSync, setLastSync] = useState<ProcessSyncResult | null>(null);
 
   useEffect(() => {
     return subscribeSyncOnOnline({
+      periodicIntervalMs: 120_000,
+      onResult: (result) => {
+        setLastSync(result);
+        refreshQueue();
+      },
+    });
+  }, [refreshQueue]);
+
+  useEffect(() => {
+    return subscribeBackgroundSyncMessages({
       onResult: (result) => {
         setLastSync(result);
         refreshQueue();
@@ -92,88 +89,164 @@ export function App() {
           tripNumber: `О-${String(Date.now() % 1_000_000).padStart(6, "0")}`,
         },
       });
+      void requestOutboxBackgroundSync();
       refreshQueue();
       setLastSync(null);
     })();
   };
 
-  const syncEnabled = meta.data?.syncApi === "enabled";
+  const syncEnabled = meta?.syncApi === "enabled";
 
   return (
-    <main style={{ fontFamily: "system-ui", padding: "1.5rem", maxWidth: 720 }}>
-      <h1 style={{ marginTop: 0 }}>Биржа</h1>
-      <p style={{ color: "#52525b" }}>
-        Клиент: Vite + React + TanStack Query. API: <code>pnpm dev:api</code> на порту 3000.
-      </p>
-      <p style={{ color: "#52525b" }}>
-        В dev запросы идут на <code>/api/…</code> (прокси в vite.config.ts).
-      </p>
-
-      <section style={sectionStyle}>
-        <strong>GET /api/meta</strong>
-        {meta.isPending && <p>Загрузка…</p>}
-        {meta.isError && <p>Нет ответа — запустите API.</p>}
-        {meta.data && (
-          <pre
-            style={{
-              margin: "0.5rem 0 0",
-              padding: "0.75rem",
-              background: "#f4f4f5",
-              borderRadius: 6,
-              overflow: "auto",
-            }}
-          >
-            {JSON.stringify(meta.data, null, 2)}
-          </pre>
-        )}
-      </section>
-
-      <section style={sectionStyle}>
-        <strong>Офлайн-очередь → POST /api/sync</strong>
-        <p style={{ margin: "0.5rem 0", color: "#52525b" }}>
-          Очередь в браузере — <strong>IndexedDB</strong> (однократная миграция из <code>localStorage</code>); в
-          среде без IDB — память / <code>localStorage</code>. Отправка по одному запросу. При появлении сети и при
-          возврате на вкладку выполняется автоматическая попытка синка (тот же конвейер, что и по кнопке). При ответе{" "}
-          <code>rejected</code> очередь останавливается, первое действие не удаляется.
+    <main style={{ fontFamily: "system-ui, sans-serif", padding: "1.5rem", maxWidth: 880 }}>
+      <h1 className="no-print" style={{ marginTop: 0 }}>
+        Биржа
+      </h1>
+      {import.meta.env.DEV ? (
+        <p className="no-print" style={muted}>
+          Клиент: Vite + React + TanStack Query + React Router. API: <code>pnpm dev:api</code> на порту 3000, в dev —
+          прокси <code>/api/…</code>.
         </p>
-        {!syncEnabled && meta.data && (
-          <p style={{ color: "#b45309", margin: "0.5rem 0" }}>
-            <code>syncApi</code> не enabled — эндпоинт <code>/sync</code> на сервере отключён (нужен полный контур репозиториев). Кнопка всё равно шлёт запрос (удобно для отладки).
-          </p>
-        )}
-        <p style={{ margin: "0.35rem 0" }}>
-          В очереди: <strong>{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
-        </p>
-        <div>
-          <button type="button" style={btnStyle} onClick={handleEnqueueDemo}>
-            Добавить в очередь (create_trip)
-          </button>
-          <button
-            type="button"
-            style={btnStyle}
-            disabled={syncMutation.isPending}
-            onClick={() => syncMutation.mutate()}
-          >
-            {syncMutation.isPending ? "Синхронизация…" : "Синхронизировать"}
-          </button>
-        </div>
-        {lastSync && (
-          <pre
-            style={{
-              marginTop: "0.75rem",
-              padding: "0.75rem",
-              background: "#f4f4f5",
-              borderRadius: 6,
-              fontSize: "0.85rem",
-            }}
-          >
-            {JSON.stringify(lastSync, null, 2)}
-          </pre>
-        )}
-        {syncMutation.isError && (
-          <p style={{ color: "#b91c1c", marginTop: "0.5rem" }}>Ошибка вызова синхронизации.</p>
-        )}
-      </section>
+      ) : null}
+
+      <div className="no-print">
+        <AppNav />
+      </div>
+
+      <Routes>
+        <Route path={routes.login} element={<LoginPage />} />
+        <Route element={<RequireApiAuthGate />}>
+          <Route path="/" element={<HomeRedirect />} />
+          <Route
+            path={routes.reports}
+            element={
+              <RequirePanel panel="reports">
+                <section style={sectionCard}>
+                  <div className="no-print">
+                    <CreateTripForm />
+                  </div>
+                  <TripReportPanel />
+                </section>
+              </RequirePanel>
+            }
+          />
+          <Route
+            path={routes.purchaseNakladnaya}
+            element={
+              <RequirePanel panel="nakladnaya">
+                <section style={sectionCard}>
+                  <PurchaseNakladnayaSection />
+                </section>
+              </RequirePanel>
+            }
+          />
+          <Route
+            path={routes.operations}
+            element={
+              <RequirePanel panel="operations">
+                <section style={sectionCard}>
+                  <OperationsPanel />
+                </section>
+              </RequirePanel>
+            }
+          />
+          <Route
+            path={routes.service}
+            element={
+              <RequirePanel panel="service">
+                <section style={sectionCard} aria-labelledby="service-heading">
+                <h2 id="service-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
+                  GET /api/meta
+                </h2>
+                {bootstrapError && (
+                  <p role="alert" style={errorText}>
+                    Нет ответа — запустите API.
+                  </p>
+                )}
+                {!bootstrapError && meta && (
+                  <pre style={preJson} tabIndex={0} aria-label="JSON ответа GET /api/meta">
+                    {JSON.stringify(meta, null, 2)}
+                  </pre>
+                )}
+              </section>
+              </RequirePanel>
+            }
+          />
+          <Route
+            path={routes.offline}
+            element={
+              <RequirePanel panel="offline">
+                <section style={sectionCard} aria-labelledby="offline-heading">
+                <strong id="offline-heading">Офлайн-очередь → POST /api/sync</strong>
+                <p style={{ ...muted, margin: "0.5rem 0" }}>
+                  Очередь в браузере — <strong>IndexedDB</strong> (однократная миграция из <code>localStorage</code>); в
+                  среде без IDB — память / <code>localStorage</code>. Отправка по одному запросу. При появлении сети и при
+                  возврате на вкладку выполняется автоматическая попытка синка (тот же конвейер, что и по кнопке); пока
+                  вкладка открыта и есть сеть — дополнительно раз в ~2 минуты. В поддерживаемых браузерах после добавления в
+                  очередь запрашивается <strong>Background Sync</strong> (при срабатывании SW просит вкладку прогнать тот же
+                  конвейер). При ответе <code>rejected</code> очередь
+                  останавливается, первое действие не удаляется.
+                </p>
+                {!syncEnabled && meta && (
+                  <p style={{ ...warnText, margin: "0.5rem 0" }}>
+                    <code>syncApi</code> не enabled — эндпоинт <code>/sync</code> на сервере отключён (нужен полный контур
+                    репозиториев). Кнопка всё равно шлёт запрос (удобно для отладки).
+                  </p>
+                )}
+                <p style={{ margin: "0.35rem 0" }}>
+                  В очереди:{" "}
+                  <strong id="offline-queue-count">
+                    {outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}
+                  </strong>
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
+                  <button type="button" style={btnStyleInline} onClick={handleEnqueueDemo}>
+                    Добавить в очередь (create_trip)
+                  </button>
+                  <button
+                    type="button"
+                    style={btnStyleInline}
+                    disabled={syncMutation.isPending}
+                    aria-busy={syncMutation.isPending ? true : undefined}
+                    onClick={() => syncMutation.mutate()}
+                  >
+                    {syncMutation.isPending ? "Синхронизация…" : "Синхронизировать"}
+                  </button>
+                </div>
+                {lastSync && (
+                  <>
+                    {lastSync.stoppedReason === "rejected" && lastSync.lastSync?.status === "rejected" && (
+                      <p role="status" aria-live="polite" style={{ ...muted, marginTop: "0.75rem", marginBottom: 0 }}>
+                        Сервер отклонил действие: <strong>{lastSync.lastSync.reason}</strong>. {lastSync.lastSync.resolution}
+                      </p>
+                    )}
+                    {lastSync.stoppedReason === "network_error" && (
+                      <p role="alert" style={{ ...errorText, marginTop: "0.75rem", marginBottom: 0 }}>
+                        Запрос к <code>/api/sync</code> не выполнен
+                        {lastSync.httpStatus != null ? ` (HTTP ${lastSync.httpStatus})` : ""}.
+                      </p>
+                    )}
+                    <pre
+                      style={{ ...preJson, marginTop: "0.75rem" }}
+                      tabIndex={0}
+                      aria-label="Результат последней синхронизации очереди, JSON"
+                    >
+                      {JSON.stringify(lastSync, null, 2)}
+                    </pre>
+                  </>
+                )}
+                {syncMutation.isError && (
+                  <p role="alert" style={{ ...errorText, marginTop: "0.5rem" }}>
+                    Ошибка вызова синхронизации.
+                  </p>
+                )}
+              </section>
+              </RequirePanel>
+            }
+          />
+          <Route path="*" element={<HomeRedirect />} />
+        </Route>
+      </Routes>
     </main>
   );
 }

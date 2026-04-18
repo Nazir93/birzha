@@ -17,6 +17,7 @@ export function persistenceStateToInsert(state: BatchPersistenceState): BatchIns
     soldGrams: kgToGrams(state.soldKg),
     writtenOffGrams: kgToGrams(state.writtenOffKg),
     pricePerKg: state.pricePerKg.toFixed(6),
+    warehouseId: state.warehouseId ?? null,
   };
 }
 
@@ -31,5 +32,6 @@ export function rowToPersistenceState(row: BatchRow): BatchPersistenceState {
     soldKg: gramsToKg(row.soldGrams),
     writtenOffKg: gramsToKg(row.writtenOffGrams),
     pricePerKg: Number(row.pricePerKg),
+    warehouseId: row.warehouseId ?? null,
   };
 }

@@ -57,6 +57,15 @@ describe("GetTripReportUseCase", () => {
     expect(saleAgg.totalRevenueKopecks).toBe(400n);
     expect(saleAgg.totalCashKopecks).toBe(400n);
     expect(saleAgg.totalDebtKopecks).toBe(0n);
+    expect(saleAgg.byClient).toEqual([
+      {
+        clientLabel: "",
+        grams: 400n,
+        revenueKopecks: 400n,
+        cashKopecks: 400n,
+        debtKopecks: 0n,
+      },
+    ]);
     expect(shortage.totalGrams).toBe(0n);
     expect(financials.revenueKopecks).toBe(400n);
     expect(financials.costOfSoldKopecks).toBe(320n);

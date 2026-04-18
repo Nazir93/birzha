@@ -10,19 +10,26 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@birzha/contracts": "workspace:*",
     "@tanstack/react-query": "^5.74.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "workbox-window": "^7.4.0"
+    "react-router-dom": "^7.14.1",
+    "workbox-window": "^7.4.0",
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^20.9.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.3",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^3.1.1"
+    "vitest": "^3.1.1",
+    "workbox-core": "7.4.0",
+    "workbox-precaching": "7.4.0",
+    "workbox-routing": "7.4.0"
   }
 }

@@ -7,6 +7,7 @@ import type { TripSaleRepository } from "./application/ports/trip-sale-repositor
 import type { TripShipmentRepository } from "./application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "./application/ports/trip-shortage-repository.port.js";
 import type { SyncIdempotencyRepository } from "./application/ports/sync-idempotency.port.js";
+import type { CounterpartyRepository } from "./application/ports/counterparty-repository.port.js";
 import type { SellFromTripTransactionRunner } from "./application/sale/sell-from-trip.use-case.js";
 import { InMemoryTripRepository } from "./application/testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "./application/testing/in-memory-trip-sale.repository.js";
@@ -18,7 +19,11 @@ import type { RecordTripShortageTransactionRunner } from "./application/trip/rec
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
 import type { AppEnv } from "./config.js";
 import type { DbClient } from "./db/client.js";
+import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
+import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
+import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
+import { createBusinessRouteAuth } from "./http/route-auth.js";
 import { registerSyncRoutes } from "./http/register-sync-routes.js";
 import { registerTripRoutes } from "./http/register-trip-routes.js";
 import { DrizzleBatchRepository } from "./infrastructure/persistence/drizzle-batch.repository.js";
@@ -27,6 +32,15 @@ import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
 import { DrizzleSyncIdempotencyRepository } from "./infrastructure/persistence/drizzle-sync-idempotency.repository.js";
+import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
+import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/drizzle-counterparty.repository.js";
+import { DrizzleProductGradeRepository } from "./infrastructure/persistence/drizzle-product-grade.repository.js";
+import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
+import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
+import { InMemoryCounterpartyRepository } from "./infrastructure/persistence/in-memory-counterparty.repository.js";
+import { InMemoryPurchaseDocumentRepository } from "./infrastructure/persistence/in-memory-purchase-document.repository.js";
+import { StaticProductGradeRepository } from "./infrastructure/persistence/static-product-grade.repository.js";
+import { StaticWarehouseRepository } from "./infrastructure/persistence/static-warehouse.repository.js";
 
 export async function buildApp(options: {
   env: AppEnv;
@@ -43,6 +57,8 @@ export async function buildApp(options: {
   shortageRepository?: TripShortageRepository | null;
   /** Идемпотентность `POST /sync`; по умолчанию in-memory или Drizzle при `db`. */
   syncIdempotencyRepository?: SyncIdempotencyRepository;
+  /** Справочник контрагентов; при `db` по умолчанию Drizzle, при полном in-memory стеке — in-memory. */
+  counterpartyRepository?: CounterpartyRepository | null;
 }): Promise<FastifyInstance> {
   const { env, db } = options;
   const app = Fastify({ logger: env.NODE_ENV !== "test" });
@@ -99,6 +115,21 @@ export async function buildApp(options: {
     options.shortageRepository === undefined
   ) {
     shortageRepository = new InMemoryTripShortageRepository();
+  }
+
+  let counterpartyRepository: CounterpartyRepository | null =
+    options.counterpartyRepository !== undefined ? options.counterpartyRepository : db ? new DrizzleCounterpartyRepository(db) : null;
+
+  if (
+    counterpartyRepository === null &&
+    options.counterpartyRepository === undefined &&
+    batchRepository &&
+    tripRepository &&
+    shipmentRepository &&
+    saleRepository &&
+    shortageRepository
+  ) {
+    counterpartyRepository = new InMemoryCounterpartyRepository();
   }
 
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
@@ -158,19 +189,95 @@ export async function buildApp(options: {
     return reply.send({ status: "ready", database: "ok" });
   });
 
+  const warehouseRepository =
+    batchRepository && tripRepository && shipmentRepository && saleRepository && shortageRepository && counterpartyRepository
+      ? db
+        ? new DrizzleWarehouseRepository(db)
+        : new StaticWarehouseRepository()
+      : null;
+
+  const productGradeRepository =
+    batchRepository && tripRepository && shipmentRepository && saleRepository && shortageRepository && counterpartyRepository
+      ? db
+        ? new DrizzleProductGradeRepository(db)
+        : new StaticProductGradeRepository()
+      : null;
+
+  const purchaseDocumentRepository =
+    batchRepository &&
+    tripRepository &&
+    shipmentRepository &&
+    saleRepository &&
+    shortageRepository &&
+    counterpartyRepository &&
+    productGradeRepository
+      ? db
+        ? new DrizzlePurchaseDocumentRepository(db)
+        : new InMemoryPurchaseDocumentRepository(batchRepository, productGradeRepository)
+      : null;
+
+  const createPurchaseDocumentUseCase =
+    warehouseRepository && productGradeRepository && purchaseDocumentRepository
+      ? new CreatePurchaseDocumentUseCase(warehouseRepository, productGradeRepository, purchaseDocumentRepository)
+      : null;
+
   app.get("/meta", async () => ({
     name: "@birzha/api",
     domain: "ok",
     batchesApi: batchRepository ? "enabled" : "disabled",
+    purchaseDocumentsApi: createPurchaseDocumentUseCase ? "enabled" : "disabled",
     tripsApi: tripRepository ? "enabled" : "disabled",
     tripShipmentLedger: shipmentRepository ? "enabled" : "disabled",
     tripSaleLedger: saleRepository ? "enabled" : "disabled",
     tripShortageLedger: shortageRepository ? "enabled" : "disabled",
+    counterpartyCatalogApi: counterpartyRepository ? "enabled" : "disabled",
     syncApi: syncIdempotency ? "enabled" : "disabled",
+    authApi: db && env.JWT_SECRET ? "enabled" : "disabled",
+    requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
   }));
 
-  if (batchRepository && tripRepository && shipmentRepository && saleRepository && shortageRepository && syncIdempotency) {
-    registerTripRoutes(app, tripRepository, shipmentRepository, saleRepository, shortageRepository, batchRepository);
+  if (db && env.JWT_SECRET) {
+    await registerAuthRoutes(app, { db, env });
+  }
+
+  const routeAuth = createBusinessRouteAuth(app, env);
+
+  if (counterpartyRepository) {
+    registerCounterpartyRoutes(app, counterpartyRepository, routeAuth);
+  }
+
+  if (
+    batchRepository &&
+    tripRepository &&
+    shipmentRepository &&
+    saleRepository &&
+    shortageRepository &&
+    counterpartyRepository &&
+    syncIdempotency &&
+    warehouseRepository &&
+    productGradeRepository &&
+    purchaseDocumentRepository &&
+    createPurchaseDocumentUseCase
+  ) {
+    registerPurchaseDocumentRoutes(
+      app,
+      {
+        warehouses: warehouseRepository,
+        grades: productGradeRepository,
+        purchaseDocuments: purchaseDocumentRepository,
+        createPurchaseDocument: createPurchaseDocumentUseCase,
+      },
+      routeAuth,
+    );
+    registerTripRoutes(
+      app,
+      tripRepository,
+      shipmentRepository,
+      saleRepository,
+      shortageRepository,
+      batchRepository,
+      routeAuth,
+    );
     registerBatchRoutes(
       app,
       batchRepository,
@@ -178,9 +285,12 @@ export async function buildApp(options: {
       shipmentRepository,
       saleRepository,
       shortageRepository,
+      counterpartyRepository,
+      routeAuth,
       runShipInTransaction,
       runSellInTransaction,
       runRecordTripShortageInTransaction,
+      db,
     );
 
     const applySync = new ApplySyncActionUseCase(
@@ -190,11 +300,12 @@ export async function buildApp(options: {
       shipmentRepository,
       saleRepository,
       shortageRepository,
+      counterpartyRepository,
       runShipInTransaction,
       runSellInTransaction,
       runRecordTripShortageInTransaction,
     );
-    registerSyncRoutes(app, applySync);
+    registerSyncRoutes(app, applySync, routeAuth);
   }
 
   return app;

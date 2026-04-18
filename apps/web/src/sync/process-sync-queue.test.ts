@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { OUTBOX_STORAGE_KEY, clearOutboxSync, enqueueSync, loadOutboxSync } from "./outbox-queue.js";
 import { processSyncQueue } from "./process-sync-queue.js";
+import { syncOutboxScopeTo } from "./outbox-scope.js";
+
+beforeEach(() => {
+  syncOutboxScopeTo("default");
+});
 
 function memoryStorage(): Storage {
   const m = new Map<string, string>();

@@ -6,6 +6,7 @@ import { resetDefaultOutboxBackendCacheForTests } from "./outbox-backend.js";
 import { enqueue, loadOutbox } from "./outbox-api.js";
 import { OUTBOX_STORAGE_KEY } from "./outbox-queue.js";
 import { resetOutboxIdbForTests } from "./outbox-idb.js";
+import { syncOutboxScopeTo } from "./outbox-scope.js";
 
 function installLocalStorage(): void {
   const m = new Map<string, string>();
@@ -28,6 +29,7 @@ function installLocalStorage(): void {
 }
 
 beforeEach(async () => {
+  syncOutboxScopeTo("default");
   await resetOutboxIdbForTests();
   resetDefaultOutboxBackendCacheForTests();
   installLocalStorage();

@@ -33,6 +33,13 @@ export type SaleLedgerAggregateJson = {
     cashKopecks: string;
     debtKopecks: string;
   }[];
+  byClient: {
+    clientLabel: string;
+    grams: string;
+    revenueKopecks: string;
+    cashKopecks: string;
+    debtKopecks: string;
+  }[];
 };
 
 export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLedgerAggregateJson {
@@ -43,6 +50,13 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     totalDebtKopecks: aggregate.totalDebtKopecks.toString(),
     byBatch: aggregate.byBatch.map((l) => ({
       batchId: l.batchId,
+      grams: l.grams.toString(),
+      revenueKopecks: l.revenueKopecks.toString(),
+      cashKopecks: l.cashKopecks.toString(),
+      debtKopecks: l.debtKopecks.toString(),
+    })),
+    byClient: aggregate.byClient.map((l) => ({
+      clientLabel: l.clientLabel,
       grams: l.grams.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),

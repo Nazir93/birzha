@@ -1,8 +1,14 @@
-import { OUTBOX_STORAGE_KEY, type EnqueueInput } from "./outbox-queue.js";
+import { getOutboxStorageKey, type EnqueueInput } from "./outbox-queue.js";
+import { indexedDbNameForScope } from "./outbox-names.js";
+import { getOutboxScopeKey } from "./outbox-scope.js";
 import type { OutboxItem } from "./types.js";
 
+export function getOutboxIndexedDbName(): string {
+  return indexedDbNameForScope(getOutboxScopeKey());
+}
+
+/** @deprecated используйте `getOutboxIndexedDbName()` */
 export const OUTBOX_IDB_NAME = "birzha-offline";
-const DB_NAME = OUTBOX_IDB_NAME;
 const DB_VERSION = 1;
 const STORE_OUTBOX = "outbox";
 const STORE_META = "meta";
@@ -28,8 +34,9 @@ function txDone(tx: IDBTransaction): Promise<void> {
 }
 
 function openDb(): Promise<IDBDatabase> {
+  const dbName = getOutboxIndexedDbName();
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(dbName, DB_VERSION);
     req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
     req.onsuccess = () => resolve(req.result);
     req.onupgradeneeded = () => {
@@ -62,7 +69,7 @@ function readLegacyLocalStorageOutbox(): OutboxItem[] {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis) || !globalThis.localStorage) {
     return [];
   }
-  const raw = globalThis.localStorage.getItem(OUTBOX_STORAGE_KEY);
+  const raw = globalThis.localStorage.getItem(getOutboxStorageKey());
   if (!raw) {
     return [];
   }
@@ -78,6 +85,9 @@ function readLegacyLocalStorageOutbox(): OutboxItem[] {
 }
 
 async function migrateFromLocalStorageIfNeeded(db: IDBDatabase): Promise<void> {
+  if (getOutboxScopeKey() !== "default") {
+    return;
+  }
   if (await readMetaFlag(db, META_KEY_MIGRATED_LS)) {
     return;
   }
@@ -94,13 +104,28 @@ async function migrateFromLocalStorageIfNeeded(db: IDBDatabase): Promise<void> {
   await txDone(tx);
 
   if (typeof globalThis !== "undefined" && "localStorage" in globalThis && globalThis.localStorage) {
-    if (globalThis.localStorage.getItem(OUTBOX_STORAGE_KEY) !== null) {
-      globalThis.localStorage.removeItem(OUTBOX_STORAGE_KEY);
+    const k = getOutboxStorageKey();
+    if (globalThis.localStorage.getItem(k) !== null) {
+      globalThis.localStorage.removeItem(k);
     }
   }
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+/** Закрыть текущее соединение (при смене пользователя / области). */
+export function resetOutboxIdbConnection(): void {
+  if (dbPromise) {
+    void dbPromise
+      .then((db) => {
+        db.close();
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  }
+  dbPromise = null;
+}
 
 export async function getOutboxIdb(): Promise<IDBDatabase> {
   if (!hasIndexedDb()) {
@@ -182,20 +207,13 @@ export { hasIndexedDb };
 
 /** Только для тестов: сброс кэша открытой БД и удаление IndexedDB. */
 export async function resetOutboxIdbForTests(): Promise<void> {
-  if (dbPromise && hasIndexedDb()) {
-    try {
-      const db = await dbPromise;
-      db.close();
-    } catch {
-      // игнор: открытие могло не завершиться
-    }
-  }
-  dbPromise = null;
+  resetOutboxIdbConnection();
   if (!hasIndexedDb()) {
     return;
   }
+  const name = getOutboxIndexedDbName();
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(DB_NAME);
+    const req = indexedDB.deleteDatabase(name);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error ?? new Error("deleteDatabase failed"));
     req.onblocked = () => resolve();

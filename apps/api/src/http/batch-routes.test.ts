@@ -26,6 +26,12 @@ describe("Batch HTTP", () => {
     const loaded = await batches.findById("http-b1");
     expect(loaded).not.toBeNull();
     expect(loaded!.remainingKg()).toBe(100);
+
+    const listRes = await app.inject({ method: "GET", url: "/batches" });
+    expect(listRes.statusCode).toBe(200);
+    const body = JSON.parse(listRes.body) as { batches: { id: string }[] };
+    expect(body.batches.some((b) => b.id === "http-b1")).toBe(true);
+
     await app.close();
   });
 
@@ -116,12 +122,21 @@ describe("Batch HTTP", () => {
 
     r = await app.inject({ method: "GET", url: "/trips/t-1/shipment-report" });
     const reportAfter = JSON.parse(r.body) as {
-      sales: { totalGrams: string; totalRevenueKopecks: string; totalCashKopecks: string; totalDebtKopecks: string };
+      sales: {
+        totalGrams: string;
+        totalRevenueKopecks: string;
+        totalCashKopecks: string;
+        totalDebtKopecks: string;
+        byClient: { clientLabel: string; grams: string }[];
+      };
     };
     expect(reportAfter.sales.totalGrams).toBe("50000");
     expect(reportAfter.sales.totalRevenueKopecks).toBe("60000");
     expect(reportAfter.sales.totalCashKopecks).toBe("60000");
     expect(reportAfter.sales.totalDebtKopecks).toBe("0");
+    expect(reportAfter.sales.byClient).toEqual([
+      { clientLabel: "", grams: "50000", revenueKopecks: "60000", cashKopecks: "60000", debtKopecks: "0" },
+    ]);
 
     const b = await batches.findById("flow-1");
     expect(b!.remainingKg()).toBe(450);

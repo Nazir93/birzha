@@ -12,6 +12,8 @@ export type BatchPersistenceState = {
   inTransitKg: number;
   soldKg: number;
   writtenOffKg: number;
+  /** Склад поступления (накладная); не участвует в инвариантах массы. */
+  warehouseId?: string | null;
 };
 
 export class Batch {
@@ -25,6 +27,7 @@ export class Batch {
     private inTransitKg: number,
     private soldKg: number,
     private writtenOffKg: number,
+    private readonly warehouseId: string | null = null,
   ) {}
 
   static create(config: {
@@ -33,10 +36,13 @@ export class Batch {
     totalKg: number;
     pricePerKg: number;
     distribution: BatchDistribution;
+    /** Склад, на который оформлено поступление (накладная). */
+    warehouseId?: string | null;
   }): Batch {
-    const { id, purchaseId, totalKg, pricePerKg, distribution } = config;
+    const { id, purchaseId, totalKg, pricePerKg, distribution, warehouseId } = config;
     Batch.assertNonNegativeFinite(totalKg, "totalKg");
     Batch.assertNonNegativeFinite(pricePerKg, "pricePerKg");
+    const wh = warehouseId ?? null;
 
     if (distribution === "awaiting_receipt") {
       return new Batch(
@@ -49,10 +55,11 @@ export class Batch {
         0,
         0,
         0,
+        wh,
       );
     }
 
-    return new Batch(id, purchaseId, totalKg, pricePerKg, 0, totalKg, 0, 0, 0);
+    return new Batch(id, purchaseId, totalKg, pricePerKg, 0, totalKg, 0, 0, 0, wh);
   }
 
   receiveOnWarehouse(kg: number): void {
@@ -143,6 +150,10 @@ export class Batch {
     return this.pricePerKg;
   }
 
+  getWarehouseId(): string | null {
+    return this.warehouseId;
+  }
+
   /**
    * Снимок для сохранения в БД (кг — как в домене; инфраструктура переводит в граммы).
    */
@@ -157,6 +168,7 @@ export class Batch {
       inTransitKg: this.inTransitKg,
       soldKg: this.soldKg,
       writtenOffKg: this.writtenOffKg,
+      warehouseId: this.warehouseId,
     };
   }
 
@@ -192,6 +204,7 @@ export class Batch {
       state.inTransitKg,
       state.soldKg,
       state.writtenOffKg,
+      state.warehouseId ?? null,
     );
   }
 

@@ -8,10 +8,23 @@ export type TripSaleAppend = {
   revenueKopecks: bigint;
   cashKopecks: bigint;
   debtKopecks: bigint;
+  /** null / undefined — не указан (агрегируется в пустую метку в отчёте). */
+  clientLabel?: string | null;
+  /** Ссылка на справочник; снимок имени дублируется в `clientLabel`. */
+  counterpartyId?: string | null;
 };
 
 export type TripSaleBatchLine = {
   batchId: string;
+  grams: bigint;
+  revenueKopecks: bigint;
+  cashKopecks: bigint;
+  debtKopecks: bigint;
+};
+
+export type TripSaleClientLine = {
+  /** Пустая строка — продажи без подписи клиента. */
+  clientLabel: string;
   grams: bigint;
   revenueKopecks: bigint;
   cashKopecks: bigint;
@@ -24,6 +37,7 @@ export type TripSaleAggregate = {
   totalCashKopecks: bigint;
   totalDebtKopecks: bigint;
   byBatch: TripSaleBatchLine[];
+  byClient: TripSaleClientLine[];
 };
 
 export interface TripSaleRepository {

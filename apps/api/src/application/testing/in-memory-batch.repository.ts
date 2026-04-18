@@ -12,4 +12,8 @@ export class InMemoryBatchRepository implements BatchRepository {
   async findById(id: string): Promise<Batch | null> {
     return this.byId.get(id) ?? null;
   }
+
+  async list(): Promise<Batch[]> {
+    return Array.from(this.byId.values()).sort((a, b) => a.getId().localeCompare(b.getId()));
+  }
 }

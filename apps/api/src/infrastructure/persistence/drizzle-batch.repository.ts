@@ -1,5 +1,5 @@
 import { Batch, type BatchPersistenceState } from "@birzha/domain";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import type { BatchRepository } from "../../application/ports/batch-repository.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -35,5 +35,10 @@ export class DrizzleBatchRepository implements BatchRepository {
       return null;
     }
     return Batch.restoreFromPersistence(rowToPersistenceState(row));
+  }
+
+  async list(): Promise<Batch[]> {
+    const rows = await this.db.select().from(batches).orderBy(asc(batches.id));
+    return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
   }
 }

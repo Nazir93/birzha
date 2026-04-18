@@ -1,0 +1,82 @@
+# Тесты, сборка, дымовой Playwright (in-memory API) и опционально E2E навигации по ролям с PostgreSQL.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test and build
+        run: pnpm check
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Playwright E2E (in-memory API)
+        run: pnpm exec playwright test
+
+  e2e-auth-nav:
+    runs-on: ubuntu-latest
+    needs: ci
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: birzha_e2e
+        ports:
+          - 5432:5432
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/birzha_e2e
+      E2E_JWT_SECRET: e2e-ci-jwt-secret-minimum-32-characters-here
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test and build
+        run: pnpm check
+
+      - name: Wait for Postgres
+        run: pnpm exec wait-on -t 120000 tcp:127.0.0.1:5432
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Playwright E2E (роли, REQUIRE_API_AUTH + PostgreSQL)
+        run: pnpm exec playwright test e2e/role-nav-auth.spec.ts

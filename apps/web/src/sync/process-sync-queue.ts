@@ -1,3 +1,4 @@
+import { apiFetch } from "../api/fetch-api.js";
 import { createStorageOutboxBackend, getDefaultOutboxBackend, type OutboxBackend } from "./outbox-backend.js";
 import { getOrCreateDeviceId } from "./device-id.js";
 import type { StorageLike } from "./storage-types.js";
@@ -49,7 +50,7 @@ function buildRequestBody(deviceId: string, item: OutboxItem): Record<string, un
 export async function processSyncQueue(options: ProcessSyncOptions = {}): Promise<ProcessSyncResult> {
   const syncUrl = options.syncUrl ?? "/api/sync";
   const outbox = resolveOutbox(options);
-  const fetchFn = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  const fetchFn = options.fetchImpl ?? apiFetch;
   const deviceId = getOrCreateDeviceId(options.storage);
 
   let processed = 0;

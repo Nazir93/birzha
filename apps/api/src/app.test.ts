@@ -31,18 +31,26 @@ describe("API", () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as {
       batchesApi: string;
+      purchaseDocumentsApi: string;
       tripsApi: string;
       tripShipmentLedger: string;
       tripSaleLedger: string;
       tripShortageLedger: string;
+      counterpartyCatalogApi: string;
       syncApi: string;
+      authApi: string;
+      requireApiAuth: string;
     };
     expect(body.batchesApi).toBe("disabled");
+    expect(body.purchaseDocumentsApi).toBe("disabled");
     expect(body.tripsApi).toBe("disabled");
     expect(body.tripShipmentLedger).toBe("disabled");
     expect(body.tripSaleLedger).toBe("disabled");
     expect(body.tripShortageLedger).toBe("disabled");
+    expect(body.counterpartyCatalogApi).toBe("disabled");
     expect(body.syncApi).toBe("disabled");
+    expect(body.authApi).toBe("disabled");
+    expect(body.requireApiAuth).toBe("disabled");
     await app.close();
   });
 });

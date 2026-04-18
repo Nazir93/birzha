@@ -57,6 +57,34 @@
       "when": 1776344865053,
       "tag": "0007_nice_carlie_cooper",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776438962950,
+      "tag": "0008_trip_sale_client_label",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776439815363,
+      "tag": "0009_users_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776449182459,
+      "tag": "0010_counterparties",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776455000000,
+      "tag": "0011_purchase_nakladnaya",
+      "breakpoints": true
     }
   ]
 }

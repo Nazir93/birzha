@@ -61,6 +61,57 @@ export class SalePaymentSplitError extends Error {
   }
 }
 
+export class CounterpartyNotFoundError extends Error {
+  readonly counterpartyId: string;
+
+  constructor(counterpartyId: string) {
+    super(`Контрагент не найден или отключён: ${counterpartyId}`);
+    this.name = "CounterpartyNotFoundError";
+    this.counterpartyId = counterpartyId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class WarehouseNotFoundError extends Error {
+  readonly warehouseId: string;
+
+  constructor(warehouseId: string) {
+    super(`Склад не найден: ${warehouseId}`);
+    this.name = "WarehouseNotFoundError";
+    this.warehouseId = warehouseId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class ProductGradeNotFoundError extends Error {
+  readonly productGradeId: string;
+
+  constructor(productGradeId: string) {
+    super(`Калибр / код строки не найден: ${productGradeId}`);
+    this.name = "ProductGradeNotFoundError";
+    this.productGradeId = productGradeId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/** Сумма строки накладной не сходится с кг × цена (допуск ±1 коп). */
+export class PurchaseLineTotalMismatchError extends Error {
+  readonly lineIndex: number;
+  readonly expectedKopecks: number;
+  readonly actualKopecks: number;
+
+  constructor(lineIndex: number, expectedKopecks: number, actualKopecks: number) {
+    super(
+      `Строка ${lineIndex + 1}: ожидаемая сумма ${expectedKopecks} коп., в теле ${actualKopecks} коп.`,
+    );
+    this.name = "PurchaseLineTotalMismatchError";
+    this.lineIndex = lineIndex;
+    this.expectedKopecks = expectedKopecks;
+    this.actualKopecks = actualKopecks;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class InsufficientStockForTripError extends Error {
   readonly tripId: string;
   readonly batchId: string;

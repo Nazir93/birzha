@@ -6,6 +6,7 @@ import { InMemoryTripRepository } from "../testing/in-memory-trip.repository.js"
 import { InMemoryTripSaleRepository } from "../testing/in-memory-trip-sale.repository.js";
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripShortageRepository } from "../testing/in-memory-trip-shortage.repository.js";
+import { InMemoryCounterpartyRepository } from "../../infrastructure/persistence/in-memory-counterparty.repository.js";
 import { CreatePurchaseUseCase } from "../purchase/create-purchase.use-case.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
 import { ShipToTripUseCase } from "../trip/ship-to-trip.use-case.js";
@@ -19,6 +20,7 @@ describe("ApplySyncActionUseCase", () => {
     const shipments = new InMemoryTripShipmentRepository();
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
     const idem = new InMemorySyncIdempotencyRepository();
 
     await new CreateTripUseCase(trips).execute({ id: "t1", tripNumber: "Ф-1" });
@@ -42,6 +44,7 @@ describe("ApplySyncActionUseCase", () => {
       shipments,
       sales,
       shortages,
+      counterparties,
     );
 
     const req = {
