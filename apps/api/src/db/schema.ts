@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { bigint, boolean, date, integer, numeric, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /** Склад поступления (Манас, Каякент и т.д.). */
@@ -28,7 +29,8 @@ export const purchaseDocuments = pgTable("purchase_documents", {
   warehouseId: text("warehouse_id")
     .notNull()
     .references(() => warehouses.id),
-  extraCostKopecks: bigint("extra_cost_kopecks", { mode: "bigint" }).notNull().default(0n),
+  /** default через sql — иначе drizzle-kit push падает на JSON.stringify(BigInt). */
+  extraCostKopecks: bigint("extra_cost_kopecks", { mode: "bigint" }).notNull().default(sql`0`),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
