@@ -13,6 +13,7 @@ import {
   expectedLineTotalKopecks,
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
+import { randomUuid } from "../lib/random-uuid.js";
 import { btnStyle, errorText, fieldStyle, muted, sectionBox, successText, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
 
 function todayIsoDate(): string {
@@ -34,7 +35,7 @@ type LineDraft = {
 
 function emptyLine(): LineDraft {
   return {
-    key: crypto.randomUUID(),
+    key: randomUuid(),
     productGradeId: "",
     totalKg: "",
     packageCount: "",
@@ -173,8 +174,9 @@ export function PurchaseNakladnayaSection() {
           Закупочная накладная
         </h3>
         <p style={muted}>
-          API накладных недоступен: на сервере нужен полный контур (партии, рейсы, sync) и миграция БД с таблицами закупки.
-          В <code>GET /api/meta</code> должно быть <code>purchaseDocumentsApi: &quot;enabled&quot;</code>.
+          API накладных недоступен: в <code>GET /api/meta</code> сейчас не <code>purchaseDocumentsApi: &quot;enabled&quot;</code>.
+          Обычно так бывает без <code>DATABASE_URL</code> на API (в production нужна БД и миграции, в т.ч. закупка) или при неполном контуре на сервере.
+          После обновления API в режиме разработки без БД контур поднимается в памяти — перезапустите <code>pnpm dev:api</code>.
         </p>
       </section>
     );
@@ -192,6 +194,11 @@ export function PurchaseNakladnayaSection() {
 
       {(warehousesQ.isError || gradesQ.isError) && (
         <p style={warnText}>Не загрузились справочники складов или калибров — проверьте API и миграции.</p>
+      )}
+      {listQ.isError && (
+        <p role="alert" style={errorText}>
+          Список накладных не загрузился: {listQ.error instanceof Error ? listQ.error.message : String(listQ.error)}
+        </p>
       )}
 
       <div style={{ display: "grid", gap: "0.5rem", maxWidth: 520, marginBottom: "0.75rem" }}>

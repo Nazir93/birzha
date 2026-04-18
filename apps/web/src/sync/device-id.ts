@@ -1,3 +1,4 @@
+import { randomUuid } from "../lib/random-uuid.js";
 import { getFallbackStorage } from "./fallback-storage.js";
 import { getOutboxScopeKey } from "./outbox-scope.js";
 import type { StorageLike } from "./storage-types.js";
@@ -20,7 +21,7 @@ export function getOrCreateDeviceId(storage: StorageLike = defaultStorage()): st
   if (existing && existing.length > 0) {
     return existing;
   }
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   storage.setItem(key, id);
   return id;
 }

@@ -11,6 +11,7 @@ import {
 import type { CreatePurchaseDocumentBody } from "@birzha/contracts";
 import { z, ZodError } from "zod";
 
+import { randomUuid } from "../lib/random-uuid.js";
 import { zodErrorMessage } from "./zod-error-message.js";
 
 function mapZod<T>(fn: () => T): T {
@@ -51,8 +52,8 @@ export function parseCreateBatchForm(input: {
   distribution: "awaiting_receipt" | "on_hand";
 }) {
   return mapZod(() => {
-    const id = input.batchId.trim() || crypto.randomUUID();
-    const purchaseId = input.purchaseId.trim() || crypto.randomUUID();
+    const id = input.batchId.trim() || randomUuid();
+    const purchaseId = input.purchaseId.trim() || randomUuid();
     const totalKg = parseDecimalKg(input.totalKg);
     const pricePerKg = parseDecimalKg(input.pricePerKg);
     return createBatchBodySchema.parse({ id, purchaseId, totalKg, pricePerKg, distribution: input.distribution });
@@ -91,7 +92,7 @@ export function parseSellFromTripForm(input: {
     const batchId = batchIdParam.parse(input.batchId.trim());
     const tripId = batchIdParam.parse(input.tripId.trim());
     const kg = parseDecimalKg(input.kg);
-    const saleId = input.saleId.trim() || crypto.randomUUID();
+    const saleId = input.saleId.trim() || randomUuid();
     const pricePerKg = parseDecimalKg(input.pricePerKg);
 
     const base: z.infer<typeof sellFromTripBodySchema> = {
@@ -130,7 +131,7 @@ export function parseRecordTripShortageForm(batchIdRaw: string, tripIdRaw: strin
 
 export function parseCreateTripForm(tripIdRaw: string, tripNumberRaw: string) {
   return mapZod(() => {
-    const id = tripIdRaw.trim() || crypto.randomUUID();
+    const id = tripIdRaw.trim() || randomUuid();
     const tripNumber = tripNumberRaw.trim();
     return createTripBodySchema.parse({ id, tripNumber });
   });

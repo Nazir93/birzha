@@ -22,6 +22,7 @@ import {
   subscribeSyncOnOnline,
   type ProcessSyncResult,
 } from "./sync/index.js";
+import { randomUuid } from "./lib/random-uuid.js";
 import { getOutboxScopeKey } from "./sync/outbox-scope.js";
 import { btnStyleInline, errorText, muted, preJson, sectionCard, warnText } from "./ui/styles.js";
 
@@ -85,7 +86,7 @@ export function App() {
       await enqueue({
         actionType: "create_trip",
         payload: {
-          id: `ui-trip-${crypto.randomUUID()}`,
+          id: `ui-trip-${randomUuid()}`,
           tripNumber: `О-${String(Date.now() % 1_000_000).padStart(6, "0")}`,
         },
       });

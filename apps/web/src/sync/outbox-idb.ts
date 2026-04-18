@@ -1,3 +1,4 @@
+import { randomUuid } from "../lib/random-uuid.js";
 import { getOutboxStorageKey, type EnqueueInput } from "./outbox-queue.js";
 import { indexedDbNameForScope } from "./outbox-names.js";
 import { getOutboxScopeKey } from "./outbox-scope.js";
@@ -154,7 +155,7 @@ export async function idbEnqueue(input: EnqueueInput): Promise<OutboxItem> {
   const db = await getOutboxIdb();
   const row: OutboxItem = {
     ...input,
-    localActionId: input.localActionId ?? crypto.randomUUID(),
+    localActionId: input.localActionId ?? randomUuid(),
     createdAt: Date.now(),
   };
   const tx = db.transaction(STORE_OUTBOX, "readwrite");

@@ -1,3 +1,4 @@
+import { randomUuid } from "../lib/random-uuid.js";
 import type { OutboxItem } from "./types.js";
 import { getFallbackStorage } from "./fallback-storage.js";
 import { getOutboxScopeKey } from "./outbox-scope.js";
@@ -53,7 +54,7 @@ export function enqueueSync(item: EnqueueInput, storage: StorageLike = defaultSt
   const queue = loadOutboxSync(storage);
   const row: OutboxItem = {
     ...item,
-    localActionId: item.localActionId ?? crypto.randomUUID(),
+    localActionId: item.localActionId ?? randomUuid(),
     createdAt: Date.now(),
   };
   queue.push(row);
