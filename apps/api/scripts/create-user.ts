@@ -26,6 +26,18 @@ const ROLE_CODES = [
   "accountant",
 ] as const;
 
+/** Как в `drizzle/0009_users_roles.sql` — `db:push` не выполняет INSERT из миграций. */
+const ROLE_SEED: { code: string; name: string }[] = [
+  { code: "admin", name: "Администратор" },
+  { code: "manager", name: "Руководитель" },
+  { code: "purchaser", name: "Закупщик" },
+  { code: "warehouse", name: "Кладовщик" },
+  { code: "logistics", name: "Логист" },
+  { code: "receiver", name: "Приёмщик" },
+  { code: "seller", name: "Продавец" },
+  { code: "accountant", name: "Бухгалтер" },
+];
+
 /** Аргументы после `node` / `tsx` и пути к скрипту; `pnpm … --` даёт лишний `--`. */
 function parseArgs(argv: string[]): { login: string; password: string; role: string } {
   let login = "";
@@ -74,28 +86,37 @@ if (!ROLE_CODES.includes(role as (typeof ROLE_CODES)[number])) {
 const { db, sql } = createDb(process.env.DATABASE_URL);
 
 try {
-  const existing = await db.select().from(schema.users).where(eq(schema.users.login, login.trim()));
-  if (existing.length > 0) {
-    console.error(`Пользователь с логином "${login}" уже есть. Выберите другой --login.`);
+  await db.transaction(async (tx) => {
+    await tx.insert(schema.roles).values(ROLE_SEED).onConflictDoNothing();
+
+    const existing = await tx.select().from(schema.users).where(eq(schema.users.login, login.trim()));
+    if (existing.length > 0) {
+      throw new Error(`USER_EXISTS:${login.trim()}`);
+    }
+
+    const id = randomUUID();
+    await tx.insert(schema.users).values({
+      id,
+      login: login.trim(),
+      passwordHash: hashPassword(password),
+      isActive: true,
+    });
+    await tx.insert(schema.userRoles).values({
+      userId: id,
+      roleCode: role,
+      scopeType: "global",
+      scopeId: "",
+    });
+
+    console.log(`Создан пользователь: login=${login.trim()}, role=${role}, id=${id}`);
+  });
+} catch (e) {
+  const msg = e instanceof Error ? e.message : "";
+  if (msg.startsWith("USER_EXISTS:")) {
+    const l = msg.slice("USER_EXISTS:".length);
+    console.error(`Пользователь с логином "${l}" уже есть. Выберите другой --login.`);
     process.exit(1);
   }
-
-  const id = randomUUID();
-  await db.insert(schema.users).values({
-    id,
-    login: login.trim(),
-    passwordHash: hashPassword(password),
-    isActive: true,
-  });
-  await db.insert(schema.userRoles).values({
-    userId: id,
-    roleCode: role,
-    scopeType: "global",
-    scopeId: "",
-  });
-
-  console.log(`Создан пользователь: login=${login.trim()}, role=${role}, id=${id}`);
-} catch (e) {
   const err = e as { code?: string };
   if (err.code === "42P01") {
     console.error(
