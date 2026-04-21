@@ -7,8 +7,10 @@ import type {
   BatchListItem,
   BatchesListResponse,
   CounterpartiesListResponse,
+  ShipmentReportResponse,
   TripsListResponse,
 } from "../api/types.js";
+import { buildTripBatchRows, type TripBatchTableRow } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   btnStyle,
@@ -43,6 +45,22 @@ function formatNakladLineLabel(b: BatchListItem): string {
 
 function formatShortBatchId(id: string): string {
   return id.length <= 16 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`;
+}
+
+/** Граммы → строка кг для подписей (целые граммы → десятичные кг без float). */
+function gramsBigIntToKgDecimalString(g: bigint): string {
+  if (g === 0n) {
+    return "0";
+  }
+  const negative = g < 0n;
+  const v = negative ? -g : g;
+  const whole = v / 1000n;
+  const rem = v % 1000n;
+  if (rem === 0n) {
+    return `${negative ? "-" : ""}${whole}`;
+  }
+  const frac = rem.toString().padStart(3, "0").replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
 /** Подпись партии в форме отгрузки: накладная + товар/калибр + остаток на складе. */
@@ -258,6 +276,44 @@ export function OperationsPanel() {
   const [sellClientLabel, setSellClientLabel] = useState("");
   const [sellCounterpartyId, setSellCounterpartyId] = useState("");
   const [newCounterpartyName, setNewCounterpartyName] = useState("");
+
+  const sellTripIdTrim = sellTripId.trim();
+  const sellReportQuery = useQuery({
+    queryKey: ["shipment-report", sellTripIdTrim],
+    queryFn: async () => {
+      const res = await apiFetch(`/api/trips/${encodeURIComponent(sellTripIdTrim)}/shipment-report`);
+      if (!res.ok) {
+        throw new Error(`Отчёт рейса ${res.status}`);
+      }
+      return res.json() as Promise<ShipmentReportResponse>;
+    },
+    enabled: sellTripIdTrim.length > 0,
+    retry: 1,
+  });
+
+  const batchByIdForSell = useMemo(() => {
+    const m = new Map<string, BatchListItem>();
+    for (const b of batchesQuery.data?.batches ?? []) {
+      m.set(b.id, b);
+    }
+    return m;
+  }, [batchesQuery.data?.batches]);
+
+  const sellableOnTripRows = useMemo(() => {
+    if (!sellReportQuery.data) {
+      return [] as TripBatchTableRow[];
+    }
+    return buildTripBatchRows(sellReportQuery.data).filter((r) => r.netTransitG > 0n);
+  }, [sellReportQuery.data]);
+
+  const formatSellBatchOptionLabel = (row: TripBatchTableRow): string => {
+    const b = batchByIdForSell.get(row.batchId);
+    const line = b ? formatNakladLineLabel(b) : `Партия ${formatShortBatchId(row.batchId)}`;
+    const docNum = b?.nakladnaya?.documentNumber?.trim();
+    const prefix = docNum ? `№ ${docNum} · ` : "";
+    const kg = gramsBigIntToKgDecimalString(row.netTransitG);
+    return `${prefix}${line} — доступно ${kg} кг`;
+  };
 
   const createCounterparty = useMutation({
     mutationFn: async () => {
@@ -583,26 +639,24 @@ export function OperationsPanel() {
         <h3 id="op-sec-sell" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           2. Продать с рейса
         </h3>
-        <p style={muted}>POST /api/batches/:batchId/sell-from-trip</p>
-        <label htmlFor="op-in-sell-batch" style={{ fontSize: "0.88rem" }}>
-          batchId *
-        </label>
-        <input
-          id="op-in-sell-batch"
-          value={sellBatchId}
-          onChange={(e) => setSellBatchId(e.target.value)}
-          style={fieldStyle}
-          list="batch-suggestions"
-          autoComplete="off"
-        />
-        <label htmlFor="op-sel-sell-trip" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          tripId *
+        <p style={muted}>
+          POST /api/batches/:batchId/sell-from-trip — сначала выберите <strong>рейс</strong>, затем{" "}
+          <strong>партию (товар и калибр)</strong> с остатком на этом рейсе; кг по умолчанию подставляется весь доступный
+          остаток (можно уменьшить).
+        </p>
+        <label htmlFor="op-sel-sell-trip" style={{ fontSize: "0.88rem" }}>
+          Рейс *
         </label>
         <select
           id="op-sel-sell-trip"
           value={sellTripId}
-          onChange={(e) => setSellTripId(e.target.value)}
-          style={selectWide}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSellTripId(v);
+            setSellBatchId("");
+            setSellKg("");
+          }}
+          style={{ ...selectWide, marginBottom: "0.5rem" }}
         >
           <option value="">— выберите рейс —</option>
           {trips.options.map((t) => (
@@ -611,6 +665,71 @@ export function OperationsPanel() {
             </option>
           ))}
         </select>
+        {sellTripIdTrim && sellReportQuery.isFetching && (
+          <p style={{ ...muted, marginTop: 0, marginBottom: "0.5rem" }} role="status">
+            Загрузка остатков по рейсу…
+          </p>
+        )}
+        {sellTripIdTrim && sellReportQuery.isError && (
+          <p role="alert" style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
+            Не удалось загрузить отчёт рейса (GET /api/trips/…/shipment-report). Продажа по списку недоступна — укажите
+            batchId вручную ниже.
+          </p>
+        )}
+        {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
+          <p style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
+            На этом рейсе нет массы для продажи: не было отгрузок в рейс или весь товар уже продан / списан по недостаче.
+          </p>
+        )}
+        <label htmlFor="op-sel-sell-batch-line" style={{ fontSize: "0.88rem" }}>
+          Партия (товар / калибр, остаток на рейсе) *
+        </label>
+        <select
+          id="op-sel-sell-batch-line"
+          value={sellBatchId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setSellBatchId(id);
+            const row = sellableOnTripRows.find((r) => r.batchId === id);
+            if (row) {
+              setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
+            }
+          }}
+          style={{ ...selectWide, marginBottom: "0.35rem" }}
+          disabled={
+            !sellTripIdTrim ||
+            (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
+            (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) ||
+            (sellReportQuery.isFetched && sellReportQuery.isError)
+          }
+        >
+          <option value="">
+            {!sellTripIdTrim
+              ? "— сначала выберите рейс —"
+              : !sellReportQuery.isFetched
+                ? "… загрузка остатков …"
+                : sellReportQuery.isError
+                  ? "— отчёт не загрузился, batchId ниже —"
+                  : "— выберите партию и калибр —"}
+          </option>
+          {sellableOnTripRows.map((row) => (
+            <option key={row.batchId} value={row.batchId}>
+              {formatSellBatchOptionLabel(row)}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="op-in-sell-batch" style={{ fontSize: "0.88rem" }}>
+          batchId (вручную, если список недоступен)
+        </label>
+        <input
+          id="op-in-sell-batch"
+          value={sellBatchId}
+          onChange={(e) => setSellBatchId(e.target.value)}
+          style={fieldStyle}
+          list="batch-suggestions"
+          autoComplete="off"
+          placeholder="совпадает с выбором выше"
+        />
         <label htmlFor="op-in-sell-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
           kg *
         </label>
