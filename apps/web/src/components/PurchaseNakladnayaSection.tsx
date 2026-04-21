@@ -7,17 +7,17 @@ import type {
   CreateProductGradeResponse,
   CreatePurchaseDocumentResponse,
   CreateWarehouseResponse,
+  ProductGradeJson,
   ProductGradesListResponse,
   PurchaseDocumentsListResponse,
   WarehousesListResponse,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import {
-  expectedLineTotalKopecks,
-  parseCreatePurchaseDocumentForm,
-} from "../validation/api-schemas.js";
+import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
+
+import { parseCreatePurchaseDocumentForm } from "../validation/api-schemas.js";
 import { randomUuid } from "../lib/random-uuid.js";
-import { routes } from "../routes.js";
+import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { btnStyle, errorText, fieldStyle, muted, sectionBox, successText, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
 
 function todayIsoDate(): string {
@@ -104,6 +104,7 @@ export function PurchaseNakladnayaSection() {
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
   const [newGradeCode, setNewGradeCode] = useState("");
   const [newGradeDisplayName, setNewGradeDisplayName] = useState("");
+  const [newGradeProductGroup, setNewGradeProductGroup] = useState("");
   const [newGradeSortOrder, setNewGradeSortOrder] = useState("");
   const [gradeFormError, setGradeFormError] = useState<string | null>(null);
 
@@ -120,7 +121,11 @@ export function PurchaseNakladnayaSection() {
       if (!code || !displayName) {
         throw new Error("Укажите код калибра и подпись (как на накладной)");
       }
-      const body: { code: string; displayName: string; sortOrder?: number } = { code, displayName };
+      const body: { code: string; displayName: string; sortOrder?: number; productGroup?: string } = { code, displayName };
+      const pg = newGradeProductGroup.trim();
+      if (pg) {
+        body.productGroup = pg;
+      }
       const so = newGradeSortOrder.trim();
       if (so) {
         const n = Number(so.replace(",", "."));
@@ -143,6 +148,7 @@ export function PurchaseNakladnayaSection() {
     onSuccess: (data) => {
       setNewGradeCode("");
       setNewGradeDisplayName("");
+      setNewGradeProductGroup("");
       setNewGradeSortOrder("");
       void queryClient.invalidateQueries({ queryKey: ["product-grades"] });
       setLines((prev) =>
@@ -236,23 +242,44 @@ export function PurchaseNakladnayaSection() {
     if (!row) {
       return;
     }
-    try {
-      const kg = Number(row.totalKg.replace(",", "."));
-      const rub = Number(row.pricePerKg.replace(",", "."));
-      if (!Number.isFinite(kg) || !Number.isFinite(rub) || kg <= 0) {
-        return;
-      }
-      const k = expectedLineTotalKopecks(kg, rub);
-      updateLine(key, { lineTotalKopecks: String(k) });
-    } catch {
-      /* noop */
+    const k = purchaseLineAmountKopecksFromDecimalStrings(row.totalKg, row.pricePerKg);
+    if (!Number.isFinite(k) || k < 0) {
+      return;
     }
+    updateLine(key, { lineTotalKopecks: String(k) });
   };
 
-  const gradeOptions = useMemo(() => {
-    const g = gradesQ.data?.productGrades ?? [];
-    return g.slice().sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"));
-  }, [gradesQ.data]);
+  const gradeOptionGroups = useMemo(() => {
+    const list = (gradesQ.data?.productGrades ?? []).slice();
+    list.sort((a, b) => {
+      const ga = (a.productGroup ?? "").trim();
+      const gb = (b.productGroup ?? "").trim();
+      if (ga !== gb) {
+        if (ga === "") return 1;
+        if (gb === "") return -1;
+        return ga.localeCompare(gb, "ru");
+      }
+      return a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru");
+    });
+    const byKey = new Map<string, ProductGradeJson[]>();
+    for (const g of list) {
+      const key = (g.productGroup ?? "").trim() || "";
+      if (!byKey.has(key)) {
+        byKey.set(key, []);
+      }
+      byKey.get(key)!.push(g);
+    }
+    const keys = [...byKey.keys()].sort((a, b) => {
+      if (a === "" && b !== "") return 1;
+      if (b === "" && a !== "") return -1;
+      return a.localeCompare(b, "ru");
+    });
+    return keys.map((k) => ({
+      key: k || "__empty__",
+      label: k === "" ? "Без группы товара" : k,
+      grades: byKey.get(k)!,
+    }));
+  }, [gradesQ.data?.productGrades]);
 
   const warehouseCount = warehousesQ.data?.warehouses?.length ?? 0;
   const gradeCount = gradesQ.data?.productGrades?.length ?? 0;
@@ -306,12 +333,15 @@ export function PurchaseNakladnayaSection() {
       </h3>
       <p style={{ ...muted, marginBottom: "0.5rem" }}>
         <strong>С этого начинается учёт:</strong> по факту приёмки товара на склад внесите те же данные, что на бумажной накладной
-        (номер, дата, склад поступления, строки: калибр, кг, короба, цена, сумма). После сохранения по строкам появятся партии на
-        выбранном складе.
+        (номер, дата, склад поступления, строки: вид товара и калибр, кг, короба, цена, сумма). У разных товаров разные калибры
+        (помидоры — №5…Ом., у огурцов — свои коды): они задаются в справочнике и сгруппированы по полю «группа товара». После
+        сохранения по строкам появятся партии на выбранном складе.
       </p>
       <p style={muted}>
-        POST /api/purchase-documents — одна строка накладной создаёт одну партию на выбранном складе. Сумма строки в копейках
-        должна сходиться с кг × цена за кг (допуск ±1 коп. на сервере).
+        POST /api/purchase-documents — одна строка накладной создаёт одну партию на выбранном складе. Сумма строки хранится в{" "}
+        <strong>копейках</strong> и должна сходиться с кг × ₽/кг (допуск ±1 коп. на сервере). Кнопка «=кг×цена» считает без
+        ошибок float: до <strong>6</strong> знаков после запятой у кг, до <strong>4</strong> у цены за кг (копейки в цене) —
+        пригодно для последующего бухучёта.
       </p>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
@@ -411,15 +441,30 @@ export function PurchaseNakladnayaSection() {
         </label>
       </div>
 
-      <p style={{ ...muted, margin: "0 0 0.35rem" }}>Строки</p>
-      {!gradesQ.isPending && gradeOptions.length === 0 && !gradesQ.isError && (
+      <div style={{ margin: "0 0 0.35rem" }}>
+        <p style={{ ...muted, margin: 0 }}>Строки</p>
+        <p style={{ ...muted, margin: "0.25rem 0 0", fontSize: "0.82rem" }}>
+          Поля <strong>Кг</strong> и <strong>₽/кг</strong> можно вводить с запятой или точкой; дробная часть учитывается при расчёте
+          суммы в копейках.
+        </p>
+      </div>
+      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && (
         <p role="status" style={warnText}>
-          В справочнике нет калибров — добавьте строку ниже (код как на бумажной накладной, например №5 или НС−).
+          В справочнике нет калибров — добавьте строку ниже (код как на бумажной накладной; при необходимости укажите группу
+          товара).
         </p>
       )}
       <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
         <p style={{ ...muted, margin: "0 0 0.35rem" }}>Нет нужного калибра — добавьте в справочник</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+          <input
+            value={newGradeProductGroup}
+            onChange={(e) => setNewGradeProductGroup(e.target.value)}
+            style={{ ...fieldStyle, flex: "1 1 120px", minWidth: 100 }}
+            placeholder="Группа товара (опц.)"
+            autoComplete="off"
+            aria-label="Группа товара, например Помидоры"
+          />
           <input
             value={newGradeCode}
             onChange={(e) => setNewGradeCode(e.target.value)}
@@ -464,7 +509,7 @@ export function PurchaseNakladnayaSection() {
         <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>
           <thead>
             <tr>
-              <th style={thHeadDense}>Калибр</th>
+              <th style={thHeadDense}>Товар / калибр</th>
               <th style={thHeadDense}>Кг</th>
               <th style={thHeadDense}>Короба</th>
               <th style={thHeadDense}>₽/кг</th>
@@ -483,10 +528,14 @@ export function PurchaseNakladnayaSection() {
                     disabled={gradesQ.isPending}
                   >
                     <option value="">{gradesQ.isPending ? "Загрузка…" : "— выберите —"}</option>
-                    {gradeOptions.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.code} — {g.displayName}
-                      </option>
+                    {gradeOptionGroups.map((grp) => (
+                      <optgroup key={grp.key} label={grp.label}>
+                        {grp.grades.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.code} — {g.displayName}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </td>
@@ -563,7 +612,9 @@ export function PurchaseNakladnayaSection() {
 
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
-          <p style={{ ...muted, marginBottom: "0.35rem" }}>Последние накладные (GET /api/purchase-documents)</p>
+          <p style={{ ...muted, marginBottom: "0.35rem" }}>
+            Сохранённые накладные — нажмите на <strong>номер</strong>, чтобы открыть документ со всеми строками и партиями.
+          </p>
           <table style={{ borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
               <tr>
@@ -574,18 +625,29 @@ export function PurchaseNakladnayaSection() {
               </tr>
             </thead>
             <tbody>
-              {listQ.data.purchaseDocuments.slice(0, 12).map((d) => (
-                <tr key={d.id}>
-                  <td style={thtdDense}>
-                    <code>{d.documentNumber}</code>
-                  </td>
-                  <td style={thtdDense}>{d.docDate}</td>
-                  <td style={thtdDense}>
-                    <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>
-                  </td>
-                  <td style={thtdDense}>{d.lineCount}</td>
-                </tr>
-              ))}
+              {listQ.data.purchaseDocuments.slice(0, 50).map((d) => {
+                const wh = warehousesQ.data?.warehouses.find((w) => w.id === d.warehouseId);
+                return (
+                  <tr key={d.id}>
+                    <td style={thtdDense}>
+                      <Link to={purchaseNakladnayaDocumentPath(d.id)} style={{ fontWeight: 600 }}>
+                        {d.documentNumber}
+                      </Link>
+                    </td>
+                    <td style={thtdDense}>{d.docDate}</td>
+                    <td style={thtdDense}>
+                      {wh ? (
+                        <>
+                          {wh.name} <span style={{ color: "#71717a" }}>({wh.code})</span>
+                        </>
+                      ) : (
+                        <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>
+                      )}
+                    </td>
+                    <td style={thtdDense}>{d.lineCount}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

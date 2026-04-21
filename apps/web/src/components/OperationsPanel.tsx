@@ -1,9 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiFetch } from "../api/fetch-api.js";
-import type { BatchesListResponse, CounterpartiesListResponse, TripsListResponse } from "../api/types.js";
+import type {
+  BatchListItem,
+  BatchesListResponse,
+  CounterpartiesListResponse,
+  TripsListResponse,
+} from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   btnStyle,
@@ -17,16 +22,42 @@ import {
   thtdDense,
   warnText,
 } from "../ui/styles.js";
-import { routes } from "../routes.js";
-import {
-  parseCreateBatchForm,
-  parseReceiveForm,
-  parseRecordTripShortageForm,
-  parseSellFromTripForm,
-  parseShipForm,
-} from "../validation/api-schemas.js";
+import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
+import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
 const selectWide = { ...fieldStyle, maxWidth: 420 };
+
+/** Строка накладной: группа товара + калибр (как в справочнике). */
+function formatNakladLineLabel(b: BatchListItem): string {
+  const n = b.nakladnaya;
+  const g = n?.productGroup?.trim();
+  const c = n?.productGradeCode?.trim();
+  if (g && c) {
+    return `${g} · ${c}`;
+  }
+  if (c) {
+    return c;
+  }
+  return "—";
+}
+
+function shortBatchId(id: string): string {
+  return id.length <= 16 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`;
+}
+
+/** Подпись партии в форме отгрузки: накладная + товар/калибр + остаток на складе. */
+function formatBatchShipLabel(b: BatchListItem): string {
+  const kg = b.onWarehouseKg;
+  const nn = b.nakladnaya?.documentNumber?.trim();
+  const line = formatNakladLineLabel(b);
+  if (nn && line !== "—") {
+    return `№ ${nn} · ${line} — ${kg} кг на складе`;
+  }
+  if (line !== "—") {
+    return `${line} — ${kg} кг на складе`;
+  }
+  return `Партия ${shortBatchId(b.id)} — ${kg} кг на складе`;
+}
 
 async function postJson(url: string, body: unknown): Promise<unknown> {
   const res = await apiFetch(url, {
@@ -90,6 +121,81 @@ export function OperationsPanel() {
 
   const trips = useTripsOptions();
 
+  const shippableBatches = useMemo(() => {
+    const list = batchesQuery.data?.batches ?? [];
+    return list.filter((b) => b.onWarehouseKg > 0).sort((a, b) => {
+      const na = a.nakladnaya?.documentNumber ?? "";
+      const nb = b.nakladnaya?.documentNumber ?? "";
+      if (na !== nb) {
+        return na.localeCompare(nb, "ru");
+      }
+      const ga = a.nakladnaya?.productGradeCode ?? "";
+      const gb = b.nakladnaya?.productGradeCode ?? "";
+      if (ga !== gb) {
+        return ga.localeCompare(gb, "ru");
+      }
+      return a.id.localeCompare(b.id);
+    });
+  }, [batchesQuery.data?.batches]);
+
+  /** Партии сгруппированы по накладной — в таблице не смешиваем документы в одной куче. */
+  const batchesGrouped = useMemo(() => {
+    const list = batchesQuery.data?.batches ?? [];
+    const byDoc = new Map<string, BatchListItem[]>();
+    const orphans: BatchListItem[] = [];
+    for (const b of list) {
+      const did = b.nakladnaya?.documentId;
+      if (did) {
+        if (!byDoc.has(did)) {
+          byDoc.set(did, []);
+        }
+        byDoc.get(did)!.push(b);
+      } else {
+        orphans.push(b);
+      }
+    }
+    const groups: {
+      documentId: string;
+      documentNumber: string | null;
+      batches: BatchListItem[];
+    }[] = [];
+    for (const [documentId, batches] of byDoc) {
+      const documentNumber = batches[0]?.nakladnaya?.documentNumber ?? null;
+      batches.sort(
+        (a, b) =>
+          (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru") ||
+          a.id.localeCompare(b.id),
+      );
+      groups.push({ documentId, documentNumber, batches });
+    }
+    groups.sort((a, b) =>
+      (a.documentNumber ?? "").localeCompare(b.documentNumber ?? "", "ru", { numeric: true }),
+    );
+    if (orphans.length > 0) {
+      orphans.sort((a, b) => a.id.localeCompare(b.id));
+      groups.push({
+        documentId: "__orphan__",
+        documentNumber: null,
+        batches: orphans,
+      });
+    }
+    return groups;
+  }, [batchesQuery.data?.batches]);
+
+  const nakladOptionsForShipAll = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const b of shippableBatches) {
+      const docId = b.nakladnaya?.documentId;
+      const num = b.nakladnaya?.documentNumber;
+      if (docId && num) {
+        seen.set(docId, num);
+      }
+    }
+    return [...seen.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "ru"))
+      .map(([documentId, documentNumber]) => ({ documentId, documentNumber }));
+  }, [shippableBatches]);
+
   const counterpartiesCatalog = meta?.counterpartyCatalogApi === "enabled";
   const counterpartiesQ = useQuery({
     queryKey: ["counterparties"],
@@ -104,50 +210,11 @@ export function OperationsPanel() {
     retry: 1,
   });
 
-  const [batchIdIn, setBatchIdIn] = useState("");
-  const [purchaseIdIn, setPurchaseIdIn] = useState("");
-  const [totalKg, setTotalKg] = useState("");
-  const [pricePerKg, setPricePerKg] = useState("");
-  const [distribution, setDistribution] = useState<"awaiting_receipt" | "on_hand">("awaiting_receipt");
-
-  const createBatch = useMutation({
-    mutationFn: async () => {
-      const body = parseCreateBatchForm({
-        batchId: batchIdIn,
-        purchaseId: purchaseIdIn,
-        totalKg,
-        pricePerKg,
-        distribution,
-      });
-      await postJson("/api/batches", body);
-      return { id: body.id, purchaseId: body.purchaseId };
-    },
-    onSuccess: (data) => {
-      setBatchIdIn(data.id);
-      setPurchaseIdIn(data.purchaseId);
-      invalidateDomain();
-    },
-  });
-
-  useEffect(() => {
-    createBatch.reset();
-  }, [batchIdIn, purchaseIdIn, totalKg, pricePerKg, distribution, createBatch]);
-
-  const [recvBatchId, setRecvBatchId] = useState("");
-  const [recvKg, setRecvKg] = useState("");
-
-  const receive = useMutation({
-    mutationFn: async () => {
-      const { batchId, body } = parseReceiveForm(recvBatchId, recvKg);
-      await postJson(`/api/batches/${encodeURIComponent(batchId)}/receive-on-warehouse`, body);
-    },
-    onSuccess: () => invalidateDomain(),
-  });
-
   const [shipBatchId, setShipBatchId] = useState("");
   const [shipTripId, setShipTripId] = useState("");
   const [shipKg, setShipKg] = useState("");
   const [shipPackages, setShipPackages] = useState("");
+  const [shipAllDocumentId, setShipAllDocumentId] = useState("");
 
   const ship = useMutation({
     mutationFn: async () => {
@@ -155,6 +222,30 @@ export function OperationsPanel() {
       await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
     },
     onSuccess: () => invalidateDomain(),
+  });
+
+  const shipAllFromNaklad = useMutation({
+    mutationFn: async () => {
+      const tripT = shipTripId.trim();
+      if (!tripT) {
+        throw new Error("Выберите рейс");
+      }
+      if (!shipAllDocumentId) {
+        throw new Error("Выберите накладную");
+      }
+      const rows = shippableBatches.filter((b) => b.nakladnaya?.documentId === shipAllDocumentId);
+      if (rows.length === 0) {
+        throw new Error("Нет остатка на складе по строкам этой накладной");
+      }
+      for (const b of rows) {
+        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
+        await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+      }
+    },
+    onSuccess: () => {
+      invalidateDomain();
+      setShipAllDocumentId("");
+    },
   });
 
   const [sellBatchId, setSellBatchId] = useState("");
@@ -220,17 +311,13 @@ export function OperationsPanel() {
     <div role="region" aria-label="Операции по партиям и рейсу">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Операции по партиям и рейсу</h2>
       <p style={muted}>
-        <strong>Порядок в учёте:</strong> сначала на вкладке{" "}
+        <strong>Порядок:</strong> партии создаются только из{" "}
         <Link to={routes.purchaseNakladnaya} style={{ fontWeight: 600 }}>
-          Накладная
+          накладной
         </Link>{" "}
-        фиксируют приём на склад — появляются партии. Здесь — рейс, отгрузка в рейс (<strong>кг</strong> обязательно;
-        <strong>ящики</strong> при отгрузке — по желанию в форме ниже, дополнительно к ящикам в накладной), при
-        необходимости недостача по приёмке на рынке, продажа с рейса.
-      </p>
-      <p style={muted}>
-        Ниже — прямые вызовы REST (как в `register-batch-routes`). ID партии и закупки при ручном создании партии можно
-        задать вручную или сгенерировать пустыми полями.
+        (строка = калибр = партия, товар сразу на складе). Здесь — рейс: отгрузка в рейс (<strong>кг</strong> обязательно;
+        <strong>ящики</strong> при отгрузке — по желанию, дополнительно к накладной), при необходимости недостача по приёмке
+        на рынке, продажа с рейса.
       </p>
 
       {batchesQuery.data && (
@@ -244,52 +331,77 @@ export function OperationsPanel() {
       {batchesQuery.isError && <p style={warnText}>Список партий (GET /api/batches) не загрузился.</p>}
 
       {batchesQuery.data && batchesQuery.data.batches.length > 0 && (
-        <div style={{ overflowX: "auto", marginBottom: "1rem" }}>
-          <p id="op-batches-heading" style={{ ...muted, marginBottom: "0.35rem" }}>
-            Партии (GET /api/batches), кг
+        <div style={{ marginBottom: "1rem" }}>
+          <p id="op-batches-heading" style={{ ...muted, marginBottom: "0.5rem" }}>
+            <strong>Партии по накладным</strong> — каждый блок — один документ и его строки (калибры). Технический id партии
+            нужен для API; в работе ориентируйтесь на <strong>номер накладной</strong> и <strong>товар / калибр</strong>.
           </p>
-          <table style={tableStyleDense} aria-labelledby="op-batches-heading">
-            <thead>
-              <tr>
-                <th scope="col" style={thHeadDense}>
-                  id
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  накладная
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  калибр
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  склад
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  в пути
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  продано
-                </th>
-                <th scope="col" style={thHeadDense}>
-                  ожидает приёмки
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {batchesQuery.data.batches.map((b) => (
-                <tr key={b.id}>
-                  <td style={thtdDense}>
-                    <code style={{ fontSize: "0.78rem" }}>{b.id}</code>
-                  </td>
-                  <td style={thtdDense}>{b.nakladnaya?.documentNumber ?? "—"}</td>
-                  <td style={thtdDense}>{b.nakladnaya?.productGradeCode ?? "—"}</td>
-                  <td style={thtdDense}>{b.onWarehouseKg}</td>
-                  <td style={thtdDense}>{b.inTransitKg}</td>
-                  <td style={thtdDense}>{b.soldKg}</td>
-                  <td style={thtdDense}>{b.pendingInboundKg}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {batchesGrouped.map((grp) => (
+            <div key={grp.documentId} style={{ overflowX: "auto", marginBottom: "1rem" }}>
+              <p
+                style={{
+                  ...muted,
+                  marginBottom: "0.3rem",
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                }}
+              >
+                {grp.documentId === "__orphan__" ? (
+                  <>Прочие партии (в системе нет привязки к строке накладной — старый или тестовый ввод)</>
+                ) : (
+                  <>
+                    Накладная № {grp.documentNumber ?? "—"}{" "}
+                    <Link
+                      to={purchaseNakladnayaDocumentPath(grp.documentId)}
+                      style={{ fontWeight: 400, fontSize: "0.88rem" }}
+                    >
+                      открыть документ
+                    </Link>
+                  </>
+                )}
+              </p>
+              <table style={tableStyleDense} aria-labelledby="op-batches-heading">
+                <thead>
+                  <tr>
+                    <th scope="col" style={thHeadDense}>
+                      Товар / калибр
+                    </th>
+                    <th scope="col" style={thHeadDense}>
+                      id партии
+                    </th>
+                    <th scope="col" style={thHeadDense}>
+                      на складе, кг
+                    </th>
+                    <th scope="col" style={thHeadDense}>
+                      в пути
+                    </th>
+                    <th scope="col" style={thHeadDense}>
+                      продано
+                    </th>
+                    <th scope="col" style={thHeadDense}>
+                      ожидает приёмки
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grp.batches.map((b) => (
+                    <tr key={b.id}>
+                      <td style={thtdDense}>{formatNakladLineLabel(b)}</td>
+                      <td style={thtdDense}>
+                        <code style={{ fontSize: "0.75rem" }} title={b.id}>
+                          {shortBatchId(b.id)}
+                        </code>
+                      </td>
+                      <td style={thtdDense}>{b.onWarehouseKg}</td>
+                      <td style={thtdDense}>{b.inTransitKg}</td>
+                      <td style={thtdDense}>{b.soldKg}</td>
+                      <td style={thtdDense}>{b.pendingInboundKg}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )}
 
@@ -301,152 +413,23 @@ export function OperationsPanel() {
         <p style={warnText}>Справочник контрагентов (GET /api/counterparties) не загрузился.</p>
       )}
 
-      <section style={sectionBox} aria-labelledby="op-sec-create">
-        <h3 id="op-sec-create" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          1. Создать партию (закупку)
-        </h3>
-        <p style={muted}>POST /api/batches</p>
-        <label htmlFor="op-in-create-batch" style={{ fontSize: "0.88rem" }}>
-          ID партии (опц.)
-        </label>
-        <input
-          id="op-in-create-batch"
-          value={batchIdIn}
-          onChange={(e) => setBatchIdIn(e.target.value)}
-          style={fieldStyle}
-          placeholder="UUID"
-          list="batch-suggestions"
-          autoComplete="off"
-        />
-        <label htmlFor="op-in-create-purchase" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          ID закупки (опц.)
-        </label>
-        <input
-          id="op-in-create-purchase"
-          value={purchaseIdIn}
-          onChange={(e) => setPurchaseIdIn(e.target.value)}
-          style={fieldStyle}
-          autoComplete="off"
-        />
-        <label htmlFor="op-in-create-total" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          totalKg *
-        </label>
-        <input
-          id="op-in-create-total"
-          value={totalKg}
-          onChange={(e) => setTotalKg(e.target.value)}
-          style={fieldStyle}
-          inputMode="decimal"
-          autoComplete="off"
-        />
-        <label htmlFor="op-in-create-price" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          pricePerKg (руб/кг) *
-        </label>
-        <input
-          id="op-in-create-price"
-          value={pricePerKg}
-          onChange={(e) => setPricePerKg(e.target.value)}
-          style={fieldStyle}
-          inputMode="decimal"
-          autoComplete="off"
-        />
-        <label htmlFor="op-sel-create-dist" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          distribution
-        </label>
-        <select
-          id="op-sel-create-dist"
-          value={distribution}
-          onChange={(e) => setDistribution(e.target.value as "awaiting_receipt" | "on_hand")}
-          style={fieldStyle}
-        >
-          <option value="awaiting_receipt">awaiting_receipt — ждёт оприходования</option>
-          <option value="on_hand">on_hand — сразу на складе</option>
-        </select>
-        <button
-          type="button"
-          style={btnStyle}
-          disabled={createBatch.isPending}
-          aria-busy={createBatch.isPending || undefined}
-          onClick={() => createBatch.mutate()}
-        >
-          {createBatch.isPending ? "Отправка…" : "Создать партию"}
-        </button>
-        <ErrorText e={createBatch.error as Error | null} />
-        {createBatch.isSuccess && (
-          <p style={successText} role="status">
-            Ок. Используйте этот batchId в следующих шагах: <code>{batchIdIn}</code>
-          </p>
-        )}
-      </section>
-
-      <section style={sectionBox} aria-labelledby="op-sec-receive">
-        <h3 id="op-sec-receive" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          2. Оприходовать на склад
-        </h3>
-        <p style={muted}>POST /api/batches/:batchId/receive-on-warehouse</p>
-        <label htmlFor="op-in-recv-batch" style={{ fontSize: "0.88rem" }}>
-          batchId *
-        </label>
-        <input
-          id="op-in-recv-batch"
-          value={recvBatchId}
-          onChange={(e) => setRecvBatchId(e.target.value)}
-          style={fieldStyle}
-          list="batch-suggestions"
-          autoComplete="off"
-        />
-        <label htmlFor="op-in-recv-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          kg *
-        </label>
-        <input
-          id="op-in-recv-kg"
-          value={recvKg}
-          onChange={(e) => setRecvKg(e.target.value)}
-          style={fieldStyle}
-          inputMode="decimal"
-          autoComplete="off"
-        />
-        <button
-          type="button"
-          style={btnStyle}
-          disabled={receive.isPending}
-          aria-busy={receive.isPending || undefined}
-          onClick={() => receive.mutate()}
-        >
-          {receive.isPending ? "…" : "Оприходовать"}
-        </button>
-        <ErrorText e={receive.error as Error | null} />
-        {receive.isSuccess && (
-          <p style={successText} role="status">
-            Готово.
-          </p>
-        )}
-      </section>
-
       <section style={sectionBox} aria-labelledby="op-sec-ship">
         <h3 id="op-sec-ship" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          3. Отгрузить в рейс
+          1. Отгрузить в рейс
         </h3>
-        <p style={muted}>POST /api/batches/:batchId/ship-to-trip</p>
-        <label htmlFor="op-in-ship-batch" style={{ fontSize: "0.88rem" }}>
-          batchId *
-        </label>
-        <input
-          id="op-in-ship-batch"
-          value={shipBatchId}
-          onChange={(e) => setShipBatchId(e.target.value)}
-          style={fieldStyle}
-          list="batch-suggestions"
-          autoComplete="off"
-        />
-        <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          tripId *
+        <p style={muted}>
+          POST /api/batches/:batchId/ship-to-trip — снимает массу <strong>с выбранной партии</strong> (строки накладной,
+          калибр). Сначала выберите рейс, затем либо одну партию и кг, либо отгрузите все строки накладной, где есть
+          остаток на складе.
+        </p>
+        <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
+          Рейс (tripId) *
         </label>
         <select
           id="op-sel-ship-trip"
           value={shipTripId}
           onChange={(e) => setShipTripId(e.target.value)}
-          style={selectWide}
+          style={{ ...selectWide, marginBottom: "0.75rem" }}
         >
           <option value="">— выберите рейс —</option>
           {trips.options.map((t) => (
@@ -455,6 +438,60 @@ export function OperationsPanel() {
             </option>
           ))}
         </select>
+
+        <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>
+        <label htmlFor="op-sel-ship-batch" style={{ fontSize: "0.88rem" }}>
+          Партия *
+        </label>
+        <select
+          id="op-sel-ship-batch"
+          value={shipBatchId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setShipBatchId(id);
+            const b = batchesQuery.data?.batches.find((x) => x.id === id);
+            if (b && b.onWarehouseKg > 0) {
+              setShipKg(String(b.onWarehouseKg));
+            }
+          }}
+          style={selectWide}
+        >
+          <option value="">— выберите партию —</option>
+          {shippableBatches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {formatBatchShipLabel(b)}
+            </option>
+          ))}
+        </select>
+        {shippableBatches.length === 0 && batchesQuery.data && (
+          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.85rem" }}>
+            Нет партий с остатком на складе — нечего отгружать (сначала оформите приём по накладной на вкладке{" "}
+            <Link to={routes.purchaseNakladnaya}>Накладная</Link>).
+          </p>
+        )}
+        <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
+          В выпадающем списке — только партии с остатком на складе. Ниже можно ввести или вставить batchId из таблицы
+          выше (в т.ч. если нужна партия не из списка).
+        </p>
+        <label htmlFor="op-in-ship-batch-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.35rem" }}>
+          batchId (дублирует выбор выше)
+        </label>
+        <input
+          id="op-in-ship-batch-id"
+          value={shipBatchId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setShipBatchId(id);
+            const b = batchesQuery.data?.batches.find((x) => x.id === id);
+            if (b && b.onWarehouseKg > 0) {
+              setShipKg(String(b.onWarehouseKg));
+            }
+          }}
+          style={fieldStyle}
+          list="batch-suggestions"
+          autoComplete="off"
+          placeholder="или вставьте UUID партии"
+        />
         <label htmlFor="op-in-ship-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
           kg *
         </label>
@@ -480,7 +517,7 @@ export function OperationsPanel() {
         />
         <button
           type="button"
-          style={btnStyle}
+          style={{ ...btnStyle, marginTop: "0.35rem" }}
           disabled={ship.isPending}
           aria-busy={ship.isPending || undefined}
           onClick={() => ship.mutate()}
@@ -493,11 +530,58 @@ export function OperationsPanel() {
             Готово.
           </p>
         )}
+
+        <h4 style={{ margin: "1rem 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Вся накладная в рейс</h4>
+        <p style={{ ...muted, fontSize: "0.85rem", marginBottom: "0.35rem" }}>
+          По очереди отправляется отгрузка по каждой строке накладной, где на складе есть кг (полный остаток по строке).
+          Ящики в этом режиме не передаются — при необходимости отгрузите строки по одной и укажите ящики выше.
+        </p>
+        <label htmlFor="op-sel-ship-naklad-all" style={{ fontSize: "0.88rem" }}>
+          Накладная
+        </label>
+        <select
+          id="op-sel-ship-naklad-all"
+          value={shipAllDocumentId}
+          onChange={(e) => setShipAllDocumentId(e.target.value)}
+          style={selectWide}
+        >
+          <option value="">— выберите накладную —</option>
+          {nakladOptionsForShipAll.map((o) => (
+            <option key={o.documentId} value={o.documentId}>
+              № {o.documentNumber}
+            </option>
+          ))}
+        </select>
+        {shipAllDocumentId ? (
+          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
+            <Link to={purchaseNakladnayaDocumentPath(shipAllDocumentId)}>Открыть накладную</Link>
+          </p>
+        ) : null}
+        <button
+          type="button"
+          style={{ ...btnStyle, marginTop: "0.35rem" }}
+          disabled={
+            shipAllFromNaklad.isPending ||
+            !shipTripId.trim() ||
+            !shipAllDocumentId ||
+            nakladOptionsForShipAll.length === 0
+          }
+          aria-busy={shipAllFromNaklad.isPending || undefined}
+          onClick={() => shipAllFromNaklad.mutate()}
+        >
+          {shipAllFromNaklad.isPending ? "Отгрузка…" : "Отгрузить всю накладную в этот рейс"}
+        </button>
+        <ErrorText e={shipAllFromNaklad.error as Error | null} />
+        {shipAllFromNaklad.isSuccess && (
+          <p style={successText} role="status">
+            Все строки с остатком отгружены.
+          </p>
+        )}
       </section>
 
       <section style={sectionBox} aria-labelledby="op-sec-sell">
         <h3 id="op-sec-sell" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          4. Продать с рейса
+          2. Продать с рейса
         </h3>
         <p style={muted}>POST /api/batches/:batchId/sell-from-trip</p>
         <label htmlFor="op-in-sell-batch" style={{ fontSize: "0.88rem" }}>
@@ -661,7 +745,7 @@ export function OperationsPanel() {
 
       <section style={{ ...sectionBox, borderBottom: "none", marginBottom: 0, paddingBottom: 0 }} aria-labelledby="op-sec-short">
         <h3 id="op-sec-short" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          5. Недостача по рейсу (приёмка)
+          3. Недостача по рейсу (приёмка)
         </h3>
         <p style={muted}>POST /api/batches/:batchId/record-trip-shortage</p>
         <label htmlFor="op-in-short-batch" style={{ fontSize: "0.88rem" }}>

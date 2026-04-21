@@ -26,6 +26,7 @@ export class DrizzleProductGradeRepository implements ProductGradeRepository {
       id: r.id,
       code: r.code,
       displayName: r.displayName,
+      productGroup: r.productGroup ?? null,
       sortOrder: r.sortOrder,
     };
   }
@@ -40,6 +41,7 @@ export class DrizzleProductGradeRepository implements ProductGradeRepository {
       id: r.id,
       code: r.code,
       displayName: r.displayName,
+      productGroup: r.productGroup ?? null,
       sortOrder: r.sortOrder,
     }));
   }
@@ -49,11 +51,18 @@ export class DrizzleProductGradeRepository implements ProductGradeRepository {
     const code = input.code.trim();
     const displayName = input.displayName.trim();
     const sortOrder = input.sortOrder ?? 100;
+    const productGroup =
+      input.productGroup === undefined || input.productGroup === null
+        ? null
+        : input.productGroup.trim() === ""
+          ? null
+          : input.productGroup.trim();
     try {
       await this.db.insert(productGrades).values({
         id,
         code,
         displayName,
+        productGroup,
         sortOrder,
         isActive: true,
       });
@@ -63,6 +72,6 @@ export class DrizzleProductGradeRepository implements ProductGradeRepository {
       }
       throw e;
     }
-    return { id, code, displayName, sortOrder };
+    return { id, code, displayName, productGroup, sortOrder };
   }
 }

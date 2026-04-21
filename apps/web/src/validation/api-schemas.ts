@@ -2,7 +2,10 @@ import {
   createBatchBodySchema,
   createPurchaseDocumentBodySchema,
   createTripBodySchema,
+  nonnegativeDecimalStringToNumber,
+  numberToDecimalStringForKopecks,
   purchaseDocumentLineInputSchema,
+  purchaseLineAmountKopecksFromDecimalStrings,
   receiveBodySchema,
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
@@ -148,9 +151,12 @@ export function parseCreateTripForm(tripIdRaw: string, tripNumberRaw: string) {
   });
 }
 
-/** Ожидаемая сумма строки накладной в копейках (для подсказки в форме). */
+/** Ожидаемая сумма строки накладной в копейках (из уже распарсенных чисел — как на сервере). */
 export function expectedLineTotalKopecks(totalKg: number, pricePerKg: number): number {
-  return Math.round(totalKg * pricePerKg * 100);
+  return purchaseLineAmountKopecksFromDecimalStrings(
+    numberToDecimalStringForKopecks(totalKg, 6),
+    numberToDecimalStringForKopecks(pricePerKg, 4),
+  );
 }
 
 export function parseCreatePurchaseDocumentForm(input: {
@@ -182,8 +188,14 @@ export function parseCreatePurchaseDocumentForm(input: {
       if (!productGradeId) {
         throw new Error(`Строка ${idx + 1}: выберите калибр`);
       }
-      const totalKg = parseDecimalKg(row.totalKg);
-      const pricePerKg = parseDecimalKg(row.pricePerKg);
+      const totalKg = nonnegativeDecimalStringToNumber(row.totalKg, 6);
+      const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
+      if (!Number.isFinite(totalKg) || totalKg <= 0) {
+        throw new Error(`Строка ${idx + 1}: укажите массу, кг (положительное число, можно с дробной частью)`);
+      }
+      if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
+        throw new Error(`Строка ${idx + 1}: укажите цену ₽/кг (неотрицательное число, до копеек в цене)`);
+      }
       const pkgRaw = row.packageCount.trim();
       let packageCount: number | undefined;
       if (pkgRaw !== "") {

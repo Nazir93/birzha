@@ -4,6 +4,11 @@ export {
 } from "./purchase-document.js";
 export type { CreatePurchaseDocumentBody } from "./purchase-document.js";
 export {
+  nonnegativeDecimalStringToNumber,
+  numberToDecimalStringForKopecks,
+  purchaseLineAmountKopecksFromDecimalStrings,
+} from "./purchase-line-kopecks.js";
+export {
   createBatchBodySchema,
   createCounterpartyBodySchema,
   createProductGradeBodySchema,

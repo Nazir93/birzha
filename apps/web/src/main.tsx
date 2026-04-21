@@ -11,7 +11,14 @@ import "./index.css";
 
 registerSW({ immediate: true });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      /** Меньше лишних повторных запросов при возврате на вкладку / повторном маунте. */
+      staleTime: 30_000,
+    },
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

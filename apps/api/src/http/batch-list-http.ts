@@ -16,7 +16,9 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
   const rows = await db
     .select({
       batchId: purchaseDocumentLines.batchId,
+      documentId: purchaseDocuments.id,
       productGradeCode: productGrades.code,
+      productGroup: productGrades.productGroup,
       documentNumber: purchaseDocuments.documentNumber,
     })
     .from(purchaseDocumentLines)
@@ -24,10 +26,20 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     .leftJoin(purchaseDocuments, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
     .where(inArray(purchaseDocumentLines.batchId, ids));
 
-  const meta = new Map<string, { productGradeCode: string | null; documentNumber: string | null }>();
+  const meta = new Map<
+    string,
+    {
+      documentId: string | null;
+      productGradeCode: string | null;
+      productGroup: string | null;
+      documentNumber: string | null;
+    }
+  >();
   for (const r of rows) {
     meta.set(r.batchId, {
+      documentId: r.documentId,
       productGradeCode: r.productGradeCode,
+      productGroup: r.productGroup,
       documentNumber: r.documentNumber,
     });
   }
@@ -37,7 +49,14 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     const m = meta.get(id);
     return batchToJson(
       b,
-      m ? { productGradeCode: m.productGradeCode, documentNumber: m.documentNumber } : undefined,
+      m
+        ? {
+            documentId: m.documentId,
+            productGradeCode: m.productGradeCode,
+            productGroup: m.productGroup,
+            documentNumber: m.documentNumber,
+          }
+        : undefined,
     );
   });
 }

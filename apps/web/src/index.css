@@ -1,4 +1,14 @@
-/* Глобальные улучшения фокуса и доступности (остальная вёрстка — inline-стили в компонентах). */
+/* Глобальные стили: Montserrat, поля ввода, фокус (остальное — inline в компонентах). */
+:root {
+  --font-ui: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-text: #18181b;
+  --color-muted: #71717a;
+  --color-border: #d4d4d8;
+  --color-border-focus: #15803d;
+  --color-surface-input: #ffffff;
+  --focus-ring: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+
 html {
   color-scheme: light;
 }
@@ -9,12 +19,80 @@ html {
   box-sizing: border-box;
 }
 
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main h1 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+/* Поля ввода: единый вид с Montserrat */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+select,
+textarea {
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.625rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-muted);
+  font-weight: 400;
+  opacity: 1;
+}
+
+input:hover:not(:disabled):not(:read-only),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled):not(:read-only) {
+  border-color: #a1a1aa;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f4f4f5;
+}
+
+/* Фокус полей в приложении: перекрывает inline border у `fieldStyle` */
+main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+main select:focus,
+main textarea:focus {
+  outline: none !important;
+  border-color: var(--color-border-focus) !important;
+  box-shadow: var(--focus-ring) !important;
+}
+
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
-select:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #15803d;
+  outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
 

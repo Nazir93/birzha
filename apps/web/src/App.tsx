@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 import { defaultRouteForUser } from "./auth/role-panels.js";
 import { useAuth } from "./auth/auth-context.js";
@@ -8,6 +8,7 @@ import { AppNav } from "./components/AppNav.js";
 import { CreateTripForm } from "./components/CreateTripForm.js";
 import { LoginPage } from "./components/LoginPage.js";
 import { OperationsPanel } from "./components/OperationsPanel.js";
+import { PurchaseNakladnayaDetailSection } from "./components/PurchaseNakladnayaDetailSection.js";
 import { PurchaseNakladnayaSection } from "./components/PurchaseNakladnayaSection.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequirePanel } from "./components/RequirePanel.js";
@@ -99,7 +100,7 @@ export function App() {
   const syncEnabled = meta?.syncApi === "enabled";
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: "1.5rem", maxWidth: 880 }}>
+    <main style={{ padding: "1.5rem", maxWidth: 880 }}>
       <h1 className="no-print" style={{ marginTop: 0 }}>
         Биржа
       </h1>
@@ -136,11 +137,14 @@ export function App() {
             element={
               <RequirePanel panel="nakladnaya">
                 <section style={sectionCard}>
-                  <PurchaseNakladnayaSection />
+                  <Outlet />
                 </section>
               </RequirePanel>
             }
-          />
+          >
+            <Route index element={<PurchaseNakladnayaSection />} />
+            <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
+          </Route>
           <Route
             path={routes.operations}
             element={

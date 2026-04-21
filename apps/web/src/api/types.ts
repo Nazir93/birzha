@@ -12,7 +12,10 @@ export type BatchListItem = {
   writtenOffKg: number;
   /** Если партия из строки закупочной накладной (PostgreSQL). */
   nakladnaya?: {
+    documentId: string | null;
     productGradeCode: string | null;
+    /** Вид товара из справочника (помидоры, огурцы…). */
+    productGroup: string | null;
     documentNumber: string | null;
   };
 };
@@ -29,6 +32,8 @@ export type ProductGradeJson = {
   id: string;
   code: string;
   displayName: string;
+  /** Вид товара для групп в накладной (помидоры, огурцы…); у разных групп свои калибры. */
+  productGroup: string | null;
   sortOrder: number;
 };
 export type ProductGradesListResponse = { productGrades: ProductGradeJson[] };
@@ -41,6 +46,31 @@ export type PurchaseDocumentSummary = {
   warehouseId: string;
   lineCount: number;
 };
+
+/** Строка `GET /purchase-documents/:id` — согласовано с `PurchaseDocumentDetail` в API. */
+export type PurchaseDocumentLineDetail = {
+  lineNo: number;
+  productGradeId: string;
+  productGradeCode: string;
+  batchId: string;
+  totalKg: number;
+  packageCount: string | null;
+  pricePerKg: number;
+  lineTotalKopecks: string;
+};
+
+export type PurchaseDocumentDetail = {
+  id: string;
+  documentNumber: string;
+  docDate: string;
+  supplierName: string | null;
+  buyerLabel: string | null;
+  warehouseId: string;
+  extraCostKopecks: string;
+  createdAt: string | null;
+  lines: PurchaseDocumentLineDetail[];
+};
+
 export type PurchaseDocumentsListResponse = { purchaseDocuments: PurchaseDocumentSummary[] };
 
 export type CreatePurchaseDocumentResponse = { documentId: string };

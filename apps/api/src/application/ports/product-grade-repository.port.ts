@@ -2,6 +2,8 @@ export type ProductGradeRecord = {
   id: string;
   code: string;
   displayName: string;
+  /** Вид товара для группировки в накладной (помидоры, огурцы…); у разных групп разные калибры. */
+  productGroup: string | null;
   sortOrder: number;
 };
 
@@ -11,6 +13,8 @@ export type CreateProductGradeInput = {
   displayName: string;
   /** Порядок в списке; по умолчанию сервер подставит значение. */
   sortOrder?: number;
+  /** Опционально: группа товара (одинаковая строка — одна группа в выпадающем списке). */
+  productGroup?: string | null;
 };
 
 export interface ProductGradeRepository {

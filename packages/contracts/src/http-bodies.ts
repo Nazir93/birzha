@@ -70,6 +70,8 @@ export const createProductGradeBodySchema = z.object({
   code: z.string().min(1).max(64).trim(),
   displayName: z.string().min(1).max(200).trim(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
+  /** Группа номенклатуры (помидоры, огурцы, перец…); у разных товаров разные калибры. */
+  productGroup: z.string().min(1).max(120).trim().optional(),
 });
 
 /** POST /warehouses — склад поступления (название произвольное; код — латиница, уникальный, опционально). */

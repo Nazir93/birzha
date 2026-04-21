@@ -223,6 +223,15 @@ describe("createProductGradeBodySchema", () => {
     expect(r.code).toBe("№9");
     expect(r.sortOrder).toBe(9);
   });
+
+  it("принимает группу товара", () => {
+    const r = createProductGradeBodySchema.parse({
+      code: "корнишон",
+      displayName: "корнишон L",
+      productGroup: "Огурцы",
+    });
+    expect(r.productGroup).toBe("Огурцы");
+  });
 });
 
 describe("createWarehouseBodySchema", () => {

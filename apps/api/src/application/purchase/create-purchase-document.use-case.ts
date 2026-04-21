@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 
 import { Batch } from "@birzha/domain";
-import type { CreatePurchaseDocumentBody } from "@birzha/contracts";
+import {
+  type CreatePurchaseDocumentBody,
+  numberToDecimalStringForKopecks,
+  purchaseLineAmountKopecksFromDecimalStrings,
+} from "@birzha/contracts";
 
 import {
   ProductGradeNotFoundError,
@@ -17,7 +21,10 @@ import type {
 import type { WarehouseRepository } from "../ports/warehouse-repository.port.js";
 
 function expectedLineKopecks(totalKg: number, pricePerKg: number): number {
-  return Math.round(totalKg * pricePerKg * 100);
+  return purchaseLineAmountKopecksFromDecimalStrings(
+    numberToDecimalStringForKopecks(totalKg, 6),
+    numberToDecimalStringForKopecks(pricePerKg, 4),
+  );
 }
 
 function lineTotalsMatch(expected: number, actual: number): boolean {

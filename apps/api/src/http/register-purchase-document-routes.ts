@@ -61,6 +61,7 @@ export function registerPurchaseDocumentRoutes(
         code: body.code,
         displayName: body.displayName,
         sortOrder: body.sortOrder,
+        productGroup: body.productGroup,
       });
       return reply.code(201).send({ productGrade });
     } catch (error) {

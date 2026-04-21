@@ -12,7 +12,11 @@ export type BatchJson = {
   writtenOffKg: number;
   /** Если партия заведена строкой закупочной накладной — код калибра и номер документа. */
   nakladnaya?: {
+    /** `purchase_documents.id` — для группировки партий одной накладной. */
+    documentId: string | null;
     productGradeCode: string | null;
+    /** Из справочника калибров — вид товара (помидоры, огурцы…). */
+    productGroup: string | null;
     documentNumber: string | null;
   };
 };
