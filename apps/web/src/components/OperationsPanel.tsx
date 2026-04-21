@@ -41,7 +41,7 @@ function formatNakladLineLabel(b: BatchListItem): string {
   return "—";
 }
 
-function shortBatchId(id: string): string {
+function formatShortBatchId(id: string): string {
   return id.length <= 16 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
 
@@ -56,7 +56,7 @@ function formatBatchShipLabel(b: BatchListItem): string {
   if (line !== "—") {
     return `${line} — ${kg} кг на складе`;
   }
-  return `Партия ${shortBatchId(b.id)} — ${kg} кг на складе`;
+  return `Партия ${formatShortBatchId(b.id)} — ${kg} кг на складе`;
 }
 
 async function postJson(url: string, body: unknown): Promise<unknown> {
@@ -389,7 +389,7 @@ export function OperationsPanel() {
                       <td style={thtdDense}>{formatNakladLineLabel(b)}</td>
                       <td style={thtdDense}>
                         <code style={{ fontSize: "0.75rem" }} title={b.id}>
-                          {shortBatchId(b.id)}
+                          {formatShortBatchId(b.id)}
                         </code>
                       </td>
                       <td style={thtdDense}>{b.onWarehouseKg}</td>
