@@ -31,11 +31,8 @@ git pull --ff-only origin "$BRANCH"
 echo ">>> pnpm install"
 pnpm install --frozen-lockfile
 
-echo ">>> build @birzha/domain"
-pnpm --filter @birzha/domain build
-
-echo ">>> pnpm build (turbo)"
-pnpm build
+echo ">>> turbo build --force (на сервере без кэша — иначе после git pull возможен устаревший билд)"
+pnpm exec turbo run build --force
 
 if [[ "${SKIP_DB:-0}" != "1" ]]; then
   echo ">>> drizzle db:push (apps/api)"

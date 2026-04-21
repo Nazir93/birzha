@@ -11,7 +11,7 @@ chmod +x deploy/server-update.sh   # один раз
 ./deploy/server-update.sh
 ```
 
-Скрипт делает `git pull`, `pnpm install`, сборку, `pnpm db:push` в `apps/api`, затем `sudo systemctl restart birzha-api`.
+Скрипт делает `git pull`, `pnpm install`, **`turbo run build --force`** (без кэша Turbo — иначе после `git pull` можно отдать старый JS), `pnpm db:push` в `apps/api`, затем `sudo systemctl restart birzha-api`.
 
 Для пользователя деплоя настройте **sudo без пароля** только на `systemctl restart birzha-api` (или запускайте скрипт под root — не рекомендуется).
 
