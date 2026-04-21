@@ -25,7 +25,8 @@ fi
 echo ">>> git fetch / checkout $BRANCH / pull"
 git fetch origin
 git checkout "$BRANCH"
-git pull --ff-only "origin/$BRANCH"
+# Два аргумента: remote и ветка. Нельзя "origin/main" — git воспринимает как путь к репозиторию.
+git pull --ff-only origin "$BRANCH"
 
 echo ">>> pnpm install"
 pnpm install --frozen-lockfile
