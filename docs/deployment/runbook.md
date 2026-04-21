@@ -47,6 +47,15 @@ pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' -
 
 ## 7. Обновление
 
+Серверный скрипт (тот же порядок команд, что ниже):
+
+```bash
+cd /opt/birzha
+./deploy/server-update.sh
+```
+
+Вручную:
+
 ```bash
 cd /opt/birzha && git pull && pnpm install && pnpm build && cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api

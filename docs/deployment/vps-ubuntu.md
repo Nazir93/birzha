@@ -190,6 +190,16 @@ sudo certbot --nginx -d your.domain
 
 ## 10. Обновление приложения
 
+Рекомендуется скрипт из репозитория (ветка по умолчанию `main`, см. переменные в скрипте):
+
+```bash
+cd /opt/birzha
+chmod +x deploy/server-update.sh   # один раз
+./deploy/server-update.sh
+```
+
+Или те же шаги вручную:
+
 ```bash
 cd /opt/birzha
 git pull
