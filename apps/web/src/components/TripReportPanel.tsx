@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { apiFetch, apiGetJson } from "../api/fetch-api.js";
-import type { ShipmentReportResponse, TripsListResponse } from "../api/types.js";
+import type { BatchListItem, BatchesListResponse, ShipmentReportResponse, TripsListResponse } from "../api/types.js";
+import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
@@ -35,6 +36,20 @@ export function TripReportPanel() {
     queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
     retry: 1,
   });
+
+  const batchesQuery = useQuery({
+    queryKey: ["batches"],
+    queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
+    retry: 1,
+  });
+
+  const batchById = useMemo(() => {
+    const m = new Map<string, BatchListItem>();
+    for (const b of batchesQuery.data?.batches ?? []) {
+      m.set(b.id, b);
+    }
+    return m;
+  }, [batchesQuery.data?.batches]);
 
   const sortedTrips = useMemo(() => {
     const list = tripsQuery.data?.trips ?? [];
@@ -122,7 +137,11 @@ export function TripReportPanel() {
     if (!r || batchRows.length === 0) {
       return;
     }
-    const csv = tripBatchRowsToCsv(batchRows, { tripNumber: r.trip.tripNumber, tripId: r.trip.id });
+    const csv = tripBatchRowsToCsv(batchRows, {
+      tripNumber: r.trip.tripNumber,
+      tripId: r.trip.id,
+      batchCaption: (batchId) => formatBatchPartyCaption(batchById.get(batchId), batchId),
+    });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -130,7 +149,7 @@ export function TripReportPanel() {
     a.download = `${sanitizeFilenamePart(`birzha-${r.trip.tripNumber}`)}-partii.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [r, batchRows]);
+  }, [r, batchRows, batchById]);
 
   const printReport = useCallback(() => {
     window.print();
@@ -422,7 +441,7 @@ export function TripReportPanel() {
                 <thead>
                   <tr>
                     <th scope="col" style={thHead}>
-                      Партия
+                      Партия (накладная · товар · калибр)
                     </th>
                     <th scope="col" style={thHead}>
                       Отгр., кг
@@ -448,10 +467,26 @@ export function TripReportPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {batchRows.map((row) => (
+                  {batchRows.map((row) => {
+                    const batchMeta = batchById.get(row.batchId);
+                    const caption = formatBatchPartyCaption(batchMeta, row.batchId);
+                    const showTechId = caption !== formatShortBatchId(row.batchId);
+                    return (
                     <tr key={row.batchId}>
-                      <td style={thtd}>
-                        <code style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{row.batchId}</code>
+                      <td style={thtd} title={`id: ${row.batchId}`}>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.35 }}>{caption}</div>
+                        {showTechId ? (
+                          <code
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "#71717a",
+                              display: "block",
+                              marginTop: "0.2rem",
+                            }}
+                          >
+                            {formatShortBatchId(row.batchId)}
+                          </code>
+                        ) : null}
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
                       <td style={thtd}>{row.shippedPackages.toString()}</td>
@@ -470,7 +505,8 @@ export function TripReportPanel() {
                         {kopecksToRubLabel(row.cashK.toString())} / {kopecksToRubLabel(row.debtK.toString())}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr>

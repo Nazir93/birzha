@@ -10,6 +10,7 @@ import type {
   ShipmentReportResponse,
   TripsListResponse,
 } from "../api/types.js";
+import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { buildTripBatchRows, type TripBatchTableRow } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
@@ -28,24 +29,6 @@ import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
 const selectWide = { ...fieldStyle, maxWidth: 420 };
-
-/** Строка накладной: группа товара + калибр (как в справочнике). */
-function formatNakladLineLabel(b: BatchListItem): string {
-  const n = b.nakladnaya;
-  const g = n?.productGroup?.trim();
-  const c = n?.productGradeCode?.trim();
-  if (g && c) {
-    return `${g} · ${c}`;
-  }
-  if (c) {
-    return c;
-  }
-  return "—";
-}
-
-function formatShortBatchId(id: string): string {
-  return id.length <= 16 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`;
-}
 
 /** Граммы → строка кг для подписей (целые граммы → десятичные кг без float). */
 function gramsBigIntToKgDecimalString(g: bigint): string {
