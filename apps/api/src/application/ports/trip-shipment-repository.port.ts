@@ -3,15 +3,20 @@ export type TripShipmentAppend = {
   tripId: string;
   batchId: string;
   grams: bigint;
+  /** Количество ящиков в этой строке отгрузки; `null` — не указано. */
+  packageCount: bigint | null;
 };
 
 export type TripShipmentBatchLine = {
   batchId: string;
   grams: bigint;
+  /** Сумма ящиков по всем строкам отгрузки этой партии в рейсе. */
+  packageCount: bigint;
 };
 
 export type TripShipmentAggregate = {
   totalGrams: bigint;
+  totalPackageCount: bigint;
   byBatch: TripShipmentBatchLine[];
 };
 

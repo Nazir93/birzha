@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   createBatchBodySchema,
   createTripBodySchema,
+  createProductGradeBodySchema,
+  createWarehouseBodySchema,
   loginBodySchema,
   receiveBodySchema,
   receiveOnWarehouseSyncPayloadSchema,
@@ -165,6 +167,16 @@ describe("shipToTripSyncPayloadSchema", () => {
     });
     expect(r).toEqual({ batchId: "b1", tripId: "t1", kg: 2 });
   });
+
+  it("принимает packageCount", () => {
+    const r = shipToTripSyncPayloadSchema.parse({
+      batchId: "b1",
+      tripId: "t1",
+      kg: 2,
+      packageCount: 5,
+    });
+    expect(r.packageCount).toBe(5);
+  });
 });
 
 describe("recordTripShortageBodySchema", () => {
@@ -198,6 +210,35 @@ describe("recordTripShortageSyncPayloadSchema", () => {
     });
     expect(r.batchId).toBe("b1");
     expect(r.reason).toBe("порча");
+  });
+});
+
+describe("createProductGradeBodySchema", () => {
+  it("принимает код и подпись", () => {
+    const r = createProductGradeBodySchema.parse({
+      code: "№9",
+      displayName: "Калибр №9",
+      sortOrder: 9,
+    });
+    expect(r.code).toBe("№9");
+    expect(r.sortOrder).toBe(9);
+  });
+});
+
+describe("createWarehouseBodySchema", () => {
+  it("принимает только название", () => {
+    const r = createWarehouseBodySchema.parse({ name: "  Склад А  " });
+    expect(r.name).toBe("Склад А");
+    expect(r.code).toBeUndefined();
+  });
+
+  it("принимает латинский код", () => {
+    const r = createWarehouseBodySchema.parse({ name: "А", code: "SITE-1" });
+    expect(r.code).toBe("SITE-1");
+  });
+
+  it("отклоняет кириллицу в code", () => {
+    expect(() => createWarehouseBodySchema.parse({ name: "А", code: "Склад" })).toThrow();
   });
 });
 

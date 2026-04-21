@@ -3,6 +3,8 @@ import type { ShipmentReportResponse } from "../api/types.js";
 export type TripBatchTableRow = {
   batchId: string;
   shippedG: bigint;
+  /** Ящики по отгрузке в рейс (сумма по строкам), если в отчёте есть поля. */
+  shippedPackages: bigint;
   soldG: bigint;
   shortageG: bigint;
   /** Отгружено − продано − недостача (граммы). */
@@ -33,8 +35,10 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   }
 
   const ship = new Map<string, bigint>();
+  const shipPkg = new Map<string, bigint>();
   for (const b of r.shipment.byBatch) {
     ship.set(b.batchId, bi(b.grams));
+    shipPkg.set(b.batchId, bi(b.packageCount));
   }
 
   const soldG = new Map<string, bigint>();
@@ -62,6 +66,7 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
     return {
       batchId,
       shippedG: sg,
+      shippedPackages: shipPkg.get(batchId) ?? 0n,
       soldG: sold,
       shortageG: sh,
       netTransitG: sg - sold - sh,
@@ -75,6 +80,7 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
 /** Суммы по колонкам таблицы партий (для подвала и сверки с API). */
 export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   shippedG: bigint;
+  shippedPackages: bigint;
   soldG: bigint;
   shortageG: bigint;
   netTransitG: bigint;
@@ -83,6 +89,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   debtK: bigint;
 } {
   let shippedG = 0n;
+  let shippedPackages = 0n;
   let soldG = 0n;
   let shortageG = 0n;
   let netTransitG = 0n;
@@ -91,6 +98,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   let debtK = 0n;
   for (const row of rows) {
     shippedG += row.shippedG;
+    shippedPackages += row.shippedPackages;
     soldG += row.soldG;
     shortageG += row.shortageG;
     netTransitG += row.netTransitG;
@@ -98,7 +106,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
     cashK += row.cashK;
     debtK += row.debtK;
   }
-  return { shippedG, soldG, shortageG, netTransitG, revenueK, cashK, debtK };
+  return { shippedG, shippedPackages, soldG, shortageG, netTransitG, revenueK, cashK, debtK };
 }
 
 export type BatchTotalsReconciliation = {

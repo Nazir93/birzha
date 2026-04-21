@@ -20,6 +20,7 @@ describe("tripBatchRowsToCsv", () => {
       {
         batchId: "b-1",
         shippedG: 1000n,
+        shippedPackages: 2n,
         soldG: 0n,
         shortageG: 0n,
         netTransitG: 1000n,
@@ -31,6 +32,6 @@ describe("tripBatchRowsToCsv", () => {
     const csv = tripBatchRowsToCsv(rows, { tripNumber: "Т-1", tripId: "tid" });
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Рейс;Т-1");
-    expect(csv).toContain("b-1;1000");
+    expect(csv).toContain("b-1;1000;2");
   });
 });

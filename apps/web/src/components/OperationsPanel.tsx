@@ -147,10 +147,11 @@ export function OperationsPanel() {
   const [shipBatchId, setShipBatchId] = useState("");
   const [shipTripId, setShipTripId] = useState("");
   const [shipKg, setShipKg] = useState("");
+  const [shipPackages, setShipPackages] = useState("");
 
   const ship = useMutation({
     mutationFn: async () => {
-      const { batchId, body } = parseShipForm(shipBatchId, shipTripId, shipKg);
+      const { batchId, body } = parseShipForm(shipBatchId, shipTripId, shipKg, shipPackages);
       await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
     },
     onSuccess: () => invalidateDomain(),
@@ -219,15 +220,17 @@ export function OperationsPanel() {
     <div role="region" aria-label="Операции по партиям и рейсу">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Операции по партиям и рейсу</h2>
       <p style={muted}>
-        Прямые вызовы REST (как в `register-batch-routes`). ID партии и закупки можно задать вручную или сгенерировать
-        пустыми полями при создании.
-      </p>
-      <p style={muted}>
-        Закупка по бумажной накладной — вкладка{" "}
+        <strong>Порядок в учёте:</strong> сначала на вкладке{" "}
         <Link to={routes.purchaseNakladnaya} style={{ fontWeight: 600 }}>
           Накладная
-        </Link>
-        .
+        </Link>{" "}
+        фиксируют приём на склад — появляются партии. Здесь — рейс, отгрузка в рейс (<strong>кг</strong> обязательно;
+        <strong>ящики</strong> при отгрузке — по желанию в форме ниже, дополнительно к ящикам в накладной), при
+        необходимости недостача по приёмке на рынке, продажа с рейса.
+      </p>
+      <p style={muted}>
+        Ниже — прямые вызовы REST (как в `register-batch-routes`). ID партии и закупки при ручном создании партии можно
+        задать вручную или сгенерировать пустыми полями.
       </p>
 
       {batchesQuery.data && (
@@ -462,6 +465,18 @@ export function OperationsPanel() {
           style={fieldStyle}
           inputMode="decimal"
           autoComplete="off"
+        />
+        <label htmlFor="op-in-ship-pkg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          Ящики (опц., целое число)
+        </label>
+        <input
+          id="op-in-ship-pkg"
+          value={shipPackages}
+          onChange={(e) => setShipPackages(e.target.value)}
+          style={fieldStyle}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="пусто = не указано"
         />
         <button
           type="button"

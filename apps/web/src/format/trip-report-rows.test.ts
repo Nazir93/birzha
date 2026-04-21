@@ -12,9 +12,10 @@ const baseReport = (): ShipmentReportResponse => ({
   trip: { id: "t1", tripNumber: "T-1", status: "open" },
   shipment: {
     totalGrams: "5000",
+    totalPackageCount: "100",
     byBatch: [
-      { batchId: "b1", grams: "3000" },
-      { batchId: "b2", grams: "2000" },
+      { batchId: "b1", grams: "3000", packageCount: "60" },
+      { batchId: "b2", grams: "2000", packageCount: "40" },
     ],
   },
   sales: {
@@ -47,6 +48,7 @@ describe("buildTripBatchRows", () => {
     expect(rows).toHaveLength(2);
     const b1 = rows.find((r) => r.batchId === "b1")!;
     expect(b1.shippedG).toBe(3000n);
+    expect(b1.shippedPackages).toBe(60n);
     expect(b1.soldG).toBe(1000n);
     expect(b1.shortageG).toBe(500n);
     expect(b1.netTransitG).toBe(1500n);
@@ -54,6 +56,7 @@ describe("buildTripBatchRows", () => {
 
     const b2 = rows.find((r) => r.batchId === "b2")!;
     expect(b2.shippedG).toBe(2000n);
+    expect(b2.shippedPackages).toBe(40n);
     expect(b2.soldG).toBe(0n);
     expect(b2.shortageG).toBe(0n);
     expect(b2.netTransitG).toBe(2000n);
@@ -72,6 +75,7 @@ describe("buildTripBatchRows", () => {
     const rows = buildTripBatchRows(baseReport());
     const agg = aggregateTripBatchRows(rows);
     expect(agg.shippedG).toBe(5000n);
+    expect(agg.shippedPackages).toBe(100n);
     expect(agg.soldG).toBe(1000n);
     expect(agg.shortageG).toBe(500n);
     expect(agg.netTransitG).toBe(3500n);

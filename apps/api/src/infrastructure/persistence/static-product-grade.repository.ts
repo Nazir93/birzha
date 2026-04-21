@@ -1,7 +1,14 @@
-import type { ProductGradeRecord, ProductGradeRepository } from "../../application/ports/product-grade-repository.port.js";
+import { randomUUID } from "node:crypto";
 
-/** Совпадает с сидом миграции `0011_purchase_nakladnaya`. */
-const STATIC: readonly ProductGradeRecord[] = [
+import { ProductGradeCodeConflictError } from "../../application/errors.js";
+import type {
+  CreateProductGradeInput,
+  ProductGradeRecord,
+  ProductGradeRepository,
+} from "../../application/ports/product-grade-repository.port.js";
+
+/** Совпадает с сидом миграции `0011_purchase_nakladnaya`; без PostgreSQL список можно дополнять через `create`. */
+const SEED: readonly ProductGradeRecord[] = [
   { id: "pg-n5", code: "№5", displayName: "Калибр №5", sortOrder: 5 },
   { id: "pg-n6", code: "№6", displayName: "Калибр №6", sortOrder: 6 },
   { id: "pg-n7", code: "№7", displayName: "Калибр №7", sortOrder: 7 },
@@ -11,12 +18,35 @@ const STATIC: readonly ProductGradeRecord[] = [
   { id: "pg-om", code: "Ом.", displayName: "Ом.", sortOrder: 30 },
 ];
 
+let memory: ProductGradeRecord[] | null = null;
+
+function getRows(): ProductGradeRecord[] {
+  if (!memory) {
+    memory = [...SEED];
+  }
+  return memory;
+}
+
 export class StaticProductGradeRepository implements ProductGradeRepository {
   async findById(id: string): Promise<ProductGradeRecord | null> {
-    return STATIC.find((g) => g.id === id) ?? null;
+    return getRows().find((g) => g.id === id) ?? null;
   }
 
   async list(): Promise<ProductGradeRecord[]> {
-    return [...STATIC];
+    return [...getRows()].sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"));
+  }
+
+  async create(input: CreateProductGradeInput): Promise<ProductGradeRecord> {
+    const code = input.code.trim();
+    const displayName = input.displayName.trim();
+    const sortOrder = input.sortOrder ?? 100;
+    const rows = getRows();
+    if (rows.some((g) => g.code === code)) {
+      throw new ProductGradeCodeConflictError(code);
+    }
+    const id = `pg-${randomUUID()}`;
+    const rec: ProductGradeRecord = { id, code, displayName, sortOrder };
+    rows.push(rec);
+    return rec;
   }
 }

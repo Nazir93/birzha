@@ -44,11 +44,11 @@
 | 0 | Монорепо pnpm + Turbo, Vitest, sql.js, Drizzle + PostgreSQL в API, web-каркас; пакет **`@birzha/contracts`** (Zod) | ✅ |
 | 1 | Домен `Batch`, `Money`, тесты | ✅ |
 | 2 | Use cases + порты + in-memory тесты | ✅ см. раздел «Сделано» ниже |
-| 3 | Репозитории Drizzle, миграции `drizzle/0000`…`0011` (в т.ч. **`0011_purchase_nakladnaya`**: склады, калибры, закупочная накладная и строки, `batches.warehouse_id`), PG-интеграции при `TEST_DATABASE_URL` | ✅ |
+| 3 | Репозитории Drizzle, миграции `drizzle/0000`…`0012` (в т.ч. **`0011_purchase_nakladnaya`**, **`0012_trip_shipment_package_count`**: ящики в `trip_batch_shipments`), PG-интеграции при `TEST_DATABASE_URL` | ✅ |
 | 4 | REST API (Fastify), сквозные тесты, золотой HTTP-flow, 409 на избыток недостачи, PG-тест журнала недостач | ✅ |
 | 5 | Офлайн-синхронизация | ✅ сервер `POST /sync`; клиент `apps/web/src/sync` (**IndexedDB** outbox + миграция из legacy `localStorage`, `processSyncQueue`); **PWA** (manifest + **injectManifest** SW: precache, SPA fallback, **Background Sync** → сообщение странице → тот же `processSyncQueueSerialized`); **демо в `App`**: длина очереди, «в очередь» (`create_trip`), «синхронизировать»; область очереди по пользователю при JWT — см. раздел «Роли» выше |
 | 6 | Расширенные отчёты (сходимость «как часы» в продуктовом смысле) | ✅ API отчёт по рейсу; **`sales.byClient`** и **`clientLabel`** (снимок имени); **справочник контрагентов** — таблица **`counterparties`**, **`trip_batch_sales.counterparty_id`**, **`GET/POST /counterparties`**, продажа с рейса с **`counterpartyId`** (снимок в `client_label`); UI «Операции» — выбор из справочника и создание записи. **Не в объёме MVP в репозитории:** отдельный PDF-макет; **доп. расходы/налоги** в `financials` — после правил заказчика |
-| 7 | UI / PWA | ✅ вкладки: отчёты, **операции**, офлайн, служебное; **React Router**; **Zod** на формах; **Playwright** — полный дым (`e2e/golden-smoke.spec.ts`), в т.ч. **тот же числовой сценарий**, что в `golden-scenario.flow.test.ts` (5000 кг → отгрузка → недостача → продажа) |
+| 7 | UI / PWA | ✅ **`AppNav`:** первая вкладка **«Накладная»**, затем отчёты, операции, офлайн, служебное; маршрут **`/purchase-nakladnaya`**; после входа роли **кладовщик** / **закупщик** — старт на накладной (`defaultRouteForUser` в `role-panels.ts`); **React Router**; **Zod**; **Playwright** — полный дым (`e2e/golden-smoke.spec.ts`), в т.ч. **тот же числовой сценарий**, что в `golden-scenario.flow.test.ts` (5000 кг → отгрузка → недостача → продажа) |
 | 8 | Пилот и итерации | ⏳ прод-сервер не развёрнут; пилот на месте — после хостинга и правил |
 
 ---
@@ -84,13 +84,13 @@
 
 ### База данных
 
-- Миграции до **`0011`** — в т.ч. **`sync_processed_actions`** (`0007`), **`trip_batch_sales.client_label`** (`0008`), **`users` / `roles` / `user_roles`** и сид ролей MVP (`0009`), **`counterparties`** и **`trip_batch_sales.counterparty_id`** (`0010`), **`0011_purchase_nakladnaya`**: **`warehouses`**, **`product_grades`**, **`purchase_documents`**, **`purchase_document_lines`**, колонка **`batches.warehouse_id`** (FK на склад, nullable).
+- Миграции до **`0012`** — в т.ч. **`sync_processed_actions`** (`0007`), **`trip_batch_sales.client_label`** (`0008`), **`users` / `roles` / `user_roles`** и сид ролей MVP (`0009`), **`counterparties`** и **`trip_batch_sales.counterparty_id`** (`0010`), **`0011_purchase_nakladnaya`**: **`warehouses`**, **`product_grades`**, **`purchase_documents`**, **`purchase_document_lines`**, колонка **`batches.warehouse_id`**; **`0012_trip_shipment_package_count`**: **`trip_batch_shipments.package_count`** (nullable bigint — ящики в строке отгрузки в рейс).
 - Отгрузка, продажа, недостача с PG — в транзакциях там, где это уже проведено в `app.ts`. Создание накладной — транзакция в **`DrizzlePurchaseDocumentRepository`** (шапка → партии → строки).
 
 ### Веб-клиент (`apps/web`)
 
 - Модуль **`src/sync`**: outbox в **IndexedDB** (имя БД зависит от области: без входа — `birzha-offline`; с входом — отдельная БД на `user:<id>`), миграция из `birzha:outbox:v1` только для области `default`; публичные **`loadOutbox`** / **`enqueue`** (async); для тестов — `*Sync` + явный `StorageLike`; **`processSyncQueue`** (FIFO, стоп при `rejected` или сетевой ошибке); **`processSyncQueueSerialized`** (один параллельный прогон); **`subscribeSyncOnOnline`** — при `online`, возврате на вкладку и при монтировании (если сеть есть), опционально **`periodicIntervalMs`** — пока вкладка видима и есть сеть, повтор синка не чаще чем раз в N мс (в `App` — 2 мин). Vitest: `outbox-queue.test.ts`, `process-sync-queue.test.ts`, `process-sync-queue-serial.test.ts`, `outbox-idb.test.ts` (fake-indexeddb), `subscribe-sync-on-online.test.ts` (happy-dom).
-- **`App`**: **`AuthProvider`**, **`/login`**, **`requireApiAuth`** → редирект на вход; **`auth/role-panels.ts`** + **`RequirePanel`** — навигация и маршруты по глобальным ролям JWT (при **`authApi`**); иначе все разделы как раньше; **`apiFetch`**; маршруты `/reports`, `/operations`, `/offline`, `/service`; стили — `ui/styles.ts`, `index.css`; «Отчёты» — `POST /trips`, отчёт (сверка, **по клиентам**, **печать**); «**Операции**»; **Zod**; «Служебное» — `/api/meta`; «Офлайн» — **`processSyncQueueSerialized`**, **`requestOutboxBackgroundSync`**.
+- **`App`**: **`AuthProvider`**, **`/login`**, **`requireApiAuth`** → редирект на вход; **`auth/role-panels.ts`** + **`RequirePanel`** — навигация и маршруты по глобальным ролям JWT (при **`authApi`**); иначе все разделы как раньше; **`apiFetch`**; маршруты **`/purchase-nakladnaya`**, `/reports`, `/operations`, `/offline`, `/service`; стили — `ui/styles.ts`, `index.css`; «**Накладная**» — приём на склад; «Отчёты» — `POST /trips`, отчёт (сверка, **по клиентам**, **печать**); «**Операции**» — партии и рейс; **Zod**; «Служебное» — `/api/meta`; «Офлайн» — **`processSyncQueueSerialized`**, **`requestOutboxBackgroundSync`**.
 - **PWA** (`vite-plugin-pwa`): `manifest.webmanifest`, precache ассетов, `registerSW` в `main.tsx`; иконка `public/pwa-icon.svg`.
 
 ### Тесты
@@ -117,7 +117,7 @@
 
 **Вне текущего объёма кода (продукт / домен):** **возвраты** (нет сущности в домене); **частичные оплаты долгов** и проводки — только после матрицы прав (`07-debts-returns-and-role-edge-cases.mdc`).
 
-**UI накладной:** отдельный маршрут **`/purchase-nakladnaya`** (вкладка «Накладная» в **`AppNav`**), компонент **`PurchaseNakladnayaSection`**; на странице «Операции» — ссылка на накладную. Права панели **`nakladnaya`** совпадают с «Операциями» (не бухгалтер). При `purchaseDocumentsApi: disabled` — пояснение в блоке.
+**UI накладной:** отдельный маршрут **`/purchase-nakladnaya`** (в **`AppNav`** вкладка «Накладная» **первая**), компонент **`PurchaseNakladnayaSection`**; на странице «Операции» — явный текст порядка («сначала Накладная») и ссылка на накладную. Права панели **`nakladnaya`** совпадают с «Операциями» (не бухгалтер). При `purchaseDocumentsApi: disabled` — пояснение в блоке.
 
 **E2E по ролям (JWT в браузере):** `e2e/role-nav-auth.spec.ts` — вход `e2e_accountant` / `e2e_warehouse`, проверка **`AppNav`**; сервер **`e2e-server.ts`** с **`E2E_DATABASE_URL`** + миграции + сид **`e2e-seed-role-users.ts`**, **`REQUIRE_API_AUTH`** (по умолчанию вкл.). Локально: см. **`README.md`** (`pnpm e2e:roles`). В CI: job **`e2e-auth-nav`** в `.github/workflows/ci.yml`.
 

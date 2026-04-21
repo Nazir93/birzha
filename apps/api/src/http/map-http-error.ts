@@ -9,6 +9,7 @@ import {
   BatchNotFoundError,
   CounterpartyNotFoundError,
   InsufficientStockForTripError,
+  ProductGradeCodeConflictError,
   ProductGradeNotFoundError,
   PurchaseLineTotalMismatchError,
   SalePaymentSplitError,
@@ -16,6 +17,7 @@ import {
   TripNotEmptyError,
   TripNotFoundError,
   TripShortageExceedsNetError,
+  WarehouseCodeConflictError,
   WarehouseNotFoundError,
 } from "../application/errors.js";
 
@@ -50,10 +52,22 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
       warehouseId: error.warehouseId,
     });
   }
+  if (error instanceof WarehouseCodeConflictError) {
+    return reply.code(409).send({
+      error: "warehouse_code_conflict",
+      code: error.code,
+    });
+  }
   if (error instanceof ProductGradeNotFoundError) {
     return reply.code(400).send({
       error: "product_grade_not_found",
       productGradeId: error.productGradeId,
+    });
+  }
+  if (error instanceof ProductGradeCodeConflictError) {
+    return reply.code(409).send({
+      error: "product_grade_code_conflict",
+      code: error.code,
     });
   }
   if (error instanceof PurchaseLineTotalMismatchError) {

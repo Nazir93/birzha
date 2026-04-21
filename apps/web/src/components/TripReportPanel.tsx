@@ -142,8 +142,11 @@ export function TripReportPanel() {
         Рейсы и отчёт по фуре
       </h2>
       <p className="no-print" style={muted}>
-        Список из <code>GET /api/trips</code>, отчёт — <code>GET /api/trips/:tripId/shipment-report</code> (отгрузки,
-        продажи, недостача, деньги).
+        По смыслу учёта эта сводка — опора для контроля загрузки машины и движения товара; отдельного документа «общая
+        накладная на всю машину» в системе нет — используйте этот отчёт и печать. Технически: список из{" "}
+        <code>GET /api/trips</code>, отчёт — <code>GET /api/trips/:tripId/shipment-report</code> (отгрузки, продажи,
+        недостача, деньги; калибр в разрезе партий — если партия из накладной; ящики по отгрузке в рейс — если вводили при
+        отгрузке).
       </p>
 
       {tripsQuery.isPending && (
@@ -263,6 +266,10 @@ export function TripReportPanel() {
               <tr>
                 <td style={thtd}>Отгрузка в рейс</td>
                 <td style={thtd}>{gramsToKgLabel(r.shipment.totalGrams)} кг</td>
+              </tr>
+              <tr>
+                <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
+                <td style={thtd}>{r.shipment.totalPackageCount}</td>
               </tr>
               <tr>
                 <td style={thtd}>Продажи</td>
@@ -421,6 +428,9 @@ export function TripReportPanel() {
                       Отгр., кг
                     </th>
                     <th scope="col" style={thHead}>
+                      Отгр., ящ.
+                    </th>
+                    <th scope="col" style={thHead}>
                       Прод., кг
                     </th>
                     <th scope="col" style={thHead}>
@@ -444,6 +454,7 @@ export function TripReportPanel() {
                         <code style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{row.batchId}</code>
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
+                      <td style={thtd}>{row.shippedPackages.toString()}</td>
                       <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
                       <td style={thtd}>{gramsToKgLabel(row.shortageG.toString())}</td>
                       <td

@@ -503,7 +503,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByText(batchId, { exact: true })).toBeVisible();
   });
 
-  test("навигация: вкладки AppNav (отчёты → накладная → операции → офлайн → служебное → отчёты)", async ({ page }) => {
+  test("навигация: вкладки AppNav (накладная → отчёты → операции → офлайн → служебное → отчёты)", async ({ page }) => {
     await page.goto("/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();

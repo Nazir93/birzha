@@ -41,11 +41,11 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await page.locator("#login-user").fill("e2e_warehouse");
     await page.locator("#login-pass").fill(password);
     await page.getByRole("button", { name: "Войти" }).click();
-    await expect(page).toHaveURL(/\/reports$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/purchase-nakladnaya$/, { timeout: 20_000 });
 
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
-    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Накладная" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Операции" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Офлайн-очередь" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Служебное" })).toHaveCount(0);

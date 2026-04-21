@@ -57,10 +57,12 @@ describe.skipIf(!pgUrl)("DrizzleTripShipmentRepository (PostgreSQL)", () => {
       tripId,
       batchId,
       grams: 300_000n,
+      packageCount: 15n,
     });
 
     const agg = await shipments.aggregateByTripId(tripId);
     expect(agg.totalGrams).toBe(300_000n);
-    expect(agg.byBatch).toEqual([{ batchId, grams: 300_000n }]);
+    expect(agg.totalPackageCount).toBe(15n);
+    expect(agg.byBatch).toEqual([{ batchId, grams: 300_000n, packageCount: 15n }]);
   });
 });

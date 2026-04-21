@@ -18,6 +18,8 @@ export const receiveBodySchema = z.object({
 export const shipBodySchema = z.object({
   kg: z.number().finite().positive(),
   tripId: z.string().min(1),
+  /** Ящики в этой отгрузке (опционально); целое неотрицательное. */
+  packageCount: z.number().int().nonnegative().optional(),
 });
 
 const sellFromTripBodyBase = z.object({
@@ -61,6 +63,25 @@ export const recordTripShortageBodySchema = z.object({
 /** POST /counterparties */
 export const createCounterpartyBodySchema = z.object({
   displayName: z.string().min(1).max(200).trim(),
+});
+
+/** POST /product-grades — калибр / строка накладной (`code` как на бумаге, уникален). */
+export const createProductGradeBodySchema = z.object({
+  code: z.string().min(1).max(64).trim(),
+  displayName: z.string().min(1).max(200).trim(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+});
+
+/** POST /warehouses — склад поступления (название произвольное; код — латиница, уникальный, опционально). */
+export const createWarehouseBodySchema = z.object({
+  name: z.string().min(1).max(200).trim(),
+  /** Латинский код для отчётов и сортировки; если не задан — генерируется на сервере. */
+  code: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[A-Za-z0-9._-]+$/, "code: только латиница, цифры, точка, подчёркивание, дефис")
+    .optional(),
 });
 
 /** POST /auth/login */

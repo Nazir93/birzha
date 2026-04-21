@@ -97,6 +97,8 @@ export const tripBatchShipments = pgTable("trip_batch_shipments", {
     .notNull()
     .references(() => batches.id),
   grams: bigint("grams", { mode: "bigint" }).notNull(),
+  /** Ящики по строке отгрузки (опционально); суммируются в отчёте по рейсу. */
+  packageCount: bigint("package_count", { mode: "bigint" }),
 });
 
 /** Недостача / списание массы из пути по рейсу (приёмка и т.п.). */

@@ -17,6 +17,9 @@ const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
 /** Создание партии (закупка) — закуп + склад + руководство. */
 const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as const;
 
+/** Новый склад в справочнике — те же роли, что ввод закупочную накладную. */
+const WAREHOUSE_CREATE_ROLES = BATCH_CREATE_ROLES;
+
 /** Оприходование на склад. */
 const RECEIVE_ROLES = ["admin", "manager", "warehouse"] as const;
 
@@ -69,6 +72,8 @@ export type BusinessRouteAuth = {
   sync: AuthPreHandler[];
   catalogRead: AuthPreHandler[];
   catalogWrite: AuthPreHandler[];
+  /** POST /warehouses, POST /product-grades — справочники накладной (те же роли, что ввод накладную). */
+  nakladnayaCatalogWrite: AuthPreHandler[];
 };
 
 const EMPTY_AUTH: BusinessRouteAuth = {
@@ -83,6 +88,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   sync: [],
   catalogRead: [],
   catalogWrite: [],
+  nakladnayaCatalogWrite: [],
 };
 
 function requireGlobalRoles(allowed: readonly string[]): AuthPreHandler {
@@ -118,6 +124,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     sync: [a, requireGlobalRoles(SYNC_ROLES)],
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
+    nakladnayaCatalogWrite: [a, requireGlobalRoles(WAREHOUSE_CREATE_ROLES)],
   };
 }
 

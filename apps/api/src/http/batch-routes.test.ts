@@ -94,7 +94,11 @@ describe("Batch HTTP", () => {
     r = await app.inject({ method: "GET", url: "/trips/t-1/shipment-report" });
     expect(r.statusCode).toBe(200);
     const report = JSON.parse(r.body) as {
-      shipment: { totalGrams: string; byBatch: { batchId: string; grams: string }[] };
+      shipment: {
+        totalGrams: string;
+        totalPackageCount: string;
+        byBatch: { batchId: string; grams: string; packageCount: string }[];
+      };
       sales: {
         totalGrams: string;
         totalRevenueKopecks: string;
@@ -105,7 +109,10 @@ describe("Batch HTTP", () => {
       financials: { grossProfitKopecks: string };
     };
     expect(report.shipment.totalGrams).toBe("200000");
-    expect(report.shipment.byBatch).toEqual([{ batchId: "flow-1", grams: "200000" }]);
+    expect(report.shipment.totalPackageCount).toBe("0");
+    expect(report.shipment.byBatch).toEqual([
+      { batchId: "flow-1", grams: "200000", packageCount: "0" },
+    ]);
     expect(report.sales.totalGrams).toBe("0");
     expect(report.sales.totalRevenueKopecks).toBe("0");
     expect(report.sales.totalCashKopecks).toBe("0");

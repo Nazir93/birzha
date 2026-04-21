@@ -23,15 +23,25 @@ export class InMemoryTripShipmentRepository implements TripShipmentRepository {
 
   async aggregateByTripId(tripId: string): Promise<TripShipmentAggregate> {
     const relevant = this.rows.filter((r) => r.tripId === tripId);
-    const byBatch = new Map<string, bigint>();
+    const byGrams = new Map<string, bigint>();
+    const byPackages = new Map<string, bigint>();
     let total = 0n;
+    let totalPkg = 0n;
     for (const r of relevant) {
       total += r.grams;
-      byBatch.set(r.batchId, (byBatch.get(r.batchId) ?? 0n) + r.grams);
+      byGrams.set(r.batchId, (byGrams.get(r.batchId) ?? 0n) + r.grams);
+      const p = r.packageCount ?? 0n;
+      totalPkg += p;
+      byPackages.set(r.batchId, (byPackages.get(r.batchId) ?? 0n) + p);
     }
-    const lines = [...byBatch.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([batchId, grams]) => ({ batchId, grams }));
-    return { totalGrams: total, byBatch: lines };
+    const batchIds = new Set([...byGrams.keys(), ...byPackages.keys()]);
+    const lines = [...batchIds]
+      .sort((a, b) => a.localeCompare(b))
+      .map((batchId) => ({
+        batchId,
+        grams: byGrams.get(batchId) ?? 0n,
+        packageCount: byPackages.get(batchId) ?? 0n,
+      }));
+    return { totalGrams: total, totalPackageCount: totalPkg, byBatch: lines };
   }
 }

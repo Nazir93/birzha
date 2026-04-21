@@ -34,7 +34,33 @@ describe("ShipToTripUseCase", () => {
 
     const agg = await shipments.aggregateByTripId("t-1");
     expect(agg.totalGrams).toBe(200_000n);
-    expect(agg.byBatch).toEqual([{ batchId: "b-1", grams: 200_000n }]);
+    expect(agg.totalPackageCount).toBe(0n);
+    expect(agg.byBatch).toEqual([{ batchId: "b-1", grams: 200_000n, packageCount: 0n }]);
+  });
+
+  it("сохраняет количество ящиков в строке отгрузки", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    await new CreateTripUseCase(trips).execute({ id: "t-2", tripNumber: "Ф-02" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-2",
+      purchaseId: "p-1",
+      totalKg: 500,
+      pricePerKg: 10,
+      distribution: "on_hand",
+    });
+
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-2",
+      kg: 100,
+      tripId: "t-2",
+      packageCount: 42,
+    });
+
+    const agg = await shipments.aggregateByTripId("t-2");
+    expect(agg.totalPackageCount).toBe(42n);
+    expect(agg.byBatch[0]?.packageCount).toBe(42n);
   });
 
   it("без рейса в репозитории — TripNotFoundError", async () => {

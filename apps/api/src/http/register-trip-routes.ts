@@ -15,7 +15,12 @@ import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-ca
 
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
-import { ledgerAggregateToJson, saleLedgerAggregateToJson, tripFinancialsToJson } from "./trip-report-serialize.js";
+import {
+  ledgerAggregateToJson,
+  saleLedgerAggregateToJson,
+  shipmentLedgerToJson,
+  tripFinancialsToJson,
+} from "./trip-report-serialize.js";
 import { tripToJson } from "./trip-serialize.js";
 
 export function registerTripRoutes(
@@ -47,7 +52,7 @@ export function registerTripRoutes(
       const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(tripId);
       return reply.send({
         trip: tripToJson(trip),
-        shipment: ledgerAggregateToJson(shipment),
+        shipment: shipmentLedgerToJson(shipment),
         sales: saleLedgerAggregateToJson(saleAgg),
         shortage: ledgerAggregateToJson(shortageAgg),
         financials: tripFinancialsToJson(financials),

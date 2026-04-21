@@ -30,6 +30,7 @@ describe("GetTripReportUseCase", () => {
       tripId: "t-1",
       batchId: "b-a",
       grams: 1000n,
+      packageCount: null,
     });
     await sales.append({
       id: "sl1",
@@ -53,6 +54,7 @@ describe("GetTripReportUseCase", () => {
 
     expect(trip.getId()).toBe("t-1");
     expect(shipment.totalGrams).toBe(1000n);
+    expect(shipment.totalPackageCount).toBe(0n);
     expect(saleAgg.totalGrams).toBe(400n);
     expect(saleAgg.totalRevenueKopecks).toBe(400n);
     expect(saleAgg.totalCashKopecks).toBe(400n);

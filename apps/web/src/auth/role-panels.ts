@@ -44,6 +44,12 @@ export function defaultRouteForUser(user: AuthUser | null): string {
   if (!user) {
     return routes.reports;
   }
+  const codes = globalRoleCodes(user);
+  const startAtWarehouseIntake =
+    (codes.has("warehouse") || codes.has("purchaser")) && canAccessPanel(user, "nakladnaya");
+  if (startAtWarehouseIntake) {
+    return routes.purchaseNakladnaya;
+  }
   if (canAccessPanel(user, "reports")) {
     return routes.reports;
   }

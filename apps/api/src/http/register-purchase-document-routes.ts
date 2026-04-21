@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { createPurchaseDocumentBodySchema } from "@birzha/contracts";
+import {
+  createProductGradeBodySchema,
+  createPurchaseDocumentBodySchema,
+  createWarehouseBodySchema,
+} from "@birzha/contracts";
 import { z } from "zod";
 
 import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
@@ -31,10 +35,34 @@ export function registerPurchaseDocumentRoutes(
     }
   });
 
+  app.post("/warehouses", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
+    try {
+      const body = createWarehouseBodySchema.parse(req.body);
+      const warehouse = await warehouses.create({ name: body.name, code: body.code });
+      return reply.code(201).send({ warehouse });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
   app.get("/product-grades", { ...withPreHandlers(routeAuth.catalogRead) }, async (_req, reply) => {
     try {
       const list = await grades.list();
       return reply.send({ productGrades: list });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/product-grades", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
+    try {
+      const body = createProductGradeBodySchema.parse(req.body);
+      const productGrade = await grades.create({
+        code: body.code,
+        displayName: body.displayName,
+        sortOrder: body.sortOrder,
+      });
+      return reply.code(201).send({ productGrade });
     } catch (error) {
       return sendMappedError(reply, error);
     }

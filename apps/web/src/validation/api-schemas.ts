@@ -68,12 +68,23 @@ export function parseReceiveForm(batchIdRaw: string, kgRaw: string) {
   });
 }
 
-export function parseShipForm(batchIdRaw: string, tripIdRaw: string, kgRaw: string) {
+export function parseShipForm(batchIdRaw: string, tripIdRaw: string, kgRaw: string, packageCountRaw?: string) {
   return mapZod(() => {
     const batchId = batchIdParam.parse(batchIdRaw.trim());
     const tripId = batchIdParam.parse(tripIdRaw.trim());
     const kg = parseDecimalKg(kgRaw);
-    return { batchId, body: shipBodySchema.parse({ tripId, kg }) };
+    const trimmed = packageCountRaw?.trim() ?? "";
+    const base: z.infer<typeof shipBodySchema> =
+      trimmed === ""
+        ? { tripId, kg }
+        : (() => {
+            const n = Number.parseInt(trimmed, 10);
+            if (!Number.isFinite(n) || n < 0) {
+              throw new Error("Ящики: укажите целое неотрицательное число или оставьте поле пустым");
+            }
+            return { tripId, kg, packageCount: n };
+          })();
+    return { batchId, body: shipBodySchema.parse(base) };
   });
 }
 

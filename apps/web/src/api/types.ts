@@ -23,6 +23,7 @@ export type BatchesListResponse = {
 
 export type WarehouseJson = { id: string; code: string; name: string };
 export type WarehousesListResponse = { warehouses: WarehouseJson[] };
+export type CreateWarehouseResponse = { warehouse: WarehouseJson };
 
 export type ProductGradeJson = {
   id: string;
@@ -31,6 +32,7 @@ export type ProductGradeJson = {
   sortOrder: number;
 };
 export type ProductGradesListResponse = { productGrades: ProductGradeJson[] };
+export type CreateProductGradeResponse = { productGrade: ProductGradeJson };
 
 export type PurchaseDocumentSummary = {
   id: string;
@@ -69,6 +71,13 @@ export type LedgerBlock = {
   byBatch: { batchId: string; grams: string }[];
 };
 
+/** Блок `shipment` в отчёте по рейсу: отгрузка с опциональным учётом ящиков. */
+export type ShipmentLedgerBlock = {
+  totalGrams: string;
+  totalPackageCount: string;
+  byBatch: { batchId: string; grams: string; packageCount: string }[];
+};
+
 export type SalesBlock = {
   totalGrams: string;
   totalRevenueKopecks: string;
@@ -99,7 +108,7 @@ export type FinancialsBlock = {
 
 export type ShipmentReportResponse = {
   trip: TripJson;
-  shipment: LedgerBlock;
+  shipment: ShipmentLedgerBlock;
   sales: SalesBlock;
   shortage: LedgerBlock;
   financials: FinancialsBlock;

@@ -97,6 +97,30 @@ export class WarehouseNotFoundError extends Error {
   }
 }
 
+/** Код склада уже занят (уникальный `warehouses.code`). */
+export class WarehouseCodeConflictError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Код склада уже занят: ${code}`);
+    this.name = "WarehouseCodeConflictError";
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/** Код калибра уже занят (уникальный `product_grades.code`). */
+export class ProductGradeCodeConflictError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Код калибра уже занят: ${code}`);
+    this.name = "ProductGradeCodeConflictError";
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class ProductGradeNotFoundError extends Error {
   readonly productGradeId: string;
 

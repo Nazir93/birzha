@@ -36,6 +36,8 @@ describe("role-panels", () => {
   it("defaultRouteForUser", () => {
     expect(defaultRouteForUser(userWithRoles("accountant"))).toBe(routes.reports);
     expect(defaultRouteForUser(userWithRoles("seller"))).toBe(routes.reports);
+    expect(defaultRouteForUser(userWithRoles("warehouse"))).toBe(routes.purchaseNakladnaya);
+    expect(defaultRouteForUser(userWithRoles("purchaser"))).toBe(routes.purchaseNakladnaya);
   });
 
   it("без глобальных ролей — только отчёты", () => {

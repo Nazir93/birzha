@@ -102,6 +102,7 @@ export function registerBatchRoutes(
         batchId: params.batchId,
         kg: body.kg,
         tripId: body.tripId,
+        packageCount: body.packageCount,
       });
       return reply.code(200).send({ ok: true });
     } catch (error) {

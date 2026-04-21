@@ -26,6 +26,7 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
     [
       "Партия_id",
       "Отгружено_г",
+      "Отгружено_ящ",
       "Продано_г",
       "Недостача_г",
       "Остаток_в_пути_г",
@@ -39,6 +40,7 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
       [
         escapeCsvField(row.batchId),
         row.shippedG.toString(),
+        row.shippedPackages.toString(),
         row.soldG.toString(),
         row.shortageG.toString(),
         row.netTransitG.toString(),

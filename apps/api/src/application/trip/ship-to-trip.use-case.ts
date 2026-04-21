@@ -11,6 +11,8 @@ export type ShipToTripInput = {
   batchId: string;
   kg: number;
   tripId: string;
+  /** Ящики по этой строке отгрузки (опционально). */
+  packageCount?: number;
 };
 
 /** Обёртка транзакции PostgreSQL: одна пара репозиториев на `tx` для save + append. */
@@ -37,6 +39,8 @@ export class ShipToTripUseCase {
 
     const grams = kgToGrams(input.kg);
     const shipmentId = randomUUID();
+    const packageCount: bigint | null =
+      input.packageCount === undefined ? null : BigInt(Math.max(0, Math.floor(input.packageCount)));
 
     const persist = async (batches: BatchRepository, shipments: TripShipmentRepository) => {
       const batch = await loadBatchOrThrow(batches, input.batchId);
@@ -47,6 +51,7 @@ export class ShipToTripUseCase {
         tripId: input.tripId,
         batchId: input.batchId,
         grams,
+        packageCount,
       });
     };
 
