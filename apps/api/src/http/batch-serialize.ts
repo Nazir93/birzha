@@ -14,6 +14,8 @@ export type BatchJson = {
   nakladnaya?: {
     /** `purchase_documents.id` — для группировки партий одной накладной. */
     documentId: string | null;
+    /** Склад поступления по закупочной накладной. */
+    warehouseId: string | null;
     productGradeCode: string | null;
     /** Из справочника калибров — вид товара (помидоры, огурцы…). */
     productGroup: string | null;

@@ -13,6 +13,8 @@ export type BatchListItem = {
   /** Если партия из строки закупочной накладной (PostgreSQL). */
   nakladnaya?: {
     documentId: string | null;
+    /** Склад поступления по накладной (для фильтров в «Распределении»). */
+    warehouseId: string | null;
     productGradeCode: string | null;
     /** Вид товара из справочника (помидоры, огурцы…). */
     productGroup: string | null;

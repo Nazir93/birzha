@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
-import type { BatchListItem, BatchesListResponse } from "../api/types.js";
+import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+
+const ORPHAN_WAREHOUSE = "__unassigned__";
 
 const labelsQuality: Record<(typeof BATCH_QUALITY_TIERS)[number], string> = {
   standard: "стандарт (для регионов и «нормальной» реализации)",
@@ -36,6 +38,47 @@ function toSelectValue(
   return emptyLabel === "not_set" ? "_notset" : "";
 }
 
+/** Группировка остатков: склад (из накладной) → партии. Без накладной / без склада — отдельный бакет. */
+function groupBatchesByWarehouse(stock: BatchListItem[]): {
+  byWarehouse: Map<string, BatchListItem[]>;
+  order: string[];
+} {
+  const byWarehouse = new Map<string, BatchListItem[]>();
+  for (const b of stock) {
+    const wid = b.nakladnaya?.warehouseId?.trim() || null;
+    const key = wid ?? ORPHAN_WAREHOUSE;
+    if (!byWarehouse.has(key)) {
+      byWarehouse.set(key, []);
+    }
+    byWarehouse.get(key)!.push(b);
+  }
+  const order = [...byWarehouse.keys()].sort((a, b) => {
+    if (a === ORPHAN_WAREHOUSE) {
+      return 1;
+    }
+    if (b === ORPHAN_WAREHOUSE) {
+      return -1;
+    }
+    return a.localeCompare(b, "ru");
+  });
+  return { byWarehouse, order };
+}
+
+type DocOption = { id: string; number: string };
+
+function documentsForBatches(batches: BatchListItem[]): DocOption[] {
+  const m = new Map<string, string>();
+  for (const b of batches) {
+    const d = b.nakladnaya?.documentId;
+    if (d) {
+      m.set(d, b.nakladnaya?.documentNumber?.trim() || d);
+    }
+  }
+  return [...m.entries()]
+    .map(([id, number]) => ({ id, number }))
+    .sort((a, b) => a.number.localeCompare(b.number, "ru"));
+}
+
 export function AllocationPanel() {
   const queryClient = useQueryClient();
   const batchesQuery = useQuery({
@@ -50,7 +93,32 @@ export function AllocationPanel() {
     retry: 1,
   });
 
+  const warehousesQuery = useQuery({
+    queryKey: ["warehouses"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/warehouses");
+      if (!res.ok) {
+        throw new Error(`warehouses ${res.status}`);
+      }
+      return res.json() as Promise<WarehousesListResponse>;
+    },
+    retry: 1,
+  });
+
   const [edits, setEdits] = useState<Record<string, RowEdit | undefined>>({});
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
+  const [selectedDocument, setSelectedDocument] = useState<string>("");
+
+  const warehouseName = useCallback(
+    (id: string) => {
+      if (id === ORPHAN_WAREHOUSE) {
+        return "Прочие (без накладной / вручную)";
+      }
+      const w = warehousesQuery.data?.warehouses.find((x) => x.id === id);
+      return w ? `${w.name} (${w.code})` : id;
+    },
+    [warehousesQuery.data?.warehouses],
+  );
 
   const getEdit = (b: BatchListItem): RowEdit => {
     const e = edits[b.id];
@@ -76,7 +144,7 @@ export function AllocationPanel() {
         body: JSON.stringify(body),
       });
       if (res.status === 503) {
-        throw new Error("Нужна PostgreSQL на сервере (распределение не доступно в тестовом in-memory).");
+        throw new Error("Нужна PostgreSQL на сервере (распределение не доступно in-memory).");
       }
       if (res.status === 403) {
         throw new Error("Недостаточно прав (нужна роль закупки/склада/руководства).");
@@ -101,6 +169,58 @@ export function AllocationPanel() {
     save.mutate({ batchId: b.id, quality: e.quality, destination: e.destination });
   };
 
+  const list = useMemo(
+    () => (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0),
+    [batchesQuery.data?.batches],
+  );
+  const loading = batchesQuery.isPending;
+  const refetching = batchesQuery.isFetching && !batchesQuery.isPending;
+
+  const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
+
+  const batchesInWh = useMemo(
+    () => (selectedWarehouse ? (byWarehouse.get(selectedWarehouse) ?? []) : []),
+    [byWarehouse, selectedWarehouse],
+  );
+
+  const documentOptions = useMemo(() => documentsForBatches(batchesInWh), [batchesInWh]);
+
+  const autoDocumentId = useMemo((): string | null => {
+    if (documentOptions.length !== 1) {
+      return null;
+    }
+    return documentOptions[0]!.id;
+  }, [documentOptions]);
+
+  useEffect(() => {
+    if (selectedWarehouse === ORPHAN_WAREHOUSE) {
+      setSelectedDocument("");
+      return;
+    }
+    if (!selectedWarehouse) {
+      return;
+    }
+    if (autoDocumentId) {
+      setSelectedDocument(autoDocumentId);
+    }
+  }, [selectedWarehouse, autoDocumentId]);
+
+  const tableRows: BatchListItem[] = useMemo(() => {
+    if (!selectedWarehouse) {
+      return [];
+    }
+    if (selectedWarehouse === ORPHAN_WAREHOUSE) {
+      return batchesInWh;
+    }
+    if (documentOptions.length === 0) {
+      return batchesInWh;
+    }
+    if (!selectedDocument) {
+      return [];
+    }
+    return batchesInWh.filter((b) => b.nakladnaya?.documentId === selectedDocument);
+  }, [batchesInWh, documentOptions.length, selectedDocument, selectedWarehouse]);
+
   if (batchesQuery.isError) {
     return (
       <p role="alert" style={errorText}>
@@ -109,17 +229,14 @@ export function AllocationPanel() {
     );
   }
 
-  const list = (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0);
-  const loading = batchesQuery.isPending;
-  const refetching = batchesQuery.isFetching && !batchesQuery.isPending;
-
   return (
     <div role="region" aria-label="Распределение по качеству и направлению">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по качеству и направлению</h2>
       <p style={muted}>
-        <strong>Шаг 3 процесса:</strong> по каждой партии с остатком на складе укажите <strong>оценку качества</strong> и
-        куда планируется <strong>направление</strong> (Москва, регионы, уценка, списание). Это не делит партию автоматически — фиксирует
-        решение для дальнейших шагов (отгрузка в рейс, продажа). См. также{" "}
+        <strong>Шаг 3:</strong> сначала <strong>склад поступления</strong> (как в шапке накладной), затем <strong>накладную</strong> и
+        по строкам (калибрам) укажите <strong>качество</strong> и <strong>направление</strong>. Учёт по факту: приняли одно количество на
+        склад, груз в машине может отличаться — движения по весу делаются в &quot;Операциях&quot;, здесь фиксируется
+        <strong> решение по сортам</strong> (Москва / регионы / уценка / списание). См.{" "}
         <Link to={routes.operations} style={{ fontWeight: 600 }}>
           Операции
         </Link>{" "}
@@ -128,6 +245,12 @@ export function AllocationPanel() {
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется <strong>PostgreSQL</strong>: <code>PATCH /api/batches/…/allocation</code> без БД на сервере не выполняется.
       </p>
+
+      {warehousesQuery.isError && (
+        <p style={warnText} role="alert">
+          Справочник складов (GET /api/warehouses) не загружен — подписи к складу могут быть неполны.
+        </p>
+      )}
 
       {loading && <LoadingBlock label="Загрузка партий (GET /api/batches)…" minHeight={100} />}
 
@@ -140,99 +263,176 @@ export function AllocationPanel() {
         </p>
       )}
 
-      {list.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={tableStyle} aria-label="Партии: качество и направление">
-            <thead>
-              <tr>
-                <th scope="col" style={thHead}>
-                  Партия
-                </th>
-                <th scope="col" style={thHead}>
-                  Остаток, кг
-                </th>
-                <th scope="col" style={thHead}>
-                  Качество
-                </th>
-                <th scope="col" style={thHead}>
-                  Направление
-                </th>
-                <th scope="col" style={thHead} />
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((b) => {
-                const label = formatBatchPartyCaption(b, b.id);
-                const e = getEdit(b);
-                return (
-                  <tr key={b.id}>
-                    <td style={thtd}>
-                      <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{label}</div>
-                      {b.nakladnaya?.documentId && (
-                        <Link
-                          to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
-                          style={{ fontSize: "0.82rem" }}
-                        >
-                          накладная
-                        </Link>
-                      )}
-                      <div>
-                        <code style={{ fontSize: "0.75rem", color: "#71717a" }}>{formatShortBatchId(b.id)}</code>
-                      </div>
-                    </td>
-                    <td style={thtd}>{b.onWarehouseKg}</td>
-                    <td style={thtd}>
-                      <select
-                        aria-label="Качество"
-                        value={e.quality}
-                        onChange={(ev) => {
-                          const v = ev.target.value;
-                          setEdits((prev) => ({ ...prev, [b.id]: { ...e, quality: v } }));
-                        }}
-                        style={fieldStyle}
-                      >
-                        <option value="_notset">— не выбрано —</option>
-                        {BATCH_QUALITY_TIERS.map((c) => (
-                          <option key={c} value={c}>
-                            {labelsQuality[c]}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={thtd}>
-                      <select
-                        aria-label="Направление"
-                        value={e.destination}
-                        onChange={(ev) => {
-                          const v = ev.target.value;
-                          setEdits((prev) => ({ ...prev, [b.id]: { ...e, destination: v } }));
-                        }}
-                        style={fieldStyle}
-                      >
-                        <option value="_notset">— не выбрано —</option>
-                        {BATCH_DESTINATIONS.map((c) => (
-                          <option key={c} value={c}>
-                            {labelsDestination[c]}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td style={thtd}>
-                      <button
-                        type="button"
-                        style={btnStyle}
-                        disabled={save.isPending}
-                        onClick={() => onSaveRow(b)}
-                      >
-                        {save.isPending ? "…" : "Сохранить"}
-                      </button>
-                    </td>
+      {!loading && list.length > 0 && (
+        <>
+          <div style={{ marginBottom: "1rem", maxWidth: 480 }}>
+            <label htmlFor="alloc-sel-warehouse" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
+              1. Склад (поступления по накладным) *
+            </label>
+            <select
+              id="alloc-sel-warehouse"
+              value={selectedWarehouse}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSelectedWarehouse(v);
+                setSelectedDocument("");
+              }}
+              style={{ ...fieldStyle, maxWidth: "100%" }}
+            >
+              <option value="">— выберите склад —</option>
+              {warehouseOrder.map((id) => (
+                <option key={id} value={id}>
+                  {warehouseName(id)} ({byWarehouse.get(id)?.length ?? 0} п.)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length > 0 && (
+            <div style={{ marginBottom: "1rem", maxWidth: 480 }}>
+              <label htmlFor="alloc-sel-document" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
+                2. Накладная (документ) *
+              </label>
+              <select
+                id="alloc-sel-document"
+                value={selectedDocument}
+                onChange={(e) => setSelectedDocument(e.target.value)}
+                style={{ ...fieldStyle, maxWidth: "100%" }}
+              >
+                <option value="">— выберите накладную —</option>
+                {documentOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    № {d.number} · {d.id.slice(0, 8)}…
+                  </option>
+                ))}
+              </select>
+              {selectedDocument && (
+                <p style={{ ...muted, margin: "0.4rem 0 0", fontSize: "0.82rem" }}>
+                  <Link to={purchaseNakladnayaDocumentPath(selectedDocument)}>Открыть накладную (строки и веса)</Link> — при
+                  расхождении с приёмом правьте ввод в «Операциях»; здесь — только оценка качества и канал.
+                </p>
+              )}
+            </div>
+          )}
+
+          {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length === 0 && batchesInWh.length > 0 && (
+            <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
+              На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
+              складе. Обычно накладная указывается при приёме; при необходимости проверьте данные в{" "}
+              <Link to={routes.purchaseNakladnaya}>Накладная</Link>.
+            </p>
+          )}
+
+          {selectedWarehouse === ORPHAN_WAREHOUSE && (
+            <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }}>
+              Партии без привязки к строке накладной: распределение по калибру (строка таблицы = партия).
+            </p>
+          )}
+
+          {selectedWarehouse &&
+            (selectedWarehouse === ORPHAN_WAREHOUSE || documentOptions.length === 0 || selectedDocument) &&
+            tableRows.length > 0 && (
+            <div style={{ overflowX: "auto" }}>
+              <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+                3. Строки: качество и направление
+              </h3>
+              <table style={tableStyle} aria-labelledby="alloc-table">
+                <thead>
+                  <tr>
+                    <th scope="col" style={thHead}>
+                      Партия
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Остаток, кг
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Качество
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Направление
+                    </th>
+                    <th scope="col" style={thHead} />
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {tableRows.map((b) => {
+                    const label = formatBatchPartyCaption(b, b.id);
+                    const e = getEdit(b);
+                    return (
+                      <tr key={b.id}>
+                        <td style={thtd}>
+                          <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{label}</div>
+                          {b.nakladnaya?.documentId && (
+                            <Link
+                              to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
+                              style={{ fontSize: "0.82rem" }}
+                            >
+                              накладная
+                            </Link>
+                          )}
+                          <div>
+                            <code style={{ fontSize: "0.75rem", color: "#71717a" }}>{formatShortBatchId(b.id)}</code>
+                          </div>
+                        </td>
+                        <td style={thtd}>{b.onWarehouseKg}</td>
+                        <td style={thtd}>
+                          <select
+                            aria-label="Качество"
+                            value={e.quality}
+                            onChange={(ev) => {
+                              const v = ev.target.value;
+                              setEdits((prev) => ({ ...prev, [b.id]: { ...e, quality: v } }));
+                            }}
+                            style={fieldStyle}
+                          >
+                            <option value="_notset">— не выбрано —</option>
+                            {BATCH_QUALITY_TIERS.map((c) => (
+                              <option key={c} value={c}>
+                                {labelsQuality[c]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={thtd}>
+                          <select
+                            aria-label="Направление"
+                            value={e.destination}
+                            onChange={(ev) => {
+                              const v = ev.target.value;
+                              setEdits((prev) => ({ ...prev, [b.id]: { ...e, destination: v } }));
+                            }}
+                            style={fieldStyle}
+                          >
+                            <option value="_notset">— не выбрано —</option>
+                            {BATCH_DESTINATIONS.map((c) => (
+                              <option key={c} value={c}>
+                                {labelsDestination[c]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={thtd}>
+                          <button type="button" style={btnStyle} disabled={save.isPending} onClick={() => onSaveRow(b)}>
+                            {save.isPending ? "…" : "Сохранить"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {selectedWarehouse &&
+            selectedWarehouse !== ORPHAN_WAREHOUSE &&
+            documentOptions.length > 0 &&
+            !selectedDocument && <p style={muted}>Выберите накладную — появятся строки (калибры) с остатками.</p>}
+
+          {selectedWarehouse && tableRows.length === 0 && selectedDocument && (
+            <p style={muted}>По выбранным фильтрам нет партий с остатком — возможно, всё отгружено.</p>
+          )}
+        </>
       )}
 
       {save.isError && (

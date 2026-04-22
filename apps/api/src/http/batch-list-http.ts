@@ -17,6 +17,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     .select({
       batchId: purchaseDocumentLines.batchId,
       documentId: purchaseDocuments.id,
+      warehouseId: purchaseDocuments.warehouseId,
       productGradeCode: productGrades.code,
       productGroup: productGrades.productGroup,
       documentNumber: purchaseDocuments.documentNumber,
@@ -30,6 +31,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     string,
     {
       documentId: string | null;
+      warehouseId: string | null;
       productGradeCode: string | null;
       productGroup: string | null;
       documentNumber: string | null;
@@ -38,6 +40,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
   for (const r of rows) {
     meta.set(r.batchId, {
       documentId: r.documentId,
+      warehouseId: r.warehouseId,
       productGradeCode: r.productGradeCode,
       productGroup: r.productGroup,
       documentNumber: r.documentNumber,
@@ -62,6 +65,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
       m
         ? {
             documentId: m.documentId,
+            warehouseId: m.warehouseId,
             productGradeCode: m.productGradeCode,
             productGroup: m.productGroup,
             documentNumber: m.documentNumber,
