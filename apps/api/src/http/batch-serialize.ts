@@ -19,9 +19,18 @@ export type BatchJson = {
     productGroup: string | null;
     documentNumber: string | null;
   };
+  /** Присвоение качества / направления (PostgreSQL); при in-memory API может отсутствовать. */
+  allocation?: {
+    qualityTier: string | null;
+    destination: string | null;
+  };
 };
 
-export function batchToJson(batch: Batch, nakladnaya?: BatchJson["nakladnaya"]): BatchJson {
+export function batchToJson(
+  batch: Batch,
+  nakladnaya?: BatchJson["nakladnaya"],
+  allocation?: BatchJson["allocation"],
+): BatchJson {
   const s = batch.toPersistenceState();
   return {
     id: s.id,
@@ -34,5 +43,6 @@ export function batchToJson(batch: Batch, nakladnaya?: BatchJson["nakladnaya"]):
     soldKg: s.soldKg,
     writtenOffKg: s.writtenOffKg,
     ...(nakladnaya ? { nakladnaya } : {}),
+    ...(allocation ? { allocation } : {}),
   };
 }

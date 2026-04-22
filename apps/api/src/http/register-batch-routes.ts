@@ -7,8 +7,12 @@ import {
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
+  updateBatchAllocationBodySchema,
 } from "@birzha/contracts";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+
+import { batches as batchesTable } from "../db/schema.js";
 
 import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.use-case.js";
 import { SellFromTripUseCase } from "../application/sale/sell-from-trip.use-case.js";
@@ -152,4 +156,37 @@ export function registerBatchRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.patch(
+    "/batches/:batchId/allocation",
+    { ...withPreHandlers(routeAuth.batchCreate) },
+    async (req, reply) => {
+      if (!db) {
+        return reply.code(503).send({ error: "allocation_requires_postgres" });
+      }
+      try {
+        const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
+        const body = updateBatchAllocationBodySchema.parse(req.body);
+        const [row] = await db
+          .select({ id: batchesTable.id })
+          .from(batchesTable)
+          .where(eq(batchesTable.id, params.batchId))
+          .limit(1);
+        if (!row) {
+          return reply.code(404).send({ error: "batch_not_found" });
+        }
+        const patch: { qualityTier?: string | null; destination?: string | null } = {};
+        if (body.qualityTier !== undefined) {
+          patch.qualityTier = body.qualityTier;
+        }
+        if (body.destination !== undefined) {
+          patch.destination = body.destination;
+        }
+        await db.update(batchesTable).set(patch).where(eq(batchesTable.id, params.batchId));
+        return reply.code(200).send({ ok: true });
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 }

@@ -5,6 +5,7 @@ import type { ShipmentReportResponse } from "../api/types.js";
 import {
   aggregateTripBatchRows,
   buildTripBatchRows,
+  estimateNetTransitPackageCount,
   reconcileBatchTotalsWithReport,
 } from "./trip-report-rows.js";
 
@@ -69,6 +70,15 @@ describe("buildTripBatchRows", () => {
     r.sales.byBatch = [];
     r.shortage.byBatch = [];
     expect(buildTripBatchRows(r)).toEqual([]);
+  });
+
+  it("estimateNetTransitPackageCount — ящики в пути пропорционально кг", () => {
+    const rows = buildTripBatchRows(baseReport());
+    const b1 = rows.find((r) => r.batchId === "b1")!;
+    // 3000 г отгр., 60 ящ; в пути 1500 г → 30 ящ
+    expect(estimateNetTransitPackageCount(b1)).toBe(30n);
+    const b2 = rows.find((r) => r.batchId === "b2")!;
+    expect(estimateNetTransitPackageCount(b2)).toBe(40n);
   });
 
   it("aggregateTripBatchRows суммирует колонки", () => {

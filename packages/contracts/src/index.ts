@@ -9,6 +9,12 @@ export {
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "./purchase-line-kopecks.js";
 export {
+  BATCH_DESTINATIONS,
+  BATCH_QUALITY_TIERS,
+  updateBatchAllocationBodySchema,
+} from "./batch-allocation.js";
+export type { UpdateBatchAllocationBody } from "./batch-allocation.js";
+export {
   createBatchBodySchema,
   createCounterpartyBodySchema,
   createProductGradeBodySchema,

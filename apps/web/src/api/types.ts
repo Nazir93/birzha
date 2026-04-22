@@ -18,6 +18,11 @@ export type BatchListItem = {
     productGroup: string | null;
     documentNumber: string | null;
   };
+  /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
+  allocation?: {
+    qualityTier: string | null;
+    destination: string | null;
+  };
 };
 
 export type BatchesListResponse = {

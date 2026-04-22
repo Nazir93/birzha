@@ -28,6 +28,7 @@ const tab = (active: boolean): CSSProperties => ({
 
 const items: { to: string; label: string; panel: PanelId }[] = [
   { to: routes.purchaseNakladnaya, label: "Накладная", panel: "nakladnaya" },
+  { to: routes.distribution, label: "Распределение", panel: "distribution" },
   { to: routes.reports, label: "Отчёты и рейсы", panel: "reports" },
   { to: routes.operations, label: "Операции", panel: "operations" },
   { to: routes.offline, label: "Офлайн-очередь", panel: "offline" },

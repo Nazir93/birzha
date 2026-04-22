@@ -77,6 +77,17 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   });
 }
 
+/**
+ * Оценка ящиков, оставшихся «в пути» по рейсу: ящики отгрузки × (остаток в пути / отгружено в г).
+ * Продажи в учёте только в кг — ящиков в продаже нет; оценка совпадает с линейным списанием по массе.
+ */
+export function estimateNetTransitPackageCount(r: TripBatchTableRow): bigint {
+  if (r.shippedG <= 0n || r.shippedPackages <= 0n || r.netTransitG <= 0n) {
+    return 0n;
+  }
+  return (r.shippedPackages * r.netTransitG) / r.shippedG;
+}
+
 /** Суммы по колонкам таблицы партий (для подвала и сверки с API). */
 export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   shippedG: bigint;

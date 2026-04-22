@@ -12,20 +12,32 @@ export class DrizzleBatchRepository implements BatchRepository {
 
   async save(batch: Batch): Promise<void> {
     const state: BatchPersistenceState = batch.toPersistenceState();
-    const row = persistenceStateToInsert(state);
+    const baseRow = persistenceStateToInsert(state);
 
     const existing = await this.db
-      .select({ id: batches.id })
+      .select()
       .from(batches)
       .where(eq(batches.id, state.id))
       .limit(1);
 
     if (existing.length === 0) {
-      await this.db.insert(batches).values(row);
+      await this.db.insert(batches).values({
+        ...baseRow,
+        qualityTier: null,
+        destination: null,
+      });
       return;
     }
 
-    await this.db.update(batches).set(row).where(eq(batches.id, state.id));
+    const ex = existing[0]!;
+    await this.db
+      .update(batches)
+      .set({
+        ...baseRow,
+        qualityTier: ex.qualityTier,
+        destination: ex.destination,
+      })
+      .where(eq(batches.id, state.id));
   }
 
   async findById(id: string): Promise<Batch | null> {

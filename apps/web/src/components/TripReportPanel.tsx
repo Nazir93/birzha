@@ -11,6 +11,7 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
   btnStyle,
@@ -169,9 +170,9 @@ export function TripReportPanel() {
       </p>
 
       {tripsQuery.isPending && (
-        <p className="no-print" role="status" aria-live="polite" style={{ ...muted, marginTop: "0.35rem", marginBottom: 0 }}>
-          Загрузка рейсов…
-        </p>
+        <div className="no-print" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
+          <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} />
+        </div>
       )}
       {tripsQuery.isError && (
         <p className="no-print" role="alert" style={errorText}>
@@ -232,8 +233,13 @@ export function TripReportPanel() {
       )}
 
       {tripId && reportQuery.isPending && (
-        <p className="no-print" role="status" aria-live="polite" style={{ ...muted, marginTop: "0.75rem", marginBottom: 0 }}>
-          Загрузка отчёта…
+        <div className="no-print" style={{ marginTop: "0.75rem", marginBottom: 0 }} role="status" aria-live="polite">
+          <LoadingBlock label="Загрузка отчёта по рейсу (shipment-report)…" minHeight={72} />
+        </div>
+      )}
+      {tripId && reportQuery.isFetching && !reportQuery.isPending && (
+        <p className="no-print" style={{ marginTop: "0.5rem" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Обновление отчёта…" />
         </p>
       )}
       {tripId && reportQuery.isError && (

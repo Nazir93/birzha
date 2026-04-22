@@ -22,13 +22,15 @@ describe("role-panels", () => {
     const u = userWithRoles("accountant");
     expect(canAccessPanel(u, "reports")).toBe(true);
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
+    expect(canAccessPanel(u, "distribution")).toBe(false);
     expect(canAccessPanel(u, "operations")).toBe(false);
     expect(canAccessPanel(u, "offline")).toBe(false);
   });
 
-  it("продавец — накладная и операции, не служебное", () => {
+  it("продавец — накладная, распределение и операции, не служебное", () => {
     const u = userWithRoles("seller");
     expect(canAccessPanel(u, "nakladnaya")).toBe(true);
+    expect(canAccessPanel(u, "distribution")).toBe(true);
     expect(canAccessPanel(u, "operations")).toBe(true);
     expect(canAccessPanel(u, "service")).toBe(false);
   });

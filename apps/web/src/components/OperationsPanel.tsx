@@ -11,7 +11,12 @@ import type {
   TripsListResponse,
 } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
-import { buildTripBatchRows, type TripBatchTableRow } from "../format/trip-report-rows.js";
+import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
+import {
+  buildTripBatchRows,
+  estimateNetTransitPackageCount,
+  type TripBatchTableRow,
+} from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   btnStyle,
@@ -25,6 +30,7 @@ import {
   thtdDense,
   warnText,
 } from "../ui/styles.js";
+import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
@@ -216,6 +222,8 @@ export function OperationsPanel() {
   const [shipKg, setShipKg] = useState("");
   const [shipPackages, setShipPackages] = useState("");
   const [shipAllDocumentId, setShipAllDocumentId] = useState("");
+  /** Всего ящиков в отгрузке «вся накладная»; распределяются по строкам пропорционально кг. */
+  const [shipAllTotalPackages, setShipAllTotalPackages] = useState("");
 
   const ship = useMutation({
     mutationFn: async () => {
@@ -234,18 +242,45 @@ export function OperationsPanel() {
       if (!shipAllDocumentId) {
         throw new Error("Выберите накладную");
       }
-      const rows = shippableBatches.filter((b) => b.nakladnaya?.documentId === shipAllDocumentId);
+      const rows = shippableBatches
+        .filter((b) => b.nakladnaya?.documentId === shipAllDocumentId)
+        .slice()
+        .sort((a, b) => {
+          const g = (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru");
+          if (g !== 0) {
+            return g;
+          }
+          return a.id.localeCompare(b.id);
+        });
       if (rows.length === 0) {
         throw new Error("Нет остатка на складе по строкам этой накладной");
       }
-      for (const b of rows) {
-        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
+      const pkgRaw = shipAllTotalPackages.trim();
+      let perLinePackages: number[] | null = null;
+      if (pkgRaw !== "") {
+        const totalPk = Number.parseInt(pkgRaw, 10);
+        if (!Number.isFinite(totalPk) || totalPk < 0) {
+          throw new Error("Ящики (всего): целое неотрицательное число или пусто");
+        }
+        const w = rows.map((b) => b.onWarehouseKg);
+        perLinePackages = distributeIntegersProRata(w, totalPk);
+      }
+      for (let i = 0; i < rows.length; i++) {
+        const b = rows[i]!;
+        const pkgStr =
+          perLinePackages === null
+            ? ""
+            : (perLinePackages[i] ?? 0) > 0
+              ? String(perLinePackages[i])
+              : "";
+        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), pkgStr);
         await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
       }
     },
     onSuccess: () => {
       invalidateDomain();
       setShipAllDocumentId("");
+      setShipAllTotalPackages("");
     },
   });
 
@@ -295,8 +330,48 @@ export function OperationsPanel() {
     const docNum = b?.nakladnaya?.documentNumber?.trim();
     const prefix = docNum ? `№ ${docNum} · ` : "";
     const kg = gramsBigIntToKgDecimalString(row.netTransitG);
-    return `${prefix}${line} — доступно ${kg} кг`;
+    const estPkg = estimateNetTransitPackageCount(row);
+    if (row.shippedPackages > 0n && estPkg > 0n) {
+      return `${prefix}${line} — ${kg} кг · ≈${estPkg} ящ в пути`;
+    }
+    if (row.shippedPackages > 0n && row.netTransitG > 0n && estPkg === 0n) {
+      return `${prefix}${line} — ${kg} кг · <1 ящ в пути (оцен.)`;
+    }
+    if (row.shippedG > 0n && row.shippedPackages === 0n) {
+      return `${prefix}${line} — ${kg} кг (ящ: нет в отчёте — введите при отгрузке в рейс)`;
+    }
+    return `${prefix}${line} — ${kg} кг`;
   };
+
+  const sellSelectionSummary = useMemo((): {
+    line: string;
+    doc: string;
+    kg: string;
+    estPkg: bigint;
+    hasShipped: boolean;
+    hasPkgData: boolean;
+    /** Есть ящики в отчёте, но оценка в пути &lt; 1 целого ящика. */
+    subUnitPackages: boolean;
+  } | null => {
+    if (!sellBatchId) {
+      return null;
+    }
+    const row = sellableOnTripRows.find((r) => r.batchId === sellBatchId);
+    if (!row) {
+      return null;
+    }
+    const b = batchByIdForSell.get(row.batchId);
+    const estPkg = estimateNetTransitPackageCount(row);
+    return {
+      line: b ? formatNakladLineLabel(b) : "—",
+      doc: b?.nakladnaya?.documentNumber?.trim() ?? "—",
+      kg: gramsBigIntToKgDecimalString(row.netTransitG),
+      estPkg,
+      hasShipped: row.shippedG > 0n,
+      hasPkgData: row.shippedPackages > 0n,
+      subUnitPackages: row.shippedPackages > 0n && row.netTransitG > 0n && estPkg === 0n,
+    };
+  }, [sellBatchId, sellableOnTripRows, batchByIdForSell]);
 
   const createCounterparty = useMutation({
     mutationFn: async () => {
@@ -368,8 +443,13 @@ export function OperationsPanel() {
       )}
 
       {batchesQuery.isError && <p style={warnText}>Список партий (GET /api/batches) не загрузился.</p>}
+      <StaleDataNotice
+        show={batchesQuery.isFetching && !batchesQuery.isPending}
+        label="Обновление списка партий…"
+      />
+      {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков (GET /api/batches)…" minHeight={96} />}
 
-      {batchesQuery.data && batchesQuery.data.batches.length > 0 && (
+      {!batchesQuery.isPending && batchesQuery.data && batchesQuery.data.batches.length > 0 && (
         <div style={{ marginBottom: "1rem" }}>
           <p id="op-batches-heading" style={{ ...muted, marginBottom: "0.5rem" }}>
             <strong>Партии по накладным</strong> — каждый блок — один документ и его строки (калибры). Технический id партии
@@ -451,6 +531,11 @@ export function OperationsPanel() {
       {counterpartiesCatalog && counterpartiesQ.isError && (
         <p style={warnText}>Справочник контрагентов (GET /api/counterparties) не загрузился.</p>
       )}
+      {counterpartiesCatalog && counterpartiesQ.isPending && (
+        <p style={{ margin: "0.25rem 0 0.5rem" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Загрузка справочника контрагентов…" />
+        </p>
+      )}
 
       <section style={sectionBox} aria-labelledby="op-sec-ship">
         <h3 id="op-sec-ship" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
@@ -464,13 +549,20 @@ export function OperationsPanel() {
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс (tripId) *
         </label>
+        {trips.isPending && (
+          <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
+            <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
+          </p>
+        )}
         <select
           id="op-sel-ship-trip"
           value={shipTripId}
           onChange={(e) => setShipTripId(e.target.value)}
           style={{ ...selectWide, marginBottom: "0.75rem" }}
+          disabled={trips.isPending}
+          aria-busy={trips.isPending || undefined}
         >
-          <option value="">— выберите рейс —</option>
+          <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
               {t.tripNumber} ({t.status}) — {t.id}
@@ -494,8 +586,10 @@ export function OperationsPanel() {
             }
           }}
           style={selectWide}
+          disabled={batchesQuery.isPending}
+          aria-busy={batchesQuery.isPending || undefined}
         >
-          <option value="">— выберите партию —</option>
+          <option value="">{batchesQuery.isPending ? "— загрузка партий —" : "— выберите партию —"}</option>
           {shippableBatches.map((b) => (
             <option key={b.id} value={b.id}>
               {formatBatchShipLabel(b)}
@@ -572,8 +666,10 @@ export function OperationsPanel() {
 
         <h4 style={{ margin: "1rem 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Вся накладная в рейс</h4>
         <p style={{ ...muted, fontSize: "0.85rem", marginBottom: "0.35rem" }}>
-          По очереди отправляется отгрузка по каждой строке накладной, где на складе есть кг (полный остаток по строке).
-          Ящики в этом режиме не передаются — при необходимости отгрузите строки по одной и укажите ящики выше.
+          Отправка <strong>по накладной</strong> в выбранный рейс: по очереди фиксируется отгрузка по каждой строке (калибр),{" "}
+          <strong>кг</strong> = полный остаток на складе по строке. Можно указать <strong>всего ящиков по накладной</strong> в
+          этой отгрузке — они <strong>распределяются по строкам пропорционально кг</strong> (сумма в отчёте рейса по ящикам =
+          введённое число). Нужны ящики иначе — отгрузите строки по одной в блоке выше.
         </p>
         <label htmlFor="op-sel-ship-naklad-all" style={{ fontSize: "0.88rem" }}>
           Накладная
@@ -581,7 +677,10 @@ export function OperationsPanel() {
         <select
           id="op-sel-ship-naklad-all"
           value={shipAllDocumentId}
-          onChange={(e) => setShipAllDocumentId(e.target.value)}
+          onChange={(e) => {
+            setShipAllDocumentId(e.target.value);
+            setShipAllTotalPackages("");
+          }}
           style={selectWide}
         >
           <option value="">— выберите накладную —</option>
@@ -596,6 +695,19 @@ export function OperationsPanel() {
             <Link to={purchaseNakladnayaDocumentPath(shipAllDocumentId)}>Открыть накладную</Link>
           </p>
         ) : null}
+        <label htmlFor="op-in-ship-naklad-pkg-total" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          Ящиков в этой отгрузке по накладной, всего (опц.)
+        </label>
+        <input
+          id="op-in-ship-naklad-pkg-total"
+          value={shipAllTotalPackages}
+          onChange={(e) => setShipAllTotalPackages(e.target.value)}
+          style={fieldStyle}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="пусто = без ящиков в API; кг по строкам как обычно"
+          disabled={!shipAllDocumentId}
+        />
         <button
           type="button"
           style={{ ...btnStyle, marginTop: "0.35rem" }}
@@ -623,9 +735,13 @@ export function OperationsPanel() {
           2. Продать с рейса
         </h3>
         <p style={muted}>
-          POST /api/batches/:batchId/sell-from-trip — сначала выберите <strong>рейс</strong>, затем{" "}
-          <strong>партию (товар и калибр)</strong> с остатком на этом рейсе; кг по умолчанию подставляется весь доступный
-          остаток (можно уменьшить).
+          Партия приходит из <strong>уже созданной накладной</strong> (строка = калибр). Сначала выберите <strong>рейс</strong>, затем
+          партию: в списке — <strong>кг в пути</strong> и <strong>оценка ящиков</strong> (пропорционально кг отгрузки, если ящики вводили при
+          «Отгрузить в рейс»). <strong>Килограммы</strong> в продаже обязательны; <strong>ящики</strong> в теле API не
+          уходят — оценка только для подсказки, как на бумажной накладной.
+        </p>
+        <p style={muted}>
+          <code>POST /api/batches/:batchId/sell-from-trip</code> — кг по умолчанию = весь доступный остаток в пути.
         </p>
         <label htmlFor="op-sel-sell-trip" style={{ fontSize: "0.88rem" }}>
           Рейс *
@@ -640,8 +756,10 @@ export function OperationsPanel() {
             setSellKg("");
           }}
           style={{ ...selectWide, marginBottom: "0.5rem" }}
+          disabled={trips.isPending}
+          aria-busy={trips.isPending || undefined}
         >
-          <option value="">— выберите рейс —</option>
+          <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
               {t.tripNumber} ({t.status}) — {t.id}
@@ -649,8 +767,15 @@ export function OperationsPanel() {
           ))}
         </select>
         {sellTripIdTrim && sellReportQuery.isFetching && (
-          <p style={{ ...muted, marginTop: 0, marginBottom: "0.5rem" }} role="status">
-            Загрузка остатков по рейсу…
+          <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
+            <LoadingIndicator
+              size="sm"
+              label={
+                sellReportQuery.isPending
+                  ? "Загрузка остатков по рейсу (shipment-report)…"
+                  : "Обновление остатков по рейсу…"
+              }
+            />
           </p>
         )}
         {sellTripIdTrim && sellReportQuery.isError && (
@@ -665,7 +790,7 @@ export function OperationsPanel() {
           </p>
         )}
         <label htmlFor="op-sel-sell-batch-line" style={{ fontSize: "0.88rem" }}>
-          Партия (товар / калибр, остаток на рейсе) *
+          Партия (накладная · калибр · кг и ящики в пути) *
         </label>
         <select
           id="op-sel-sell-batch-line"
@@ -678,7 +803,7 @@ export function OperationsPanel() {
               setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
             }
           }}
-          style={{ ...selectWide, marginBottom: "0.35rem" }}
+          style={{ ...selectWide, marginBottom: "0.2rem" }}
           disabled={
             !sellTripIdTrim ||
             (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
@@ -701,6 +826,30 @@ export function OperationsPanel() {
             </option>
           ))}
         </select>
+        {sellSelectionSummary && (
+          <p
+            id="op-sell-naklad-summary"
+            style={{ ...muted, fontSize: "0.86rem", marginTop: 0, marginBottom: "0.5rem" }}
+            role="status"
+            aria-live="polite"
+          >
+            <strong>Накладная № {sellSelectionSummary.doc}</strong> — {sellSelectionSummary.line}
+            {". "}
+            <strong>В пути: {sellSelectionSummary.kg} кг</strong>
+            {sellSelectionSummary.hasPkgData && sellSelectionSummary.estPkg > 0n && (
+              <>
+                {" "}
+                · <strong>≈ {String(sellSelectionSummary.estPkg)} ящ</strong> (оценка по кг в отгрузке)
+              </>
+            )}
+            {sellSelectionSummary.subUnitPackages && (
+              <> · остаток в пути &lt; 1 ящ (оценка по кг), в сделке — кг</>
+            )}
+            {sellSelectionSummary.hasShipped && !sellSelectionSummary.hasPkgData && (
+              <> · ящики в отчёте не заданы — введите при «Отгрузить в рейс», иначе оценки нет</>
+            )}
+          </p>
+        )}
         <label htmlFor="op-in-sell-batch" style={{ fontSize: "0.88rem" }}>
           batchId (вручную, если список недоступен)
         </label>
@@ -755,8 +904,12 @@ export function OperationsPanel() {
               value={sellCounterpartyId}
               onChange={(e) => setSellCounterpartyId(e.target.value)}
               style={selectWide}
+              disabled={counterpartiesQ.isPending}
+              aria-busy={counterpartiesQ.isPending || undefined}
             >
-              <option value="">— подпись вручную (ниже) —</option>
+              <option value="">
+                {counterpartiesQ.isPending ? "— загрузка справочника —" : "— подпись вручную (ниже) —"}
+              </option>
               {(counterpartiesQ.data?.counterparties ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.displayName}
@@ -869,8 +1022,10 @@ export function OperationsPanel() {
           value={shortTripId}
           onChange={(e) => setShortTripId(e.target.value)}
           style={selectWide}
+          disabled={trips.isPending}
+          aria-busy={trips.isPending || undefined}
         >
-          <option value="">— выберите рейс —</option>
+          <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
               {t.tripNumber} ({t.status}) — {t.id}

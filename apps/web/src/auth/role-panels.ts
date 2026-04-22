@@ -3,7 +3,7 @@ import { routes } from "../routes.js";
 import type { AuthUser } from "./auth-context.js";
 
 /** Совпадает с сидом ролей в API (`0009_users_roles`). */
-export type PanelId = "reports" | "nakladnaya" | "operations" | "offline" | "service";
+export type PanelId = "reports" | "nakladnaya" | "distribution" | "operations" | "offline" | "service";
 
 /**
  * Какие глобальные роли видят раздел (см. `docs/architecture/ui/screen-flows.md`).
@@ -14,6 +14,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   reports: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller", "accountant"],
   /** Закупочная накладная — те же роли, что «Операции» (не бухгалтер). */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
+  /** Распределение по качеству и направлению (шаг 3) — кладовщик, закуп, полевые; не бухгалтер. */
+  distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   /** Операции по партиям/рейсу — не бухгалтер (первичка не его контур в матрице панелей). */
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   /** Офлайн-очередь — полевые и склад; бухгалтер не в приоритете. */

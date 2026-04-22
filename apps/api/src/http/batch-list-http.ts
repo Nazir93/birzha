@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DbClient } from "../db/client.js";
-import { productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
+import { batches as batchesTable, productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
 
 import { type BatchJson, batchToJson } from "./batch-serialize.js";
 
@@ -44,9 +44,19 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     });
   }
 
+  const br = await db
+    .select({ id: batchesTable.id, qualityTier: batchesTable.qualityTier, destination: batchesTable.destination })
+    .from(batchesTable)
+    .where(inArray(batchesTable.id, ids));
+  const alloc = new Map<string, { qualityTier: string | null; destination: string | null }>();
+  for (const r of br) {
+    alloc.set(r.id, { qualityTier: r.qualityTier, destination: r.destination });
+  }
+
   return list.map((b) => {
     const id = b.getId();
     const m = meta.get(id);
+    const a = alloc.get(id);
     return batchToJson(
       b,
       m
@@ -57,6 +67,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
             documentNumber: m.documentNumber,
           }
         : undefined,
+      a ? { qualityTier: a.qualityTier, destination: a.destination } : undefined,
     );
   });
 }

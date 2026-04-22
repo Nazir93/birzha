@@ -228,4 +228,16 @@ describe("Batch HTTP", () => {
     expect(r.statusCode).toBe(400);
     await app.close();
   });
+
+  it("PATCH /batches/:batchId/allocation без PostgreSQL — 503", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({ env, db: null, batchRepository: new InMemoryBatchRepository() });
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/batches/any-id/allocation",
+      payload: { qualityTier: "standard", destination: "moscow" },
+    });
+    expect(res.statusCode).toBe(503);
+    await app.close();
+  });
 });

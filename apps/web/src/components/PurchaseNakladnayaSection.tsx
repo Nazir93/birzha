@@ -18,6 +18,7 @@ import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
 import { parseCreatePurchaseDocumentForm } from "../validation/api-schemas.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, sectionBox, successText, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
 
 function todayIsoDate(): string {
@@ -352,7 +353,11 @@ export function PurchaseNakladnayaSection() {
           <code>pnpm db:migrate</code> (один раз; не только <code>db:push</code>).
         </p>
       )}
-      {(warehousesQ.isPending || gradesQ.isPending) && <p style={muted}>Загрузка справочников складов и калибров…</p>}
+      {(warehousesQ.isPending || gradesQ.isPending) && (
+        <p style={muted} role="status" aria-live="polite">
+          <LoadingIndicator size="md" label="Загрузка справочников складов и калибров…" />
+        </p>
+      )}
       {listQ.isError && (
         <p role="alert" style={errorText}>
           Список накладных не загрузился: {listQ.error instanceof Error ? listQ.error.message : String(listQ.error)}
@@ -609,6 +614,14 @@ export function PurchaseNakladnayaSection() {
         </p>
       )}
       {lastOk && <p style={successText}>{lastOk}</p>}
+
+      {listQ.isPending && <LoadingBlock label="Загрузка списка накладных (GET /api/purchase-documents)…" minHeight={80} />}
+
+      {listQ.isFetching && !listQ.isPending && (
+        <p style={{ margin: "0.35rem 0" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Обновление списка накладных…" />
+        </p>
+      )}
 
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>

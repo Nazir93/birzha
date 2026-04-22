@@ -2,6 +2,8 @@
 export const routes = {
   reports: "/reports",
   purchaseNakladnaya: "/purchase-nakladnaya",
+  /** Распределение по качеству и направлению (MVP). */
+  distribution: "/distribution",
   operations: "/operations",
   offline: "/offline",
   service: "/service",

@@ -29,6 +29,32 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Индикаторы загрузки (см. `ui/LoadingIndicator.tsx`) */
+@keyframes birzha-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.birzha-loader__spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid #e4e4e7;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: birzha-spin 0.75s linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.birzha-loader__spinner--sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+.birzha-loader--stale {
+  font-size: 0.9rem;
+}
+
 main h1 {
   font-family: var(--font-ui);
   font-weight: 600;

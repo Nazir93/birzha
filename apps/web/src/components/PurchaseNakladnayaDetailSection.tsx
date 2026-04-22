@@ -5,6 +5,7 @@ import { apiFetch } from "../api/fetch-api.js";
 import type { PurchaseDocumentDetail, WarehousesListResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { routes, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
 
 function formatRubFromKopecks(k: string): string {
@@ -65,7 +66,7 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   if (docQ.isPending) {
-    return <p style={muted}>Загрузка накладной…</p>;
+    return <LoadingBlock label="Загрузка накладной (GET /api/purchase-documents/…)…" minHeight={100} />;
   }
 
   if (docQ.isError) {

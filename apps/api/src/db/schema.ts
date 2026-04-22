@@ -61,6 +61,10 @@ export const batches = pgTable("batches", {
   writtenOffGrams: bigint("written_off_grams", { mode: "bigint" }).notNull(),
   pricePerKg: numeric("price_per_kg", { precision: 18, scale: 6 }).notNull(),
   warehouseId: text("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  /** Оценка качества после сортировки: `standard` / `weak` / `reject`. */
+  qualityTier: text("quality_tier"),
+  /** Куда планируется движение: `moscow` / `regions` / `discount` / `writeoff`. */
+  destination: text("destination"),
 });
 
 /** Строка закупочной накладной; одна строка — одна партия (`batch_id`). */

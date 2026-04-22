@@ -99,6 +99,13 @@
       "when": 1776600000000,
       "tag": "0013_product_grade_product_group",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776700000000,
+      "tag": "0014_batch_quality_destination",
+      "breakpoints": true
     }
   ]
 }

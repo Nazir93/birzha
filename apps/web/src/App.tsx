@@ -7,6 +7,7 @@ import { useAuth } from "./auth/auth-context.js";
 import { AppNav } from "./components/AppNav.js";
 import { CreateTripForm } from "./components/CreateTripForm.js";
 import { LoginPage } from "./components/LoginPage.js";
+import { AllocationPanel } from "./components/AllocationPanel.js";
 import { OperationsPanel } from "./components/OperationsPanel.js";
 import { PurchaseNakladnayaDetailSection } from "./components/PurchaseNakladnayaDetailSection.js";
 import { PurchaseNakladnayaSection } from "./components/PurchaseNakladnayaSection.js";
@@ -25,15 +26,16 @@ import {
 } from "./sync/index.js";
 import { randomUuid } from "./lib/random-uuid.js";
 import { getOutboxScopeKey } from "./sync/outbox-scope.js";
+import { LoadingBlock } from "./ui/LoadingIndicator.js";
 import { btnStyleInline, errorText, muted, preJson, sectionCard, warnText } from "./ui/styles.js";
 
 function HomeRedirect() {
   const { ready, meta, user } = useAuth();
   if (!ready) {
     return (
-      <p role="status" aria-live="polite">
-        Загрузка…
-      </p>
+      <div style={{ maxWidth: 400, margin: "2rem 1rem" }} role="status" aria-live="polite">
+        <LoadingBlock label="Инициализация…" minHeight={72} />
+      </div>
     );
   }
   const to = meta?.authApi === "enabled" && user ? defaultRouteForUser(user) : routes.reports;
@@ -145,6 +147,16 @@ export function App() {
             <Route index element={<PurchaseNakladnayaSection />} />
             <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
           </Route>
+          <Route
+            path={routes.distribution}
+            element={
+              <RequirePanel panel="distribution">
+                <section style={sectionCard}>
+                  <AllocationPanel />
+                </section>
+              </RequirePanel>
+            }
+          />
           <Route
             path={routes.operations}
             element={

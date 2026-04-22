@@ -499,8 +499,10 @@ test.describe("золотой smoke (UI + API)", () => {
       timeout: 15_000,
     });
     await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible();
-    await expect(page.getByText("Партии (GET /api/batches), кг")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(batchId, { exact: true })).toBeVisible();
+    await expect(page.locator("#op-batches-heading")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Партии по накладным", { exact: false })).toBeVisible();
+    /** В таблице id показывается сокращённо, полный UUID — в `title` на `<code>`. */
+    await expect(page.getByTitle(batchId, { exact: true })).toBeVisible({ timeout: 15_000 });
   });
 
   test("навигация: вкладки AppNav (накладная → отчёты → операции → офлайн → служебное → отчёты)", async ({ page }) => {
