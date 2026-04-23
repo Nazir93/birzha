@@ -1,5 +1,6 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { asc, count, desc, eq, inArray } from "drizzle-orm";
 
+import { PurchaseDocumentNotFoundError } from "../../application/errors.js";
 import type {
   NewPurchaseDocumentLine,
   PurchaseDocumentDetail,
@@ -8,7 +9,15 @@ import type {
   PurchaseDocumentSummary,
 } from "../../application/ports/purchase-document-repository.port.js";
 import type { DbClient } from "../../db/client.js";
-import { productGrades, purchaseDocumentLines, purchaseDocuments } from "../../db/schema.js";
+import {
+  batches,
+  productGrades,
+  purchaseDocumentLines,
+  purchaseDocuments,
+  tripBatchSales,
+  tripBatchShipments,
+  tripBatchShortages,
+} from "../../db/schema.js";
 import { gramsToKg } from "./batch-mass.js";
 
 import { DrizzleBatchRepository } from "./drizzle-batch.repository.js";
@@ -71,6 +80,39 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       warehouseId: d.warehouseId,
       lineCount: countMap.get(d.id) ?? 0,
     }));
+  }
+
+  async hasProductGradeInAnyLine(productGradeId: string): Promise<boolean> {
+    const r = await this.db
+      .select({ c: count() })
+      .from(purchaseDocumentLines)
+      .where(eq(purchaseDocumentLines.productGradeId, productGradeId));
+    return Number(r[0]?.c ?? 0) > 0;
+  }
+
+  async deleteById(documentId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const exec = tx as unknown as DbClient;
+      const lineBatchRows = await exec
+        .select({ batchId: purchaseDocumentLines.batchId })
+        .from(purchaseDocumentLines)
+        .where(eq(purchaseDocumentLines.documentId, documentId));
+      const batchIds = [...new Set(lineBatchRows.map((r) => r.batchId))];
+
+      if (batchIds.length > 0) {
+        await exec.delete(tripBatchSales).where(inArray(tripBatchSales.batchId, batchIds));
+        await exec.delete(tripBatchShortages).where(inArray(tripBatchShortages.batchId, batchIds));
+        await exec.delete(tripBatchShipments).where(inArray(tripBatchShipments.batchId, batchIds));
+      }
+
+      const del = await exec.delete(purchaseDocuments).where(eq(purchaseDocuments.id, documentId)).returning({ id: purchaseDocuments.id });
+      if (del.length === 0) {
+        throw new PurchaseDocumentNotFoundError(documentId);
+      }
+      if (batchIds.length > 0) {
+        await exec.delete(batches).where(inArray(batches.id, batchIds));
+      }
+    });
   }
 
   async findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null> {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { asc, eq } from "drizzle-orm";
 
-import { WarehouseCodeConflictError } from "../../application/errors.js";
+import { WarehouseCodeConflictError, WarehouseNotFoundError } from "../../application/errors.js";
 import type {
   CreateWarehouseInput,
   WarehouseRecord,
@@ -28,6 +28,17 @@ export class DrizzleWarehouseRepository implements WarehouseRepository {
   async list(): Promise<WarehouseRecord[]> {
     const rows = await this.db.select().from(warehouses).orderBy(asc(warehouses.code));
     return rows.map((r) => ({ id: r.id, code: r.code, name: r.name }));
+  }
+
+  async deleteById(warehouseId: string): Promise<void> {
+    const w = await this.findById(warehouseId);
+    if (!w) {
+      throw new WarehouseNotFoundError(warehouseId);
+    }
+    const del = await this.db.delete(warehouses).where(eq(warehouses.id, warehouseId)).returning({ id: warehouses.id });
+    if (del.length === 0) {
+      throw new WarehouseNotFoundError(warehouseId);
+    }
   }
 
   async create(input: CreateWarehouseInput): Promise<WarehouseRecord> {

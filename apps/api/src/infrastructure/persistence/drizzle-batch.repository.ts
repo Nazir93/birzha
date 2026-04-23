@@ -53,4 +53,8 @@ export class DrizzleBatchRepository implements BatchRepository {
     const rows = await this.db.select().from(batches).orderBy(asc(batches.id));
     return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
   }
+
+  async deleteById(id: string): Promise<void> {
+    await this.db.delete(batches).where(eq(batches.id, id));
+  }
 }

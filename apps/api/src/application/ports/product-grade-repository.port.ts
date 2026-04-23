@@ -22,4 +22,5 @@ export interface ProductGradeRepository {
   /** Только активные — для выбора в накладной. */
   list(): Promise<ProductGradeRecord[]>;
   create(input: CreateProductGradeInput): Promise<ProductGradeRecord>;
+  deleteById(productGradeId: string): Promise<void>;
 }

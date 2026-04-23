@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { CounterpartyNotFoundError } from "../../application/errors.js";
 import type { CounterpartyRecord, CounterpartyRepository } from "../../application/ports/counterparty-repository.port.js";
 
 export class InMemoryCounterpartyRepository implements CounterpartyRepository {
@@ -29,5 +30,12 @@ export class InMemoryCounterpartyRepository implements CounterpartyRepository {
     const name = displayName.trim();
     this.rows.set(id, { displayName: name, isActive: true });
     return { id, displayName: name };
+  }
+
+  async deleteById(counterpartyId: string): Promise<void> {
+    if (!this.rows.get(counterpartyId)) {
+      throw new CounterpartyNotFoundError(counterpartyId);
+    }
+    this.rows.delete(counterpartyId);
   }
 }

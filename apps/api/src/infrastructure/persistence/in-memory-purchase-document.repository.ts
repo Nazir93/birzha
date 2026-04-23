@@ -1,3 +1,4 @@
+import { PurchaseDocumentNotFoundError } from "../../application/errors.js";
 import type { BatchRepository } from "../../application/ports/batch-repository.port.js";
 import type { ProductGradeRepository } from "../../application/ports/product-grade-repository.port.js";
 import type {
@@ -7,6 +8,9 @@ import type {
   PurchaseDocumentRepository,
   PurchaseDocumentSummary,
 } from "../../application/ports/purchase-document-repository.port.js";
+import type { TripSaleRepository } from "../../application/ports/trip-sale-repository.port.js";
+import type { TripShipmentRepository } from "../../application/ports/trip-shipment-repository.port.js";
+import type { TripShortageRepository } from "../../application/ports/trip-shortage-repository.port.js";
 import { gramsToKg } from "./batch-mass.js";
 
 export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepository {
@@ -14,16 +18,49 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
   private readonly linesByDoc = new Map<string, NewPurchaseDocumentLine[]>();
 
   constructor(
-    private readonly batches: BatchRepository,
+    private readonly batchRepo: BatchRepository,
     private readonly grades: ProductGradeRepository,
+    private readonly tripShipments: TripShipmentRepository,
+    private readonly tripSales: TripSaleRepository,
+    private readonly tripShortages: TripShortageRepository,
   ) {}
 
   async insertDocumentWithLines(header: PurchaseDocumentHeaderRow, lines: NewPurchaseDocumentLine[]): Promise<void> {
     for (const line of lines) {
-      await this.batches.save(line.batch);
+      await this.batchRepo.save(line.batch);
     }
     this.headers.push(header);
     this.linesByDoc.set(header.id, lines);
+  }
+
+  async hasProductGradeInAnyLine(productGradeId: string): Promise<boolean> {
+    for (const lines of this.linesByDoc.values()) {
+      for (const line of lines) {
+        if (line.productGradeId === productGradeId) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  async deleteById(documentId: string): Promise<void> {
+    const headerIdx = this.headers.findIndex((h) => h.id === documentId);
+    if (headerIdx === -1) {
+      throw new PurchaseDocumentNotFoundError(documentId);
+    }
+    const lines = this.linesByDoc.get(documentId) ?? [];
+    const batchIds = lines.map((l) => l.batch.getId());
+    if (batchIds.length > 0) {
+      await this.tripSales.deleteByBatchIds(batchIds);
+      await this.tripShortages.deleteByBatchIds(batchIds);
+      await this.tripShipments.deleteByBatchIds(batchIds);
+    }
+    for (const batchId of batchIds) {
+      await this.batchRepo.deleteById(batchId);
+    }
+    this.headers.splice(headerIdx, 1);
+    this.linesByDoc.delete(documentId);
   }
 
   async listSummaries(): Promise<PurchaseDocumentSummary[]> {

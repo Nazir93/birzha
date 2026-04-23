@@ -58,4 +58,7 @@ export interface PurchaseDocumentRepository {
   insertDocumentWithLines(header: PurchaseDocumentHeaderRow, lines: NewPurchaseDocumentLine[]): Promise<void>;
   listSummaries(): Promise<PurchaseDocumentSummary[]>;
   findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null>;
+  /** Удаляет шапку, строки, партии, записи рейса по `batch_id`. */
+  deleteById(documentId: string): Promise<void>;
+  hasProductGradeInAnyLine(productGradeId: string): Promise<boolean>;
 }

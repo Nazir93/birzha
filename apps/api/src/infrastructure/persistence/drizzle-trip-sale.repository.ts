@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 
 import type {
   TripSaleAggregate,
@@ -11,6 +11,21 @@ import { tripBatchSales } from "../../db/schema.js";
 
 export class DrizzleTripSaleRepository implements TripSaleRepository {
   constructor(private readonly db: DbClient) {}
+
+  async countByCounterpartyId(counterpartyId: string): Promise<number> {
+    const r = await this.db
+      .select({ c: count() })
+      .from(tripBatchSales)
+      .where(eq(tripBatchSales.counterpartyId, counterpartyId));
+    return Number(r[0]?.c ?? 0);
+  }
+
+  async deleteByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    await this.db.delete(tripBatchSales).where(inArray(tripBatchSales.batchId, batchIds));
+  }
 
   async append(row: TripSaleAppend): Promise<void> {
     await this.db.insert(tripBatchSales).values({

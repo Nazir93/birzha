@@ -33,6 +33,10 @@ import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/driz
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
 import { DrizzleSyncIdempotencyRepository } from "./infrastructure/persistence/drizzle-sync-idempotency.repository.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
+import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
+import { DeletePurchaseDocumentUseCase } from "./application/purchase/delete-purchase-document.use-case.js";
+import { DeleteCounterpartyUseCase } from "./application/counterparty/delete-counterparty.use-case.js";
+import { DeleteWarehouseUseCase } from "./application/warehouse/delete-warehouse.use-case.js";
 import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/drizzle-counterparty.repository.js";
 import { DrizzleProductGradeRepository } from "./infrastructure/persistence/drizzle-product-grade.repository.js";
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
@@ -213,12 +217,37 @@ export async function buildApp(options: {
     productGradeRepository
       ? db
         ? new DrizzlePurchaseDocumentRepository(db)
-        : new InMemoryPurchaseDocumentRepository(batchRepository, productGradeRepository)
+        : new InMemoryPurchaseDocumentRepository(
+            batchRepository,
+            productGradeRepository,
+            shipmentRepository,
+            saleRepository,
+            shortageRepository,
+          )
       : null;
 
   const createPurchaseDocumentUseCase =
     warehouseRepository && productGradeRepository && purchaseDocumentRepository
       ? new CreatePurchaseDocumentUseCase(warehouseRepository, productGradeRepository, purchaseDocumentRepository)
+      : null;
+
+  const deletePurchaseDocumentUseCase = purchaseDocumentRepository
+    ? new DeletePurchaseDocumentUseCase(purchaseDocumentRepository)
+    : null;
+
+  const deleteWarehouseUseCase =
+    warehouseRepository && purchaseDocumentRepository && batchRepository
+      ? new DeleteWarehouseUseCase(warehouseRepository, purchaseDocumentRepository, batchRepository)
+      : null;
+
+  const deleteProductGradeUseCase =
+    productGradeRepository && purchaseDocumentRepository
+      ? new DeleteProductGradeUseCase(productGradeRepository, purchaseDocumentRepository)
+      : null;
+
+  const deleteCounterpartyUseCase =
+    counterpartyRepository && saleRepository
+      ? new DeleteCounterpartyUseCase(counterpartyRepository, saleRepository)
       : null;
 
   app.get("/meta", async () => ({
@@ -243,7 +272,11 @@ export async function buildApp(options: {
   const routeAuth = createBusinessRouteAuth(app, env);
 
   if (counterpartyRepository) {
-    registerCounterpartyRoutes(app, counterpartyRepository, routeAuth);
+    registerCounterpartyRoutes(
+      app,
+      { counterparties: counterpartyRepository, deleteCounterparty: deleteCounterpartyUseCase },
+      routeAuth,
+    );
   }
 
   if (
@@ -257,7 +290,10 @@ export async function buildApp(options: {
     warehouseRepository &&
     productGradeRepository &&
     purchaseDocumentRepository &&
-    createPurchaseDocumentUseCase
+    createPurchaseDocumentUseCase &&
+    deletePurchaseDocumentUseCase &&
+    deleteWarehouseUseCase &&
+    deleteProductGradeUseCase
   ) {
     registerPurchaseDocumentRoutes(
       app,
@@ -266,6 +302,9 @@ export async function buildApp(options: {
         grades: productGradeRepository,
         purchaseDocuments: purchaseDocumentRepository,
         createPurchaseDocument: createPurchaseDocumentUseCase,
+        deletePurchaseDocument: deletePurchaseDocumentUseCase,
+        deleteWarehouse: deleteWarehouseUseCase,
+        deleteProductGrade: deleteProductGradeUseCase,
       },
       routeAuth,
     );

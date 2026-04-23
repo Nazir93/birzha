@@ -14,4 +14,5 @@ export interface WarehouseRepository {
   findById(id: string): Promise<WarehouseRecord | null>;
   list(): Promise<WarehouseRecord[]>;
   create(input: CreateWarehouseInput): Promise<WarehouseRecord>;
+  deleteById(warehouseId: string): Promise<void>;
 }

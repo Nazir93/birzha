@@ -97,6 +97,15 @@ export class WarehouseNotFoundError extends Error {
   }
 }
 
+/** Системные записи (сид) из демо-репозитория без БД. */
+export class SeededResourceDeleteForbiddenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SeededResourceDeleteForbiddenError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Код склада уже занят (уникальный `warehouses.code`). */
 export class WarehouseCodeConflictError extends Error {
   readonly code: string;
@@ -128,6 +137,32 @@ export class ProductGradeNotFoundError extends Error {
     super(`Калибр / код строки не найден: ${productGradeId}`);
     this.name = "ProductGradeNotFoundError";
     this.productGradeId = productGradeId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class PurchaseDocumentNotFoundError extends Error {
+  readonly documentId: string;
+
+  constructor(documentId: string) {
+    super(`Накладная не найдена: ${documentId}`);
+    this.name = "PurchaseDocumentNotFoundError";
+    this.documentId = documentId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Сущность нельзя удалить: на неё ссылаются накладные, партии, рейс и т.п.
+ * Текст для пользователя/логов.
+ */
+export class ResourceInUseError extends Error {
+  constructor(
+    public readonly code: "warehouse" | "product_grade" | "counterparty",
+    message: string,
+  ) {
+    super(message);
+    this.name = "ResourceInUseError";
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

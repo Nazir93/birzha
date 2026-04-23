@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { ProductGradeCodeConflictError } from "../../application/errors.js";
+import {
+  ProductGradeNotFoundError,
+  ProductGradeCodeConflictError,
+  SeededResourceDeleteForbiddenError,
+} from "../../application/errors.js";
 import type {
   CreateProductGradeInput,
   ProductGradeRecord,
@@ -19,6 +23,7 @@ const SEED: readonly ProductGradeRecord[] = [
 ];
 
 let memory: ProductGradeRecord[] | null = null;
+const userCreatedIds = new Set<string>();
 
 function getRows(): ProductGradeRecord[] {
   if (!memory) {
@@ -60,6 +65,23 @@ export class StaticProductGradeRepository implements ProductGradeRepository {
     const id = `pg-${randomUUID()}`;
     const rec: ProductGradeRecord = { id, code, displayName, productGroup, sortOrder };
     rows.push(rec);
+    userCreatedIds.add(id);
     return rec;
+  }
+
+  async deleteById(productGradeId: string): Promise<void> {
+    if (SEED.some((g) => g.id === productGradeId)) {
+      throw new SeededResourceDeleteForbiddenError("Нельзя удалить предустановленный калибр (сид).");
+    }
+    const rows = getRows();
+    const idx = rows.findIndex((g) => g.id === productGradeId);
+    if (idx === -1) {
+      throw new ProductGradeNotFoundError(productGradeId);
+    }
+    if (!userCreatedIds.has(productGradeId)) {
+      throw new SeededResourceDeleteForbiddenError("Удаление возможно только для калибров, созданных через API.");
+    }
+    rows.splice(idx, 1);
+    userCreatedIds.delete(productGradeId);
   }
 }

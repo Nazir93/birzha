@@ -20,4 +20,5 @@ export interface TripShortageRepository {
   append(row: TripShortageAppend): Promise<void>;
   aggregateByTripId(tripId: string): Promise<TripShortageAggregate>;
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
+  deleteByBatchIds(batchIds: string[]): Promise<void>;
 }

@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { WarehouseCodeConflictError } from "../../application/errors.js";
+import {
+  SeededResourceDeleteForbiddenError,
+  WarehouseCodeConflictError,
+  WarehouseNotFoundError,
+} from "../../application/errors.js";
 import type {
   CreateWarehouseInput,
   WarehouseRecord,
@@ -16,6 +20,7 @@ const SEED: readonly WarehouseRecord[] = [
 ];
 
 let memory: WarehouseRecord[] | null = null;
+const userCreatedIds = new Set<string>();
 
 function getRows(): WarehouseRecord[] {
   if (!memory) {
@@ -45,6 +50,7 @@ export class StaticWarehouseRepository implements WarehouseRepository {
       }
       const rec: WarehouseRecord = { id, code, name };
       rows.push(rec);
+      userCreatedIds.add(id);
       return rec;
     }
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -54,8 +60,25 @@ export class StaticWarehouseRepository implements WarehouseRepository {
       }
       const rec: WarehouseRecord = { id, code, name };
       rows.push(rec);
+      userCreatedIds.add(id);
       return rec;
     }
     throw new Error("Не удалось создать склад: повторите попытку");
+  }
+
+  async deleteById(warehouseId: string): Promise<void> {
+    if (SEED.some((s) => s.id === warehouseId)) {
+      throw new SeededResourceDeleteForbiddenError("Нельзя удалить предустановленный склад (сид).");
+    }
+    const rows = getRows();
+    const idx = rows.findIndex((w) => w.id === warehouseId);
+    if (idx === -1) {
+      throw new WarehouseNotFoundError(warehouseId);
+    }
+    if (!userCreatedIds.has(warehouseId)) {
+      throw new SeededResourceDeleteForbiddenError("Удаление возможно только для складов, созданных через API.");
+    }
+    rows.splice(idx, 1);
+    userCreatedIds.delete(warehouseId);
   }
 }

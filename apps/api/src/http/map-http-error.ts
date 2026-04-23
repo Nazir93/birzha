@@ -11,8 +11,11 @@ import {
   InsufficientStockForTripError,
   ProductGradeCodeConflictError,
   ProductGradeNotFoundError,
+  PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
+  ResourceInUseError,
   SalePaymentSplitError,
+  SeededResourceDeleteForbiddenError,
   TripClosedError,
   TripNotEmptyError,
   TripNotFoundError,
@@ -44,6 +47,25 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "counterparty_not_found",
       counterpartyId: error.counterpartyId,
+    });
+  }
+  if (error instanceof PurchaseDocumentNotFoundError) {
+    return reply.code(404).send({
+      error: "purchase_document_not_found",
+      documentId: error.documentId,
+    });
+  }
+  if (error instanceof SeededResourceDeleteForbiddenError) {
+    return reply.code(409).send({
+      error: "seeded_resource_delete_forbidden",
+      message: error.message,
+    });
+  }
+  if (error instanceof ResourceInUseError) {
+    return reply.code(409).send({
+      error: "resource_in_use",
+      code: error.code,
+      message: error.message,
     });
   }
   if (error instanceof WarehouseNotFoundError) {

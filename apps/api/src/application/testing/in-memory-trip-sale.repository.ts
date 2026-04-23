@@ -12,6 +12,28 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
     this.rows.push(row);
   }
 
+  async countByCounterpartyId(counterpartyId: string): Promise<number> {
+    let n = 0;
+    for (const r of this.rows) {
+      if (r.counterpartyId === counterpartyId) {
+        n += 1;
+      }
+    }
+    return n;
+  }
+
+  async deleteByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    const set = new Set(batchIds);
+    for (let i = this.rows.length - 1; i >= 0; i--) {
+      if (set.has(this.rows[i]!.batchId)) {
+        this.rows.splice(i, 1);
+      }
+    }
+  }
+
   async totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint> {
     let sum = 0n;
     for (const r of this.rows) {

@@ -6,10 +6,13 @@ import {
 } from "@birzha/contracts";
 import { z } from "zod";
 
-import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
 import type { ProductGradeRepository } from "../application/ports/product-grade-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
 import type { WarehouseRepository } from "../application/ports/warehouse-repository.port.js";
+import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
+import { DeleteProductGradeUseCase } from "../application/purchase/delete-product-grade.use-case.js";
+import { DeletePurchaseDocumentUseCase } from "../application/purchase/delete-purchase-document.use-case.js";
+import { DeleteWarehouseUseCase } from "../application/warehouse/delete-warehouse.use-case.js";
 
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
@@ -21,10 +24,21 @@ export function registerPurchaseDocumentRoutes(
     grades: ProductGradeRepository;
     purchaseDocuments: PurchaseDocumentRepository;
     createPurchaseDocument: CreatePurchaseDocumentUseCase;
+    deletePurchaseDocument: DeletePurchaseDocumentUseCase;
+    deleteWarehouse: DeleteWarehouseUseCase;
+    deleteProductGrade: DeleteProductGradeUseCase;
   },
   routeAuth: BusinessRouteAuth,
 ): void {
-  const { warehouses, grades, purchaseDocuments, createPurchaseDocument } = deps;
+  const {
+    warehouses,
+    grades,
+    purchaseDocuments,
+    createPurchaseDocument,
+    deletePurchaseDocument,
+    deleteWarehouse,
+    deleteProductGrade,
+  } = deps;
 
   app.get("/warehouses", { ...withPreHandlers(routeAuth.catalogRead) }, async (_req, reply) => {
     try {
@@ -34,6 +48,20 @@ export function registerPurchaseDocumentRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.delete(
+    "/warehouses/:warehouseId",
+    { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const params = z.object({ warehouseId: z.string().min(1) }).parse(req.params);
+        await deleteWarehouse.execute(params.warehouseId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 
   app.post("/warehouses", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
     try {
@@ -53,6 +81,20 @@ export function registerPurchaseDocumentRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.delete(
+    "/product-grades/:productGradeId",
+    { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const params = z.object({ productGradeId: z.string().min(1) }).parse(req.params);
+        await deleteProductGrade.execute(params.productGradeId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 
   app.post("/product-grades", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
     try {
@@ -100,4 +142,18 @@ export function registerPurchaseDocumentRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.delete(
+    "/purchase-documents/:documentId",
+    { ...withPreHandlers(routeAuth.batchCreate) },
+    async (req, reply) => {
+      try {
+        const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
+        await deletePurchaseDocument.execute(params.documentId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 }

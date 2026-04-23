@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { asc, eq } from "drizzle-orm";
 
-import { ProductGradeCodeConflictError } from "../../application/errors.js";
+import { ProductGradeCodeConflictError, ProductGradeNotFoundError } from "../../application/errors.js";
 import type {
   CreateProductGradeInput,
   ProductGradeRecord,
@@ -44,6 +44,17 @@ export class DrizzleProductGradeRepository implements ProductGradeRepository {
       productGroup: r.productGroup ?? null,
       sortOrder: r.sortOrder,
     }));
+  }
+
+  async deleteById(productGradeId: string): Promise<void> {
+    const existing = await this.findById(productGradeId);
+    if (!existing) {
+      throw new ProductGradeNotFoundError(productGradeId);
+    }
+    const del = await this.db.delete(productGrades).where(eq(productGrades.id, productGradeId)).returning({ id: productGrades.id });
+    if (del.length === 0) {
+      throw new ProductGradeNotFoundError(productGradeId);
+    }
   }
 
   async create(input: CreateProductGradeInput): Promise<ProductGradeRecord> {

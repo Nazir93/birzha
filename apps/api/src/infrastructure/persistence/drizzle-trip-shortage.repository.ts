@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type {
   TripShortageAggregate,
@@ -19,6 +19,13 @@ export class DrizzleTripShortageRepository implements TripShortageRepository {
       grams: row.grams,
       reason: row.reason,
     });
+  }
+
+  async deleteByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    await this.db.delete(tripBatchShortages).where(inArray(tripBatchShortages.batchId, batchIds));
   }
 
   async totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint> {

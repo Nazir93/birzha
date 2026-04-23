@@ -44,4 +44,7 @@ export interface TripSaleRepository {
   append(row: TripSaleAppend): Promise<void>;
   aggregateByTripId(tripId: string): Promise<TripSaleAggregate>;
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
+  /** Число строк с этим `counterpartyId` (блокировка удаления справочника). */
+  countByCounterpartyId(counterpartyId: string): Promise<number>;
+  deleteByBatchIds(batchIds: string[]): Promise<void>;
 }
