@@ -20,6 +20,11 @@ export type BatchJson = {
     /** Из справочника калибров — вид товара (помидоры, огурцы…). */
     productGroup: string | null;
     documentNumber: string | null;
+    /**
+     * Ящиков по строке накладной (как в документе). Остаток в ящиках на UI — пропорция
+     * `onWarehouseKg / totalKg` к этому числу (см. «Распределение»).
+     */
+    linePackageCount: number | null;
   };
   /** Присвоение качества / направления (PostgreSQL); при in-memory API может отсутствовать. */
   allocation?: {

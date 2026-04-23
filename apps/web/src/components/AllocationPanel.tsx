@@ -92,6 +92,31 @@ function countNakldocuments(batches: BatchListItem[]): number {
   return s.size;
 }
 
+/** Остаток в ящиках: доля `onWarehouseKg` к массе партии, × ящиков по строке накладной. */
+function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
+  const linePk = b.nakladnaya?.linePackageCount;
+  if (linePk == null || linePk <= 0) {
+    return null;
+  }
+  if (b.totalKg <= 0) {
+    return null;
+  }
+  return Math.max(0, Math.round((b.onWarehouseKg / b.totalKg) * linePk));
+}
+
+function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: number; linesWithBoxData: number } {
+  let sum = 0;
+  let linesWithBoxData = 0;
+  for (const b of batches) {
+    const e = estimatedPackageCountOnShelf(b);
+    if (e != null) {
+      sum += e;
+      linesWithBoxData += 1;
+    }
+  }
+  return { sum, linesWithBoxData };
+}
+
 export function AllocationPanel() {
   const queryClient = useQueryClient();
   const batchesQuery = useQuery({
@@ -192,14 +217,33 @@ export function AllocationPanel() {
   const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
 
   /** Склады из справочника (всегда в селекте) + остатки/кг по партиям, без «потери» физического склада. */
-  const allocationWarehouseOptions = useMemo((): { id: string; batchCount: number; totalKg: number }[] => {
-    const out: { id: string; batchCount: number; totalKg: number }[] = [];
+  const allocationWarehouseOptions = useMemo((): {
+    id: string;
+    batchCount: number;
+    totalKg: number;
+    packageEstimate: number;
+    linesWithBoxData: number;
+  }[] => {
+    const out: {
+      id: string;
+      batchCount: number;
+      totalKg: number;
+      packageEstimate: number;
+      linesWithBoxData: number;
+    }[] = [];
     const cat = (warehousesQuery.data?.warehouses ?? [])
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name, "ru"));
     const add = (id: string) => {
       const bs = byWarehouse.get(id) ?? [];
-      out.push({ id, batchCount: bs.length, totalKg: sumOnWarehouseKg(bs) });
+      const { sum, linesWithBoxData } = sumPackageEstimatesForWarehouse(bs);
+      out.push({
+        id,
+        batchCount: bs.length,
+        totalKg: sumOnWarehouseKg(bs),
+        packageEstimate: sum,
+        linesWithBoxData,
+      });
     };
     for (const w of cat) {
       add(w.id);
@@ -229,7 +273,8 @@ export function AllocationPanel() {
     const bs = byWarehouse.get(selectedWarehouse) ?? [];
     const totalKg = sumOnWarehouseKg(bs);
     const ndoc = countNakldocuments(bs);
-    return { batches: bs.length, totalKg, docCount: ndoc };
+    const { sum: packageEstimate, linesWithBoxData } = sumPackageEstimatesForWarehouse(bs);
+    return { batches: bs.length, totalKg, docCount: ndoc, packageEstimate, linesWithBoxData };
   }, [byWarehouse, selectedWarehouse]);
 
   const batchesInWh = useMemo(
@@ -337,25 +382,52 @@ export function AllocationPanel() {
               <option value="">— выберите склад —</option>
               {allocationWarehouseOptions.map((row) => (
                 <option key={row.id} value={row.id}>
-                  {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг, {row.batchCount} п
+                  {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+                  {row.linesWithBoxData > 0
+                    ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.`
+                    : ""}
+                  {`, ${row.batchCount} парт.`}
                 </option>
               ))}
             </select>
             {selectedWarehouse && whSummary && (
-              <p style={{ ...muted, margin: "0.4rem 0 0", fontSize: "0.86rem" }} role="status" aria-live="polite">
-                <strong>На выбранном:</strong>{" "}
-                {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг, {whSummary.batches} парт.{" "}
-                {whSummary.docCount > 0
-                  ? `, ${whSummary.docCount} накл.`
-                  : `, ${
-                      selectedWarehouse === ORPHAN_WAREHOUSE
-                        ? "как в списке «без накл./склада»"
-                        : "накл. в ответе нет (приём вручную/без ссылки на документ)"
-                    }`}
-                {selectedWarehouse === ORPHAN_WAREHOUSE
-                  ? " (партии, у которых в API не указан склад поступления — должен тянуться с приёмки)."
-                  : ""}
-              </p>
+              <div
+                style={{ ...muted, margin: "0.5rem 0 0", fontSize: "0.88rem", lineHeight: 1.45 }}
+                role="status"
+                aria-live="polite"
+              >
+                <p style={{ margin: "0 0 0.35rem" }}>
+                  <strong>Остаток на этом складе:</strong>{" "}
+                  {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг &nbsp;·&nbsp;{" "}
+                  {whSummary.batches} парт. &nbsp;·&nbsp;{" "}
+                  {whSummary.docCount > 0 ? (
+                    <>{whSummary.docCount} накладн.</>
+                  ) : (
+                    <>
+                      {selectedWarehouse === ORPHAN_WAREHOUSE
+                        ? "без привязки к накладной"
+                        : "накладная в данных не указана"}
+                    </>
+                  )}
+                </p>
+                <p style={{ margin: 0 }}>
+                  <strong>Ящики (оценка):</strong>{" "}
+                  {whSummary.linesWithBoxData > 0 ? (
+                    <>
+                      ≈ {whSummary.packageEstimate.toLocaleString("ru-RU")} шт. на остатке (по {whSummary.linesWithBoxData}{" "}
+                      {whSummary.linesWithBoxData === 1 ? "строке" : "строкам"} с числом ящиков в накладной; пропорция к кг
+                      остатка)
+                    </>
+                  ) : (
+                    <>в строках накладных не указаны — смотрите только кг в таблице</>
+                  )}
+                </p>
+                {selectedWarehouse === ORPHAN_WAREHOUSE && (
+                  <p style={{ margin: "0.35rem 0 0" }}>
+                    Склад не подтянут из накладной — проверьте приём; иначе остатки сходятся в «Прочие».
+                  </p>
+                )}
+              </div>
             )}
             {warehousesQuery.isSuccess &&
               (warehousesQuery.data?.warehouses.length ?? 0) > 0 &&
@@ -429,6 +501,9 @@ export function AllocationPanel() {
                       Остаток, кг
                     </th>
                     <th scope="col" style={thHead}>
+                      Ящики
+                    </th>
+                    <th scope="col" style={thHead}>
                       Качество
                     </th>
                     <th scope="col" style={thHead}>
@@ -441,6 +516,8 @@ export function AllocationPanel() {
                   {tableRows.map((b) => {
                     const label = formatBatchPartyCaption(b, b.id);
                     const e = getEdit(b);
+                    const onShelfPkg = estimatedPackageCountOnShelf(b);
+                    const linePkg = b.nakladnaya?.linePackageCount;
                     return (
                       <tr key={b.id}>
                         <td style={thtd}>
@@ -458,6 +535,18 @@ export function AllocationPanel() {
                           </div>
                         </td>
                         <td style={thtd}>{b.onWarehouseKg}</td>
+                        <td style={thtd}>
+                          {onShelfPkg != null ? (
+                            <span style={{ fontWeight: 500 }}>≈ {onShelfPkg}</span>
+                          ) : (
+                            "—"
+                          )}
+                          {linePkg != null && linePkg > 0 && (
+                            <div style={{ fontSize: "0.78rem", color: "#52525b", marginTop: "0.2rem" }}>
+                              в накл.: {linePkg} шт. · вес партии {b.totalKg} кг
+                            </div>
+                          )}
+                        </td>
                         <td style={thtd}>
                           <select
                             aria-label="Качество"

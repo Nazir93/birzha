@@ -14,6 +14,7 @@ type LineMeta = {
   productGradeCode: string | null;
   productGroup: string | null;
   documentNumber: string | null;
+  linePackageCount: number | null;
 };
 
 /** Склад для группировки в «Распределении»: из накладной, иначе с колонки партий (всё, что пришло с приёмов). */
@@ -31,6 +32,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
       productGradeCode: null,
       productGroup: null,
       documentNumber: null,
+      linePackageCount: null,
     };
   }
   if (!m) {
@@ -42,6 +44,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
     productGradeCode: m.productGradeCode,
     productGroup: m.productGroup,
     documentNumber: m.documentNumber,
+    linePackageCount: m.linePackageCount,
   };
 }
 
@@ -60,6 +63,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
       productGradeCode: productGrades.code,
       productGroup: productGrades.productGroup,
       documentNumber: purchaseDocuments.documentNumber,
+      linePackageCount: purchaseDocumentLines.packageCount,
     })
     .from(purchaseDocumentLines)
     .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
@@ -74,15 +78,18 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
       productGradeCode: string | null;
       productGroup: string | null;
       documentNumber: string | null;
+      linePackageCount: number | null;
     }
   >();
   for (const r of rows) {
+    const pk = r.linePackageCount;
     meta.set(r.batchId, {
       documentId: r.documentId,
       warehouseId: r.warehouseId,
       productGradeCode: r.productGradeCode,
       productGroup: r.productGroup,
       documentNumber: r.documentNumber,
+      linePackageCount: pk != null ? Number(pk) : null,
     });
   }
 

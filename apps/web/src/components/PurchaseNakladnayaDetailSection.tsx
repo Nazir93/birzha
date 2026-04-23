@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { apiFetch } from "../api/fetch-api.js";
 import type { PurchaseDocumentDetail, WarehousesListResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { kopecksToRubLabel } from "../format/money.js";
 import { routes, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
 
@@ -48,6 +51,24 @@ export function PurchaseNakladnayaDetailSection() {
     enabled: enabled && Boolean(id),
   });
 
+  const documentTotals = useMemo(() => {
+    const d = docQ.data;
+    if (!d) {
+      return null;
+    }
+    let totalKg = 0;
+    let totalPackages = 0;
+    let lineKopSum = 0;
+    for (const line of d.lines) {
+      totalKg += line.totalKg;
+      totalPackages += linePackageCountForNakladnayaSum(line.packageCount ?? "");
+      lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
+    }
+    const extraKop = lineTotalKopecksForNakladnayaSum(d.extraCostKopecks);
+    const allKop = lineKopSum + extraKop;
+    return { totalKg, totalPackages, lineKopSum, extraKop, allKop };
+  }, [docQ.data]);
+
   const warehouseLabel = (wid: string) => {
     const w = warehousesQ.data?.warehouses.find((x) => x.id === wid);
     return w ? `${w.name} (${w.code})` : wid;
@@ -88,6 +109,11 @@ export function PurchaseNakladnayaDetailSection() {
       </div>
     );
   }
+
+  const totals = documentTotals;
+  const totalKgLabel = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
+    totals?.totalKg ?? 0,
+  );
 
   return (
     <section style={sectionBox} aria-labelledby="nakl-detail-heading" role="region">
@@ -168,8 +194,104 @@ export function PurchaseNakladnayaDetailSection() {
               </tr>
             ))}
           </tbody>
+          {totals && (
+            <tfoot>
+              <tr>
+                <th
+                  colSpan={2}
+                  scope="row"
+                  style={{ ...thtdDense, textAlign: "right", background: "rgba(0,0,0,0.04)" }}
+                >
+                  Итого
+                </th>
+                <td
+                  style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.04)" }}
+                  title="Сумма кг по строкам"
+                >
+                  {totalKgLabel}{" "}
+                  <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.8rem" }}>кг</span>
+                </td>
+                <td style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.04)" }}>
+                  {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
+                    totals.totalPackages,
+                  )}{" "}
+                  <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.8rem" }}>кор.</span>
+                </td>
+                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)", color: "#71717a" }}>—</td>
+                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>
+                  <div style={{ fontWeight: 600 }}>{totals.lineKopSum} коп.</div>
+                  <div style={{ fontSize: "0.8rem", color: "#3f3f46" }}>= {kopecksToRubLabel(totals.lineKopSum.toString())} ₽</div>
+                </td>
+                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>—</td>
+              </tr>
+              {totals.extraKop > 0 && (
+                <tr>
+                  <th
+                    colSpan={5}
+                    scope="row"
+                    style={{ ...thtdDense, textAlign: "right", background: "rgba(0,0,0,0.03)" }}
+                  >
+                    Доп. расходы (см. шапку)
+                  </th>
+                  <td colSpan={2} style={{ ...thtdDense, background: "rgba(0,0,0,0.03)" }}>
+                    <span style={{ fontWeight: 600 }}>{totals.extraKop} коп.</span> = {kopecksToRubLabel(totals.extraKop.toString())} ₽
+                  </td>
+                </tr>
+              )}
+              <tr>
+                <th
+                  colSpan={5}
+                  scope="row"
+                  style={{ ...thtdDense, textAlign: "right", background: "rgba(0,0,0,0.05)", fontWeight: 700 }}
+                >
+                  Всего по документу
+                </th>
+                <td colSpan={2} style={{ ...thtdDense, background: "rgba(0,0,0,0.05)" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{totals.allKop} коп.</div>
+                  <div style={{ fontSize: "0.9rem" }}>= {kopecksToRubLabel(totals.allKop.toString())} ₽</div>
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
+
+      {totals && (
+        <div
+          role="region"
+          aria-label="Итого по накладной"
+          style={{
+            marginTop: "0.75rem",
+            maxWidth: 480,
+            padding: "0.6rem 0.75rem",
+            border: "1px solid #e4e4e7",
+            borderRadius: 6,
+            background: "#fafafa",
+            fontSize: "0.9rem",
+            lineHeight: 1.5,
+          }}
+        >
+          <h4 id="nakl-totals-heading" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
+            Итого
+          </h4>
+          <p style={{ margin: "0.2rem 0" }}>
+            <strong>Кг</strong> по всем строкам: {totalKgLabel} кг
+          </p>
+          <p style={{ margin: "0.2rem 0" }}>
+            <strong>Короба / ящики</strong> (сумма по строкам): {totals.totalPackages.toLocaleString("ru-RU")} шт.
+          </p>
+          <p style={{ margin: "0.2rem 0" }}>
+            <strong>Сумма по строкам:</strong> {totals.lineKopSum} коп. = {kopecksToRubLabel(totals.lineKopSum.toString())} ₽
+          </p>
+          <p style={{ margin: "0.2rem 0" }}>
+            <strong>Доп. расходы</strong> (к документу): {totals.extraKop} коп. = {kopecksToRubLabel(totals.extraKop.toString())} ₽
+            {totals.extraKop === 0 && <span style={muted}>, не указаны</span>}
+          </p>
+          <p style={{ margin: "0.4rem 0 0", paddingTop: "0.35rem", borderTop: "1px solid #e4e4e7", fontWeight: 600 }}>
+            <strong style={{ fontSize: "1.02rem" }}>К оплате (всего):</strong> {totals.allKop} коп. = {kopecksToRubLabel(totals.allKop.toString())} ₽
+          </p>
+        </div>
+      )}
 
       <p style={{ ...muted, marginTop: "0.75rem", fontSize: "0.82rem" }}>
         Прямая ссылка:{" "}

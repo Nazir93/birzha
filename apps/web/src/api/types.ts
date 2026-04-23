@@ -19,6 +19,8 @@ export type BatchListItem = {
     /** Вид товара из справочника (помидоры, огурцы…). */
     productGroup: string | null;
     documentNumber: string | null;
+    /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
+    linePackageCount?: number | null;
   };
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
   allocation?: {
