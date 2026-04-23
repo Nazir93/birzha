@@ -33,6 +33,9 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
       documentNumber: null,
     };
   }
+  if (!m) {
+    return undefined;
+  }
   return {
     documentId: m.documentId,
     warehouseId: w,

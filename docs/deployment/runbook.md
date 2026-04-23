@@ -47,19 +47,18 @@ pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' -
 
 ## 7. Обновление
 
-Серверный скрипт (тот же порядок команд, что ниже):
+**Основной порядок** — **вручную** (подробности — **`deploy/README.md`**):
 
 ```bash
 cd /opt/birzha
-./deploy/server-update.sh
-```
-
-Вручную:
-
-```bash
-cd /opt/birzha && git pull && pnpm install && pnpm build && cd apps/api && pnpm db:push
+git fetch origin && git checkout main && git pull --ff-only origin main
+pnpm install --frozen-lockfile
+pnpm exec turbo run build --force
+cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
 ```
+
+**Опционально:** `deploy/server-update.sh` тот же смысл, см. `deploy/README.md`.
 
 ## 8. Резервные копии
 

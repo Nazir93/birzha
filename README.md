@@ -117,7 +117,7 @@ pnpm e2e
 
 **Локальная разработка:** `pnpm dev:api` / `pnpm dev:web`, при необходимости PostgreSQL на машине (см. раздел **API и база**).
 
-**Когда появится сервер** — пошаговый чеклист для Ubuntu/VPS: **`docs/deployment/vps-ubuntu.md`**; краткий порядок шагов — **`docs/deployment/runbook.md`**; пример **nginx** без секретов — **`deploy/nginx-birzha.example.conf`**. После первого клона обновления из Git: **`deploy/server-update.sh`** (см. **`deploy/README.md`**); опционально ручной деплой из **GitHub Actions** (workflow **Deploy to server**, секреты SSH — в **`deploy/README.md`**). Нужны PostgreSQL, переменные окружения (`DATABASE_URL`, `JWT_SECRET` и т.д.), процесс запуска `apps/api` (например systemd), раздача статики из `apps/web/dist` и обратный прокси для `/api`, HTTPS, резервное копирование БД.
+**Когда появится сервер** — пошаговый чеклист для Ubuntu/VPS: **`docs/deployment/vps-ubuntu.md`**; краткий порядок шагов — **`docs/deployment/runbook.md`**; пример **nginx** без секретов — **`deploy/nginx-birzha.example.conf`**. Обновления из Git на сервере: **вручную, командами** в **`deploy/README.md`** (там же — опционально `deploy/server-update.sh` и GitHub Actions **Deploy to server**). Нужны PostgreSQL, переменные окружения (`DATABASE_URL`, `JWT_SECRET` и т.д.), процесс запуска `apps/api` (например systemd), раздача статики из `apps/web/dist` и обратный прокси для `/api`, HTTPS, резервное копирование БД.
 
 ### API и база
 

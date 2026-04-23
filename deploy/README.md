@@ -3,15 +3,8 @@
 ## На VPS (ручной цикл)
 
 1. Один раз: клонировать репозиторий (см. **`docs/deployment/vps-ubuntu.md`**), настроить `apps/api/.env`, PostgreSQL, **nginx**, **systemd** (`docs/deployment/runbook.md`).
-2. При каждом обновлении из Git — **вариант А: скрипт** (рекомендуется):
 
-```bash
-cd /opt/birzha   # или ваш каталог
-chmod +x deploy/server-update.sh   # один раз
-./deploy/server-update.sh
-```
-
-**Вариант Б: те же шаги вручную** (если скрипт не используете — копируйте целиком, по порядку):
+2. **При каждом обновлении из Git** — основной и зафиксированный в документации порядок, **команды вручную** (копируйте целиком, по порядку; каталог — ваш, часто `/opt/birzha`):
 
 ```bash
 cd /opt/birzha
@@ -22,13 +15,11 @@ cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
 ```
 
-После `db:push` вы снова в `apps/api`; следующий заход начните с `cd /opt/birzha`, если нужен полный цикл снова.
+`turbo run build --force` нужен, чтобы после `git pull` не остался устаревший кэш Turbo. После `db:push` вы в каталоге `apps/api`; **следующий** полный цикл снова с `cd /opt/birzha`.
 
-Скрипт `server-update.sh` делает то же самое: `git pull`, `pnpm install`, **`turbo run build --force`** (без кэша Turbo — иначе после `git pull` можно отдать старый JS), `pnpm db:push` в `apps/api`, затем `sudo systemctl restart birzha-api`.
+**sudo:** настройте у пользователя деплоя `systemctl restart birzha-api` **без пароля** (или вводите пароль при `sudo` на перезапуске).
 
-Для пользователя деплоя настройте **sudo без пароля** только на `systemctl restart birzha-api` (или запускайте скрипт под root — не рекомендуется).
-
-Переменные: см. комментарии в начале **`server-update.sh`** (ветка `BIRZHA_GIT_BRANCH`, пропуск БД или перезапуска).
+**Опционально (скрипт, тот же смысл):** `./deploy/server-update.sh` (один раз `chmod +x deploy/server-update.sh`). См. переменные в начале **`server-update.sh`** (`BIRZHA_GIT_BRANCH`, пропуск БД или перезапуска).
 
 ## Из GitHub (CI → SSH)
 

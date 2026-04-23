@@ -190,24 +190,18 @@ sudo certbot --nginx -d your.domain
 
 ## 10. Обновление приложения
 
-Рекомендуется скрипт из репозитория (ветка по умолчанию `main`, см. переменные в скрипте):
+**Основной порядок** — **вручную** (тот же, что в **`deploy/README.md`**):
 
 ```bash
 cd /opt/birzha
-chmod +x deploy/server-update.sh   # один раз
-./deploy/server-update.sh
-```
-
-Или те же шаги вручную:
-
-```bash
-cd /opt/birzha
-git pull
-pnpm install
-pnpm build
+git fetch origin && git checkout main && git pull --ff-only origin main
+pnpm install --frozen-lockfile
+pnpm exec turbo run build --force
 cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
 ```
+
+**Опционально:** `chmod +x deploy/server-update.sh` (один раз) и `./deploy/server-update.sh` — эквивалент тому же, см. `deploy/server-update.sh`.
 
 ---
 
