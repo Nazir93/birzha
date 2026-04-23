@@ -135,7 +135,7 @@ export function PurchaseNakladnayaDetailSection() {
         )}
       </p>
 
-      <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.88rem", marginBottom: "0.75rem", maxWidth: 520 }}>
+      <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.88rem", marginBottom: "0.75rem", width: "100%", maxWidth: "100%" }}>
         <div>
           <strong>Дата:</strong> {doc.docDate}
         </div>
@@ -262,7 +262,7 @@ export function PurchaseNakladnayaDetailSection() {
           aria-label="Итого по накладной"
           style={{
             marginTop: "0.75rem",
-            maxWidth: 480,
+            maxWidth: "100%",
             padding: "0.6rem 0.75rem",
             border: "1px solid #e4e4e7",
             borderRadius: 6,

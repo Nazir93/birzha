@@ -7,7 +7,7 @@ export const fontUi = '"Montserrat", system-ui, -apple-system, "Segoe UI", sans-
 export const fieldStyle: CSSProperties = {
   display: "block",
   width: "100%",
-  maxWidth: 360,
+  maxWidth: "100%",
   marginTop: "0.35rem",
   padding: "0.5rem 0.75rem",
   fontFamily: fontUi,
@@ -31,7 +31,7 @@ export const dateFieldStyle: CSSProperties = {
 
 export const fieldStyleCompact: CSSProperties = {
   ...fieldStyle,
-  maxWidth: 320,
+  maxWidth: "100%",
 };
 
 /** Селект на всю ширину карточки (например выбор рейса в отчёте). */

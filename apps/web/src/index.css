@@ -19,6 +19,11 @@ html {
   box-sizing: border-box;
 }
 
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--font-ui);
@@ -27,6 +32,15 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Корневой layout: на десктопе на всю ширину окна (без max-width ~880px). */
+main.app-shell {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1.5rem;
 }
 
 /* Индикаторы загрузки (см. `ui/LoadingIndicator.tsx`) */

@@ -35,7 +35,7 @@ import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIn
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
-const selectWide = { ...fieldStyle, maxWidth: 420 };
+const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
 /** Граммы → строка кг для подписей (целые граммы → десятичные кг без float). */
 function gramsBigIntToKgDecimalString(g: bigint): string {

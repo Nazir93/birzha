@@ -365,7 +365,7 @@ export function AllocationPanel() {
 
       {!loading && list.length > 0 && (
         <>
-          <div style={{ marginBottom: "1rem", maxWidth: 480 }}>
+          <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
             <label htmlFor="alloc-sel-warehouse" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
               1. Склад (куда сходятся остатки с приёмов по накладным) *
             </label>
@@ -444,7 +444,7 @@ export function AllocationPanel() {
           </div>
 
           {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length > 0 && (
-            <div style={{ marginBottom: "1rem", maxWidth: 480 }}>
+            <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
               <label htmlFor="alloc-sel-document" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
                 2. Накладная (документ) *
               </label>

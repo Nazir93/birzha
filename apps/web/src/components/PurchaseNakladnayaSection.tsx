@@ -416,7 +416,7 @@ export function PurchaseNakladnayaSection() {
         </p>
       )}
 
-      <div style={{ display: "grid", gap: "0.5rem", maxWidth: 520, marginBottom: "0.75rem" }}>
+      <div style={{ display: "grid", gap: "0.5rem", width: "100%", maxWidth: "100%", marginBottom: "0.75rem" }}>
         <label style={{ fontSize: "0.88rem" }}>
           Номер документа *
           <input

@@ -102,7 +102,7 @@ export function App() {
   const syncEnabled = meta?.syncApi === "enabled";
 
   return (
-    <main style={{ padding: "1.5rem", maxWidth: 880 }}>
+    <main className="app-shell">
       <h1 className="no-print" style={{ marginTop: 0 }}>
         Биржа
       </h1>
