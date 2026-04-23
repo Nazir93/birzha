@@ -13,9 +13,19 @@ import type {
   WarehousesListResponse,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
+import {
+  kopecksFromNakladnayaAmountField,
+  kopecksToNakladnayaRubleFieldString,
+  nonnegativeDecimalStringToNumber,
+  purchaseLineAmountKopecksFromDecimalStrings,
+} from "@birzha/contracts";
 
-import { parseCreatePurchaseDocumentForm } from "../validation/api-schemas.js";
+import {
+  linePackageCountForNakladnayaSum,
+  lineTotalKopecksForNakladnayaSum,
+  parseCreatePurchaseDocumentForm,
+} from "../validation/api-schemas.js";
+import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -247,7 +257,7 @@ export function PurchaseNakladnayaSection() {
     if (!Number.isFinite(k) || k < 0) {
       return;
     }
-    updateLine(key, { lineTotalKopecks: String(k) });
+    updateLine(key, { lineTotalKopecks: kopecksToNakladnayaRubleFieldString(k) });
   };
 
   const gradeOptionGroups = useMemo(() => {
@@ -286,6 +296,38 @@ export function PurchaseNakladnayaSection() {
   const gradeCount = gradesQ.data?.productGrades?.length ?? 0;
   const catalogsEmptyOk =
     warehousesQ.isSuccess && gradesQ.isSuccess && (warehouseCount === 0 || gradeCount === 0);
+
+  const extraCostKopecksForTotals = useMemo(() => {
+    const t = extraCostKopecks.trim();
+    if (t === "") {
+      return 0;
+    }
+    return kopecksFromNakladnayaAmountField(t) ?? 0;
+  }, [extraCostKopecks]);
+
+  const nakladnayaFormTotals = useMemo(() => {
+    let totalKg = 0;
+    let totalPackages = 0;
+    let totalLineKopecks = 0;
+    for (const line of lines) {
+      const kg = nonnegativeDecimalStringToNumber(line.totalKg, 6);
+      if (Number.isFinite(kg) && kg > 0) {
+        totalKg += kg;
+      }
+      totalPackages += linePackageCountForNakladnayaSum(line.packageCount);
+      totalLineKopecks += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
+    }
+    const totalAllKopecks = totalLineKopecks + extraCostKopecksForTotals;
+    return { totalKg, totalPackages, totalLineKopecks, totalAllKopecks };
+  }, [lines, extraCostKopecksForTotals]);
+
+  const totalKgLabel = useMemo(
+    () =>
+      new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
+        Number.isFinite(nakladnayaFormTotals.totalKg) ? nakladnayaFormTotals.totalKg : 0,
+      ),
+    [nakladnayaFormTotals.totalKg],
+  );
 
   const catalogLoadErrorText = useMemo(() => {
     if (!warehousesQ.isError && !gradesQ.isError) {
@@ -339,10 +381,12 @@ export function PurchaseNakladnayaSection() {
         сохранения по строкам появятся партии на выбранном складе.
       </p>
       <p style={muted}>
-        POST /api/purchase-documents — одна строка накладной создаёт одну партию на выбранном складе. Сумма строки хранится в{" "}
-        <strong>копейках</strong> и должна сходиться с кг × ₽/кг (допуск ±1 коп. на сервере). Кнопка «=кг×цена» считает без
-        ошибок float: до <strong>6</strong> знаков после запятой у кг, до <strong>4</strong> у цены за кг (копейки в цене) —
-        пригодно для последующего бухучёта.
+        POST /api/purchase-documents — одна строка накладной создаёт одну партию на выбранном складе. Сумма в поле
+        <strong> «коп. / руб,коп»</strong> хранится в API в <strong>копейках</strong> как целое, без float; можно ввести{" "}
+        <strong>32232,77</strong> (руб,коп) — это 3 223 277 коп. Можно и <strong>3223277</strong> (тот же смысл — только
+        цифры, без <code>,</code>). Сумма должна сходиться с кг × ₽/кг (допуск ±1 коп. на сервере). «=кг×цена» подставляет
+        <strong>руб,коп</strong> в поле. Короба — <strong>целым</strong> (при 5,2 кор → округление). Ниже — итоги по
+        введённым строкам.
       </p>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
@@ -441,7 +485,7 @@ export function PurchaseNakladnayaSection() {
           <input value={buyerLabel} onChange={(e) => setBuyerLabel(e.target.value)} style={fieldStyle} />
         </label>
         <label style={{ fontSize: "0.88rem" }}>
-          Доп. расходы, коп.
+          Доп. расходы (коп. или 100,50 = руб+коп)
           <input value={extraCostKopecks} onChange={(e) => setExtraCostKopecks(e.target.value)} style={fieldStyle} />
         </label>
       </div>
@@ -449,8 +493,8 @@ export function PurchaseNakladnayaSection() {
       <div style={{ margin: "0 0 0.35rem" }}>
         <p style={{ ...muted, margin: 0 }}>Строки</p>
         <p style={{ ...muted, margin: "0.25rem 0 0", fontSize: "0.82rem" }}>
-          Поля <strong>Кг</strong> и <strong>₽/кг</strong> можно вводить с запятой или точкой; дробная часть учитывается при расчёте
-          суммы в копейках.
+          <strong>Кг</strong> и <strong>₽/кг</strong> — <strong>целые</strong> или <strong>дробные</strong> (запятая или
+          точка, например 10,5). <strong>Короба</strong> — целое; можно ввести с «,5» (округлится), пробелы игнорируются.
         </p>
       </div>
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && (
@@ -518,7 +562,9 @@ export function PurchaseNakladnayaSection() {
               <th style={thHeadDense}>Кг</th>
               <th style={thHeadDense}>Короба</th>
               <th style={thHeadDense}>₽/кг</th>
-              <th style={thHeadDense}>Сумма, коп.</th>
+              <th style={thHeadDense} title="Только цифры = коп.; запятая = «руб,коп»">
+                Сумма, коп. (или руб,коп)
+              </th>
               <th style={thHeadDense} />
             </tr>
           </thead>
@@ -557,7 +603,9 @@ export function PurchaseNakladnayaSection() {
                     value={line.packageCount}
                     onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
                     style={{ ...fieldStyle, width: 56 }}
-                    inputMode="numeric"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    title="Короба, целое; можно 10,5 (округлит)"
                   />
                 </td>
                 <td style={thtdDense}>
@@ -572,8 +620,10 @@ export function PurchaseNakladnayaSection() {
                   <input
                     value={line.lineTotalKopecks}
                     onChange={(e) => updateLine(line.key, { lineTotalKopecks: e.target.value })}
-                    style={{ ...fieldStyle, width: 88 }}
-                    inputMode="numeric"
+                    style={{ ...fieldStyle, maxWidth: 100 }}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    title="50000 = коп.; 32232,77 = 32 232,77 RUB = 3 223 277 коп."
                   />
                 </td>
                 <td style={thtdDense}>
@@ -592,6 +642,55 @@ export function PurchaseNakladnayaSection() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <th
+                scope="row"
+                style={{ ...thtdDense, textAlign: "right", background: "rgba(0,0,0,0.03)" }}
+                title="Складываются все строки при вводе"
+              >
+                Итого
+              </th>
+              <td
+                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)" }}
+                title="Сумма кг по строкам, где кг &gt; 0"
+              >
+                {totalKgLabel}{" "}
+                <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.78rem" }}>кг</span>
+              </td>
+              <td
+                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)" }}
+                title="Сумма коробов; пустое поле = 0"
+              >
+                {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
+                  nakladnayaFormTotals.totalPackages,
+                )}{" "}
+                <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.78rem" }}>кор.</span>
+              </td>
+              <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)", color: "#71717a" }}>—</td>
+              <td
+                colSpan={1}
+                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)", verticalAlign: "top" }}
+              >
+                <div>По строкам: {nakladnayaFormTotals.totalLineKopecks} коп.</div>
+                <div style={{ fontSize: "0.82rem", color: "#3f3f46" }}>
+                  = {kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽
+                </div>
+                {extraCostKopecksForTotals > 0 && (
+                  <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "#1c1917" }}>
+                    Всего (строки + доп.): {nakladnayaFormTotals.totalAllKopecks} коп. ={" "}
+                    {kopecksToRubLabel(nakladnayaFormTotals.totalAllKopecks.toString())} ₽
+                    <div style={{ fontSize: "0.76rem", fontWeight: 400, color: "#52525b", marginTop: 2 }}>
+                      (доп. расходы: {extraCostKopecksForTotals} коп.)
+                    </div>
+                  </div>
+                )}
+              </td>
+              <td
+                style={{ ...thtdDense, background: "rgba(0,0,0,0.03)", fontSize: "0.75rem", color: "#52525b" }}
+              />
+            </tr>
+          </tfoot>
         </table>
       </div>
       <p style={{ margin: "0.5rem 0" }}>

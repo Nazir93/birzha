@@ -9,6 +9,11 @@ export {
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "./purchase-line-kopecks.js";
 export {
+  kopecksFromNakladnayaAmountField,
+  kopecksFromNakladnayaAmountFieldForSum,
+  kopecksToNakladnayaRubleFieldString,
+} from "./nakladnaya-amount-kopecks.js";
+export {
   BATCH_DESTINATIONS,
   BATCH_QUALITY_TIERS,
   updateBatchAllocationBodySchema,

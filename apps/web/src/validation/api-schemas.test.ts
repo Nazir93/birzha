@@ -57,6 +57,51 @@ describe("parseCreatePurchaseDocumentForm", () => {
     expect(body.lines[0]?.lineTotalKopecks).toBe(50_000);
     expect(body.lines[0]?.packageCount).toBe(2);
   });
+
+  it("короба с запятой округляются до целого", () => {
+    const body = parseCreatePurchaseDocumentForm({
+      documentId: "",
+      documentNumber: "НФ-1",
+      docDate: "2026-04-16",
+      warehouseId: "wh-1",
+      supplierName: "",
+      buyerLabel: "",
+      extraCostKopecks: "0",
+      lines: [
+        {
+          productGradeId: "pg-1",
+          totalKg: "1",
+          packageCount: "2,4",
+          pricePerKg: "0",
+          lineTotalKopecks: "0",
+        },
+      ],
+    });
+    expect(body.lines[0]?.packageCount).toBe(2);
+  });
+
+  it("сумма строки «руб,коп» в точные копейки без float", () => {
+    const body = parseCreatePurchaseDocumentForm({
+      documentId: "",
+      documentNumber: "НФ-1",
+      docDate: "2026-04-16",
+      warehouseId: "wh-1",
+      supplierName: "",
+      buyerLabel: "",
+      extraCostKopecks: "100,50",
+      lines: [
+        {
+          productGradeId: "pg-1",
+          totalKg: "1",
+          packageCount: "0",
+          pricePerKg: "0",
+          lineTotalKopecks: "32232,77",
+        },
+      ],
+    });
+    expect(body.lines[0]?.lineTotalKopecks).toBe(3_223_277);
+    expect(body.extraCostKopecks).toBe(10_050);
+  });
 });
 
 describe("parseReceiveForm", () => {

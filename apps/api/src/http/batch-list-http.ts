@@ -4,12 +4,48 @@ import type { BatchRepository } from "../application/ports/batch-repository.port
 import type { DbClient } from "../db/client.js";
 import { batches as batchesTable, productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
 
+import type { Batch } from "@birzha/domain";
+
 import { type BatchJson, batchToJson } from "./batch-serialize.js";
+
+type LineMeta = {
+  documentId: string | null;
+  warehouseId: string | null;
+  productGradeCode: string | null;
+  productGroup: string | null;
+  documentNumber: string | null;
+};
+
+/** Склад для группировки в «Распределении»: из накладной, иначе с колонки партий (всё, что пришло с приёмов). */
+function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["nakladnaya"] | undefined {
+  const wJoin = m?.warehouseId != null && String(m.warehouseId).trim() !== "" ? String(m.warehouseId).trim() : null;
+  const wBatch = b.getWarehouseId();
+  const w = wJoin ?? wBatch;
+  if (!m && w == null) {
+    return undefined;
+  }
+  if (!m && w != null) {
+    return {
+      documentId: null,
+      warehouseId: w,
+      productGradeCode: null,
+      productGroup: null,
+      documentNumber: null,
+    };
+  }
+  return {
+    documentId: m.documentId,
+    warehouseId: w,
+    productGradeCode: m.productGradeCode,
+    productGroup: m.productGroup,
+    documentNumber: m.documentNumber,
+  };
+}
 
 export async function listBatchesForHttp(batches: BatchRepository, db: DbClient | null): Promise<BatchJson[]> {
   const list = await batches.list();
   if (!db || list.length === 0) {
-    return list.map((b) => batchToJson(b));
+    return list.map((b) => batchToJson(b, mergeNakladnyaForList(undefined, b), undefined));
   }
 
   const ids = list.map((b) => b.getId());
@@ -62,15 +98,7 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     const a = alloc.get(id);
     return batchToJson(
       b,
-      m
-        ? {
-            documentId: m.documentId,
-            warehouseId: m.warehouseId,
-            productGradeCode: m.productGradeCode,
-            productGroup: m.productGroup,
-            documentNumber: m.documentNumber,
-          }
-        : undefined,
+      mergeNakladnyaForList(m, b),
       a ? { qualityTier: a.qualityTier, destination: a.destination } : undefined,
     );
   });

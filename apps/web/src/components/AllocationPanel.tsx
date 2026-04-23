@@ -79,6 +79,19 @@ function documentsForBatches(batches: BatchListItem[]): DocOption[] {
     .sort((a, b) => a.number.localeCompare(b.number, "ru"));
 }
 
+function sumOnWarehouseKg(batches: BatchListItem[]): number {
+  return batches.reduce((a, b) => a + b.onWarehouseKg, 0);
+}
+
+function countNakldocuments(batches: BatchListItem[]): number {
+  const s = new Set<string>();
+  for (const b of batches) {
+    const d = b.nakladnaya?.documentId;
+    if (d) s.add(d);
+  }
+  return s.size;
+}
+
 export function AllocationPanel() {
   const queryClient = useQueryClient();
   const batchesQuery = useQuery({
@@ -178,6 +191,47 @@ export function AllocationPanel() {
 
   const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
 
+  /** Склады из справочника (всегда в селекте) + остатки/кг по партиям, без «потери» физического склада. */
+  const allocationWarehouseOptions = useMemo((): { id: string; batchCount: number; totalKg: number }[] => {
+    const out: { id: string; batchCount: number; totalKg: number }[] = [];
+    const cat = (warehousesQuery.data?.warehouses ?? [])
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    const add = (id: string) => {
+      const bs = byWarehouse.get(id) ?? [];
+      out.push({ id, batchCount: bs.length, totalKg: sumOnWarehouseKg(bs) });
+    };
+    for (const w of cat) {
+      add(w.id);
+    }
+    for (const id of warehouseOrder) {
+      if (id === ORPHAN_WAREHOUSE) {
+        continue;
+      }
+      if (cat.some((w) => w.id === id)) {
+        continue;
+      }
+      add(id);
+    }
+    if (byWarehouse.has(ORPHAN_WAREHOUSE)) {
+      const orphanB = byWarehouse.get(ORPHAN_WAREHOUSE) ?? [];
+      if (orphanB.length > 0) {
+        add(ORPHAN_WAREHOUSE);
+      }
+    }
+    return out;
+  }, [warehousesQuery.data?.warehouses, byWarehouse, warehouseOrder]);
+
+  const whSummary = useMemo(() => {
+    if (!selectedWarehouse) {
+      return null;
+    }
+    const bs = byWarehouse.get(selectedWarehouse) ?? [];
+    const totalKg = sumOnWarehouseKg(bs);
+    const ndoc = countNakldocuments(bs);
+    return { batches: bs.length, totalKg, docCount: ndoc };
+  }, [byWarehouse, selectedWarehouse]);
+
   const batchesInWh = useMemo(
     () => (selectedWarehouse ? (byWarehouse.get(selectedWarehouse) ?? []) : []),
     [byWarehouse, selectedWarehouse],
@@ -233,14 +287,15 @@ export function AllocationPanel() {
     <div role="region" aria-label="Распределение по качеству и направлению">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по качеству и направлению</h2>
       <p style={muted}>
-        <strong>Шаг 3:</strong> сначала <strong>склад поступления</strong> (как в шапке накладной), затем <strong>накладную</strong> и
-        по строкам (калибрам) укажите <strong>качество</strong> и <strong>направление</strong>. Учёт по факту: приняли одно количество на
-        склад, груз в машине может отличаться — движения по весу делаются в &quot;Операциях&quot;, здесь фиксируется
-        <strong> решение по сортам</strong> (Москва / регионы / уценка / списание). См.{" "}
+        <strong>Шаг 3:</strong> весь товар, принятый по <strong>разным</strong> накладным на один <strong>склад</strong>, даёт
+        <strong> общий остаток в кг</strong> на складе. Здесь: выберите склад (поступление), затем — при необходимости
+        <strong> конкретную накладную</strong> (с какой поставки отдать в рейс) и по строкам укажите
+        <strong> качество</strong> и <strong>направление</strong>. Сбор <strong>одного рейса / исходящей накладной</strong> весом и
+        оформлением — в &quot;Операциях&quot;. Учёт по факту: приняли другое кг, чем погружаем — вес правите в{" "}
         <Link to={routes.operations} style={{ fontWeight: 600 }}>
-          Операции
-        </Link>{" "}
-        и <Link to={routes.reports}>отчёты</Link>.
+          Операциях
+        </Link>
+        ; здесь — решения по <strong>сорту</strong>. См. <Link to={routes.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется <strong>PostgreSQL</strong>: <code>PATCH /api/batches/…/allocation</code> без БД на сервере не выполняется.
@@ -267,7 +322,7 @@ export function AllocationPanel() {
         <>
           <div style={{ marginBottom: "1rem", maxWidth: 480 }}>
             <label htmlFor="alloc-sel-warehouse" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
-              1. Склад (поступления по накладным) *
+              1. Склад (куда сходятся остатки с приёмов по накладным) *
             </label>
             <select
               id="alloc-sel-warehouse"
@@ -280,12 +335,40 @@ export function AllocationPanel() {
               style={{ ...fieldStyle, maxWidth: "100%" }}
             >
               <option value="">— выберите склад —</option>
-              {warehouseOrder.map((id) => (
-                <option key={id} value={id}>
-                  {warehouseName(id)} ({byWarehouse.get(id)?.length ?? 0} п.)
+              {allocationWarehouseOptions.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг, {row.batchCount} п
                 </option>
               ))}
             </select>
+            {selectedWarehouse && whSummary && (
+              <p style={{ ...muted, margin: "0.4rem 0 0", fontSize: "0.86rem" }} role="status" aria-live="polite">
+                <strong>На выбранном:</strong>{" "}
+                {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг, {whSummary.batches} парт.{" "}
+                {whSummary.docCount > 0
+                  ? `, ${whSummary.docCount} накл.`
+                  : `, ${
+                      selectedWarehouse === ORPHAN_WAREHOUSE
+                        ? "как в списке «без накл./склада»"
+                        : "накл. в ответе нет (приём вручную/без ссылки на документ)"
+                    }`}
+                {selectedWarehouse === ORPHAN_WAREHOUSE
+                  ? " (партии, у которых в API не указан склад поступления — должен тянуться с приёмки)."
+                  : ""}
+              </p>
+            )}
+            {warehousesQuery.isSuccess &&
+              (warehousesQuery.data?.warehouses.length ?? 0) > 0 &&
+              !warehousesQuery.isPending &&
+              warehouseOrder.length === 1 &&
+              warehouseOrder[0] === ORPHAN_WAREHOUSE &&
+              list.length > 0 && (
+                <p style={warnText} role="status">
+                  Все остатки попали в «{warehouseName(ORPHAN_WAREHOUSE)}» — в ответе GET /batches нет
+                  <code> nakladnaya.warehouseId</code> (и с колонки партии). Обновите API: склад подставляется с приёмов и
+                  накладных.
+                </p>
+              )}
           </div>
 
           {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length > 0 && (

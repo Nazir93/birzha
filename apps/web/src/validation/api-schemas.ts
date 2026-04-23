@@ -2,6 +2,8 @@ import {
   createBatchBodySchema,
   createPurchaseDocumentBodySchema,
   createTripBodySchema,
+  kopecksFromNakladnayaAmountField,
+  kopecksFromNakladnayaAmountFieldForSum,
   nonnegativeDecimalStringToNumber,
   numberToDecimalStringForKopecks,
   purchaseDocumentLineInputSchema,
@@ -159,6 +161,38 @@ export function expectedLineTotalKopecks(totalKg: number, pricePerKg: number): n
   );
 }
 
+/**
+ * Короба в строке накладной: пусто не сюда — в форме.
+ * Пробелы убираются, запятая как в десятичной записи, на сервер — целое (округление).
+ * `null` — ввод невалиден.
+ */
+export function linePackageCountFromNakladnayaString(raw: string): number | null {
+  const t = raw.trim();
+  if (t === "") {
+    return 0;
+  }
+  const normalized = t.replace(/\s/g, "").replace(",", ".");
+  const n = Number(normalized);
+  if (!Number.isFinite(n) || n < 0) {
+    return null;
+  }
+  return Math.max(0, Math.round(n));
+}
+
+/** Суммирование коробов в итогах: пустая строка → 0, иначе как `linePackageCountFromNakladnayaString` (невалид — 0). */
+export function linePackageCountForNakladnayaSum(raw: string): number {
+  const t = raw.trim();
+  if (t === "") {
+    return 0;
+  }
+  return linePackageCountFromNakladnayaString(t) ?? 0;
+}
+
+/** Сумма в копейках для итогов: пусто 0, иначе тот же разбор, что при отправке (см. `kopecksFromNakladnayaAmountField`). */
+export function lineTotalKopecksForNakladnayaSum(raw: string): number {
+  return kopecksFromNakladnayaAmountFieldForSum(raw);
+}
+
 export function parseCreatePurchaseDocumentForm(input: {
   documentId: string;
   documentNumber: string;
@@ -176,12 +210,16 @@ export function parseCreatePurchaseDocumentForm(input: {
   }>;
 }): CreatePurchaseDocumentBody {
   return mapZod(() => {
-    const extraRaw = input.extraCostKopecks.trim().replace(/\s/g, "").replace(",", ".");
-    const extraCostKopecks =
-      extraRaw === "" ? 0 : Math.round(Number(extraRaw));
-    if (!Number.isFinite(extraCostKopecks) || extraCostKopecks < 0) {
-      throw new Error("Доп. расходы: неотрицательное целое число копеек");
+    const extraTrim = input.extraCostKopecks.trim();
+    const extraParsed =
+      extraTrim === "" ? 0 : kopecksFromNakladnayaAmountField(extraTrim);
+    if (extraParsed === null) {
+      throw new Error("Доп. расходы: пусто или «руб,коп» (например 100,50) либо только коп. целым (без . и ,), неотриц.");
     }
+    if (extraParsed < 0) {
+      throw new Error("Доп. расходы: неотрицательная сумма");
+    }
+    const extraCostKopecks = extraParsed;
 
     const lines = input.lines.map((row, idx) => {
       const productGradeId = row.productGradeId.trim();
@@ -199,17 +237,26 @@ export function parseCreatePurchaseDocumentForm(input: {
       const pkgRaw = row.packageCount.trim();
       let packageCount: number | undefined;
       if (pkgRaw !== "") {
-        const n = Number.parseInt(pkgRaw, 10);
-        if (!Number.isFinite(n) || n < 0) {
-          throw new Error(`Строка ${idx + 1}: короба — целое неотрицательное число`);
+        const parsed = linePackageCountFromNakladnayaString(pkgRaw);
+        if (parsed == null) {
+          throw new Error(
+            `Строка ${idx + 1}: короба — неотрицательное число, можно с запятой; в заявку — целое (округление)`,
+          );
         }
-        packageCount = n;
+        packageCount = parsed;
       }
-      const kRaw = row.lineTotalKopecks.trim().replace(/\s/g, "");
-      const lineTotalKopecks = Math.round(Number(kRaw));
-      if (!Number.isFinite(lineTotalKopecks) || lineTotalKopecks < 0) {
-        throw new Error(`Строка ${idx + 1}: сумма строки в копейках — неотрицательное целое`);
+      const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());
+      if (lineK === null) {
+        throw new Error(
+          `Строка ${
+            idx + 1
+          }: укажите сумму: только копейки цифрами (50000) или «руб,коп» (32232,77), до копейки — без float`,
+        );
       }
+      if (lineK < 0) {
+        throw new Error(`Строка ${idx + 1}: сумма — неотрицательная`);
+      }
+      const lineTotalKopecks = lineK;
       return purchaseDocumentLineInputSchema.parse({
         productGradeId,
         totalKg,
