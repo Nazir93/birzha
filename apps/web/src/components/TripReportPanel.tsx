@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { apiFetch, apiGetJson } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, ShipmentReportResponse, TripsListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
@@ -193,11 +194,14 @@ export function TripReportPanel() {
           </label>
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
-            {sortedTrips.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.tripNumber} ({t.status}) — {t.id.slice(0, 8)}…
-              </option>
-            ))}
+            {sortedTrips.map((t) => {
+              const label = formatTripSelectLabel(t);
+              return (
+                <option key={t.id} value={t.id}>
+                  {label.length > 120 ? `${label.slice(0, 117)}…` : label}
+                </option>
+              );
+            })}
           </select>
           <p style={{ ...muted, marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
             Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны права
@@ -271,6 +275,15 @@ export function TripReportPanel() {
             >
               Печать
             </button>
+            {(r.trip.vehicleLabel || r.trip.driverName || r.trip.departedAt) && (
+              <span style={{ width: "100%", fontSize: "0.88rem", lineHeight: 1.45, margin: "0.25rem 0 0" }}>
+                {r.trip.vehicleLabel ? `ТС: ${r.trip.vehicleLabel}` : null}
+                {r.trip.vehicleLabel && (r.trip.driverName || r.trip.departedAt) ? " · " : null}
+                {r.trip.driverName ? `Водитель: ${r.trip.driverName}` : null}
+                {r.trip.driverName && r.trip.departedAt ? " · " : null}
+                {r.trip.departedAt ? `Время: ${new Date(r.trip.departedAt).toLocaleString("ru-RU")}` : null}
+              </span>
+            )}
           </p>
 
           <h3 id="trip-report-masses" style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>

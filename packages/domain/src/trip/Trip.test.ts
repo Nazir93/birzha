@@ -24,4 +24,18 @@ describe("Trip", () => {
     });
     expect(t.canAcceptShipments()).toBe(false);
   });
+
+  it("создаётся с ТС, водителем и временем", () => {
+    const d = new Date("2026-04-21T10:00:00.000Z");
+    const t = Trip.create({
+      id: "t-4",
+      tripNumber: "Ф-99",
+      vehicleLabel: "А 123 ВС 77",
+      driverName: "Иванов",
+      departedAt: d,
+    });
+    expect(t.getVehicleLabel()).toBe("А 123 ВС 77");
+    expect(t.getDriverName()).toBe("Иванов");
+    expect(t.getDepartedAt()?.getTime()).toBe(d.getTime());
+  });
 });

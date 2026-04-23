@@ -29,7 +29,18 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, muted, sectionBox, successText, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
+import {
+  btnStyle,
+  dateFieldStyle,
+  errorText,
+  fieldStyle,
+  muted,
+  sectionBox,
+  successText,
+  thHeadDense,
+  thtdDense,
+  warnText,
+} from "../ui/styles.js";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -372,21 +383,18 @@ export function PurchaseNakladnayaSection() {
   return (
     <section style={sectionBox} aria-labelledby="nakl-heading" role="region" aria-label="Закупочная накладная">
       <h3 id="nakl-heading" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-        Закупочная накладная (как у заказчика)
+        Закупочная накладная
       </h3>
-      <p style={{ ...muted, marginBottom: "0.5rem" }}>
-        <strong>С этого начинается учёт:</strong> по факту приёмки товара на склад внесите те же данные, что на бумажной накладной
-        (номер, дата, склад поступления, строки: вид товара и калибр, кг, короба, цена, сумма). У разных товаров разные калибры
-        (помидоры — №5…Ом., у огурцов — свои коды): они задаются в справочнике и сгруппированы по полю «группа товара». После
-        сохранения по строкам появятся партии на выбранном складе.
-      </p>
-      <p style={muted}>
-        POST /api/purchase-documents — одна строка накладной создаёт одну партию на выбранном складе. Сумма в поле
-        <strong> «коп. / руб,коп»</strong> хранится в API в <strong>копейках</strong> как целое, без float; можно ввести{" "}
-        <strong>32232,77</strong> (руб,коп) — это 3 223 277 коп. Можно и <strong>3223277</strong> (тот же смысл — только
-        цифры, без <code>,</code>). Сумма должна сходиться с кг × ₽/кг (допуск ±1 коп. на сервере). «=кг×цена» подставляет
-        <strong>руб,коп</strong> в поле. Короба — <strong>целым</strong> (при 5,2 кор → округление). Ниже — итоги по
-        введённым строкам.
+      <p style={{ ...muted, marginBottom: "0.6rem" }}>
+        <strong>Шаг 1 (приём):</strong> ввод по факту приёмки — как на бумаге. После сохранения на выбранном складе появятся партии; дальше —{" "}
+        <Link to={routes.distribution} style={{ fontWeight: 600 }}>
+          Распределение
+        </Link>{" "}
+        и{" "}
+        <Link to={routes.operations} style={{ fontWeight: 600 }}>
+          Операции
+        </Link>
+        .
       </p>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
@@ -421,7 +429,7 @@ export function PurchaseNakladnayaSection() {
         </label>
         <label style={{ fontSize: "0.88rem" }}>
           Дата (YYYY-MM-DD) *
-          <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} style={fieldStyle} />
+          <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} style={dateFieldStyle} />
         </label>
         <label style={{ fontSize: "0.88rem" }}>
           Склад *

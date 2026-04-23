@@ -50,4 +50,21 @@ describe.skipIf(!pgUrl)("DrizzleTripRepository (PostgreSQL)", () => {
     const list = await repo.list();
     expect(list.some((t) => t.getId() === id)).toBe(true);
   });
+
+  it("сохраняет и читает ТС, водителя и время", async () => {
+    const id = `it-meta-${crypto.randomUUID()}`;
+    const when = new Date("2026-04-21T10:00:00.000Z");
+    const trip = Trip.create({
+      id,
+      tripNumber: `M-${id.slice(0, 6)}`,
+      vehicleLabel: "X 9",
+      driverName: "Сидоров",
+      departedAt: when,
+    });
+    await repo.save(trip);
+    const loaded = await repo.findById(id);
+    expect(loaded?.getVehicleLabel()).toBe("X 9");
+    expect(loaded?.getDriverName()).toBe("Сидоров");
+    expect(loaded?.getDepartedAt()?.getTime()).toBe(when.getTime());
+  });
 });

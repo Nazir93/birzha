@@ -106,6 +106,13 @@
       "when": 1776700000000,
       "tag": "0014_batch_quality_destination",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1776800000000,
+      "tag": "0015_trip_vehicle_driver",
+      "breakpoints": true
     }
   ]
 }

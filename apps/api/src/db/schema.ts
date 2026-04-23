@@ -91,6 +91,12 @@ export const trips = pgTable("trips", {
   id: text("id").primaryKey(),
   tripNumber: text("trip_number").notNull(),
   status: text("status").notNull(),
+  /** Номер/марка ТС. */
+  vehicleLabel: text("vehicle_label"),
+  /** Водитель (подпись). */
+  driverName: text("driver_name"),
+  /** План/факт отправления. */
+  departedAt: timestamp("departed_at", { withTimezone: true, mode: "date" }),
 });
 
 /** Строка журнала: отгрузка массы партии в рейс (сходимость отчёта по рейсу). */

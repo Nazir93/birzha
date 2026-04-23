@@ -92,10 +92,23 @@ export const loginBodySchema = z.object({
   password: z.string().min(1).max(500),
 });
 
+const optionalTrim = (s: string | null | undefined): string | null => (s == null || s.trim() === "" ? null : s.trim().slice(0, 200));
+
 /** POST /trips */
 export const createTripBodySchema = z.object({
   id: z.string().min(1),
   tripNumber: z.string().min(1),
+  /** Номер/марка ТС, как в «общей накладной». */
+  vehicleLabel: z.string().max(200).optional().nullable().transform(optionalTrim),
+  /** Водитель (фамилия/как в реестре). */
+  driverName: z.string().max(200).optional().nullable().transform(optionalTrim),
+  /** План/факт отправления, ISO-8601 (с фронта — `toISOString()`). */
+  departedAt: z
+    .string()
+    .max(50)
+    .nullish()
+    .transform((s) => (s == null || s.trim() === "" ? null : s.trim()))
+    .refine((s) => s == null || !Number.isNaN(Date.parse(s)), { message: "departedAt: неверная дата" }),
 });
 
 /** Payload `ship_to_trip` в POST /sync */

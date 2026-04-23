@@ -88,6 +88,12 @@ export type TripJson = {
   id: string;
   tripNumber: string;
   status: string;
+  /** ТС (номер / подпись). */
+  vehicleLabel: string | null;
+  /** Водитель. */
+  driverName: string | null;
+  /** UTC, ISO-8601. */
+  departedAt: string | null;
 };
 
 export type TripsListResponse = {

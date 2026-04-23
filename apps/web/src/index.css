@@ -106,6 +106,29 @@ textarea:disabled {
   background: #f4f4f5;
 }
 
+/*
+ * Нативный выбор даты/времени: всплывающий календарь в Chromium/Edge
+ * с «светлой» схемой, как остальное тело (серый/белый, не тёмный системный);
+ * иконка календаря в тон #71717a.
+ */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"] {
+  color-scheme: only light;
+  accent-color: var(--color-border-focus);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-inline: 0.1rem 0.15rem;
+  opacity: 0.7;
+  filter: grayscale(1) brightness(0.45);
+}
+
 /* Фокус полей в приложении: перекрывает inline border у `fieldStyle` */
 main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
 main select:focus,

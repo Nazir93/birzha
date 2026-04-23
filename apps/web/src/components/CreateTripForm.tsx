@@ -9,10 +9,13 @@ export function CreateTripForm() {
   const queryClient = useQueryClient();
   const [tripNumber, setTripNumber] = useState("");
   const [tripId, setTripId] = useState("");
+  const [vehicleLabel, setVehicleLabel] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [departedAtLocal, setDepartedAtLocal] = useState("");
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = parseCreateTripForm(tripId, tripNumber);
+      const body = parseCreateTripForm(tripId, tripNumber, vehicleLabel, driverName, departedAtLocal);
       const res = await apiFetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,18 +31,22 @@ export function CreateTripForm() {
       void queryClient.invalidateQueries({ queryKey: ["trips"] });
       setTripNumber("");
       setTripId("");
+      setVehicleLabel("");
+      setDriverName("");
+      setDepartedAtLocal("");
     },
   });
 
   useEffect(() => {
     mutation.reset();
-  }, [tripNumber, tripId, mutation]);
+  }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, mutation]);
 
   return (
     <div style={{ marginBottom: "1.25rem", paddingBottom: "1rem", borderBottom: "1px solid #e4e4e7" }}>
       <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>Создать рейс (POST /api/trips)</h3>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Онлайн-вызов API (не через офлайн-очередь). ID можно оставить пустым — будет UUID.
+        Онлайн-вызов API (не через офлайн-очередь). ID можно оставить пустым — будет UUID. ТС, водитель и время —
+        для «общей накладной» в отчёте рейса.
       </p>
       <label htmlFor="ct-trip-number" style={{ fontSize: "0.88rem" }}>
         Номер рейса *
@@ -62,6 +69,38 @@ export function CreateTripForm() {
         placeholder="пусто = случайный UUID"
         style={fieldStyleCompact}
         autoComplete="off"
+      />
+      <label htmlFor="ct-vehicle" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+        ТС (номер и т.п., опционально)
+      </label>
+      <input
+        id="ct-vehicle"
+        value={vehicleLabel}
+        onChange={(e) => setVehicleLabel(e.target.value)}
+        placeholder="например А 123 ВС 77"
+        style={fieldStyleCompact}
+        autoComplete="off"
+      />
+      <label htmlFor="ct-driver" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+        Водитель, фамилия (опционально)
+      </label>
+      <input
+        id="ct-driver"
+        value={driverName}
+        onChange={(e) => setDriverName(e.target.value)}
+        placeholder="например Иванов"
+        style={fieldStyleCompact}
+        autoComplete="name"
+      />
+      <label htmlFor="ct-departed" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+        План/факт отправления (локальные дата и время, опционально)
+      </label>
+      <input
+        id="ct-departed"
+        type="datetime-local"
+        value={departedAtLocal}
+        onChange={(e) => setDepartedAtLocal(e.target.value)}
+        style={fieldStyleCompact}
       />
       <div>
         <button

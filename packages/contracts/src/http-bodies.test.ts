@@ -252,12 +252,31 @@ describe("createWarehouseBodySchema", () => {
 });
 
 describe("createTripBodySchema", () => {
-  it("принимает id и tripNumber", () => {
+  it("принимает id и tripNumber (остальное — null)", () => {
     const r = createTripBodySchema.parse({
       id: "trip-1",
       tripNumber: "Ф-01",
     });
-    expect(r).toEqual({ id: "trip-1", tripNumber: "Ф-01" });
+    expect(r).toEqual({
+      id: "trip-1",
+      tripNumber: "Ф-01",
+      vehicleLabel: null,
+      driverName: null,
+      departedAt: null,
+    });
+  });
+
+  it("принимает ТС, водителя и ISO времени", () => {
+    const r = createTripBodySchema.parse({
+      id: "t1",
+      tripNumber: "Ф-02",
+      vehicleLabel: "  А 123  ",
+      driverName: "Иванов",
+      departedAt: "2026-04-21T10:00:00.000Z",
+    });
+    expect(r.vehicleLabel).toBe("А 123");
+    expect(r.driverName).toBe("Иванов");
+    expect(r.departedAt).toBe("2026-04-21T10:00:00.000Z");
   });
 
   it("отклоняет пустой id", () => {

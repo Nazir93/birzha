@@ -20,6 +20,9 @@ export class DrizzleTripRepository implements TripRepository {
       id: trip.getId(),
       tripNumber: trip.getTripNumber(),
       status: trip.getStatus(),
+      vehicleLabel: trip.getVehicleLabel(),
+      driverName: trip.getDriverName(),
+      departedAt: trip.getDepartedAt(),
     };
 
     const existing = await this.db
@@ -46,6 +49,9 @@ export class DrizzleTripRepository implements TripRepository {
       id: row.id,
       tripNumber: row.tripNumber,
       status: parseStatus(row.status),
+      vehicleLabel: row.vehicleLabel,
+      driverName: row.driverName,
+      departedAt: row.departedAt,
     });
   }
 
@@ -56,6 +62,9 @@ export class DrizzleTripRepository implements TripRepository {
         id: row.id,
         tripNumber: row.tripNumber,
         status: parseStatus(row.status),
+        vehicleLabel: row.vehicleLabel,
+        driverName: row.driverName,
+        departedAt: row.departedAt,
       }),
     );
   }

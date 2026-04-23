@@ -145,11 +145,31 @@ export function parseRecordTripShortageForm(batchIdRaw: string, tripIdRaw: strin
   });
 }
 
-export function parseCreateTripForm(tripIdRaw: string, tripNumberRaw: string) {
+export function parseCreateTripForm(
+  tripIdRaw: string,
+  tripNumberRaw: string,
+  vehicleLabelRaw = "",
+  driverNameRaw = "",
+  departedAtLocal = "",
+) {
   return mapZod(() => {
     const id = tripIdRaw.trim() || randomUuid();
     const tripNumber = tripNumberRaw.trim();
-    return createTripBodySchema.parse({ id, tripNumber });
+    let departedAt: string | null | undefined;
+    if (departedAtLocal.trim() !== "") {
+      const d = new Date(departedAtLocal);
+      if (Number.isNaN(d.getTime())) {
+        throw new Error("Время отправления: введите корректные дату и время");
+      }
+      departedAt = d.toISOString();
+    }
+    return createTripBodySchema.parse({
+      id,
+      tripNumber,
+      vehicleLabel: vehicleLabelRaw,
+      driverName: driverNameRaw,
+      departedAt,
+    });
   });
 }
 

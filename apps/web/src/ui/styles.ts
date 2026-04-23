@@ -23,6 +23,12 @@ export const fieldStyle: CSSProperties = {
   transition: "border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
+/** `input[type="date"]` — плюс `color-scheme` (см. `index.css`), единообразно с `fieldStyle`. */
+export const dateFieldStyle: CSSProperties = {
+  ...fieldStyle,
+  colorScheme: "only light",
+};
+
 export const fieldStyleCompact: CSSProperties = {
   ...fieldStyle,
   maxWidth: 320,

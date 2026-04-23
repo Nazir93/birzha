@@ -11,6 +11,7 @@ import type {
   TripsListResponse,
 } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
 import {
   buildTripBatchRows,
@@ -565,7 +566,7 @@ export function OperationsPanel() {
           <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.tripNumber} ({t.status}) — {t.id}
+              {formatTripSelectLabel(t)}
             </option>
           ))}
         </select>
@@ -762,7 +763,7 @@ export function OperationsPanel() {
           <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.tripNumber} ({t.status}) — {t.id}
+              {formatTripSelectLabel(t)}
             </option>
           ))}
         </select>
@@ -1028,7 +1029,7 @@ export function OperationsPanel() {
           <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
           {trips.options.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.tripNumber} ({t.status}) — {t.id}
+              {formatTripSelectLabel(t)}
             </option>
           ))}
         </select>
