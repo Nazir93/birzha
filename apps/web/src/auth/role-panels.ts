@@ -6,7 +6,7 @@ import type { AuthUser } from "./auth-context.js";
 export type PanelId = "reports" | "nakladnaya" | "distribution" | "operations" | "offline" | "service";
 
 /**
- * Какие глобальные роли видят раздел (см. `docs/architecture/ui/screen-flows.md`).
+ * Какие глобальные роли видят раздел (см. `docs/architecture/cabinets.md`, `docs/architecture/processes/roles-and-permissions.md`).
  * `admin` всегда проходит (как на API).
  */
 const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {

@@ -15,7 +15,7 @@
 | `packages/contracts` | **Zod**-схемы тел HTTP и payload **POST /sync** — общие для `@birzha/api` и `@birzha/web` |
 | `apps/api` | HTTP API: **Fastify**, **Drizzle** + PostgreSQL |
 | `apps/web` | **Vite + React + TanStack Query + React Router + Zod** (формы операций и рейса согласованы с телами REST; прокси `/api` в dev) |
-| `docs/` | Архитектура, спеки; **стек** — в этом файле (раздел ниже); **статус кода и очередь** — `docs/implementation-status.md`; **как заполнять формы (заказчик / сотрудники)** — `docs/guides/dlya-zakazchika-zapolnenie.md` |
+| `docs/` | Архитектура; **краткий индекс** — `docs/architecture/README.md`; **кабинеты и план входов** — `docs/architecture/cabinets.md`; **как заполнять формы** — `docs/guides/dlya-zakazchika-zapolnenie.md` |
 
 ## Стек (зафиксировано)
 
@@ -131,10 +131,9 @@ cd apps/api && pnpm db:push
 
 ## Документация для агента
 
-- **`AGENTS.md`** — **единые точки опоры**, таблица «куда смотреть», **синхронизация правок**, практики **качества кода** (слои монорепо, чеклист задачи); без лишних `docs/*-guide`
-- `PROJECT_MASTER_SPEC.md`, `CLAUDE.md`
-- `docs/implementation-status.md` — **текущий этап** и что дальше
-- `.cursor/rules/*.mdc`
+- **`AGENTS.md`** — куда смотреть, правки ролей/кода
+- **`CLAUDE.md`**, **`docs/architecture/cabinets.md`**
+- **`.cursor/rules/*.mdc`**
 
 Проверка перед коммитом: `pnpm check` (тесты + сборка). Turbo перед тестами API собирает `@birzha/domain`, чтобы импорт из `dist` совпадал с исходниками.
 

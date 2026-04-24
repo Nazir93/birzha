@@ -1,16 +1,8 @@
-# Проект «биржа» — учёт товара
+# Биржа — кратко для агента
 
-## Главный ориентир для агента
+1. **`AGENTS.md`** — таблица ссылок; **`.cursor/rules/00-master.mdc`**.
+2. **`docs/architecture/cabinets.md`** — план кабинетов и отдельных входов; **роли и права** — `docs/architecture/processes/roles-and-permissions.md`.
+3. Монорепо: `packages/domain` → `packages/contracts` → `apps/api` (Fastify) → `apps/web` (Vite); команды в **`README.md`**.
+4. **Риски, офлайн** — `docs/architecture/risks-and-guardrails.md`, `docs/architecture/offline/offline-sync.md`.
 
-0. **`AGENTS.md`** — сжатая лестница: раздел **«Контроль приоритетов»** (кто ведёт работу: `implementation-status` + очередь), таблица «куда смотреть», **синхронизация правок**, **качество кода** (слои, чеклист).
-1. Прочитай **`PROJECT_MASTER_SPEC.md`** в корне — мастер-спецификация, этапы и чек-листы.
-2. Правила Cursor лежат в **`.cursor/rules/`** (файлы `*.mdc`), в первую очередь `00-master.mdc`.
-3. Код: монорепозиторий — **`packages/domain`** (домен), **`apps/api`** (Fastify + Drizzle), **`apps/web`** (Vite + React). Команды см. **`README.md`**.
-4. Продуктовая и бизнес-архитектура — в **`docs/architecture/`** (глоссарий, ER, офлайн, экраны).
-5. **Сценарии по ролям (как у заказчика):** `docs/architecture/processes/role-workflows-detailed.md`.
-6. **Риски и защита целостности:** `docs/architecture/risks-and-guardrails.md`.
-7. **Стек:** `README.md` (раздел «Стек»).
-8. **Золотой сценарий теста (сходимость цифр):** `docs/testing/golden-scenario.md`.
-9. **На каком этапе проект и что делать дальше:** `docs/implementation-status.md` — при «продолжаем без уточнений» ассистент берёт следующий шаг из **«Очередь работ»** там же.
-
-При противоречии между документами: **сначала** согласуй с заказчиком; до согласования для кода опирайся на `PROJECT_MASTER_SPEC.md` и `.cursor/rules/`, для смысла терминов — на `docs/architecture/business-glossary.md`. Противоречия «сценарий vs матрица прав» — см. `risks-and-guardrails.md` и `07-debts-returns-and-role-edge-cases.mdc`.
+Если смыслы расходятся: уточнить у заказчика/пользователя; по умолчанию **код** и **`.cursor/rules`**, глоссарий — `docs/architecture/business-glossary.md`.

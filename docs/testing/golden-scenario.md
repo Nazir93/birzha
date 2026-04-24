@@ -29,4 +29,4 @@
 ## Связь с кодом
 
 - Обязательный для регрессии in-memory тест: `apps/api/src/http/golden-scenario.flow.test.ts` (см. `pnpm test`).
-- Отдельный PG/integration-файл — по необходимости; статус и пробелы к золотому сценарию ведутся в **`docs/implementation-status.md`**.
+- Отдельный PG/integration-файл — по необходимости.
