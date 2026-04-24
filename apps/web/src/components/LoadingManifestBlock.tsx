@@ -3,23 +3,17 @@ import { Link } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import {
+  estimatedPackageCountOnShelf,
+  filterBatchesForLoadingManifest,
+  sumLoadingManifestTotals,
+} from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPath } from "../routes.js";
 import { btnStyle, btnStyleInline, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ORPHAN = "__unassigned__";
 
 type DocOption = { id: string; number: string };
-
-function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
-  const linePk = b.nakladnaya?.linePackageCount;
-  if (linePk == null || linePk <= 0) {
-    return null;
-  }
-  if (b.totalKg <= 0) {
-    return null;
-  }
-  return Math.max(0, Math.round((b.onWarehouseKg / b.totalKg) * linePk));
-}
 
 /**
  * Сводный «лист на погрузку»: несколько закупочных накладных на выбранном складе, итоги, экспорт.
@@ -73,36 +67,12 @@ export function LoadingManifestBlock({
     setSelectedDocIds(new Set());
   };
 
-  const includedBatches = useMemo(() => {
-    return batchesInWh.filter((b) => {
-      if (b.onWarehouseKg <= 0) {
-        return false;
-      }
-      const docId = b.nakladnaya?.documentId;
-      if (documentOptions.length === 0) {
-        return true;
-      }
-      if (!docId) {
-        return true;
-      }
-      return selectedDocIds.has(docId);
-    });
-  }, [batchesInWh, documentOptions.length, selectedDocIds]);
+  const includedBatches = useMemo(
+    () => filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, selectedDocIds),
+    [batchesInWh, documentOptions.length, selectedDocIds],
+  );
 
-  const totals = useMemo(() => {
-    let kg = 0;
-    let pkg = 0;
-    let linesWithPkg = 0;
-    for (const b of includedBatches) {
-      kg += b.onWarehouseKg;
-      const e = estimatedPackageCountOnShelf(b);
-      if (e != null) {
-        pkg += e;
-        linesWithPkg += 1;
-      }
-    }
-    return { kg, pkg, linesWithPkg, batchCount: includedBatches.length };
-  }, [includedBatches]);
+  const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
 
   const buildCsv = useCallback(() => {
     const head = [

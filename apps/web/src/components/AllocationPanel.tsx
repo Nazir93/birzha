@@ -6,6 +6,7 @@ import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { estimatedPackageCountOnShelf } from "../format/loading-manifest.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -91,18 +92,6 @@ function countNakldocuments(batches: BatchListItem[]): number {
     if (d) s.add(d);
   }
   return s.size;
-}
-
-/** Остаток в ящиках: доля `onWarehouseKg` к массе партии, × ящиков по строке накладной. */
-function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
-  const linePk = b.nakladnaya?.linePackageCount;
-  if (linePk == null || linePk <= 0) {
-    return null;
-  }
-  if (b.totalKg <= 0) {
-    return null;
-  }
-  return Math.max(0, Math.round((b.onWarehouseKg / b.totalKg) * linePk));
 }
 
 function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: number; linesWithBoxData: number } {
