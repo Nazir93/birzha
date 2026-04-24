@@ -12,6 +12,8 @@ export type TripSaleAppend = {
   clientLabel?: string | null;
   /** Ссылка на справочник; снимок имени дублируется в `clientLabel`. */
   counterpartyId?: string | null;
+  /** Учётная запись, внёсшая продажу; для sync и REST с JWT. */
+  recordedByUserId?: string | null;
 };
 
 export type TripSaleBatchLine = {
@@ -42,7 +44,7 @@ export type TripSaleAggregate = {
 
 export interface TripSaleRepository {
   append(row: TripSaleAppend): Promise<void>;
-  aggregateByTripId(tripId: string): Promise<TripSaleAggregate>;
+  aggregateByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleAggregate>;
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
   /** Число строк с этим `counterpartyId` (блокировка удаления справочника). */
   countByCounterpartyId(counterpartyId: string): Promise<number>;

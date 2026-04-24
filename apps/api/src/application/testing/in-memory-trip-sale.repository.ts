@@ -44,8 +44,16 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
     return sum;
   }
 
-  async aggregateByTripId(tripId: string): Promise<TripSaleAggregate> {
-    const relevant = this.rows.filter((r) => r.tripId === tripId);
+  async aggregateByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleAggregate> {
+    const relevant = this.rows.filter((r) => {
+      if (r.tripId !== tripId) {
+        return false;
+      }
+      if (!filter) {
+        return true;
+      }
+      return (r.recordedByUserId ?? null) === filter.onlyRecordedByUserId;
+    });
     return buildTripSaleAggregateFromRows(
       relevant.map((r) => ({
         batchId: r.batchId,

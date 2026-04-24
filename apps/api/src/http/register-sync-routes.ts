@@ -29,7 +29,8 @@ export function registerSyncRoutes(
           });
         }
       }
-      const result = await applySync.execute(body);
+      const u = req.user as { sub: string; roles: AuthRoleGrant[] } | undefined;
+      const result = await applySync.execute(body, u ? { recordedByUserId: u.sub } : undefined);
       return reply.code(200).send(result);
     } catch (error) {
       return sendMappedError(reply, error);

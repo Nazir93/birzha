@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
-import { routes } from "../routes.js";
+import { login } from "../routes.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 
 /** Если `requireApiAuth` на сервере и сессии нет — редирект на `/login`. */
@@ -22,7 +22,7 @@ export function RequireApiAuthGate() {
   }
 
   if (meta?.requireApiAuth === "enabled" && !user) {
-    return <Navigate to={routes.login} replace state={{ from: location }} />;
+    return <Navigate to={login} replace state={{ from: location }} />;
   }
 
   return <Outlet />;

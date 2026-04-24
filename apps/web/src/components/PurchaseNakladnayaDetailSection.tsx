@@ -6,7 +6,7 @@ import { apiFetch } from "../api/fetch-api.js";
 import type { PurchaseDocumentDetail, WarehousesListResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { routes, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
@@ -103,7 +103,7 @@ export function PurchaseNakladnayaDetailSection() {
     return (
       <div style={sectionBox}>
         <p style={errorText}>Документ не найден.</p>
-        <Link to={routes.purchaseNakladnaya} style={{ fontSize: "0.92rem" }}>
+        <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.92rem" }}>
           ← Назад к новой накладной
         </Link>
       </div>
@@ -118,7 +118,7 @@ export function PurchaseNakladnayaDetailSection() {
   return (
     <section style={sectionBox} aria-labelledby="nakl-detail-heading" role="region">
       <div style={{ marginBottom: "0.5rem" }}>
-        <Link to={routes.purchaseNakladnaya} style={{ fontSize: "0.88rem" }}>
+        <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.88rem" }}>
           ← Все накладные и новая
         </Link>
       </div>

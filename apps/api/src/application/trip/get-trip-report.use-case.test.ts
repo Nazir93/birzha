@@ -74,4 +74,55 @@ describe("GetTripReportUseCase", () => {
     expect(financials.costOfShortageKopecks).toBe(0n);
     expect(financials.grossProfitKopecks).toBe(80n);
   });
+
+  it("фильтр по recordedByUserId: только чужие строки отсекаются", async () => {
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const batches = new InMemoryBatchRepository();
+    await batches.save(
+      Batch.create({
+        id: "b-b",
+        purchaseId: "p-2",
+        totalKg: 200,
+        pricePerKg: 4,
+        distribution: "on_hand",
+      }),
+    );
+    await trips.save(Trip.create({ id: "t-2", tripNumber: "Ф-99" }));
+    await shipments.append({
+      id: "sh2",
+      tripId: "t-2",
+      batchId: "b-b",
+      grams: 50_000n,
+      packageCount: null,
+    });
+    const line = (id: string, saleId: string, grams: bigint, rev: bigint, cash: bigint, uid: string) =>
+      sales.append({
+        id,
+        tripId: "t-2",
+        batchId: "b-b",
+        saleId,
+        grams,
+        pricePerKgKopecks: 1_000n,
+        revenueKopecks: rev,
+        cashKopecks: cash,
+        debtKopecks: rev - cash,
+        recordedByUserId: uid,
+      });
+    await line("a", "s-a", 10_000n, 1_000n, 1_000n, "u-alice");
+    await line("b", "s-b", 5_000n, 2_000n, 2_000n, "u-bob");
+
+    const uc = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
+    const full = await uc.execute("t-2");
+    expect(full.sales.totalGrams).toBe(15_000n);
+
+    const forAlice = await uc.execute("t-2", { onlySalesRecordedByUserId: "u-alice" });
+    expect(forAlice.sales.totalGrams).toBe(10_000n);
+    expect(forAlice.financials.revenueKopecks).toBe(1_000n);
+
+    const forBob = await uc.execute("t-2", { onlySalesRecordedByUserId: "u-bob" });
+    expect(forBob.sales.totalGrams).toBe(5_000n);
+  });
 });

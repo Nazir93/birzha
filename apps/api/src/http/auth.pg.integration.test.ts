@@ -218,4 +218,55 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     await db.delete(schema.users).where(eq(schema.users.id, accountantId));
     await app.close();
   });
+
+  it("REQUIRE_API_AUTH: кладовщик не POST /warehouses; admin — 201", async () => {
+    const whUserId = randomUUID();
+    const whLogin = `u_wh2_${randomUUID().slice(0, 8)}`;
+    await db.insert(schema.users).values({
+      id: whUserId,
+      login: whLogin,
+      passwordHash: hashPassword(password),
+      isActive: true,
+    });
+    await db.insert(schema.userRoles).values({
+      userId: whUserId,
+      roleCode: "warehouse",
+      scopeType: "global",
+      scopeId: "",
+    });
+
+    const env = loadEnv({
+      NODE_ENV: "test",
+      DATABASE_URL: pgUrl,
+      JWT_SECRET: "k".repeat(32),
+      REQUIRE_API_AUTH: "true",
+    });
+    const app = await buildApp({ env, db });
+
+    const whTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login: whLogin, password } })).body,
+    ) as { token: string }).token;
+    const forbidden = await app.inject({
+      method: "POST",
+      url: "/warehouses",
+      headers: { authorization: `Bearer ${whTok}`, "content-type": "application/json" },
+      payload: { name: "Склад из теста", code: `t${randomUUID().slice(0, 6)}` },
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const adminTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login, password } })).body,
+    ) as { token: string }).token;
+    const ok = await app.inject({
+      method: "POST",
+      url: "/warehouses",
+      headers: { authorization: `Bearer ${adminTok}`, "content-type": "application/json" },
+      payload: { name: "Склад админа", code: `A${randomUUID().slice(0, 4)}` },
+    });
+    expect(ok.statusCode).toBe(201);
+
+    await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, whUserId));
+    await db.delete(schema.users).where(eq(schema.users.id, whUserId));
+    await app.close();
+  });
 });

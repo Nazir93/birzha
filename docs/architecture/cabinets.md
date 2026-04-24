@@ -13,11 +13,20 @@
 
 ## Вход
 
-У каждого рода работ — **свой вход** (свой URL, билд или конфиг PWA, отдельная сессия/приложение), чтобы не мешать роли в одной «куче». Реализация пошагово: в коде сейчас **один** `apps/web` + матрица панелей `role-panels` и `/login` — дальше вынос в отдельные приложения/поддомены по мере плана, без «большой переписи в один день».
+У каждого рода работ — **свой URL-префикс** (один билд `apps/web`, одна PWA, без отдельного субдомена на текущем этапе):
+
+| Кабинет | Префикс | Стартовая страница (типично) |
+|--------|--------|------------------------------|
+| Админ | `/a` | `/a/inventory` — склады и калибры; `/a/service` — GET /api/meta |
+| Закуп, склад, рейс, логист, (рук.) | `/o` | `/o/purchase-nakladnaya` (закуп/клад) или `/o/reports` |
+| Продавец | `/s` | `/s` — сводка; отчёт по деньгам в `/s/reports` при «только seller» — только **свои** строки продажи (API + `recorded_by_user_id`); PWA: опцион. `VITE_PWA_START_URL=/s` при сборке |
+| Бухгалтер | `/b` | `/b` — сводка; отчёты: `/b/reports`; справочник: `/b/counterparties` (форма **создания рейса** не показывается — только `logistics` / `manager` / `admin` на API) |
+
+**Старые пути** без префи (`/reports`, `/purchase-nakladnaya`, …) **редиректят** в кабинет согласно роли (`LegacyPathRedirect` в `App.tsx`).
 
 ## С чем сверяться
 
-- **Код панелей:** `apps/web/src/auth/role-panels.ts`, маршруты с `RequirePanel` в `App.tsx`.
-- **API и права:** `apps/api/src/http/route-auth.ts` — сервер нельзя «обойти» только скрытием меню.
+- **Код панелей и кабинетов:** `apps/web/src/auth/role-panels.ts` — `canAccessPanel`, `canAccessCabinet`, `hrefForPanelInCabinet`; `RequireCabinet` + `RequirePanel` в `App.tsx`.
+- **API и права:** `apps/api/src/http/route-auth.ts` — **POST/DELETE** `/warehouses` и `/product-grades` только `admin` и `manager` (`inventoryCatalogWrite`).
 
 Короткие сценарии ввода для сотрудников: [`../guides/dlya-zakazchika-zapolnenie.md`](../guides/dlya-zakazchika-zapolnenie.md).

@@ -51,7 +51,7 @@ export function registerPurchaseDocumentRoutes(
 
   app.delete(
     "/warehouses/:warehouseId",
-    { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) },
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
     async (req, reply) => {
       try {
         const params = z.object({ warehouseId: z.string().min(1) }).parse(req.params);
@@ -63,7 +63,7 @@ export function registerPurchaseDocumentRoutes(
     },
   );
 
-  app.post("/warehouses", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
+  app.post("/warehouses", { ...withPreHandlers(routeAuth.inventoryCatalogWrite) }, async (req, reply) => {
     try {
       const body = createWarehouseBodySchema.parse(req.body);
       const warehouse = await warehouses.create({ name: body.name, code: body.code });
@@ -84,7 +84,7 @@ export function registerPurchaseDocumentRoutes(
 
   app.delete(
     "/product-grades/:productGradeId",
-    { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) },
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
     async (req, reply) => {
       try {
         const params = z.object({ productGradeId: z.string().min(1) }).parse(req.params);
@@ -96,7 +96,7 @@ export function registerPurchaseDocumentRoutes(
     },
   );
 
-  app.post("/product-grades", { ...withPreHandlers(routeAuth.nakladnayaCatalogWrite) }, async (req, reply) => {
+  app.post("/product-grades", { ...withPreHandlers(routeAuth.inventoryCatalogWrite) }, async (req, reply) => {
     try {
       const body = createProductGradeBodySchema.parse(req.body);
       const productGrade = await grades.create({

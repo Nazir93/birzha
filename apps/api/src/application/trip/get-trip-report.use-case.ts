@@ -17,13 +17,23 @@ export class GetTripReportUseCase {
     private readonly batches: BatchRepository,
   ) {}
 
-  async execute(tripId: string) {
+  /**
+   * @param onlySalesRecordedByUserId — если задан, блок `sales` и `financials` (через продажи) только по строкам, записанным этим пользователем (полевой «только seller»).
+   */
+  async execute(
+    tripId: string,
+    options?: { onlySalesRecordedByUserId?: string },
+  ) {
     const trip = await this.trips.findById(tripId);
     if (!trip) {
       throw new TripNotFoundError(tripId);
     }
     const shipment = await this.shipments.aggregateByTripId(tripId);
-    const sales = await this.sales.aggregateByTripId(tripId);
+    const uid = options?.onlySalesRecordedByUserId?.trim();
+    const sales = await this.sales.aggregateByTripId(
+      tripId,
+      uid ? { onlyRecordedByUserId: uid } : undefined,
+    );
     const shortage = await this.shortages.aggregateByTripId(tripId);
 
     const batchIds = new Set<string>();

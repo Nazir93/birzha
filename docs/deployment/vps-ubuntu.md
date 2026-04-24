@@ -103,7 +103,7 @@ cd apps/api && pnpm db:push
 pnpm build
 ```
 
-Должны собраться `@birzha/web` (статика в `apps/web/dist`) и `@birzha/api`.
+Должны собраться `@birzha/web` (статика в `apps/web/dist`) и `@birzha/api`. Для PWA «установка» в поле сразу в кабинет продавца: перед сборкой задайте **`VITE_PWA_START_URL=/s`** (см. комментарий в `apps/web/vite.config.ts`); по умолчанию `start_url` в манифесте — **`/`**, дальше редирект по роли.
 
 ## 6. Пользователь для первого входа
 

@@ -1,7 +1,9 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createTripBodySchema } from "@birzha/contracts";
 import { z } from "zod";
 
+import { isGlobalSellerOnly } from "../auth/seller-scope.js";
+import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { TripNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
@@ -22,6 +24,8 @@ import {
   tripFinancialsToJson,
 } from "./trip-report-serialize.js";
 import { tripToJson } from "./trip-serialize.js";
+
+type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
 
 export function registerTripRoutes(
   app: FastifyInstance,
@@ -49,7 +53,12 @@ export function registerTripRoutes(
   app.get("/trips/:tripId/shipment-report", { ...withPreHandlers(routeAuth.tripReportRead) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
-      const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(tripId);
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      const onlySales = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
+      const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(
+        tripId,
+        onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined,
+      );
       return reply.send({
         trip: tripToJson(trip),
         shipment: shipmentLedgerToJson(shipment),

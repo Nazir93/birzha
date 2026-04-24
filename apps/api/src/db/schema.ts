@@ -148,6 +148,8 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   clientLabel: text("client_label"),
   /** Ссылка на справочник; при продаже по справочнику дублируется снимок имени в `client_label`. */
   counterpartyId: text("counterparty_id").references(() => counterparties.id, { onDelete: "set null" }),
+  /** Кто внёс строку продажи; для «только продавец» — фильтр отчёта по `users.id`. */
+  recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
 });
 
 /** Успешно обработанные офлайн-действия (идемпотентность по устройству). */

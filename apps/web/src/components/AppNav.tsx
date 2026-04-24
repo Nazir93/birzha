@@ -1,9 +1,15 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import type { CSSProperties } from "react";
 
-import { canAccessPanel, type PanelId } from "../auth/role-panels.js";
+import {
+  cabinetIdFromPathname,
+  cabinetForUser,
+  hrefForPanelInCabinet,
+  type CabinetId,
+  type PanelId,
+} from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
-import { routes } from "../routes.js";
+import { accounting, adminRoutes, login, ops, prefix, sales } from "../routes.js";
 import { btnStyleInline, muted } from "../ui/styles.js";
 
 const navStyle: CSSProperties = {
@@ -26,29 +32,78 @@ const tab = (active: boolean): CSSProperties => ({
   fontWeight: active ? 600 : 400,
 });
 
-const items: { to: string; label: string; panel: PanelId }[] = [
-  { to: routes.purchaseNakladnaya, label: "Накладная", panel: "nakladnaya" },
-  { to: routes.distribution, label: "Распределение", panel: "distribution" },
-  { to: routes.reports, label: "Отчёты и рейсы", panel: "reports" },
-  { to: routes.operations, label: "Операции", panel: "operations" },
-  { to: routes.offline, label: "Офлайн-очередь", panel: "offline" },
-  { to: routes.service, label: "Служебное", panel: "service" },
+const panelOrder: PanelId[] = [
+  "nakladnaya",
+  "distribution",
+  "reports",
+  "operations",
+  "offline",
+  "inventory",
+  "service",
 ];
+
+const panelLabel: Record<PanelId, string> = {
+  nakladnaya: "Накладная",
+  distribution: "Распределение",
+  reports: "Отчёты и рейсы",
+  operations: "Операции",
+  offline: "Офлайн-очередь",
+  service: "Служебное (meta)",
+  inventory: "Склады и калибры",
+};
 
 export function AppNav() {
   const { meta, user, logout, ready } = useAuth();
+  const { pathname } = useLocation();
+  const cabinet = cabinetIdFromPathname(pathname) ?? (user ? cabinetForUser(user) : "operations");
 
-  const navItems = items.filter((item) => {
-    if (!ready || meta?.authApi !== "enabled" || !user) {
-      return true;
+  const showRestricted = ready && meta?.authApi === "enabled" && user !== null;
+
+  const buildLinks: { to: string; label: string; key: string }[] = (() => {
+    if (!user || !showRestricted) {
+      return [
+        { key: "nakl", to: ops.purchaseNakladnaya, label: "Накладная" },
+        { key: "dist", to: ops.distribution, label: "Распределение" },
+        { key: "rep", to: ops.reports, label: "Отчёты и рейсы" },
+        { key: "op", to: ops.operations, label: "Операции" },
+        { key: "off", to: ops.offline, label: "Офлайн-очередь" },
+        { key: "svc", to: adminRoutes.service, label: "Служебное" },
+      ];
     }
-    return canAccessPanel(user, item.panel);
-  });
+
+    const out: { to: string; label: string; key: string }[] = [];
+    if (cabinet === "sales") {
+      out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
+    }
+    if (cabinet === "accounting") {
+      out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
+      out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    }
+    for (const p of panelOrder) {
+      const to = hrefForPanelInCabinet(user, p, cabinet);
+      if (to) {
+        out.push({ to, label: panelLabel[p], key: p });
+      }
+    }
+    return out;
+  })();
+
+  const titleSuffix: Record<CabinetId, string> = {
+    admin: "админ",
+    operations: "закуп/склад/рейс",
+    sales: "продавец",
+    accounting: "бухгалтерия",
+  };
+  const prefixForCabinet = prefix[cabinet as keyof typeof prefix] ?? prefix.operations;
 
   return (
     <nav style={navStyle} aria-label="Разделы приложения">
-      {navItems.map(({ to, label }) => (
-        <NavLink key={to} to={to} style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}>
+      {buildLinks.map(({ to, label, key }) => (
+        <NavLink
+          key={`${key}-${to}`}
+          to={to}
+          style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}
+        >
           {label}
         </NavLink>
       ))}
@@ -56,13 +111,15 @@ export function AppNav() {
         <span style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
           {user ? (
             <>
-              <span style={{ ...muted, fontSize: "0.88rem" }}>{user.login}</span>
+              <span style={{ ...muted, fontSize: "0.88rem" }} title={`${titleSuffix[cabinet]} · ${prefixForCabinet}`}>
+                {user.login}
+              </span>
               <button type="button" style={btnStyleInline} onClick={() => void logout()}>
                 Выйти
               </button>
             </>
           ) : (
-            <NavLink to={routes.login} style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}>
+            <NavLink to={login} style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}>
               Вход
             </NavLink>
           )}

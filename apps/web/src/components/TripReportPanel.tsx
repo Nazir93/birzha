@@ -12,6 +12,8 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
+import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
+import { useAuth } from "../auth/auth-context.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
@@ -29,7 +31,18 @@ function sanitizeFilenamePart(s: string): string {
   return s.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 80);
 }
 
-export function TripReportPanel() {
+export type TripReportViewContext = "default" | "accounting" | "sales";
+
+const headingByContext: Record<TripReportViewContext, string> = {
+  default: "Рейсы и отчёт по фуре",
+  accounting: "Отчёт по рейсу (сверка)",
+  sales: "Рейс и отчёт",
+};
+
+export function TripReportPanel({ viewContext = "default" }: { viewContext?: TripReportViewContext }) {
+  const { user } = useAuth();
+  /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
+  const canTripWrite = user == null || canCreateTrip(user);
   const queryClient = useQueryClient();
   const [tripId, setTripId] = useState<string | "">("");
 
@@ -157,18 +170,32 @@ export function TripReportPanel() {
     window.print();
   }, []);
 
+  const introByContext: Record<TripReportViewContext, string> = {
+    default: `По смыслу учёта эта сводка — опора для контроля загрузки машины и движения товара; отдельного документа «общая накладная на всю машину» в системе нет — используйте этот отчёт и печать. Список из GET /api/trips, отчёт — GET /api/trips/:id/shipment-report (отгрузки, продажи, недостача, деньги).`,
+    accounting: `Сверка по движению товара и денег по рейсу (чтение). Создание/закрытие рейса — в операционном кабинете или у логиста. Список рейсов: GET /api/trips, отчёт: GET /api/trips/:id/shipment-report.`,
+    sales: `Сводка по рейсу для полей: остатки, продажи, долги. Продажа с рейса — в «Операциях» или очереди sync. Данные из API как в кабинете /o, без ввода закупа.`,
+  };
+
+  const emptyTextByContext: Record<TripReportViewContext, string> = {
+    default: "Рейсов пока нет — создайте через API или офлайн-очередь.",
+    accounting: "Рейсов в списке нет. Рейс вводит логист/руководитель; после открытия рейс появится здесь.",
+    sales: "Рейсов в списке нет. После ввода рейса логистом/складом он отобразится; продажа — в разделе «Операции».",
+  };
+
   return (
     <div role="region" aria-labelledby="trip-report-heading">
       <h2 id="trip-report-heading" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
-        Рейсы и отчёт по фуре
+        {headingByContext[viewContext]}
       </h2>
       <p className="no-print" style={muted}>
-        По смыслу учёта эта сводка — опора для контроля загрузки машины и движения товара; отдельного документа «общая
-        накладная на всю машину» в системе нет — используйте этот отчёт и печать. Технически: список из{" "}
-        <code>GET /api/trips</code>, отчёт — <code>GET /api/trips/:tripId/shipment-report</code> (отгрузки, продажи,
-        недостача, деньги; калибр в разрезе партий — если партия из накладной; ящики по отгрузке в рейс — если вводили при
-        отгрузке).
+        {introByContext[viewContext]}
       </p>
+      {isFieldSellerOnly(user) && viewContext === "sales" ? (
+        <p className="no-print" style={{ ...muted, marginTop: "0.35rem" }}>
+          Суммы продажи и деньги в отчёте — только по строкам, внесённым под вашим входом. Отгрузка в рейс и остаток в
+          пути — общие по рейсу.
+        </p>
+      ) : null}
 
       {tripsQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
@@ -183,7 +210,7 @@ export function TripReportPanel() {
 
       {tripsQuery.data && sortedTrips.length === 0 && (
         <p className="no-print" style={{ ...muted, marginTop: "0.5rem" }}>
-          Рейсов пока нет — создайте через API или офлайн-очередь.
+          {emptyTextByContext[viewContext]}
         </p>
       )}
 
@@ -203,11 +230,13 @@ export function TripReportPanel() {
               );
             })}
           </select>
-          <p style={{ ...muted, marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
-            Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны права
-            логиста, менеджера или администратора.
-          </p>
-          {tripId && r && canDeleteTrip && (
+          {canTripWrite && (
+            <p style={{ ...muted, marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
+              Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны
+              права логиста, менеджера или администратора.
+            </p>
+          )}
+          {tripId && r && canDeleteTrip && canTripWrite && (
             <div style={{ marginTop: "0.5rem" }}>
               <button
                 type="button"

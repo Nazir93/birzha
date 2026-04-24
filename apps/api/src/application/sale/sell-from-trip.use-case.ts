@@ -26,6 +26,8 @@ export type SellFromTripInput = {
   clientLabel?: string | null;
   /** Справочник контрагентов; при указании подпись берётся из справочника. */
   counterpartyId?: string | null;
+  /** Id пользователя (JWT `sub`); пишется в продажу для отчёта в разрезе «только мои» у продавца. */
+  recordedByUserId?: string | null;
 };
 
 export type SellFromTripTransactionRunner = (
@@ -121,6 +123,7 @@ export class SellFromTripUseCase {
         debtKopecks,
         clientLabel,
         counterpartyId,
+        recordedByUserId: input.recordedByUserId?.trim() || null,
       });
     };
 

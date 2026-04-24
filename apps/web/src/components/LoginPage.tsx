@@ -2,13 +2,13 @@ import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
-import { routes } from "../routes.js";
+import { ops } from "../routes.js";
 import { btnStyle, errorText, fieldStyle, muted } from "../ui/styles.js";
 
 export function LoginPage() {
   const { ready, meta, user, login, bootstrapError } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? routes.reports;
+  const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? ops.reports;
 
   const [loginField, setLoginField] = useState("");
   const [password, setPassword] = useState("");

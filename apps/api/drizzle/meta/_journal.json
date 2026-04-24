@@ -113,6 +113,13 @@
       "when": 1776800000000,
       "tag": "0015_trip_vehicle_driver",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0016_trip_sale_recorded_by_user",
+      "breakpoints": true
     }
   ]
 }

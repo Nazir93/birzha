@@ -4,12 +4,13 @@ import { hashPassword } from "./auth/password-scrypt.js";
 import type { DbClient } from "./db/client.js";
 import * as schema from "./db/schema.js";
 
-/** Пароль тестовых пользователей `e2e_accountant` / `e2e_warehouse` (можно переопределить `E2E_TEST_PASSWORD`). */
+/** Пароль E2E-пользователей (см. список ниже; `E2E_TEST_PASSWORD` переопределяет). */
 export const E2E_DEFAULT_TEST_PASSWORD = "E2e-birzha-test-99";
 
 const E2E_USERS: { id: string; login: string; roleCode: string }[] = [
   { id: "e2e-user-accountant", login: "e2e_accountant", roleCode: "accountant" },
   { id: "e2e-user-warehouse", login: "e2e_warehouse", roleCode: "warehouse" },
+  { id: "e2e-user-seller", login: "e2e_seller", roleCode: "seller" },
 ];
 
 /**

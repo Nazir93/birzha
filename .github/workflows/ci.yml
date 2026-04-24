@@ -83,3 +83,40 @@ jobs:
 
       - name: Playwright E2E (роли, REQUIRE_API_AUTH + PostgreSQL)
         run: pnpm exec playwright test e2e/role-nav-auth.spec.ts
+
+  # Интеграция Drizzle + Postgres (тесты с `TEST_DATABASE_URL` иначе пропущены)
+  api-pg:
+    needs: [ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: birzha_test
+        ports:
+          - 5432:5432
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/birzha_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: pnpm exec wait-on -t 120000 tcp:127.0.0.1:5432
+
+      - name: API tests with PostgreSQL (Drizzle migrations in tests)
+        run: pnpm --filter @birzha/api test

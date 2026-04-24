@@ -28,6 +28,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
   }
 
   async append(row: TripSaleAppend): Promise<void> {
+    const uid = row.recordedByUserId?.trim();
     await this.db.insert(tripBatchSales).values({
       id: row.id,
       tripId: row.tripId,
@@ -40,6 +41,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
       debtKopecks: row.debtKopecks,
       clientLabel: row.clientLabel?.trim() || null,
       counterpartyId: row.counterpartyId?.trim() || null,
+      recordedByUserId: uid || null,
     });
   }
 
@@ -55,8 +57,14 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
     return sum;
   }
 
-  async aggregateByTripId(tripId: string): Promise<TripSaleAggregate> {
-    const rows = await this.db.select().from(tripBatchSales).where(eq(tripBatchSales.tripId, tripId));
+  async aggregateByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleAggregate> {
+    const whereClause = filter
+      ? and(
+          eq(tripBatchSales.tripId, tripId),
+          eq(tripBatchSales.recordedByUserId, filter.onlyRecordedByUserId),
+        )
+      : eq(tripBatchSales.tripId, tripId);
+    const rows = await this.db.select().from(tripBatchSales).where(whereClause);
     return buildTripSaleAggregateFromRows(
       rows.map((r) => ({
         batchId: r.batchId,

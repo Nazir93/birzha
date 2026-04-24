@@ -69,7 +69,10 @@ export class ApplySyncActionUseCase {
     this.createTrip = new CreateTripUseCase(trips);
   }
 
-  async execute(body: SyncRequestBody): Promise<SyncApplyResult> {
+  async execute(
+    body: SyncRequestBody,
+    ctx?: { recordedByUserId: string | undefined },
+  ): Promise<SyncApplyResult> {
     const { deviceId, localActionId } = body;
     if (await this.idempotency.hasProcessed(deviceId, localActionId)) {
       return { status: "ok", actionId: localActionId, duplicate: true };
@@ -95,6 +98,7 @@ export class ApplySyncActionUseCase {
             cashKopecksMixed,
             clientLabel: p.clientLabel,
             counterpartyId: p.counterpartyId,
+            recordedByUserId: ctx?.recordedByUserId,
           });
           break;
         }

@@ -103,11 +103,11 @@ pnpm e2e
 
 Полная сходимость по операциям — в `apps/api` (Vitest, `golden-scenario.flow.test.ts`); в браузере — те же ключевые числа (в т.ч. сценарий 5000 кг → отгрузка → недостача → продажа) в `e2e/golden-smoke.spec.ts`, плюс CSV, офлайн, операции, навигация.
 
-**E2E навигации по ролям (PostgreSQL):** поднимите Postgres (локально или на хосте — см. раздел **API и база**), задайте **`E2E_DATABASE_URL`**, **`E2E_JWT_SECRET`** (≥ 32 символов) и при необходимости **`E2E_TEST_PASSWORD`** (пароль пользователей `e2e_accountant` / `e2e_warehouse`; по умолчанию совпадает с сидом в коде). Запуск: **`pnpm e2e:roles`** (только `e2e/role-nav-auth.spec.ts`). Сервер `apps/api/src/e2e-server.ts` при **`E2E_DATABASE_URL`** применяет миграции, сид `e2e-seed-role-users.ts`, включает **`REQUIRE_API_AUTH`** (отключить: `E2E_REQUIRE_API_AUTH=false`). Без этих переменных тесты в `e2e/role-nav-auth.spec.ts` в отчёте Playwright помечаются как пропущенные. **Не выставляйте `E2E_DATABASE_URL` при полном `pnpm exec playwright test`** — дым `golden-smoke` рассчитан на in-memory API без обязательного JWT на REST. В **GitHub Actions** job **`e2e-auth-nav`** гоняет сценарий ролей отдельно от основного E2E.
+**E2E навигации по ролям (PostgreSQL):** поднимите Postgres (локально или на хосте — см. раздел **API и база**), задайте **`E2E_DATABASE_URL`**, **`E2E_JWT_SECRET`** (≥ 32 символов) и при необходимости **`E2E_TEST_PASSWORD`** (пароль пользователей `e2e_accountant` / `e2e_warehouse` / `e2e_seller`; по умолчанию совпадает с сидом в коде). Запуск: **`pnpm e2e:roles`** (только `e2e/role-nav-auth.spec.ts`). Сервер `apps/api/src/e2e-server.ts` при **`E2E_DATABASE_URL`** применяет миграции, сид `e2e-seed-role-users.ts`, включает **`REQUIRE_API_AUTH`** (отключить: `E2E_REQUIRE_API_AUTH=false`). Без этих переменных тесты в `e2e/role-nav-auth.spec.ts` в отчёте Playwright помечаются как пропущенные. **Не выставляйте `E2E_DATABASE_URL` при полном `pnpm exec playwright test`** — дым `golden-smoke` рассчитан на in-memory API без обязательного JWT на REST. В **GitHub Actions** job **`e2e-auth-nav`** гоняет сценарий ролей отдельно от основного E2E, job **`api-pg`** — интеграционные тесты API с **`TEST_DATABASE_URL`**.
 
 ### CI
 
-В репозитории — GitHub Actions (`.github/workflows/ci.yml`): `pnpm check`, затем установка Chromium и **`pnpm exec playwright test`** (после сборки в `check` уже есть `apps/web/dist`).
+В репозитории — GitHub Actions (`.github/workflows/ci.yml`): `pnpm check`, затем установка Chromium и **`pnpm exec playwright test`**; при Postgres в CI также **`api-pg`** (`@birzha/api` с **`TEST_DATABASE_URL`**) и **`e2e-auth-nav`**.
 
 ### Продакшен и хостинг
 

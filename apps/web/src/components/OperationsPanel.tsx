@@ -32,7 +32,7 @@ import {
   warnText,
 } from "../ui/styles.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
-import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
+import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -427,7 +427,7 @@ export function OperationsPanel() {
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Операции по партиям и рейсу</h2>
       <p style={muted}>
         <strong>Порядок:</strong> партии создаются только из{" "}
-        <Link to={routes.purchaseNakladnaya} style={{ fontWeight: 600 }}>
+        <Link to={ops.purchaseNakladnaya} style={{ fontWeight: 600 }}>
           накладной
         </Link>{" "}
         (строка = калибр = партия, товар сразу на складе). Здесь — рейс: отгрузка в рейс (<strong>кг</strong> обязательно;
@@ -600,7 +600,7 @@ export function OperationsPanel() {
         {shippableBatches.length === 0 && batchesQuery.data && (
           <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.85rem" }}>
             Нет партий с остатком на складе — нечего отгружать (сначала оформите приём по накладной на вкладке{" "}
-            <Link to={routes.purchaseNakladnaya}>Накладная</Link>).
+            <Link to={ops.purchaseNakladnaya}>Накладная</Link>).
           </p>
         )}
         <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>

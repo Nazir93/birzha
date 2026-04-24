@@ -6,7 +6,7 @@ import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
-import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
+import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
@@ -337,10 +337,10 @@ export function AllocationPanel() {
         <strong> конкретную накладную</strong> (с какой поставки отдать в рейс) и по строкам укажите
         <strong> качество</strong> и <strong>направление</strong>. Сбор <strong>одного рейса / исходящей накладной</strong> весом и
         оформлением — в &quot;Операциях&quot;. Учёт по факту: приняли другое кг, чем погружаем — вес правите в{" "}
-        <Link to={routes.operations} style={{ fontWeight: 600 }}>
+        <Link to={ops.operations} style={{ fontWeight: 600 }}>
           Операциях
         </Link>
-        ; здесь — решения по <strong>сорту</strong>. См. <Link to={routes.reports}>отчёты</Link>.
+        ; здесь — решения по <strong>сорту</strong>. См. <Link to={ops.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется <strong>PostgreSQL</strong>: <code>PATCH /api/batches/…/allocation</code> без БД на сервере не выполняется.
@@ -359,7 +359,7 @@ export function AllocationPanel() {
       {!loading && list.length === 0 && (
         <p style={muted}>
           Нет партий с остатком на складе — сначала оформите закупку по накладной (вкладка{" "}
-          <Link to={routes.purchaseNakladnaya}>Накладная</Link>).
+          <Link to={ops.purchaseNakladnaya}>Накладная</Link>).
         </p>
       )}
 
@@ -474,7 +474,7 @@ export function AllocationPanel() {
             <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
               На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
               складе. Обычно накладная указывается при приёме; при необходимости проверьте данные в{" "}
-              <Link to={routes.purchaseNakladnaya}>Накладная</Link>.
+              <Link to={ops.purchaseNakladnaya}>Накладная</Link>.
             </p>
           )}
 

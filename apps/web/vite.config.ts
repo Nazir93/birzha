@@ -3,6 +3,8 @@ import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite";
 
 const apiProxyTarget = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "3000"}`;
+/** Старт PWA из манифеста. По умолчанию `/` (дальше редирект по роли). Для продавца: `VITE_PWA_START_URL=/s` при `vite build`. */
+const pwaStartUrl = process.env.VITE_PWA_START_URL?.trim() || "/";
 
 export default defineConfig({
   plugins: [
@@ -26,7 +28,7 @@ export default defineConfig({
         display: "standalone",
         orientation: "portrait-primary",
         lang: "ru",
-        start_url: "/",
+        start_url: pwaStartUrl,
         scope: "/",
         icons: [
           {

@@ -1,5 +1,6 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 
+import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { DbClient } from "../db/client.js";
 import {
   createBatchBodySchema,
@@ -32,6 +33,8 @@ import type { ShipToTripTransactionRunner } from "../application/trip/ship-to-tr
 import { listBatchesForHttp } from "./batch-list-http.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
+
+type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
 
 export function registerBatchRoutes(
   app: FastifyInstance,
@@ -124,6 +127,7 @@ export function registerBatchRoutes(
           : typeof body.cashKopecksMixed === "string"
             ? BigInt(body.cashKopecksMixed)
             : BigInt(body.cashKopecksMixed);
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
       await sell.execute({
         batchId: params.batchId,
         tripId: body.tripId,
@@ -134,6 +138,7 @@ export function registerBatchRoutes(
         cashKopecksMixed,
         clientLabel: body.clientLabel,
         counterpartyId: body.counterpartyId,
+        recordedByUserId: u?.sub,
       });
       return reply.code(200).send({ ok: true });
     } catch (error) {

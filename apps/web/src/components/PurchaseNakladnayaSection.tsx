@@ -27,7 +27,8 @@ import {
 } from "../validation/api-schemas.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
-import { purchaseNakladnayaDocumentPath, routes } from "../routes.js";
+import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnStyle,
@@ -72,6 +73,7 @@ function emptyLine(): LineDraft {
 
 export function PurchaseNakladnayaSection() {
   const { meta, user } = useAuth();
+  const canManageCatalog = user ? canManageInventoryCatalog(user) : false;
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
 
@@ -350,7 +352,7 @@ export function PurchaseNakladnayaSection() {
       return meta?.requireApiAuth === "enabled" ? (
         <>
           Справочники не загрузились: нужна авторизация. Откройте{" "}
-          <Link to={routes.login} style={{ fontWeight: 600 }}>
+          <Link to={login} style={{ fontWeight: 600 }}>
             Вход
           </Link>
           {user ? " (сессия могла истечь — войдите снова)." : "."}
@@ -387,22 +389,28 @@ export function PurchaseNakladnayaSection() {
       </h3>
       <p style={{ ...muted, marginBottom: "0.6rem" }}>
         <strong>Шаг 1 (приём):</strong> ввод по факту приёмки — как на бумаге. После сохранения на выбранном складе появятся партии; дальше —{" "}
-        <Link to={routes.distribution} style={{ fontWeight: 600 }}>
+        <Link to={ops.distribution} style={{ fontWeight: 600 }}>
           Распределение
         </Link>{" "}
         и{" "}
-        <Link to={routes.operations} style={{ fontWeight: 600 }}>
+        <Link to={ops.operations} style={{ fontWeight: 600 }}>
           Операции
         </Link>
         .
       </p>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
-      {catalogsEmptyOk && (
+      {catalogsEmptyOk && canManageCatalog && (
         <p role="status" style={warnText}>
-          В справочнике нет складов или калибров — нечего выбирать в списках. Добавьте их блоками ниже («Добавить склад», «Добавить
-          калибр») или на сервере примените миграции с начальными данными: в каталоге <code>apps/api</code> выполните{" "}
-          <code>pnpm db:migrate</code> (один раз; не только <code>db:push</code>).
+          В справочнике нет складов или калибров — нечего выбирать в списках. Добавьте их в разделе{" "}
+          <strong>Склады и калибры</strong> (кабинет админа) или на сервере примените миграции с начальными данными: в каталоге{" "}
+          <code>apps/api</code> выполните <code>pnpm db:migrate</code> (один раз; не только <code>db:push</code>).
+        </p>
+      )}
+      {catalogsEmptyOk && !canManageCatalog && (
+        <p role="status" style={warnText}>
+          В справочнике нет складов или калибров — обратитесь к администратору, чтобы настроить справочники в кабинете{" "}
+          <strong>админа</strong> (склады и калибры), либо попросите применить миграции на сервере.
         </p>
       )}
       {(warehousesQ.isPending || gradesQ.isPending) && (
@@ -446,40 +454,44 @@ export function PurchaseNakladnayaSection() {
             ))}
           </select>
         </label>
-        <div style={{ fontSize: "0.85rem" }}>
-          <p style={{ ...muted, margin: "0 0 0.35rem" }}>Нет нужного склада — добавьте (название как на бумаге; код — латиница, опционально)</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
-            <input
-              value={newWarehouseName}
-              onChange={(e) => setNewWarehouseName(e.target.value)}
-              style={{ ...fieldStyle, flex: "1 1 160px", minWidth: 120 }}
-              placeholder="Название склада"
-              autoComplete="off"
-              aria-label="Название нового склада"
-            />
-            <input
-              value={newWarehouseCode}
-              onChange={(e) => setNewWarehouseCode(e.target.value)}
-              style={{ ...fieldStyle, width: 120 }}
-              placeholder="Код (опц.)"
-              autoComplete="off"
-              aria-label="Код склада латиницей, опционально"
-            />
-            <button
-              type="button"
-              style={btnStyle}
-              disabled={createWarehouse.isPending}
-              onClick={() => void createWarehouse.mutate()}
-            >
-              {createWarehouse.isPending ? "…" : "Добавить склад"}
-            </button>
-          </div>
-          {warehouseFormError && (
-            <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
-              {warehouseFormError}
+        {canManageCatalog && (
+          <div style={{ fontSize: "0.85rem" }}>
+            <p style={{ ...muted, margin: "0 0 0.35rem" }}>
+              Нет нужного склада — администратор может добавить склад (название как на бумаге; код — латиница, опционально)
             </p>
-          )}
-        </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+              <input
+                value={newWarehouseName}
+                onChange={(e) => setNewWarehouseName(e.target.value)}
+                style={{ ...fieldStyle, flex: "1 1 160px", minWidth: 120 }}
+                placeholder="Название склада"
+                autoComplete="off"
+                aria-label="Название нового склада"
+              />
+              <input
+                value={newWarehouseCode}
+                onChange={(e) => setNewWarehouseCode(e.target.value)}
+                style={{ ...fieldStyle, width: 120 }}
+                placeholder="Код (опц.)"
+                autoComplete="off"
+                aria-label="Код склада латиницей, опционально"
+              />
+              <button
+                type="button"
+                style={btnStyle}
+                disabled={createWarehouse.isPending}
+                onClick={() => void createWarehouse.mutate()}
+              >
+                {createWarehouse.isPending ? "…" : "Добавить склад"}
+              </button>
+            </div>
+            {warehouseFormError && (
+              <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
+                {warehouseFormError}
+              </p>
+            )}
+          </div>
+        )}
         <label style={{ fontSize: "0.88rem" }}>
           ID документа (опц., иначе UUID на сервере)
           <input value={documentId} onChange={(e) => setDocumentId(e.target.value)} style={fieldStyle} placeholder="" />
@@ -505,63 +517,69 @@ export function PurchaseNakladnayaSection() {
           точка, например 10,5). <strong>Короба</strong> — целое; можно ввести с «,5» (округлится), пробелы игнорируются.
         </p>
       </div>
-      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && (
+      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog && (
         <p role="status" style={warnText}>
-          В справочнике нет калибров — добавьте строку ниже (код как на бумажной накладной; при необходимости укажите группу
-          товара).
+          В справочнике нет калибров — добавьте в блоке выше или в кабинете админа.
         </p>
       )}
-      <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-        <p style={{ ...muted, margin: "0 0 0.35rem" }}>Нет нужного калибра — добавьте в справочник</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
-          <input
-            value={newGradeProductGroup}
-            onChange={(e) => setNewGradeProductGroup(e.target.value)}
-            style={{ ...fieldStyle, flex: "1 1 120px", minWidth: 100 }}
-            placeholder="Группа товара (опц.)"
-            autoComplete="off"
-            aria-label="Группа товара, например Помидоры"
-          />
-          <input
-            value={newGradeCode}
-            onChange={(e) => setNewGradeCode(e.target.value)}
-            style={{ ...fieldStyle, width: 88 }}
-            placeholder="Код"
-            autoComplete="off"
-            aria-label="Код калибра"
-          />
-          <input
-            value={newGradeDisplayName}
-            onChange={(e) => setNewGradeDisplayName(e.target.value)}
-            style={{ ...fieldStyle, flex: "1 1 140px", minWidth: 120 }}
-            placeholder="Подпись в списке"
-            autoComplete="off"
-            aria-label="Название калибра"
-          />
-          <input
-            value={newGradeSortOrder}
-            onChange={(e) => setNewGradeSortOrder(e.target.value)}
-            style={{ ...fieldStyle, width: 72 }}
-            placeholder="Порядок"
-            autoComplete="off"
-            inputMode="numeric"
-            aria-label="Порядок сортировки, опционально"
-          />
-          <button
-            type="button"
-            style={btnStyle}
-            disabled={createProductGrade.isPending || gradesQ.isPending}
-            onClick={() => void createProductGrade.mutate()}
-          >
-            {createProductGrade.isPending ? "…" : "Добавить калибр"}
-          </button>
+      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && !canManageCatalog && (
+        <p role="status" style={warnText}>
+          В справочнике нет калибров — настройка выполняется администратором.
+        </p>
+      )}
+      {canManageCatalog && (
+        <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+          <p style={{ ...muted, margin: "0 0 0.35rem" }}>Нет нужного калибра — администратор добавит его в кабинете</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+            <input
+              value={newGradeProductGroup}
+              onChange={(e) => setNewGradeProductGroup(e.target.value)}
+              style={{ ...fieldStyle, flex: "1 1 120px", minWidth: 100 }}
+              placeholder="Группа товара (опц.)"
+              autoComplete="off"
+              aria-label="Группа товара, например Помидоры"
+            />
+            <input
+              value={newGradeCode}
+              onChange={(e) => setNewGradeCode(e.target.value)}
+              style={{ ...fieldStyle, width: 88 }}
+              placeholder="Код"
+              autoComplete="off"
+              aria-label="Код калибра"
+            />
+            <input
+              value={newGradeDisplayName}
+              onChange={(e) => setNewGradeDisplayName(e.target.value)}
+              style={{ ...fieldStyle, flex: "1 1 140px", minWidth: 120 }}
+              placeholder="Подпись в списке"
+              autoComplete="off"
+              aria-label="Название калибра"
+            />
+            <input
+              value={newGradeSortOrder}
+              onChange={(e) => setNewGradeSortOrder(e.target.value)}
+              style={{ ...fieldStyle, width: 72 }}
+              placeholder="Порядок"
+              autoComplete="off"
+              inputMode="numeric"
+              aria-label="Порядок сортировки, опционально"
+            />
+            <button
+              type="button"
+              style={btnStyle}
+              disabled={createProductGrade.isPending || gradesQ.isPending}
+              onClick={() => void createProductGrade.mutate()}
+            >
+              {createProductGrade.isPending ? "…" : "Добавить калибр"}
+            </button>
+          </div>
+          {gradeFormError && (
+            <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
+              {gradeFormError}
+            </p>
+          )}
         </div>
-        {gradeFormError && (
-          <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
-            {gradeFormError}
-          </p>
-        )}
-      </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>
           <thead>
