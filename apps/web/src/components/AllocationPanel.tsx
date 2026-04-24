@@ -7,6 +7,7 @@ import { apiFetch } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
@@ -442,6 +443,15 @@ export function AllocationPanel() {
                 </p>
               )}
           </div>
+
+          {selectedWarehouse && (
+            <LoadingManifestBlock
+              selectedWarehouse={selectedWarehouse}
+              documentOptions={documentOptions}
+              batchesInWh={batchesInWh}
+              warehouseName={warehouseName(selectedWarehouse)}
+            />
+          )}
 
           {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length > 0 && (
             <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
