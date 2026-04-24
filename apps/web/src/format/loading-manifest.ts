@@ -1,4 +1,5 @@
 import type { BatchListItem } from "../api/types.js";
+import { formatNakladLineLabel } from "./batch-label.js";
 
 /** Остаток в ящиках: доля onWarehouseKg к totalKg, × ящиков по строке накладной. */
 export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
@@ -54,4 +55,33 @@ export function sumLoadingManifestTotals(included: readonly BatchListItem[]): {
     }
   }
   return { kg, pkg, linesWithPkg, batchCount: included.length };
+}
+
+/** Суммы по калибру/товарной строке (как в подписи партии), для свода «сколько веса и ящ. по каждому калибру». */
+export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[]): {
+  lineLabel: string;
+  totalKg: number;
+  totalPkg: number;
+  linesWithPkg: number;
+  partCount: number;
+}[] {
+  const m = new Map<
+    string,
+    { lineLabel: string; totalKg: number; totalPkg: number; linesWithPkg: number; partCount: number }
+  >();
+  for (const b of batches) {
+    const lineLabel = formatNakladLineLabel(b);
+    if (!m.has(lineLabel)) {
+      m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0 });
+    }
+    const g = m.get(lineLabel)!;
+    g.totalKg += b.onWarehouseKg;
+    g.partCount += 1;
+    const e = estimatedPackageCountOnShelf(b);
+    if (e != null) {
+      g.totalPkg += e;
+      g.linesWithPkg += 1;
+    }
+  }
+  return Array.from(m.values()).sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
 }

@@ -6,9 +6,9 @@ import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
-import { estimatedPackageCountOnShelf } from "../format/loading-manifest.js";
+import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
-import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
+import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
@@ -66,9 +66,10 @@ function groupBatchesByWarehouse(stock: BatchListItem[]): {
   return { byWarehouse, order };
 }
 
-type DocOption = { id: string; number: string };
-
-function documentsForBatches(batches: BatchListItem[]): DocOption[] {
+/** Список накладных на складе: подписи чекбоксов; при одинаковом номере у разных id — дизамбиг в подписи. */
+function documentOptionsForAllocation(
+  batches: BatchListItem[],
+): { id: string; number: string; checkboxLabel: string }[] {
   const m = new Map<string, string>();
   for (const b of batches) {
     const d = b.nakladnaya?.documentId;
@@ -76,9 +77,21 @@ function documentsForBatches(batches: BatchListItem[]): DocOption[] {
       m.set(d, b.nakladnaya?.documentNumber?.trim() || d);
     }
   }
-  return [...m.entries()]
+  const base = [...m.entries()]
     .map(([id, number]) => ({ id, number }))
     .sort((a, b) => a.number.localeCompare(b.number, "ru"));
+  const byNumberCount = new Map<string, number>();
+  for (const o of base) {
+    byNumberCount.set(o.number, (byNumberCount.get(o.number) ?? 0) + 1);
+  }
+  return base.map((o) => ({
+    id: o.id,
+    number: o.number,
+    checkboxLabel:
+      (byNumberCount.get(o.number) ?? 0) > 1
+        ? `№ ${o.number} (id ${o.id.slice(0, 6)}…)`
+        : `№ ${o.number}`,
+  }));
 }
 
 function sumOnWarehouseKg(batches: BatchListItem[]): number {
@@ -135,7 +148,8 @@ export function AllocationPanel() {
 
   const [edits, setEdits] = useState<Record<string, RowEdit | undefined>>({});
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
-  const [selectedDocument, setSelectedDocument] = useState<string>("");
+  /** Какие накл. вошли в «отбор под рейс» — общий список для сбора на погрузку и для строк качества. */
+  const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
 
   const warehouseName = useCallback(
     (id: string) => {
@@ -272,27 +286,45 @@ export function AllocationPanel() {
     [byWarehouse, selectedWarehouse],
   );
 
-  const documentOptions = useMemo(() => documentsForBatches(batchesInWh), [batchesInWh]);
-
-  const autoDocumentId = useMemo((): string | null => {
-    if (documentOptions.length !== 1) {
-      return null;
-    }
-    return documentOptions[0]!.id;
-  }, [documentOptions]);
+  const documentOptions = useMemo(() => documentOptionsForAllocation(batchesInWh), [batchesInWh]);
+  const docIdKey = useMemo(
+    () =>
+      documentOptions
+        .map((d) => d.id)
+        .sort()
+        .join(","),
+    [documentOptions],
+  );
+  const manifestDocumentOptions: LoadingManifestDocOption[] = useMemo(
+    () => documentOptions.map((d) => ({ id: d.id, checkboxLabel: d.checkboxLabel })),
+    [documentOptions],
+  );
 
   useEffect(() => {
-    if (selectedWarehouse === ORPHAN_WAREHOUSE) {
-      setSelectedDocument("");
+    if (!docIdKey) {
+      setLoadNaklSelection(new Set());
       return;
     }
-    if (!selectedWarehouse) {
-      return;
-    }
-    if (autoDocumentId) {
-      setSelectedDocument(autoDocumentId);
-    }
-  }, [selectedWarehouse, autoDocumentId]);
+    setLoadNaklSelection(new Set(docIdKey.split(",")));
+  }, [selectedWarehouse, docIdKey]);
+
+  const onToggleNaklDoc = useCallback((id: string) => {
+    setLoadNaklSelection((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
+      return n;
+    });
+  }, []);
+  const onSelectAllNakl = useCallback(() => {
+    setLoadNaklSelection(new Set(documentOptions.map((d) => d.id)));
+  }, [documentOptions]);
+  const onClearNakl = useCallback(() => {
+    setLoadNaklSelection(new Set());
+  }, []);
 
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
@@ -304,11 +336,11 @@ export function AllocationPanel() {
     if (documentOptions.length === 0) {
       return batchesInWh;
     }
-    if (!selectedDocument) {
+    if (loadNaklSelection.size === 0) {
       return [];
     }
-    return batchesInWh.filter((b) => b.nakladnaya?.documentId === selectedDocument);
-  }, [batchesInWh, documentOptions.length, selectedDocument, selectedWarehouse]);
+    return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
+  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
   if (batchesQuery.isError) {
     return (
@@ -322,15 +354,16 @@ export function AllocationPanel() {
     <div role="region" aria-label="Распределение по качеству и направлению">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по качеству и направлению</h2>
       <p style={muted}>
-        <strong>Шаг 3:</strong> весь товар, принятый по <strong>разным</strong> накладным на один <strong>склад</strong>, даёт
-        <strong> общий остаток в кг</strong> на складе. Здесь: выберите склад (поступление), затем — при необходимости
-        <strong> конкретную накладную</strong> (с какой поставки отдать в рейс) и по строкам укажите
-        <strong> качество</strong> и <strong>направление</strong>. Сбор <strong>одного рейса / исходящей накладной</strong> весом и
-        оформлением — в &quot;Операциях&quot;. Учёт по факту: приняли другое кг, чем погружаем — вес правите в{" "}
+        Весь товар, принятый по <strong>разным</strong> накладным на один <strong>склад</strong>, даёт <strong>общий остаток</strong> в
+        кг. <strong>1</strong> — выберите склад, <strong>2</strong> — в блоке ниже отметьте, с каких накладных берёте
+        погрузку, посмотрите <strong>свод по калибру</strong> и <strong>по партиям</strong> (снимите накл., что не везёте —
+        товар <strong>остаётся</strong> на учёте склада), <strong>3</strong> — по <strong>тем же</strong> партиям укажите
+        качество и направление. <strong>Оформить рейс / отгрузку</strong> — в{" "}
         <Link to={ops.operations} style={{ fontWeight: 600 }}>
           Операциях
-        </Link>
-        ; здесь — решения по <strong>сорту</strong>. См. <Link to={ops.reports}>отчёты</Link>.
+        </Link>{" "}
+        (кнопка внизу). Расхождения кг/приём — правки в «Операциях»; при необходимости в карточке исходной накл. См.{" "}
+        <Link to={ops.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется <strong>PostgreSQL</strong>: <code>PATCH /api/batches/…/allocation</code> без БД на сервере не выполняется.
@@ -363,9 +396,7 @@ export function AllocationPanel() {
               id="alloc-sel-warehouse"
               value={selectedWarehouse}
               onChange={(e) => {
-                const v = e.target.value;
-                setSelectedWarehouse(v);
-                setSelectedDocument("");
+                setSelectedWarehouse(e.target.value);
               }}
               style={{ ...fieldStyle, maxWidth: "100%" }}
             >
@@ -436,37 +467,14 @@ export function AllocationPanel() {
           {selectedWarehouse && (
             <LoadingManifestBlock
               selectedWarehouse={selectedWarehouse}
-              documentOptions={documentOptions}
+              documentOptions={manifestDocumentOptions}
+              selectedDocIds={loadNaklSelection}
+              onToggleNaklDoc={onToggleNaklDoc}
+              onSelectAllNakl={onSelectAllNakl}
+              onClearNakl={onClearNakl}
               batchesInWh={batchesInWh}
               warehouseName={warehouseName(selectedWarehouse)}
             />
-          )}
-
-          {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length > 0 && (
-            <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
-              <label htmlFor="alloc-sel-document" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
-                2. Накладная (документ) *
-              </label>
-              <select
-                id="alloc-sel-document"
-                value={selectedDocument}
-                onChange={(e) => setSelectedDocument(e.target.value)}
-                style={{ ...fieldStyle, maxWidth: "100%" }}
-              >
-                <option value="">— выберите накладную —</option>
-                {documentOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    № {d.number} · {d.id.slice(0, 8)}…
-                  </option>
-                ))}
-              </select>
-              {selectedDocument && (
-                <p style={{ ...muted, margin: "0.4rem 0 0", fontSize: "0.82rem" }}>
-                  <Link to={purchaseNakladnayaDocumentPath(selectedDocument)}>Открыть накладную (строки и веса)</Link> — при
-                  расхождении с приёмом правьте ввод в «Операциях»; здесь — только оценка качества и канал.
-                </p>
-              )}
-            </div>
           )}
 
           {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length === 0 && batchesInWh.length > 0 && (
@@ -484,11 +492,18 @@ export function AllocationPanel() {
           )}
 
           {selectedWarehouse &&
-            (selectedWarehouse === ORPHAN_WAREHOUSE || documentOptions.length === 0 || selectedDocument) &&
+            selectedWarehouse !== ORPHAN_WAREHOUSE &&
+            documentOptions.length > 0 &&
+            loadNaklSelection.size === 0 && <p style={warnText}>Отметьте в блоке выше хотя бы одну накладную — иначе не к чему проставлять сорт в таблице.</p>}
+
+          {selectedWarehouse &&
+            (selectedWarehouse === ORPHAN_WAREHOUSE ||
+              documentOptions.length === 0 ||
+              (documentOptions.length > 0 && loadNaklSelection.size > 0)) &&
             tableRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
-                3. Строки: качество и направление
+                2. Качество и направление по отобранным партиям
               </h3>
               <table style={tableStyle} aria-labelledby="alloc-table">
                 <thead>
@@ -592,16 +607,22 @@ export function AllocationPanel() {
                   })}
                 </tbody>
               </table>
+              <p className="no-print" style={{ marginTop: "0.9rem" }}>
+                <Link to={ops.operations} style={{ ...btnStyle, display: "inline-block", textAlign: "center" }}>
+                  Погрузка в рейс
+                </Link>{" "}
+                <span style={muted}>(оформление рейса и отгрузок — в «Операциях»)</span>
+              </p>
             </div>
           )}
 
           {selectedWarehouse &&
-            selectedWarehouse !== ORPHAN_WAREHOUSE &&
-            documentOptions.length > 0 &&
-            !selectedDocument && <p style={muted}>Выберите накладную — появятся строки (калибры) с остатками.</p>}
-
-          {selectedWarehouse && tableRows.length === 0 && selectedDocument && (
-            <p style={muted}>По выбранным фильтрам нет партий с остатком — возможно, всё отгружено.</p>
+            tableRows.length === 0 &&
+            loadNaklSelection.size > 0 &&
+            selectedWarehouse !== ORPHAN_WAREHOUSE && (
+            <p style={muted} role="status">
+              По отмеченным накладным нет партий с остатком / всё в рейсах — смотрите в Операциях.
+            </p>
           )}
         </>
       )}

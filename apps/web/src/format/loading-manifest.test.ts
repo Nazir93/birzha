@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { BatchListItem } from "../api/types.js";
 import {
+  aggregateBatchesByCaliberLine,
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
@@ -88,5 +89,44 @@ describe("sumLoadingManifestTotals", () => {
     expect(t.batchCount).toBe(2);
     expect(t.linesWithPkg).toBe(1);
     expect(t.pkg).toBe(5);
+  });
+});
+
+describe("aggregateBatchesByCaliberLine", () => {
+  it("суммирует кг и оценку ящиков по калибру/товарной подписи", () => {
+    const batches = [
+      b({
+        id: "a1",
+        totalKg: 100,
+        onWarehouseKg: 30,
+        nakladnaya: {
+          documentId: "d1",
+          warehouseId: "w1",
+          productGradeCode: "5",
+          productGroup: "Том",
+          documentNumber: "1",
+          linePackageCount: 20,
+        } as BatchListItem["nakladnaya"],
+      }),
+      b({
+        id: "a2",
+        totalKg: 10,
+        onWarehouseKg: 5,
+        nakladnaya: {
+          documentId: "d1",
+          warehouseId: "w1",
+          productGradeCode: "5",
+          productGroup: "Том",
+          documentNumber: "1",
+          linePackageCount: 10,
+        } as BatchListItem["nakladnaya"],
+      }),
+    ];
+    const g = aggregateBatchesByCaliberLine(batches);
+    expect(g).toHaveLength(1);
+    expect(g[0]!.lineLabel).toContain("Том");
+    expect(g[0]!.lineLabel).toContain("5");
+    expect(g[0]!.totalKg).toBe(35);
+    expect(g[0]!.partCount).toBe(2);
   });
 });
