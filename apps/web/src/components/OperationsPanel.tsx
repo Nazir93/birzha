@@ -15,6 +15,7 @@ import type {
   TripsListResponse,
 } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
 import {
@@ -138,7 +139,10 @@ export function OperationsPanel() {
 
   const shippableBatches = useMemo(() => {
     const list = batchesQuery.data?.batches ?? [];
-    return list.filter((b) => b.onWarehouseKg > 0).sort((a, b) => {
+    return list
+      .filter((b) => b.onWarehouseKg > 0)
+      .filter(isFromPurchaseNakladnaya)
+      .sort((a, b) => {
       const na = a.nakladnaya?.documentNumber ?? "";
       const nb = b.nakladnaya?.documentNumber ?? "";
       if (na !== nb) {
@@ -201,21 +205,16 @@ export function OperationsPanel() {
     });
   }, [distShipBatchIds]);
 
-  /** Партии сгруппированы по накладной — в таблице не смешиваем документы в одной куче. */
+  /** Партии сгруппированы по накладной — в таблице не смешиваем документы в одной куче. Без накладной (старые данные) в списке не показываем. */
   const batchesGrouped = useMemo(() => {
-    const list = batchesQuery.data?.batches ?? [];
+    const list = (batchesQuery.data?.batches ?? []).filter(isFromPurchaseNakladnaya);
     const byDoc = new Map<string, BatchListItem[]>();
-    const orphans: BatchListItem[] = [];
     for (const b of list) {
-      const did = b.nakladnaya?.documentId;
-      if (did) {
-        if (!byDoc.has(did)) {
-          byDoc.set(did, []);
-        }
-        byDoc.get(did)!.push(b);
-      } else {
-        orphans.push(b);
+      const did = b.nakladnaya!.documentId!;
+      if (!byDoc.has(did)) {
+        byDoc.set(did, []);
       }
+      byDoc.get(did)!.push(b);
     }
     const groups: {
       documentId: string;
@@ -234,14 +233,6 @@ export function OperationsPanel() {
     groups.sort((a, b) =>
       (a.documentNumber ?? "").localeCompare(b.documentNumber ?? "", "ru", { numeric: true }),
     );
-    if (orphans.length > 0) {
-      orphans.sort((a, b) => a.id.localeCompare(b.id));
-      groups.push({
-        documentId: "__orphan__",
-        documentNumber: null,
-        batches: orphans,
-      });
-    }
     return groups;
   }, [batchesQuery.data?.batches]);
 
@@ -513,7 +504,9 @@ export function OperationsPanel() {
 
       {batchesQuery.data && (
         <datalist id="batch-suggestions">
-          {batchesQuery.data.batches.map((b) => (
+          {batchesQuery.data.batches
+            .filter(isFromPurchaseNakladnaya)
+            .map((b) => (
             <option key={b.id} value={b.id} />
           ))}
         </datalist>
@@ -526,11 +519,12 @@ export function OperationsPanel() {
       />
       {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков (GET /api/batches)…" minHeight={96} />}
 
-      {!batchesQuery.isPending && batchesQuery.data && batchesQuery.data.batches.length > 0 && (
+      {!batchesQuery.isPending && batchesQuery.data && batchesGrouped.length > 0 && (
         <div style={{ marginBottom: "1rem" }}>
           <p id="op-batches-heading" style={{ ...muted, marginBottom: "0.5rem" }}>
             <strong>Партии по накладным</strong> — каждый блок — один документ и его строки (калибры). Технический id партии
             нужен для API; в работе ориентируйтесь на <strong>номер накладной</strong> и <strong>товар / калибр</strong>.
+            Партии не из оформленной накладной в списке не отображаются.
           </p>
           {batchesGrouped.map((grp) => (
             <div key={grp.documentId} style={{ overflowX: "auto", marginBottom: "1rem" }}>
@@ -542,19 +536,13 @@ export function OperationsPanel() {
                   fontSize: "0.92rem",
                 }}
               >
-                {grp.documentId === "__orphan__" ? (
-                  <>Прочие партии (в системе нет привязки к строке накладной — старый или тестовый ввод)</>
-                ) : (
-                  <>
-                    Накладная № {grp.documentNumber ?? "—"}{" "}
-                    <Link
-                      to={purchaseNakladnayaDocumentPath(grp.documentId)}
-                      style={{ fontWeight: 400, fontSize: "0.88rem" }}
-                    >
-                      открыть документ
-                    </Link>
-                  </>
-                )}
+                Накладная № {grp.documentNumber ?? "—"}{" "}
+                <Link
+                  to={purchaseNakladnayaDocumentPath(grp.documentId)}
+                  style={{ fontWeight: 400, fontSize: "0.88rem" }}
+                >
+                  открыть документ
+                </Link>
               </p>
               <table style={tableStyleDense} aria-labelledby="op-batches-heading">
                 <thead>

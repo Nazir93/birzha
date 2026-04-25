@@ -3,9 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-
-/** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
-const ALLOCATION_SELL_TIERS = ["standard", "weak"] as const;
 import { apiFetch } from "../api/fetch-api.js";
 import type {
   BatchListItem,
@@ -16,13 +13,15 @@ import type {
 import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
-const ORPHAN_WAREHOUSE = "__unassigned__";
+/** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
+const ALLOCATION_SELL_TIERS = ["standard", "weak"] as const;
 
 const labelsQuality: Record<(typeof ALLOCATION_SELL_TIERS)[number], string> = {
   standard: "стандарт (для регионов и «нормальной» реализации)",
@@ -49,29 +48,20 @@ function toSelectValue(
   return emptyLabel === "not_set" ? "_notset" : "";
 }
 
-/** Группировка остатков: склад (из накладной) → партии. Без накладной / без склада — отдельный бакет. */
+/** Группировка: склад из строки накладной. В `stock` только партии `isFromPurchaseNakladnaya`. */
 function groupBatchesByWarehouse(stock: BatchListItem[]): {
   byWarehouse: Map<string, BatchListItem[]>;
   order: string[];
 } {
   const byWarehouse = new Map<string, BatchListItem[]>();
   for (const b of stock) {
-    const wid = b.nakladnaya?.warehouseId?.trim() || null;
-    const key = wid ?? ORPHAN_WAREHOUSE;
+    const key = b.nakladnaya!.warehouseId!.trim();
     if (!byWarehouse.has(key)) {
       byWarehouse.set(key, []);
     }
     byWarehouse.get(key)!.push(b);
   }
-  const order = [...byWarehouse.keys()].sort((a, b) => {
-    if (a === ORPHAN_WAREHOUSE) {
-      return 1;
-    }
-    if (b === ORPHAN_WAREHOUSE) {
-      return -1;
-    }
-    return a.localeCompare(b, "ru");
-  });
+  const order = [...byWarehouse.keys()].sort((a, c) => a.localeCompare(c, "ru"));
   return { byWarehouse, order };
 }
 
@@ -196,9 +186,6 @@ export function AllocationPanel() {
 
   const warehouseName = useCallback(
     (id: string) => {
-      if (id === ORPHAN_WAREHOUSE) {
-        return "Прочие (без накладной / вручную)";
-      }
       const w = warehousesQuery.data?.warehouses.find((x) => x.id === id);
       return w ? `${w.name} (${w.code})` : id;
     },
@@ -326,7 +313,10 @@ export function AllocationPanel() {
   };
 
   const list = useMemo(
-    () => (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0),
+    () =>
+      (batchesQuery.data?.batches ?? [])
+        .filter((b) => b.onWarehouseKg > 0)
+        .filter(isFromPurchaseNakladnaya),
     [batchesQuery.data?.batches],
   );
   const loading = batchesQuery.isPending;
@@ -367,19 +357,10 @@ export function AllocationPanel() {
       add(w.id);
     }
     for (const id of warehouseOrder) {
-      if (id === ORPHAN_WAREHOUSE) {
-        continue;
-      }
       if (cat.some((w) => w.id === id)) {
         continue;
       }
       add(id);
-    }
-    if (byWarehouse.has(ORPHAN_WAREHOUSE)) {
-      const orphanB = byWarehouse.get(ORPHAN_WAREHOUSE) ?? [];
-      if (orphanB.length > 0) {
-        add(ORPHAN_WAREHOUSE);
-      }
     }
     return out;
   }, [warehousesQuery.data?.warehouses, byWarehouse, warehouseOrder]);
@@ -459,9 +440,6 @@ export function AllocationPanel() {
     if (!selectedWarehouse) {
       return [];
     }
-    if (selectedWarehouse === ORPHAN_WAREHOUSE) {
-      return batchesInWh;
-    }
     if (documentOptions.length === 0) {
       return batchesInWh;
     }
@@ -520,7 +498,16 @@ export function AllocationPanel() {
 
       <StaleDataNotice show={refetching} label="Обновление списка партий…" />
 
-      {!loading && list.length === 0 && (
+      {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 && (
+        <p style={warnText} role="status">
+          Остатки с оформленной <strong>накладной</strong> (id документа и склад в строке) здесь не найдены — на отбор не
+          попадут «ручные»/старые партии без накладной. Оформите приём в{" "}
+          <Link to={ops.purchaseNakladnaya}>Накладной</Link>.
+        </p>
+      )}
+      {!loading &&
+        list.length === 0 &&
+        (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length === 0 && (
         <p style={muted}>
           Нет партий с остатком на складе — сначала оформите закупку по накладной (вкладка{" "}
           <Link to={ops.purchaseNakladnaya}>Накладная</Link>).
@@ -562,15 +549,7 @@ export function AllocationPanel() {
                   <strong>Остаток на этом складе:</strong>{" "}
                   {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг &nbsp;·&nbsp;{" "}
                   {whSummary.batches} парт. &nbsp;·&nbsp;{" "}
-                  {whSummary.docCount > 0 ? (
-                    <>{whSummary.docCount} накладн.</>
-                  ) : (
-                    <>
-                      {selectedWarehouse === ORPHAN_WAREHOUSE
-                        ? "без привязки к накладной"
-                        : "накладная в данных не указана"}
-                    </>
-                  )}
+                  {whSummary.docCount > 0 ? <>{whSummary.docCount} накладн.</> : "накладная в данных не указана"}
                 </p>
                 <p style={{ margin: 0 }}>
                   <strong>Ящики (оценка):</strong>{" "}
@@ -584,30 +563,12 @@ export function AllocationPanel() {
                     <>в строках накладных не указаны — смотрите только кг в таблице</>
                   )}
                 </p>
-                {selectedWarehouse === ORPHAN_WAREHOUSE && (
-                  <p style={{ margin: "0.35rem 0 0" }}>
-                    Склад не подтянут из накладной — проверьте приём; иначе остатки сходятся в «Прочие».
-                  </p>
-                )}
               </div>
             )}
-            {warehousesQuery.isSuccess &&
-              (warehousesQuery.data?.warehouses.length ?? 0) > 0 &&
-              !warehousesQuery.isPending &&
-              warehouseOrder.length === 1 &&
-              warehouseOrder[0] === ORPHAN_WAREHOUSE &&
-              list.length > 0 && (
-                <p style={warnText} role="status">
-                  Все остатки попали в «{warehouseName(ORPHAN_WAREHOUSE)}» — в ответе GET /batches нет
-                  <code> nakladnaya.warehouseId</code> (и с колонки партии). Обновите API: склад подставляется с приёмов и
-                  накладных.
-                </p>
-              )}
           </div>
 
           {selectedWarehouse && (
             <LoadingManifestBlock
-              selectedWarehouse={selectedWarehouse}
               documentOptions={manifestDocumentOptions}
               selectedDocIds={loadNaklSelection}
               onToggleNaklDoc={onToggleNaklDoc}
@@ -618,29 +579,20 @@ export function AllocationPanel() {
             />
           )}
 
-          {selectedWarehouse && selectedWarehouse !== ORPHAN_WAREHOUSE && documentOptions.length === 0 && batchesInWh.length > 0 && (
+          {selectedWarehouse && documentOptions.length === 0 && batchesInWh.length > 0 && (
             <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
               На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
-              складе. Обычно накладная указывается при приёме; при необходимости проверьте данные в{" "}
-              <Link to={ops.purchaseNakladnaya}>Накладная</Link>.
+              складе. Оформите закупку в{" "}
+              <Link to={ops.purchaseNakladnaya}>Накладной</Link>.
             </p>
           )}
 
-          {selectedWarehouse === ORPHAN_WAREHOUSE && (
-            <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }}>
-              Партии без привязки к строке накладной: распределение по калибру (строка таблицы = партия).
-            </p>
+          {selectedWarehouse && documentOptions.length > 0 && loadNaklSelection.size === 0 && (
+            <p style={warnText}>Отметьте в блоке выше хотя бы одну накладную — иначе не к чему проставлять сорт в таблице.</p>
           )}
 
           {selectedWarehouse &&
-            selectedWarehouse !== ORPHAN_WAREHOUSE &&
-            documentOptions.length > 0 &&
-            loadNaklSelection.size === 0 && <p style={warnText}>Отметьте в блоке выше хотя бы одну накладную — иначе не к чему проставлять сорт в таблице.</p>}
-
-          {selectedWarehouse &&
-            (selectedWarehouse === ORPHAN_WAREHOUSE ||
-              documentOptions.length === 0 ||
-              (documentOptions.length > 0 && loadNaklSelection.size > 0)) &&
+            (documentOptions.length === 0 || (documentOptions.length > 0 && loadNaklSelection.size > 0)) &&
             tableRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
@@ -907,10 +859,7 @@ export function AllocationPanel() {
             </div>
           )}
 
-          {selectedWarehouse &&
-            tableRows.length === 0 &&
-            loadNaklSelection.size > 0 &&
-            selectedWarehouse !== ORPHAN_WAREHOUSE && (
+          {selectedWarehouse && tableRows.length === 0 && loadNaklSelection.size > 0 && (
             <p style={muted} role="status">
               По отмеченным накладным нет партий с остатком / всё в рейсах — смотрите в Операциях.
             </p>

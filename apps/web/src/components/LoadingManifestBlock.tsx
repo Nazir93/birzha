@@ -12,12 +12,9 @@ import {
 import { purchaseNakladnayaDocumentPath } from "../routes.js";
 import { btnStyle, btnStyleInline, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
-const ORPHAN = "__unassigned__";
-
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
 
 type Props = {
-  selectedWarehouse: string;
   documentOptions: LoadingManifestDocOption[];
   /** Выбор вынесен в AllocationPanel, чтобы тот же фильтр применялся к «Шаг 3: строки». */
   selectedDocIds: ReadonlySet<string>;
@@ -33,7 +30,6 @@ type Props = {
  * Бухучёт: в исходных накладных; **остаток/факт** в партиях/Операциях.
  */
 export function LoadingManifestBlock({
-  selectedWarehouse,
   documentOptions,
   selectedDocIds,
   onToggleNaklDoc,
@@ -114,10 +110,6 @@ export function LoadingManifestBlock({
     a.click();
     URL.revokeObjectURL(url);
   }, [buildCsv]);
-
-  if (selectedWarehouse === ORPHAN) {
-    return null;
-  }
 
   return (
     <section

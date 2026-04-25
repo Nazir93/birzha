@@ -66,7 +66,7 @@ describe("filterBatchesForLoadingManifest", () => {
     expect(r.map((x) => x.id)).toEqual(["a"]);
   });
 
-  it("строка без documentId в данных — остаётся в списке (не отфильтровать вручную введённое)", () => {
+  it("строка без documentId в данных — filter при count>0 ведёт себя согласно селектору (краевой кейс)", () => {
     const batches = [b({ id: "x", onWarehouseKg: 1, totalKg: 1 })];
     const r = filterBatchesForLoadingManifest(batches, 1, new Set(["d1"]));
     expect(r).toHaveLength(1);
