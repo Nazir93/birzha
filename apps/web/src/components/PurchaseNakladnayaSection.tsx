@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { apiFetch } from "../api/fetch-api.js";
 import type {
   CreatePurchaseDocumentResponse,
-  CreateWarehouseResponse,
   ProductGradeJson,
   ProductGradesListResponse,
   PurchaseDocumentsListResponse,
@@ -123,47 +122,10 @@ export function PurchaseNakladnayaSection() {
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
-  const [newWarehouseName, setNewWarehouseName] = useState("");
-  const [newWarehouseCode, setNewWarehouseCode] = useState("");
-  const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["batches"] });
     void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
   }, [queryClient]);
-
-  const createWarehouse = useMutation({
-    mutationFn: async () => {
-      setWarehouseFormError(null);
-      const name = newWarehouseName.trim();
-      if (!name) {
-        throw new Error("Введите название склада");
-      }
-      const codeRaw = newWarehouseCode.trim();
-      const body: { name: string; code?: string } = { name };
-      if (codeRaw) {
-        body.code = codeRaw;
-      }
-      const res = await apiFetch("/api/warehouses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<CreateWarehouseResponse>;
-    },
-    onSuccess: (data) => {
-      setNewWarehouseName("");
-      setNewWarehouseCode("");
-      setWarehouseId(data.warehouse.id);
-      void queryClient.invalidateQueries({ queryKey: ["warehouses"] });
-    },
-    onError: (e: Error) => {
-      setWarehouseFormError(e.message);
-    },
-  });
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -407,43 +369,14 @@ export function PurchaseNakladnayaSection() {
             ))}
           </select>
         </label>
-        {canManageCatalog && (
-          <div style={{ fontSize: "0.85rem" }}>
-            <p style={{ ...muted, margin: "0 0 0.35rem" }}>
-              Нет нужного склада — администратор может добавить склад (название как на бумаге; код — латиница, опционально)
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
-              <input
-                value={newWarehouseName}
-                onChange={(e) => setNewWarehouseName(e.target.value)}
-                style={{ ...fieldStyle, flex: "1 1 160px", minWidth: 120 }}
-                placeholder="Название склада"
-                autoComplete="off"
-                aria-label="Название нового склада"
-              />
-              <input
-                value={newWarehouseCode}
-                onChange={(e) => setNewWarehouseCode(e.target.value)}
-                style={{ ...fieldStyle, width: 120 }}
-                placeholder="Код (опц.)"
-                autoComplete="off"
-                aria-label="Код склада латиницей, опционально"
-              />
-              <button
-                type="button"
-                style={btnStyle}
-                disabled={createWarehouse.isPending}
-                onClick={() => void createWarehouse.mutate()}
-              >
-                {createWarehouse.isPending ? "…" : "Добавить склад"}
-              </button>
-            </div>
-            {warehouseFormError && (
-              <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
-                {warehouseFormError}
-              </p>
-            )}
-          </div>
+        {canManageCatalog && warehouseCount > 0 && (
+          <p style={{ ...muted, fontSize: "0.85rem", margin: 0 }}>
+            Нет нужного склада — добавьте его в{" "}
+            <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
+              кабинете админа
+            </Link>{" "}
+            (склады), затем обновите список или страницу.
+          </p>
         )}
         <label style={{ fontSize: "0.88rem" }}>
           ID документа (опц., иначе UUID на сервере)
