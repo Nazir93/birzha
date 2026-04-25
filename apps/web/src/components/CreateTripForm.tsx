@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../api/fetch-api.js";
 import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
+import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 export function CreateTripForm() {
   const queryClient = useQueryClient();
@@ -95,13 +96,13 @@ export function CreateTripForm() {
       <label htmlFor="ct-departed" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
         План/факт отправления (локальные дата и время, опционально)
       </label>
-      <input
+      <BirzhaDateTimeField
         id="ct-departed"
-        type="datetime-local"
         value={departedAtLocal}
-        onChange={(e) => setDepartedAtLocal(e.target.value)}
+        onChange={setDepartedAtLocal}
         style={dateFieldStyleCompact}
         className="birzha-input-date"
+        emptyLabel="— не задано —"
       />
       <div>
         <button

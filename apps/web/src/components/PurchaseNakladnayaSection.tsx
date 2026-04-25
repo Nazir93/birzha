@@ -41,6 +41,7 @@ import {
   thtdDense,
   warnText,
 } from "../ui/styles.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -382,13 +383,13 @@ export function PurchaseNakladnayaSection() {
           />
         </label>
         <label style={{ fontSize: "0.88rem" }}>
-          Дата (YYYY-MM-DD) *
-          <input
-            type="date"
+          Дата *
+          <BirzhaDateField
             value={docDate}
-            onChange={(e) => setDocDate(e.target.value)}
+            onChange={setDocDate}
             style={dateFieldStyle}
             className="birzha-input-date"
+            aria-label="Дата документа"
           />
         </label>
         <label style={{ fontSize: "0.88rem" }}>

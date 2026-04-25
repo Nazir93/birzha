@@ -15,6 +15,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { ops, prefix } from "../routes.js";
 import { Link } from "react-router-dom";
 import { btnStyle, errorText, fieldStyle, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
+import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 /**
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
@@ -478,12 +479,19 @@ export function InventoryAdminPanel() {
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>Отправл.</label>
-              <input
-                type="datetime-local"
+              <label
+                htmlFor="inv-adm-new-trip-departed"
+                style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}
+              >
+                Отправл.
+              </label>
+              <BirzhaDateTimeField
+                id="inv-adm-new-trip-departed"
                 value={newTripDeparted}
-                onChange={(e) => setNewTripDeparted(e.target.value)}
-                style={fieldStyle}
+                onChange={setNewTripDeparted}
+                style={{ ...fieldStyle, maxWidth: 220, marginTop: 0.35 }}
+                className="birzha-input-date"
+                emptyLabel="—"
               />
             </div>
             <button

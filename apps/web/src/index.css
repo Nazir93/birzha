@@ -162,6 +162,260 @@ main input[type="month"] {
   color-scheme: only light;
 }
 
+/* Кастомный выбор даты/времени: центр экрана + светлая панель (BirzhaDateField / BirzhaDateTimeField) */
+.birzha-dp {
+  border: none;
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  width: 100%;
+  min-height: 100dvh;
+  max-height: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.birzha-dp::backdrop {
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(1px);
+}
+
+.birzha-dp__layout {
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.birzha-dp__card {
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.08),
+    0 24px 48px -10px rgba(0, 0, 0, 0.22);
+  padding: 1.1rem 1.15rem 0.9rem;
+  min-width: min(22.5rem, 100vw - 2rem);
+  max-width: 24rem;
+  text-align: left;
+}
+
+.birzha-dp__card--wide {
+  min-width: min(24.5rem, 100vw - 2rem);
+  max-width: 26.5rem;
+}
+
+.birzha-dp__heading {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
+.birzha-dp__icon {
+  flex-shrink: 0;
+  color: #71717a;
+  opacity: 0.9;
+}
+
+.birzha-dp-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: #f4f4f5;
+}
+
+.birzha-dp-trigger__ph {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.birzha-dp__cal {
+  user-select: none;
+}
+
+.birzha-dp__cal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.birzha-dp__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.birzha-dp__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #f8faf8;
+  color: #18181b;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.birzha-dp__nav:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.birzha-dp__dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem 0.15rem;
+  margin-bottom: 0.25rem;
+}
+
+.birzha-dp__dow-lbl {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  padding: 0.1rem 0;
+}
+
+.birzha-dp__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.birzha-dp__cell--empty {
+  min-height: 2.1rem;
+}
+
+.birzha-dp__day {
+  min-height: 2.1rem;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #fafafa;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #18181b;
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+.birzha-dp__day:hover {
+  background: #f0fdf4;
+  border-color: rgba(21, 128, 61, 0.3);
+}
+
+.birzha-dp__day--today {
+  border-color: #15803d;
+  color: #15803d;
+}
+
+.birzha-dp__day--selected,
+.birzha-dp__day--selected:hover {
+  background: #15803d;
+  color: #fff;
+  border-color: #14532d;
+  font-weight: 600;
+}
+
+.birzha-dp__time-lbl {
+  display: block;
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.78rem;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.birzha-dp__time {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  margin-bottom: 0.75rem;
+  min-height: 2.5rem;
+  color-scheme: only light;
+  accent-color: #15803d;
+}
+
+.birzha-dp__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #e4e4e7;
+}
+
+.birzha-dp__row--end {
+  justify-content: flex-end;
+  gap: 0.4rem 0.5rem;
+}
+
+.birzha-dp__linkish {
+  font: inherit;
+  font-size: 0.85rem;
+  color: #15803d;
+  text-decoration: underline;
+  text-underline-offset: 0.1em;
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.birzha-dp__linkish:hover {
+  color: #166534;
+}
+
+.birzha-dp__secondary,
+.birzha-dp__primary {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.birzha-dp__primary {
+  background: #15803d;
+  color: #fff;
+  border-color: #14532d;
+}
+
+.birzha-dp__primary:hover:not(:disabled) {
+  background: #166534;
+  border-color: #14532d;
+}
+
+.birzha-dp__primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.birzha-dp__secondary:hover {
+  background: #fafafa;
+  border-color: #a1a1aa;
+}
+
 /* Фокус полей в приложении: перекрывает inline border у `fieldStyle` */
 main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
 main select:focus,
