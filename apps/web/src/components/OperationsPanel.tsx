@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiFetch } from "../api/fetch-api.js";
+import {
+  clearDistributionShipPayload,
+  readDistributionShipPayload,
+} from "../distribution/distribution-ship-payload.js";
 import type {
   BatchListItem,
   BatchesListResponse,
@@ -109,6 +113,9 @@ function ErrorText({ e }: { e: Error | null }) {
 
 export function OperationsPanel() {
   const { meta } = useAuth();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: ["shipment-report"] });
@@ -145,6 +152,54 @@ export function OperationsPanel() {
       return a.id.localeCompare(b.id);
     });
   }, [batchesQuery.data?.batches]);
+
+  const [distShipBatchIds, setDistShipBatchIds] = useState<string[] | null>(null);
+
+  const distBatchesToShip = useMemo(() => {
+    if (distShipBatchIds == null || distShipBatchIds.length === 0) {
+      return [] as BatchListItem[];
+    }
+    const want = new Set(distShipBatchIds);
+    return shippableBatches
+      .filter((b) => want.has(b.id))
+      .slice()
+      .sort((a, b) => {
+        const g = (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru");
+        if (g !== 0) {
+          return g;
+        }
+        return a.id.localeCompare(b.id);
+      });
+  }, [distShipBatchIds, shippableBatches]);
+
+  const distBatchesMissingCount = useMemo(
+    () =>
+      distShipBatchIds == null || distShipBatchIds.length === 0
+        ? 0
+        : distShipBatchIds.length - distBatchesToShip.length,
+    [distShipBatchIds, distBatchesToShip.length],
+  );
+
+  const fromDistributionQ = searchParams.get("fromDistribution");
+  useEffect(() => {
+    if (fromDistributionQ !== "1") {
+      return;
+    }
+    const p = readDistributionShipPayload();
+    if (p && p.batchIds.length > 0) {
+      setDistShipBatchIds(p.batchIds);
+    }
+    void navigate({ pathname: location.pathname, search: "" }, { replace: true });
+  }, [fromDistributionQ, location.pathname, navigate]);
+
+  useLayoutEffect(() => {
+    if (distShipBatchIds == null || distShipBatchIds.length === 0) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      document.getElementById("op-sec-ship")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [distShipBatchIds]);
 
   /** Партии сгруппированы по накладной — в таблице не смешиваем документы в одной куче. */
   const batchesGrouped = useMemo(() => {
@@ -282,6 +337,27 @@ export function OperationsPanel() {
       invalidateDomain();
       setShipAllDocumentId("");
       setShipAllTotalPackages("");
+    },
+  });
+
+  const shipFromDistribution = useMutation({
+    mutationFn: async () => {
+      const tripT = shipTripId.trim();
+      if (!tripT) {
+        throw new Error("Выберите рейс");
+      }
+      if (distBatchesToShip.length === 0) {
+        throw new Error("Нет партий с остатком по этому отбору");
+      }
+      for (const b of distBatchesToShip) {
+        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
+        await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+      }
+    },
+    onSuccess: () => {
+      invalidateDomain();
+      setDistShipBatchIds(null);
+      clearDistributionShipPayload();
     },
   });
 
@@ -728,6 +804,78 @@ export function OperationsPanel() {
           <p style={successText} role="status">
             Все строки с остатком отгружены.
           </p>
+        )}
+
+        {distShipBatchIds != null && distShipBatchIds.length > 0 && (
+          <div
+            className="no-print"
+            style={{
+              marginTop: "0.9rem",
+              marginBottom: "0.5rem",
+              padding: "0.65rem 0.8rem",
+              background: "linear-gradient(90deg, #e0f2fe 0%, #f0fdf4 100%)",
+              border: "1px solid #bae6fd",
+              borderRadius: 6,
+            }}
+            role="region"
+            aria-labelledby="dist-ship-h"
+          >
+            <h4 id="dist-ship-h" style={{ fontSize: "0.9rem", margin: "0 0 0.4rem" }}>
+              Отбор из «Распределения» → рейс
+            </h4>
+            <p style={{ ...muted, margin: "0 0 0.4rem", fontSize: "0.86rem", lineHeight: 1.5 }}>
+              Перенесён список <strong>{distShipBatchIds.length}</strong> {distShipBatchIds.length === 1 ? "партии" : "партий"}.
+              С <strong>остатком сейчас</strong> готово к отгрузке: <strong>{distBatchesToShip.length}</strong>. Для
+              каждой вызывается <code>POST /api/batches/…/ship-to-trip</code> (кг = полный остаток по партии, как в одиночной
+              отгрузке). {distBatchesMissingCount > 0 && (
+                <>
+                  {" "}
+                  {distBatchesMissingCount} из списка уже <strong>без остатка</strong> (часть увезли раньше) — в отгрузку не
+                  пошли.
+                </>
+              )}
+            </p>
+            <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
+              Сначала выберите <strong>рейс</strong> (создайте выше «Создать рейс», если его ещё нет), затем нажмите кнопку.
+            </p>
+            {distBatchesToShip.length > 0 && (
+              <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
+                Партии:{" "}
+                {distBatchesToShip
+                  .map((b) => `${formatNakladLineLabel(b)} (${b.onWarehouseKg} кг)`)
+                  .join(" · ")}
+                .
+              </p>
+            )}
+            <p style={{ margin: "0.35rem 0 0" }}>
+              <button
+                type="button"
+                style={btnStyle}
+                disabled={shipFromDistribution.isPending || !shipTripId.trim() || distBatchesToShip.length === 0}
+                aria-busy={shipFromDistribution.isPending || undefined}
+                onClick={() => shipFromDistribution.mutate()}
+              >
+                {shipFromDistribution.isPending
+                  ? "Отгрузка…"
+                  : "Отгрузить весь отбор из «Распределения» в выбранный рейс"}
+              </button>{" "}
+              <button
+                type="button"
+                style={btnStyle}
+                disabled={shipFromDistribution.isPending}
+                onClick={() => {
+                  setDistShipBatchIds(null);
+                  clearDistributionShipPayload();
+                }}
+              >
+                Сбросить отбор
+              </button>{" "}
+              <Link to={ops.distribution} style={{ fontSize: "0.86rem" }}>
+                к распределению
+              </Link>
+            </p>
+            <ErrorText e={shipFromDistribution.error as Error | null} />
+          </div>
         )}
       </section>
 

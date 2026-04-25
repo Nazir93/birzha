@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
+import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
@@ -121,6 +122,7 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
 }
 
 export function AllocationPanel() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const batchesQuery = useQuery({
     queryKey: ["batches"],
@@ -608,10 +610,20 @@ export function AllocationPanel() {
                 </tbody>
               </table>
               <p className="no-print" style={{ marginTop: "0.9rem" }}>
-                <Link to={ops.operations} style={{ ...btnStyle, display: "inline-block", textAlign: "center" }}>
+                <button
+                  type="button"
+                  style={btnStyle}
+                  onClick={() => {
+                    saveDistributionShipPayload({ v: 1, batchIds: tableRows.map((b) => b.id) });
+                    void navigate({ pathname: ops.operations, search: "?fromDistribution=1" });
+                  }}
+                >
                   Погрузка в рейс
-                </Link>{" "}
-                <span style={muted}>(оформление рейса и отгрузок — в «Операциях»)</span>
+                </button>{" "}
+                <span style={muted}>
+                  (переносит этот набор партий в «Операции» — укажите рейс и нажмите «Отгрузить весь отбор из
+                  «Распределения»»; рейс при отсутствии создаётся на той же странице)
+                </span>
               </p>
             </div>
           )}
