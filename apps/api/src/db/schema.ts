@@ -47,6 +47,16 @@ export const counterparties = pgTable("counterparties", {
 });
 
 /**
+ * Направления отгрузки («Москва», «Регионы» и т.д.); `code` пишется в `batches.destination`, ведётся из админки.
+ */
+export const shipDestinations = pgTable("ship_destinations", {
+  code: text("code").primaryKey(),
+  displayName: text("display_name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+/**
  * Персистентная модель партии. Масса — в граммах (bigint), без float.
  * Маппинг из доменного Batch — в application/repositories (следующие этапы).
  */

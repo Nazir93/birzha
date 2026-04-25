@@ -26,6 +26,8 @@ export type ApiMeta = {
   counterpartyCatalogApi?: string;
   /** Накладные и справочники закупки при полном контуре API. */
   purchaseDocumentsApi?: string;
+  /** Таблица `ship_destinations` (направления для распределения), только при PostgreSQL. */
+  shipDestinationsApi?: string;
   syncApi: string;
   authApi: string;
   requireApiAuth: string;

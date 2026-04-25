@@ -31,6 +31,7 @@ import { RecordTripShortageUseCase } from "../application/trip/record-trip-short
 import type { ShipToTripTransactionRunner } from "../application/trip/ship-to-trip.use-case.js";
 
 import { listBatchesForHttp } from "./batch-list-http.js";
+import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
@@ -179,6 +180,12 @@ export function registerBatchRoutes(
           .limit(1);
         if (!row) {
           return reply.code(404).send({ error: "batch_not_found" });
+        }
+        if (body.destination != null) {
+          const ok = await assertActiveShipDestination(db, body.destination);
+          if (!ok) {
+            return reply.code(400).send({ error: "invalid_ship_destination" });
+          }
         }
         const patch: { qualityTier?: string | null; destination?: string | null } = {};
         if (body.qualityTier !== undefined) {

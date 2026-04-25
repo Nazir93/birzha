@@ -145,7 +145,7 @@ export function registerPurchaseDocumentRoutes(
 
   app.delete(
     "/purchase-documents/:documentId",
-    { ...withPreHandlers(routeAuth.batchCreate) },
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
     async (req, reply) => {
       try {
         const params = z.object({ documentId: z.string().min(1) }).parse(req.params);

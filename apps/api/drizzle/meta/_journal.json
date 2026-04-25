@@ -120,6 +120,13 @@
       "when": 1776900000000,
       "tag": "0016_trip_sale_recorded_by_user",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0017_ship_destinations",
+      "breakpoints": true
     }
   ]
 }

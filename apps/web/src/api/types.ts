@@ -82,6 +82,15 @@ export type PurchaseDocumentDetail = {
 
 export type PurchaseDocumentsListResponse = { purchaseDocuments: PurchaseDocumentSummary[] };
 
+/** Справочник направлений/«городов» (`GET /ship-destinations`) — `code` в `batches.destination`. */
+export type ShipDestinationJson = {
+  code: string;
+  displayName: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+export type ShipDestinationsListResponse = { shipDestinations: ShipDestinationJson[] };
+
 export type CreatePurchaseDocumentResponse = { documentId: string };
 
 /** Ответы `/trips` и `/trips/:id/shipment-report` (согласовано с `register-trip-routes`). */

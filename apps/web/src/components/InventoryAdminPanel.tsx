@@ -6,6 +6,8 @@ import type {
   CreateProductGradeResponse,
   CreateWarehouseResponse,
   ProductGradesListResponse,
+  PurchaseDocumentsListResponse,
+  ShipDestinationsListResponse,
   WarehousesListResponse,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -29,10 +31,17 @@ export function InventoryAdminPanel() {
   const [newGradeProductGroup, setNewGradeProductGroup] = useState("");
   const [newGradeSortOrder, setNewGradeSortOrder] = useState("");
   const [gradeFormError, setGradeFormError] = useState<string | null>(null);
+  const [newDestCode, setNewDestCode] = useState("");
+  const [newDestName, setNewDestName] = useState("");
+  const [newDestOrder, setNewDestOrder] = useState("");
+  const [destFormError, setDestFormError] = useState<string | null>(null);
+  const [nakladError, setNakladError] = useState<string | null>(null);
 
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["warehouses"] });
     void queryClient.invalidateQueries({ queryKey: ["product-grades"] });
+    void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
+    void queryClient.invalidateQueries({ queryKey: ["ship-destinations"] });
   }, [queryClient]);
 
   const warehousesQ = useQuery({
@@ -45,6 +54,111 @@ export function InventoryAdminPanel() {
       return res.json() as Promise<WarehousesListResponse>;
     },
     enabled,
+  });
+
+  const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
+  const purchaseDocsQ = useQuery({
+    queryKey: ["purchase-documents"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/purchase-documents");
+      if (!res.ok) {
+        throw new Error(`purchase-documents ${res.status}`);
+      }
+      return res.json() as Promise<PurchaseDocumentsListResponse>;
+    },
+    enabled,
+  });
+  const shipDestQ = useQuery({
+    queryKey: ["ship-destinations"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/ship-destinations");
+      if (!res.ok) {
+        throw new Error(`ship-destinations ${res.status}`);
+      }
+      return res.json() as Promise<ShipDestinationsListResponse>;
+    },
+    enabled: enabled && shipDestEnabled,
+  });
+
+  const deletePurchaseDocument = useMutation({
+    mutationFn: async (documentId: string) => {
+      setNakladError(null);
+      const res = await apiFetch(`/api/purchase-documents/${encodeURIComponent(documentId)}`, { method: "DELETE" });
+      if (res.status === 403) {
+        throw new Error("Недостаточно прав: удаление накладных — только admin/manager (инвентарь).");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setNakladError(e.message);
+    },
+  });
+
+  const createShipDest = useMutation({
+    mutationFn: async () => {
+      setDestFormError(null);
+      const code = newDestCode.trim();
+      const displayName = newDestName.trim();
+      if (!code || !displayName) {
+        throw new Error("Код и название направления обязательны");
+      }
+      const body: { code: string; displayName: string; sortOrder?: number } = { code, displayName };
+      const so = newDestOrder.trim();
+      if (so) {
+        const n = Number.parseInt(so, 10);
+        if (!Number.isInteger(n) || n < 0 || n > 9999) {
+          throw new Error("Порядок — целое 0…9999 или пусто");
+        }
+        body.sortOrder = n;
+      }
+      const res = await apiFetch("/api/ship-destinations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 403) {
+        throw new Error("Нет прав: только admin/manager");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: () => {
+      setNewDestCode("");
+      setNewDestName("");
+      setNewDestOrder("");
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setDestFormError(e.message);
+    },
+  });
+
+  const deleteShipDest = useMutation({
+    mutationFn: async (code: string) => {
+      setDestFormError(null);
+      const res = await apiFetch(`/api/ship-destinations/${encodeURIComponent(code)}`, { method: "DELETE" });
+      if (res.status === 403) {
+        throw new Error("Нет прав: только admin/manager");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setDestFormError(e.message);
+    },
   });
 
   const gradesQ = useQuery({
@@ -175,15 +289,164 @@ export function InventoryAdminPanel() {
   return (
     <section style={sectionBox} aria-labelledby="inv-adm-heading" role="region">
       <h2 id="inv-adm-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
-        Склады и калибры
+        Админ: накладные, направления, склады, калибры
       </h2>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Управление справочниками. Ввод накладных — в разделе{" "}
+        Управление справочниками и <strong>данными</strong> закупочных накладных (только admin/manager). Ввод новых
+        накладных — в разделе{" "}
         <Link to={ops.purchaseNakladnaya} style={{ fontWeight: 600 }}>
           Накладная
         </Link>{" "}
         ({prefix.operations}).
       </p>
+
+      <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Закупочные накладные (удаление)</h3>
+      {nakladError && <p style={errorText}>{nakladError}</p>}
+      {purchaseDocsQ.isError && <p style={errorText}>Не загрузились накладные: {String(purchaseDocsQ.error)}</p>}
+      {purchaseDocsQ.isPending && <p style={muted}>Список накладных…</p>}
+      {purchaseDocsQ.isSuccess && (
+        <div style={{ overflowX: "auto", marginBottom: "0.75rem" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+            <thead>
+              <tr>
+                <th style={thHeadDense}>№</th>
+                <th style={thHeadDense}>Дата</th>
+                <th style={thHeadDense}>Строк</th>
+                <th style={thHeadDense} />
+              </tr>
+            </thead>
+            <tbody>
+              {(purchaseDocsQ.data.purchaseDocuments ?? [])
+                .slice()
+                .sort((a, b) => a.documentNumber.localeCompare(b.documentNumber, "ru", { numeric: true }))
+                .map((d) => (
+                  <tr key={d.id}>
+                    <td style={thtdDense}>№ {d.documentNumber}</td>
+                    <td style={thtdDense}>{d.docDate}</td>
+                    <td style={thtdDense}>{d.lineCount}</td>
+                    <td style={thtdDense}>
+                      <button
+                        type="button"
+                        style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                        disabled={deletePurchaseDocument.isPending}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Удалить накладную № ${d.documentNumber} и все связанные партии/движения? Неотвратимо для учёта.`,
+                            )
+                          ) {
+                            void deletePurchaseDocument.mutate(d.id);
+                          }
+                        }}
+                      >
+                        Удалить
+                      </button>{" "}
+                      <Link to={`${ops.purchaseNakladnaya}/${d.id}`} style={{ fontSize: "0.86rem" }}>
+                        карточка
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {shipDestEnabled && (
+        <>
+          <h3 style={{ fontSize: "0.95rem", margin: "0.9rem 0 0.35rem" }}>Направления / куда везти (для «Распределения»)</h3>
+          {destFormError && <p style={errorText}>{destFormError}</p>}
+          {shipDestQ.isError && <p style={errorText}>Направления: {String(shipDestQ.error)}</p>}
+          {shipDestQ.isPending && <p style={muted}>Справочник…</p>}
+          <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+            Код хранится в партии. «Удалить» — снятие с выбора (is_active = false), повтор с тем же кодом —
+            обновит подпись и снова включит.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
+            <input
+              value={newDestCode}
+              onChange={(e) => setNewDestCode(e.target.value)}
+              style={{ ...fieldStyle, width: 120 }}
+              placeholder="Код (лат.)"
+              autoComplete="off"
+            />
+            <input
+              value={newDestName}
+              onChange={(e) => setNewDestName(e.target.value)}
+              style={{ ...fieldStyle, flex: "1 1 160px" }}
+              placeholder="Название (как в списке)"
+              autoComplete="off"
+            />
+            <input
+              value={newDestOrder}
+              onChange={(e) => setNewDestOrder(e.target.value)}
+              style={{ ...fieldStyle, width: 72 }}
+              placeholder="№"
+              inputMode="numeric"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              style={btnStyle}
+              disabled={createShipDest.isPending}
+              onClick={() => void createShipDest.mutate()}
+            >
+              {createShipDest.isPending ? "…" : "Добавить / обновить"}
+            </button>
+          </div>
+          {shipDestQ.isSuccess && (
+            <div style={{ overflowX: "auto", marginBottom: "0.75rem" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                <thead>
+                  <tr>
+                    <th style={thHeadDense}>Код</th>
+                    <th style={thHeadDense}>Название</th>
+                    <th style={thHeadDense}>Порядок</th>
+                    <th style={thHeadDense}>Активн.</th>
+                    <th style={thHeadDense} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(shipDestQ.data.shipDestinations ?? [])
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"),
+                    )
+                    .map((r) => (
+                      <tr key={r.code}>
+                        <td style={thtdDense}>
+                          <code style={{ fontSize: "0.82rem" }}>{r.code}</code>
+                        </td>
+                        <td style={thtdDense}>{r.displayName}</td>
+                        <td style={thtdDense}>{r.sortOrder}</td>
+                        <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
+                        <td style={thtdDense}>
+                          {r.isActive ? (
+                            <button
+                              type="button"
+                              style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                              disabled={deleteShipDest.isPending}
+                              onClick={() => {
+                                if (window.confirm(`Снять направление «${r.displayName}» (код ${r.code})?`)) {
+                                  void deleteShipDest.mutate(r.code);
+                                }
+                              }}
+                            >
+                              Снять
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Склады</h3>
       {warehousesQ.isError && (

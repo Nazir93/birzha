@@ -16,4 +16,9 @@ describe("updateBatchAllocationBodySchema", () => {
     expect(r.qualityTier).toBeNull();
     expect(r.destination).toBeNull();
   });
+
+  it("направление — произвольный code из справочника (строка)", () => {
+    const r = updateBatchAllocationBodySchema.parse({ destination: "kazan" });
+    expect(r.destination).toBe("kazan");
+  });
 });

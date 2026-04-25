@@ -32,6 +32,7 @@ describe("API", () => {
     const body = JSON.parse(res.body) as {
       batchesApi: string;
       purchaseDocumentsApi: string;
+      shipDestinationsApi?: string;
       tripsApi: string;
       tripShipmentLedger: string;
       tripSaleLedger: string;
@@ -43,6 +44,7 @@ describe("API", () => {
     };
     expect(body.batchesApi).toBe("disabled");
     expect(body.purchaseDocumentsApi).toBe("disabled");
+    expect(body.shipDestinationsApi).toBe("disabled");
     expect(body.tripsApi).toBe("disabled");
     expect(body.tripShipmentLedger).toBe("disabled");
     expect(body.tripSaleLedger).toBe("disabled");

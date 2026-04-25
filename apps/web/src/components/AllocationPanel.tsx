@@ -4,7 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
 import { apiFetch } from "../api/fetch-api.js";
-import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
+import type {
+  BatchListItem,
+  BatchesListResponse,
+  ShipDestinationsListResponse,
+  WarehousesListResponse,
+} from "../api/types.js";
+import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
@@ -123,7 +129,34 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
 
 export function AllocationPanel() {
   const navigate = useNavigate();
+  const { meta } = useAuth();
   const queryClient = useQueryClient();
+  const shipDestQ = useQuery({
+    queryKey: ["ship-destinations"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/ship-destinations");
+      if (!res.ok) {
+        throw new Error(`ship-destinations ${res.status}`);
+      }
+      return res.json() as Promise<ShipDestinationsListResponse>;
+    },
+    enabled: meta?.shipDestinationsApi === "enabled",
+    retry: 1,
+  });
+  const { destAllowed, labelDest } = useMemo((): { destAllowed: readonly string[]; labelDest: Record<string, string> } => {
+    const act = (shipDestQ.data?.shipDestinations ?? []).filter((r) => r.isActive);
+    if (act.length > 0) {
+      const sorted = act.slice().sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"));
+      const m: Record<string, string> = {};
+      for (const r of sorted) {
+        m[r.code] = r.displayName;
+      }
+      return { destAllowed: sorted.map((r) => r.code), labelDest: m };
+    }
+    const fallback: Record<string, string> = { ...labelsDestination };
+    return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
+  }, [shipDestQ.data]);
+
   const batchesQuery = useQuery({
     queryKey: ["batches"],
     queryFn: async () => {
@@ -172,7 +205,7 @@ export function AllocationPanel() {
     const a = b.allocation;
     return {
       quality: toSelectValue(a?.qualityTier ?? null, BATCH_QUALITY_TIERS, "not_set"),
-      destination: toSelectValue(a?.destination ?? null, BATCH_DESTINATIONS, "not_set"),
+      destination: toSelectValue(a?.destination ?? null, destAllowed, "not_set"),
     };
   };
 
@@ -592,9 +625,9 @@ export function AllocationPanel() {
                             style={fieldStyle}
                           >
                             <option value="_notset">— не выбрано —</option>
-                            {BATCH_DESTINATIONS.map((c) => (
+                            {destAllowed.map((c) => (
                               <option key={c} value={c}>
-                                {labelsDestination[c]}
+                                {labelDest[c] ?? c}
                               </option>
                             ))}
                           </select>

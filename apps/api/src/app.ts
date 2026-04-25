@@ -21,6 +21,7 @@ import type { AppEnv } from "./config.js";
 import type { DbClient } from "./db/client.js";
 import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
+import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
@@ -255,6 +256,7 @@ export async function buildApp(options: {
     domain: "ok",
     batchesApi: batchRepository ? "enabled" : "disabled",
     purchaseDocumentsApi: createPurchaseDocumentUseCase ? "enabled" : "disabled",
+    shipDestinationsApi: db && createPurchaseDocumentUseCase ? "enabled" : "disabled",
     tripsApi: tripRepository ? "enabled" : "disabled",
     tripShipmentLedger: shipmentRepository ? "enabled" : "disabled",
     tripSaleLedger: saleRepository ? "enabled" : "disabled",
@@ -331,6 +333,9 @@ export async function buildApp(options: {
       runRecordTripShortageInTransaction,
       db,
     );
+    if (db) {
+      registerShipDestinationRoutes(app, db, routeAuth);
+    }
 
     const applySync = new ApplySyncActionUseCase(
       syncIdempotency,
