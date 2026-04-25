@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { apiFetch, apiGetJson } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, ShipmentReportResponse, TripsListResponse } from "../api/types.js";
@@ -44,7 +45,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
   const canTripWrite = user == null || canCreateTrip(user);
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [tripId, setTripId] = useState<string | "">("");
+  const initialTripFromUrl = useRef(false);
 
   const tripsQuery = useQuery({
     queryKey: ["trips"],
@@ -70,6 +73,20 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     const list = tripsQuery.data?.trips ?? [];
     return [...list].sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru"));
   }, [tripsQuery.data?.trips]);
+
+  useEffect(() => {
+    if (initialTripFromUrl.current) {
+      return;
+    }
+    const p = searchParams.get("trip")?.trim() ?? "";
+    if (!p || sortedTrips.length === 0) {
+      return;
+    }
+    if (sortedTrips.some((t) => t.id === p)) {
+      setTripId(p);
+      initialTripFromUrl.current = true;
+    }
+  }, [searchParams, sortedTrips]);
 
   const reportQuery = useQuery({
     queryKey: ["shipment-report", tripId],
@@ -172,7 +189,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const introByContext: Record<TripReportViewContext, string> = {
     default: `По смыслу учёта эта сводка — опора для контроля загрузки машины и движения товара; отдельного документа «общая накладная на всю машину» в системе нет — используйте этот отчёт и печать. Список из GET /api/trips, отчёт — GET /api/trips/:id/shipment-report (отгрузки, продажи, недостача, деньги).`,
-    accounting: `Сверка по движению товара и денег по рейсу (чтение). Создание/закрытие рейса — в операционном кабинете или у логиста. Список рейсов: GET /api/trips, отчёт: GET /api/trips/:id/shipment-report.`,
+    accounting: `Сверка по движению товара и денег по рейсу (чтение). Сводка по деньгам — на главной кабинета /b. Создание рейса — у логиста. Данные: GET /api/trips/:id/shipment-report; детализация и печать — ниже в этом разделе.`,
     sales: `Сводка по рейсу для полей: остатки, продажи, долги. Продажа с рейса — в «Операциях» или очереди sync. Данные из API как в кабинете /o, без ввода закупа.`,
   };
 

@@ -9,7 +9,9 @@
   --focus-ring: 0 0 0 3px rgba(21, 128, 61, 0.2);
 }
 
-html {
+html,
+body,
+#root {
   color-scheme: light;
 }
 
@@ -130,17 +132,34 @@ input[type="datetime-local"],
 input[type="month"] {
   color-scheme: only light;
   accent-color: var(--color-border-focus);
+  color: var(--color-text);
+  background: var(--color-surface-input);
+}
+
+/* Сегменты внутри поля (Chromium) — в одной гамме с остальными input */
+input[type="date"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit {
+  color: var(--color-text);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  width: 1.125rem;
-  height: 1.125rem;
-  margin-inline: 0.1rem 0.15rem;
-  opacity: 0.7;
-  filter: grayscale(1) brightness(0.45);
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-inline: 0.15rem 0.2rem;
+  opacity: 0.75;
+  filter: grayscale(1) brightness(0.4);
+  padding: 0.1rem;
+}
+
+/* Нативный popover календаря в Chromium/Edge: светлая схема, без «системного» тёмного окна */
+.birzha-input-date,
+main input[type="date"],
+main input[type="datetime-local"],
+main input[type="month"] {
+  color-scheme: only light;
 }
 
 /* Фокус полей в приложении: перекрывает inline border у `fieldStyle` */

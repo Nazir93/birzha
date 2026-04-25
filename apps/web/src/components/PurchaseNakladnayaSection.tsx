@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 
 import { apiFetch } from "../api/fetch-api.js";
 import type {
-  CreateProductGradeResponse,
   CreatePurchaseDocumentResponse,
   CreateWarehouseResponse,
   ProductGradeJson,
@@ -28,7 +27,7 @@ import {
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
-import { login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { adminRoutes, login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnStyle,
@@ -126,63 +125,10 @@ export function PurchaseNakladnayaSection() {
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseCode, setNewWarehouseCode] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
-  const [newGradeCode, setNewGradeCode] = useState("");
-  const [newGradeDisplayName, setNewGradeDisplayName] = useState("");
-  const [newGradeProductGroup, setNewGradeProductGroup] = useState("");
-  const [newGradeSortOrder, setNewGradeSortOrder] = useState("");
-  const [gradeFormError, setGradeFormError] = useState<string | null>(null);
-
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["batches"] });
     void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
   }, [queryClient]);
-
-  const createProductGrade = useMutation({
-    mutationFn: async () => {
-      setGradeFormError(null);
-      const code = newGradeCode.trim();
-      const displayName = newGradeDisplayName.trim();
-      if (!code || !displayName) {
-        throw new Error("Укажите код калибра и подпись (как на накладной)");
-      }
-      const body: { code: string; displayName: string; sortOrder?: number; productGroup?: string } = { code, displayName };
-      const pg = newGradeProductGroup.trim();
-      if (pg) {
-        body.productGroup = pg;
-      }
-      const so = newGradeSortOrder.trim();
-      if (so) {
-        const n = Number(so.replace(",", "."));
-        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > 9999) {
-          throw new Error("Порядок сортировки — целое от 0 до 9999 или пусто");
-        }
-        body.sortOrder = n;
-      }
-      const res = await apiFetch("/api/product-grades", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<CreateProductGradeResponse>;
-    },
-    onSuccess: (data) => {
-      setNewGradeCode("");
-      setNewGradeDisplayName("");
-      setNewGradeProductGroup("");
-      setNewGradeSortOrder("");
-      void queryClient.invalidateQueries({ queryKey: ["product-grades"] });
-      setLines((prev) =>
-        prev.map((line, i) => (i === 0 && !line.productGradeId ? { ...line, productGradeId: data.productGrade.id } : line)),
-      );
-    },
-    onError: (e: Error) => {
-      setGradeFormError(e.message);
-    },
-  });
 
   const createWarehouse = useMutation({
     mutationFn: async () => {
@@ -437,7 +383,13 @@ export function PurchaseNakladnayaSection() {
         </label>
         <label style={{ fontSize: "0.88rem" }}>
           Дата (YYYY-MM-DD) *
-          <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} style={dateFieldStyle} />
+          <input
+            type="date"
+            value={docDate}
+            onChange={(e) => setDocDate(e.target.value)}
+            style={dateFieldStyle}
+            className="birzha-input-date"
+          />
         </label>
         <label style={{ fontSize: "0.88rem" }}>
           Склад *
@@ -519,66 +471,26 @@ export function PurchaseNakladnayaSection() {
       </div>
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog && (
         <p role="status" style={warnText}>
-          В справочнике нет калибров — добавьте в блоке выше или в кабинете админа.
+          В справочнике нет калибров. Добавьте калибры в{" "}
+          <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
+            кабинете админа — «Склады и калибры»
+          </Link>
+          , обновите страницу.
         </p>
       )}
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && !canManageCatalog && (
         <p role="status" style={warnText}>
-          В справочнике нет калибров — настройка выполняется администратором.
+          В справочнике нет калибров — пусть администратор добавит их в разделе «Склады и калибры».
         </p>
       )}
-      {canManageCatalog && (
-        <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-          <p style={{ ...muted, margin: "0 0 0.35rem" }}>Нет нужного калибра — администратор добавит его в кабинете</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
-            <input
-              value={newGradeProductGroup}
-              onChange={(e) => setNewGradeProductGroup(e.target.value)}
-              style={{ ...fieldStyle, flex: "1 1 120px", minWidth: 100 }}
-              placeholder="Группа товара (опц.)"
-              autoComplete="off"
-              aria-label="Группа товара, например Помидоры"
-            />
-            <input
-              value={newGradeCode}
-              onChange={(e) => setNewGradeCode(e.target.value)}
-              style={{ ...fieldStyle, width: 88 }}
-              placeholder="Код"
-              autoComplete="off"
-              aria-label="Код калибра"
-            />
-            <input
-              value={newGradeDisplayName}
-              onChange={(e) => setNewGradeDisplayName(e.target.value)}
-              style={{ ...fieldStyle, flex: "1 1 140px", minWidth: 120 }}
-              placeholder="Подпись в списке"
-              autoComplete="off"
-              aria-label="Название калибра"
-            />
-            <input
-              value={newGradeSortOrder}
-              onChange={(e) => setNewGradeSortOrder(e.target.value)}
-              style={{ ...fieldStyle, width: 72 }}
-              placeholder="Порядок"
-              autoComplete="off"
-              inputMode="numeric"
-              aria-label="Порядок сортировки, опционально"
-            />
-            <button
-              type="button"
-              style={btnStyle}
-              disabled={createProductGrade.isPending || gradesQ.isPending}
-              onClick={() => void createProductGrade.mutate()}
-            >
-              {createProductGrade.isPending ? "…" : "Добавить калибр"}
-            </button>
-          </div>
-          {gradeFormError && (
-            <p role="alert" style={{ ...errorText, margin: "0.35rem 0 0" }}>
-              {gradeFormError}
-            </p>
-          )}
-        </div>
+      {canManageCatalog && gradeCount > 0 && (
+        <p style={{ ...muted, fontSize: "0.85rem", margin: "0 0 0.5rem" }}>
+          Нет нужного калибра в списке —{" "}
+          <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
+            добавьте в админке
+          </Link>
+          , затем обновите страницу.
+        </p>
       )}
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>

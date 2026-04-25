@@ -27,6 +27,13 @@ export const fieldStyle: CSSProperties = {
 export const dateFieldStyle: CSSProperties = {
   ...fieldStyle,
   colorScheme: "only light",
+  accentColor: "#15803d",
+};
+
+/** Как `fieldStyleCompact`, с `color-scheme` / `accent-color` для нативного календаря (см. `index.css`). */
+export const dateFieldStyleCompact: CSSProperties = {
+  ...dateFieldStyle,
+  maxWidth: "100%",
 };
 
 export const fieldStyleCompact: CSSProperties = {

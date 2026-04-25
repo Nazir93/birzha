@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "../api/fetch-api.js";
-import { btnStyle, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
+import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
 
 export function CreateTripForm() {
@@ -100,7 +100,8 @@ export function CreateTripForm() {
         type="datetime-local"
         value={departedAtLocal}
         onChange={(e) => setDepartedAtLocal(e.target.value)}
-        style={fieldStyleCompact}
+        style={dateFieldStyleCompact}
+        className="birzha-input-date"
       />
       <div>
         <button

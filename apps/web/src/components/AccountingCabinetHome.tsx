@@ -4,6 +4,7 @@ import { adminRoutes, accounting, prefix } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { sectionCard, muted, btnStyle } from "../ui/styles.js";
+import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
 /**
  * Сводка бухкабинета: ссылка на отчёты; без форм ввода рейса/партий.
@@ -18,15 +19,15 @@ export function AccountingCabinetHome() {
         Бухгалтерия
       </h2>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Сверка и контроль по рейсам. Закуп, приём и клад вводятся в кабинете <code>{prefix.operations}</code> (
-        {prefix.operations}). Создание и закрытие рейса — у логиста или руководителя, не в этом кабинете.
+        Сверка и контроль по рейсам: <strong>выручка, закуп, валовая, нал/долг</strong> — таблица ниже и в «Отчётах»
+        по рейсу. Закуп и склад — в <code>{prefix.operations}</code>. Рейс создаётся логистом/руководителем.
       </p>
       <ul style={{ margin: 0, paddingLeft: "1.15rem", lineHeight: 1.55 }}>
         <li>
           <Link to={accounting.reports} style={{ fontWeight: 600 }}>
             Отчёты по рейсам
           </Link>{" "}
-          — отгрузки, продажи, деньги, печать для сверки.
+          — детализация по рейсу (клиенты, партии, печать); для быстрого смотрите сводку ниже.
         </li>
         <li>
           <Link to={accounting.counterparties} style={{ fontWeight: 600 }}>
@@ -43,9 +44,10 @@ export function AccountingCabinetHome() {
           </li>
         ) : null}
       </ul>
+      <AccountingTripsSummary />
       <p className="no-print" style={{ marginTop: "0.9rem" }}>
         <Link to={accounting.reports} style={btnStyle}>
-          Перейти к отчётам
+          Подробный отчёт по рейсу
         </Link>
       </p>
     </section>
