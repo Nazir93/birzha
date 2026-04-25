@@ -77,6 +77,20 @@ export const batches = pgTable("batches", {
   destination: text("destination"),
 });
 
+/**
+ * Списание массы с остатка на складе (домен `Batch#writeOff`), в т.ч. «брак, кг».
+ * `reason` — код причины; `quality_reject` — дозаписывается с экрана «Распределение».
+ */
+export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {
+  id: text("id").primaryKey(),
+  batchId: text("batch_id")
+    .notNull()
+    .references(() => batches.id, { onDelete: "cascade" }),
+  grams: bigint("grams", { mode: "bigint" }).notNull(),
+  reason: text("reason").notNull().default("quality_reject"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
 /** Строка закупочной накладной; одна строка — одна партия (`batch_id`). */
 export const purchaseDocumentLines = pgTable("purchase_document_lines", {
   id: text("id").primaryKey(),

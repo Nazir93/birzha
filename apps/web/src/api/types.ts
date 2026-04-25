@@ -22,11 +22,19 @@ export type BatchListItem = {
     /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
     linePackageCount?: number | null;
   };
+  /** Какие кг списаны как «брак с остатка» (журнал) — `POST /batches/…/warehouse-write-off` при полном API. */
+  qualityRejectWrittenOffKg?: number;
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
   allocation?: {
     qualityTier: string | null;
     destination: string | null;
   };
+};
+
+export type WarehouseWriteOffsByDocumentResponse = {
+  documentId: string;
+  totalKg: number;
+  lines: { id: string; batchId: string; kg: number; createdAt: string; productGradeCode: string | null }[];
 };
 
 export type BatchesListResponse = {

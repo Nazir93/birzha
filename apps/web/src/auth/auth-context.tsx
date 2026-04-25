@@ -28,6 +28,8 @@ export type ApiMeta = {
   purchaseDocumentsApi?: string;
   /** Таблица `ship_destinations` (направления для распределения), только при PostgreSQL. */
   shipDestinationsApi?: string;
+  /** `POST /batches/…/warehouse-write-off` и `GET /warehouse-write-offs?purchaseDocumentId=` при PostgreSQL. */
+  warehouseWriteOffApi?: string;
   syncApi: string;
   authApi: string;
   requireApiAuth: string;

@@ -8,12 +8,21 @@ import {
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
+  postWarehouseWriteOffBodySchema,
   updateBatchAllocationBodySchema,
 } from "@birzha/contracts";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { batches as batchesTable } from "../db/schema.js";
+import { RecordWarehouseWriteOffUseCase } from "../application/batch/record-warehouse-write-off.use-case.js";
+import {
+  batchWarehouseWriteOffs,
+  batches as batchesTable,
+  productGrades,
+  purchaseDocumentLines,
+  purchaseDocuments,
+} from "../db/schema.js";
+import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
 
 import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.use-case.js";
 import { SellFromTripUseCase } from "../application/sale/sell-from-trip.use-case.js";
@@ -50,6 +59,7 @@ export function registerBatchRoutes(
   runSellInTransaction?: SellFromTripTransactionRunner,
   runRecordTripShortageInTransaction?: RecordTripShortageTransactionRunner,
   db: DbClient | null = null,
+  recordWarehouseWriteOff: RecordWarehouseWriteOffUseCase | null = null,
 ): void {
   const createPurchase = new CreatePurchaseUseCase(batches);
   const receive = new ReceiveOnWarehouseUseCase(batches);
@@ -196,6 +206,90 @@ export function registerBatchRoutes(
         }
         await db.update(batchesTable).set(patch).where(eq(batchesTable.id, params.batchId));
         return reply.code(200).send({ ok: true });
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
+
+  app.post(
+    "/batches/:batchId/warehouse-write-off",
+    { ...withPreHandlers(routeAuth.batchCreate) },
+    async (req, reply) => {
+      if (!db || !recordWarehouseWriteOff) {
+        return reply.code(503).send({ error: "warehouse_write_off_requires_postgres" });
+      }
+      try {
+        const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
+        const body = postWarehouseWriteOffBodySchema.parse(req.body);
+        const [row] = await db
+          .select({ id: batchesTable.id })
+          .from(batchesTable)
+          .where(eq(batchesTable.id, params.batchId))
+          .limit(1);
+        if (!row) {
+          return reply.code(404).send({ error: "batch_not_found" });
+        }
+        await recordWarehouseWriteOff.execute({
+          batchId: params.batchId,
+          kg: body.kg,
+          reason: "quality_reject",
+        });
+        return reply.code(200).send({ ok: true });
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
+
+  app.get(
+    "/warehouse-write-offs",
+    { ...withPreHandlers(routeAuth.dataRead) },
+    async (req, reply) => {
+      if (!db) {
+        return reply.code(503).send({ error: "warehouse_write_off_ledger_requires_postgres" });
+      }
+      try {
+        const q = z.object({ purchaseDocumentId: z.string().min(1) });
+        const { purchaseDocumentId } = q.parse(req.query);
+        const rows = await db
+          .select({
+            id: batchWarehouseWriteOffs.id,
+            batchId: batchWarehouseWriteOffs.batchId,
+            grams: batchWarehouseWriteOffs.grams,
+            createdAt: batchWarehouseWriteOffs.createdAt,
+            documentId: purchaseDocuments.id,
+            documentNumber: purchaseDocuments.documentNumber,
+            productGradeCode: productGrades.code,
+          })
+          .from(batchWarehouseWriteOffs)
+          .innerJoin(
+            purchaseDocumentLines,
+            eq(batchWarehouseWriteOffs.batchId, purchaseDocumentLines.batchId),
+          )
+          .innerJoin(
+            purchaseDocuments,
+            eq(purchaseDocumentLines.documentId, purchaseDocuments.id),
+          )
+          .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
+          .where(
+            and(
+              eq(purchaseDocuments.id, purchaseDocumentId),
+              eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+            ),
+          )
+          .orderBy(desc(batchWarehouseWriteOffs.createdAt));
+        return reply.send({
+          documentId: purchaseDocumentId,
+          totalKg: rows.reduce((a, r) => a + gramsToKg(r.grams), 0),
+          lines: rows.map((r) => ({
+            id: r.id,
+            batchId: r.batchId,
+            kg: gramsToKg(r.grams),
+            createdAt: r.createdAt.toISOString(),
+            productGradeCode: r.productGradeCode,
+          })),
+        });
       } catch (error) {
         return sendMappedError(reply, error);
       }

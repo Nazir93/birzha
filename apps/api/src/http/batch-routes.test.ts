@@ -240,4 +240,5 @@ describe("Batch HTTP", () => {
     expect(res.statusCode).toBe(503);
     await app.close();
   });
+
 });

@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { BATCH_DESTINATIONS, BATCH_QUALITY_TIERS } from "@birzha/contracts";
+import { BATCH_DESTINATIONS } from "@birzha/contracts";
+
+/** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
+const ALLOCATION_SELL_TIERS = ["standard", "weak"] as const;
 import { apiFetch } from "../api/fetch-api.js";
 import type {
   BatchListItem,
@@ -21,10 +24,9 @@ import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnT
 
 const ORPHAN_WAREHOUSE = "__unassigned__";
 
-const labelsQuality: Record<(typeof BATCH_QUALITY_TIERS)[number], string> = {
+const labelsQuality: Record<(typeof ALLOCATION_SELL_TIERS)[number], string> = {
   standard: "стандарт (для регионов и «нормальной» реализации)",
   weak: "слабый (уценка, отдельный контур)",
-  reject: "брак (не в продажу)",
 };
 
 const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
@@ -130,6 +132,7 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
 export function AllocationPanel() {
   const navigate = useNavigate();
   const { meta } = useAuth();
+  const showWarehouseWriteOff = meta?.warehouseWriteOffApi === "enabled";
   const queryClient = useQueryClient();
   const shipDestQ = useQuery({
     queryKey: ["ship-destinations"],
@@ -185,6 +188,11 @@ export function AllocationPanel() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   /** Какие накл. вошли в «отбор под рейс» — общий список для сбора на погрузку и для строк качества. */
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
+  /** Партии для «Применить к выбранным» (качество/направление). */
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
+  const [bulkQuality, setBulkQuality] = useState<string>("_notset");
+  const [bulkDestination, setBulkDestination] = useState<string>("_notset");
+  const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
 
   const warehouseName = useCallback(
     (id: string) => {
@@ -204,7 +212,7 @@ export function AllocationPanel() {
     }
     const a = b.allocation;
     return {
-      quality: toSelectValue(a?.qualityTier ?? null, BATCH_QUALITY_TIERS, "not_set"),
+      quality: toSelectValue(a?.qualityTier ?? null, [...ALLOCATION_SELL_TIERS], "not_set"),
       destination: toSelectValue(a?.destination ?? null, destAllowed, "not_set"),
     };
   };
@@ -237,6 +245,77 @@ export function AllocationPanel() {
         delete next[batchId];
         return next;
       });
+      void queryClient.invalidateQueries({ queryKey: ["batches"] });
+    },
+  });
+
+  const writeOff = useMutation({
+    mutationFn: async ({ batchId, kg }: { batchId: string; kg: number }) => {
+      const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/warehouse-write-off`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "quality_reject", kg }),
+      });
+      if (res.status === 503) {
+        throw new Error("Нужна PostgreSQL (списание на складе не настроено).");
+      }
+      if (res.status === 409) {
+        const t = await res.json().catch(() => ({}));
+        const msg = typeof t === "object" && t && "message" in t ? String(t.message) : "Недостаточно кг на остатке";
+        throw new Error(msg);
+      }
+      if (res.status === 403) {
+        throw new Error("Недостаточно прав (роль закупки/склада/руководства).");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: (_d, { batchId }) => {
+      setRejectScrapInput((prev) => {
+        const next = { ...prev };
+        delete next[batchId];
+        return next;
+      });
+      void queryClient.invalidateQueries({ queryKey: ["batches"] });
+    },
+  });
+
+  const bulkSave = useMutation({
+    mutationFn: async (payload: { batchIds: string[]; quality: string; destination: string }) => {
+      const hasQ = payload.quality !== "_notset";
+      const hasD = payload.destination !== "_notset";
+      if (!hasQ && !hasD) {
+        return;
+      }
+      for (const batchId of payload.batchIds) {
+        const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/allocation`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(hasQ
+              ? { qualityTier: payload.quality === "_notset" ? null : (payload.quality as string) }
+              : {}),
+            ...(hasD
+              ? { destination: payload.destination === "_notset" ? null : (payload.destination as string) }
+              : {}),
+          }),
+        });
+        if (res.status === 503) {
+          throw new Error("Нужна PostgreSQL на сервере (распределение не доступно in-memory).");
+        }
+        if (res.status === 403) {
+          throw new Error("Недостаточно прав (нужна роль закупки/склада/руководства).");
+        }
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || `HTTP ${res.status}`);
+        }
+      }
+    },
+    onSuccess: () => {
+      setEdits({});
       void queryClient.invalidateQueries({ queryKey: ["batches"] });
     },
   });
@@ -361,6 +440,21 @@ export function AllocationPanel() {
     setLoadNaklSelection(new Set());
   }, []);
 
+  const onToggleSelectRow = useCallback((id: string) => {
+    setSelectedRowIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) {
+        n.delete(id);
+      } else {
+        n.add(id);
+      }
+      return n;
+    });
+  }, []);
+  const onClearRowSelection = useCallback(() => {
+    setSelectedRowIds(new Set());
+  }, []);
+
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
       return [];
@@ -377,6 +471,15 @@ export function AllocationPanel() {
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
+  const onSelectAllTableRows = useCallback(() => {
+    setSelectedRowIds(new Set(tableRows.map((b) => b.id)));
+  }, [tableRows]);
+
+  useEffect(() => {
+    const valid = new Set(tableRows.map((b) => b.id));
+    setSelectedRowIds((prev) => new Set([...prev].filter((id) => valid.has(id))));
+  }, [tableRows]);
+
   if (batchesQuery.isError) {
     return (
       <p role="alert" style={errorText}>
@@ -392,8 +495,11 @@ export function AllocationPanel() {
         Весь товар, принятый по <strong>разным</strong> накладным на один <strong>склад</strong>, даёт <strong>общий остаток</strong> в
         кг. <strong>1</strong> — выберите склад, <strong>2</strong> — в блоке ниже отметьте, с каких накладных берёте
         погрузку, посмотрите <strong>свод по калибру</strong> и <strong>по партиям</strong> (снимите накл., что не везёте —
-        товар <strong>остаётся</strong> на учёте склада), <strong>3</strong> — по <strong>тем же</strong> партиям укажите
-        качество и направление. <strong>Оформить рейс / отгрузку</strong> — в{" "}
+        товар <strong>остаётся</strong> на учёте склада), <strong>        3</strong> — отметьте партию(и) (чекбокс), при необходимости
+        <strong> массово</strong> проставьте качество и направление. Часть партии в брак — <strong>кг в
+        отдельной колонке</strong> (списание с остатка; для бух. — выгрузка
+        <code> GET /api/warehouse-write-offs?purchaseDocumentId=</code> с авторизацией, как в Postman).{" "}
+        <strong>Оформить рейс / отгрузку</strong> — в{" "}
         <Link to={ops.operations} style={{ fontWeight: 600 }}>
           Операциях
         </Link>{" "}
@@ -540,9 +646,84 @@ export function AllocationPanel() {
               <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
                 2. Качество и направление по отобранным партиям
               </h3>
+              {tableRows.length > 0 && (
+                <div
+                  className="no-print"
+                  style={{ margin: "0 0 0.9rem", display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", alignItems: "end" }}
+                >
+                  <span style={{ fontSize: "0.86rem" }}>
+                    Выбрано: <strong>{selectedRowIds.size}</strong> / {tableRows.length}
+                  </span>
+                  <div>
+                    <span style={muted}>Качество</span>{" "}
+                    <select
+                      aria-label="Качество для выбранных"
+                      value={bulkQuality}
+                      onChange={(ev) => setBulkQuality(ev.target.value)}
+                      style={fieldStyle}
+                    >
+                      <option value="_notset">— пропуск —</option>
+                      {ALLOCATION_SELL_TIERS.map((c) => (
+                        <option key={c} value={c}>
+                          {labelsQuality[c]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <span style={muted}>Направление</span>{" "}
+                    <select
+                      aria-label="Направление для выбранных"
+                      value={bulkDestination}
+                      onChange={(ev) => setBulkDestination(ev.target.value)}
+                      style={fieldStyle}
+                    >
+                      <option value="_notset">— пропуск —</option>
+                      {destAllowed.map((c) => (
+                        <option key={c} value={c}>
+                          {labelDest[c] ?? c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                    <button
+                      type="button"
+                      style={btnStyle}
+                      disabled={bulkSave.isPending || save.isPending || selectedRowIds.size === 0}
+                      onClick={() => {
+                        if (bulkQuality === "_notset" && bulkDestination === "_notset") {
+                          return;
+                        }
+                        const batchIds = [...selectedRowIds];
+                        bulkSave.mutate({ batchIds, quality: bulkQuality, destination: bulkDestination });
+                      }}
+                    >
+                      {bulkSave.isPending ? "…" : "К выбранным"}
+                    </button>
+                    <button type="button" style={btnStyle} onClick={onSelectAllTableRows} disabled={tableRows.length === 0}>
+                      Все строки
+                    </button>
+                    <button type="button" style={btnStyle} onClick={onClearRowSelection}>
+                      Сброс
+                    </button>
+                  </div>
+                </div>
+              )}
               <table style={tableStyle} aria-labelledby="alloc-table">
                 <thead>
                   <tr>
+                    <th scope="col" style={{ ...thHead, width: "2.5rem" }}>
+                      <input
+                        type="checkbox"
+                        title="Переключить все"
+                        checked={
+                          tableRows.length > 0 && tableRows.every((b) => selectedRowIds.has(b.id))
+                        }
+                        onChange={(ev) => (ev.target.checked ? onSelectAllTableRows() : onClearRowSelection())}
+                        aria-label="Переключить выбор всех партий"
+                      />
+                    </th>
                     <th scope="col" style={thHead}>
                       Партия
                     </th>
@@ -552,6 +733,11 @@ export function AllocationPanel() {
                     <th scope="col" style={thHead}>
                       Ящики
                     </th>
+                    {showWarehouseWriteOff && (
+                      <th scope="col" style={thHead}>
+                        Брак (кг) со склада
+                      </th>
+                    )}
                     <th scope="col" style={thHead}>
                       Качество
                     </th>
@@ -569,6 +755,14 @@ export function AllocationPanel() {
                     const linePkg = b.nakladnaya?.linePackageCount;
                     return (
                       <tr key={b.id}>
+                        <td style={thtd}>
+                          <input
+                            type="checkbox"
+                            checked={selectedRowIds.has(b.id)}
+                            onChange={() => onToggleSelectRow(b.id)}
+                            aria-label={`Выбрать партию ${label}`}
+                          />
+                        </td>
                         <td style={thtd}>
                           <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{label}</div>
                           {b.nakladnaya?.documentId && (
@@ -596,6 +790,58 @@ export function AllocationPanel() {
                             </div>
                           )}
                         </td>
+                        {showWarehouseWriteOff && (
+                          <td style={thtd}>
+                            <div style={{ fontSize: "0.82rem", marginBottom: "0.35rem" }}>
+                              уже:{" "}
+                              <strong>
+                                {typeof b.qualityRejectWrittenOffKg === "number"
+                                  ? b.qualityRejectWrittenOffKg.toLocaleString("ru-RU", {
+                                      maximumFractionDigits: 2,
+                                    })
+                                  : "0"}{" "}
+                                кг
+                              </strong>
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="кг"
+                                value={rejectScrapInput[b.id] ?? ""}
+                                onChange={(ev) =>
+                                  setRejectScrapInput((prev) => ({ ...prev, [b.id]: ev.target.value }))
+                                }
+                                style={{ ...fieldStyle, width: "4.2rem" }}
+                                aria-label="Килограммов брака к списанию"
+                              />
+                              <button
+                                type="button"
+                                style={btnStyle}
+                                disabled={writeOff.isPending}
+                                onClick={() => {
+                                  const s = (rejectScrapInput[b.id] ?? "").replace(",", ".");
+                                  const kg = parseFloat(s);
+                                  if (!Number.isFinite(kg) || kg <= 0) {
+                                    return;
+                                  }
+                                  if (kg > b.onWarehouseKg) {
+                                    return;
+                                  }
+                                  writeOff.mutate({ batchId: b.id, kg });
+                                }}
+                              >
+                                Списать
+                              </button>
+                            </div>
+                            {b.allocation?.qualityTier === "reject" && (
+                              <p style={{ ...muted, fontSize: "0.75rem", margin: "0.3rem 0 0" }}>
+                                В БД: вся партия помечена «брак»; приведите в соответствие или снимайте
+                                в админ-данных.
+                              </p>
+                            )}
+                          </td>
+                        )}
                         <td style={thtd}>
                           <select
                             aria-label="Качество"
@@ -607,7 +853,7 @@ export function AllocationPanel() {
                             style={fieldStyle}
                           >
                             <option value="_notset">— не выбрано —</option>
-                            {BATCH_QUALITY_TIERS.map((c) => (
+                            {ALLOCATION_SELL_TIERS.map((c) => (
                               <option key={c} value={c}>
                                 {labelsQuality[c]}
                               </option>
@@ -675,6 +921,16 @@ export function AllocationPanel() {
       {save.isError && (
         <p role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
           {(save.error as Error).message}
+        </p>
+      )}
+      {writeOff.isError && (
+        <p role="alert" style={{ ...errorText, marginTop: "0.35rem" }}>
+          {(writeOff.error as Error).message}
+        </p>
+      )}
+      {bulkSave.isError && (
+        <p role="alert" style={{ ...errorText, marginTop: "0.35rem" }}>
+          {(bulkSave.error as Error).message}
         </p>
       )}
     </div>

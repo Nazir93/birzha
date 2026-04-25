@@ -2,6 +2,8 @@ import { eq, inArray } from "drizzle-orm";
 
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DbClient } from "../db/client.js";
+import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
+import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { batches as batchesTable, productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
 
 import type { Batch } from "@birzha/domain";
@@ -50,7 +52,18 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
 
 export async function listBatchesForHttp(batches: BatchRepository, db: DbClient | null): Promise<BatchJson[]> {
   const list = await batches.list();
-  if (!db || list.length === 0) {
+  if (list.length === 0) {
+    return list.map((b) => batchToJson(b, mergeNakladnyaForList(undefined, b), undefined));
+  }
+
+  let rejectByBatch = new Map<string, bigint>();
+  if (db) {
+    const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
+    const ids0 = list.map((b) => b.getId());
+    rejectByBatch = await ledger.totalQualityRejectGramsByBatchIds(ids0);
+  }
+
+  if (!db) {
     return list.map((b) => batchToJson(b, mergeNakladnyaForList(undefined, b), undefined));
   }
 
@@ -106,10 +119,12 @@ export async function listBatchesForHttp(batches: BatchRepository, db: DbClient 
     const id = b.getId();
     const m = meta.get(id);
     const a = alloc.get(id);
+    const rg = rejectByBatch.get(id) ?? 0n;
     return batchToJson(
       b,
       mergeNakladnyaForList(m, b),
       a ? { qualityTier: a.qualityTier, destination: a.destination } : undefined,
+      { qualityRejectWrittenOffKg: gramsToKg(rg) },
     );
   });
 }

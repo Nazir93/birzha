@@ -31,12 +31,18 @@ export type BatchJson = {
     qualityTier: string | null;
     destination: string | null;
   };
+  /**
+   * Сумма кг, списанных как «брак с остатка» (журнал `quality_reject`), без прочих списаний в `writtenOffKg`.
+   * Только при PostgreSQL; иначе поле нет.
+   */
+  qualityRejectWrittenOffKg?: number;
 };
 
 export function batchToJson(
   batch: Batch,
   nakladnaya?: BatchJson["nakladnaya"],
   allocation?: BatchJson["allocation"],
+  extras?: { qualityRejectWrittenOffKg: number },
 ): BatchJson {
   const s = batch.toPersistenceState();
   return {
@@ -51,5 +57,6 @@ export function batchToJson(
     writtenOffKg: s.writtenOffKg,
     ...(nakladnaya ? { nakladnaya } : {}),
     ...(allocation ? { allocation } : {}),
+    ...(extras ? { qualityRejectWrittenOffKg: extras.qualityRejectWrittenOffKg } : {}),
   };
 }

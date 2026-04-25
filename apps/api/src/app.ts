@@ -14,6 +14,8 @@ import { InMemoryTripSaleRepository } from "./application/testing/in-memory-trip
 import { InMemoryTripShipmentRepository } from "./application/testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripShortageRepository } from "./application/testing/in-memory-trip-shortage.repository.js";
 import { InMemorySyncIdempotencyRepository } from "./application/testing/in-memory-sync-idempotency.repository.js";
+import { RecordWarehouseWriteOffUseCase } from "./application/batch/record-warehouse-write-off.use-case.js";
+import type { RecordWarehouseWriteOffTransactionRunner } from "./application/batch/record-warehouse-write-off.use-case.js";
 import { ApplySyncActionUseCase } from "./application/sync/apply-sync-action.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "./application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
@@ -28,6 +30,7 @@ import { createBusinessRouteAuth } from "./http/route-auth.js";
 import { registerSyncRoutes } from "./http/register-sync-routes.js";
 import { registerTripRoutes } from "./http/register-trip-routes.js";
 import { DrizzleBatchRepository } from "./infrastructure/persistence/drizzle-batch.repository.js";
+import { DrizzleBatchWarehouseWriteOffLedger } from "./infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { DrizzleTripRepository } from "./infrastructure/persistence/drizzle-trip.repository.js";
 import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-trip-sale.repository.js";
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
@@ -164,6 +167,24 @@ export async function buildApp(options: {
       }
     : undefined;
 
+  const runRecordWarehouseWriteOff: RecordWarehouseWriteOffTransactionRunner | undefined = db
+    ? async (fn) => {
+        await db.transaction(async (tx) => {
+          const exec = tx as unknown as DbClient;
+          await fn(new DrizzleBatchRepository(exec), new DrizzleBatchWarehouseWriteOffLedger(exec));
+        });
+      }
+    : undefined;
+
+  const recordWarehouseWriteOff: RecordWarehouseWriteOffUseCase | null =
+    db && batchRepository && runRecordWarehouseWriteOff
+      ? new RecordWarehouseWriteOffUseCase(
+          batchRepository,
+          new DrizzleBatchWarehouseWriteOffLedger(db as DbClient),
+          runRecordWarehouseWriteOff,
+        )
+      : null;
+
   const syncStackReady =
     Boolean(batchRepository) &&
     Boolean(tripRepository) &&
@@ -257,6 +278,7 @@ export async function buildApp(options: {
     batchesApi: batchRepository ? "enabled" : "disabled",
     purchaseDocumentsApi: createPurchaseDocumentUseCase ? "enabled" : "disabled",
     shipDestinationsApi: db && createPurchaseDocumentUseCase ? "enabled" : "disabled",
+    warehouseWriteOffApi: db && recordWarehouseWriteOff ? "enabled" : "disabled",
     tripsApi: tripRepository ? "enabled" : "disabled",
     tripShipmentLedger: shipmentRepository ? "enabled" : "disabled",
     tripSaleLedger: saleRepository ? "enabled" : "disabled",
@@ -332,6 +354,7 @@ export async function buildApp(options: {
       runSellInTransaction,
       runRecordTripShortageInTransaction,
       db,
+      recordWarehouseWriteOff,
     );
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
