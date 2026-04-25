@@ -8,6 +8,7 @@ import type {
   ProductGradesListResponse,
   PurchaseDocumentsListResponse,
   ShipDestinationsListResponse,
+  TripsListResponse,
   WarehousesListResponse,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -36,12 +37,19 @@ export function InventoryAdminPanel() {
   const [newDestOrder, setNewDestOrder] = useState("");
   const [destFormError, setDestFormError] = useState<string | null>(null);
   const [nakladError, setNakladError] = useState<string | null>(null);
+  const [newTripId, setNewTripId] = useState("");
+  const [newTripNumber, setNewTripNumber] = useState("");
+  const [newTripVehicle, setNewTripVehicle] = useState("");
+  const [newTripDriver, setNewTripDriver] = useState("");
+  const [newTripDeparted, setNewTripDeparted] = useState(""); // datetime-local
+  const [tripError, setTripError] = useState<string | null>(null);
 
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["warehouses"] });
     void queryClient.invalidateQueries({ queryKey: ["product-grades"] });
     void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
     void queryClient.invalidateQueries({ queryKey: ["ship-destinations"] });
+    void queryClient.invalidateQueries({ queryKey: ["trips"] });
   }, [queryClient]);
 
   const warehousesQ = useQuery({
@@ -57,6 +65,19 @@ export function InventoryAdminPanel() {
   });
 
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
+  const tripsApiEnabled = meta?.tripsApi === "enabled";
+
+  const tripsQ = useQuery({
+    queryKey: ["trips"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/trips");
+      if (!res.ok) {
+        throw new Error(`trips ${res.status}`);
+      }
+      return res.json() as Promise<TripsListResponse>;
+    },
+    enabled: enabled && tripsApiEnabled,
+  });
   const purchaseDocsQ = useQuery({
     queryKey: ["purchase-documents"],
     queryFn: async () => {
@@ -276,6 +297,91 @@ export function InventoryAdminPanel() {
     },
   });
 
+  const createTrip = useMutation({
+    mutationFn: async () => {
+      setTripError(null);
+      const id = newTripId.trim();
+      const tripNumber = newTripNumber.trim();
+      if (!id || !tripNumber) {
+        throw new Error("Id рейса (технический) и отображаемый номер обязательны");
+      }
+      const body: {
+        id: string;
+        tripNumber: string;
+        vehicleLabel?: string | null;
+        driverName?: string | null;
+        departedAt?: string | null;
+      } = { id, tripNumber };
+      const vl = newTripVehicle.trim();
+      if (vl) {
+        body.vehicleLabel = vl;
+      }
+      const dr = newTripDriver.trim();
+      if (dr) {
+        body.driverName = dr;
+      }
+      if (newTripDeparted) {
+        const t = new Date(newTripDeparted);
+        if (Number.isNaN(t.getTime())) {
+          throw new Error("Неверная дата/время отправления");
+        }
+        body.departedAt = t.toISOString();
+      }
+      const res = await apiFetch("/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 403) {
+        throw new Error("Нет прав: создание рейса — роли admin, manager, logistics");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: () => {
+      setNewTripId("");
+      setNewTripNumber("");
+      setNewTripVehicle("");
+      setNewTripDriver("");
+      setNewTripDeparted("");
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setTripError(e.message);
+    },
+  });
+
+  const deleteTrip = useMutation({
+    mutationFn: async (tripId: string) => {
+      setTripError(null);
+      const res = await apiFetch(`/api/trips/${encodeURIComponent(tripId)}`, { method: "DELETE" });
+      if (res.status === 403) {
+        throw new Error("Нет прав на удаление рейса");
+      }
+      if (res.status === 409) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        if (j.error === "trip_not_empty") {
+          throw new Error(
+            "Нельзя удалить: в рейсе есть отгрузка, продажа или недостача. Сначала уберите движения в «Операциях» и отчётах.",
+          );
+        }
+        throw new Error(j.message ?? "Конфликт при удалении (409)");
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setTripError(e.message);
+    },
+  });
+
   if (!enabled) {
     return (
       <section style={sectionBox}>
@@ -289,7 +395,7 @@ export function InventoryAdminPanel() {
   return (
     <section style={sectionBox} aria-labelledby="inv-adm-heading" role="region">
       <h2 id="inv-adm-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
-        Админ: накладные, направления, склады, калибры
+        Админ: накладные, рейсы, направления, склады, калибры
       </h2>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
         Управление справочниками и <strong>данными</strong> закупочных накладных (только admin/manager). Ввод новых
@@ -299,6 +405,157 @@ export function InventoryAdminPanel() {
         </Link>{" "}
         ({prefix.operations}).
       </p>
+
+      {tripsApiEnabled && (
+        <>
+          <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Рейсы</h3>
+          {tripError && <p style={errorText}>{tripError}</p>}
+          <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+            Создание и удаление (пустой рейс) — <code>POST/DELETE /api/trips</code>. Удалить можно только если нет
+            отгрузок, продаж и недостач по рейсу. Использование в грузообороте — в{" "}
+            <Link to={ops.operations}>Операциях</Link>.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "end",
+              gap: "0.35rem",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>id (UUID)</label>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <input
+                  value={newTripId}
+                  onChange={(e) => setNewTripId(e.target.value)}
+                  style={{ ...fieldStyle, width: 250 }}
+                  placeholder="технический id"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  style={{ ...btnStyle, fontSize: "0.82rem" }}
+                  onClick={() => {
+                    if (globalThis.crypto?.randomUUID) {
+                      setNewTripId(globalThis.crypto.randomUUID());
+                    }
+                  }}
+                >
+                  Сгенерировать
+                </button>
+              </div>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>№ рейса</label>
+              <input
+                value={newTripNumber}
+                onChange={(e) => setNewTripNumber(e.target.value)}
+                style={{ ...fieldStyle, width: 100 }}
+                placeholder="Ф-12"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>ТС</label>
+              <input
+                value={newTripVehicle}
+                onChange={(e) => setNewTripVehicle(e.target.value)}
+                style={{ ...fieldStyle, width: 100 }}
+                placeholder="опц."
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>Водитель</label>
+              <input
+                value={newTripDriver}
+                onChange={(e) => setNewTripDriver(e.target.value)}
+                style={{ ...fieldStyle, width: 120 }}
+                placeholder="опц."
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>Отправл.</label>
+              <input
+                type="datetime-local"
+                value={newTripDeparted}
+                onChange={(e) => setNewTripDeparted(e.target.value)}
+                style={fieldStyle}
+              />
+            </div>
+            <button
+              type="button"
+              style={btnStyle}
+              disabled={createTrip.isPending}
+              onClick={() => void createTrip.mutate()}
+            >
+              {createTrip.isPending ? "…" : "Создать рейс"}
+            </button>
+          </div>
+          {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
+          {tripsQ.isPending && <p style={muted}>Список рейсов…</p>}
+          {tripsQ.isSuccess && (
+            <div style={{ overflowX: "auto", marginBottom: "0.9rem" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                <thead>
+                  <tr>
+                    <th style={thHeadDense}>№ (борт)</th>
+                    <th style={thHeadDense}>Статус</th>
+                    <th style={thHeadDense}>ТС</th>
+                    <th style={thHeadDense}>Водитель</th>
+                    <th style={thHeadDense}>id</th>
+                    <th style={thHeadDense} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(tripsQ.data.trips ?? [])
+                    .slice()
+                    .sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru", { numeric: true }))
+                    .map((t) => (
+                      <tr key={t.id}>
+                        <td style={thtdDense}>
+                          <strong>№ {t.tripNumber}</strong>{" "}
+                          <Link to={`${prefix.operations}#trips`} style={{ fontSize: "0.8rem" }}>
+                            к операциям
+                          </Link>
+                        </td>
+                        <td style={thtdDense}>{t.status}</td>
+                        <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
+                        <td style={thtdDense}>{t.driverName ?? "—"}</td>
+                        <td style={thtdDense}>
+                          <code style={{ fontSize: "0.75rem" }} title={t.id}>
+                            {t.id.slice(0, 8)}…
+                          </code>
+                        </td>
+                        <td style={thtdDense}>
+                          <button
+                            type="button"
+                            style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                            disabled={deleteTrip.isPending}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
+                                )
+                              ) {
+                                void deleteTrip.mutate(t.id);
+                              }
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Закупочные накладные (удаление)</h3>
       {nakladError && <p style={errorText}>{nakladError}</p>}
