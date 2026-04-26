@@ -192,6 +192,7 @@ export function OperationsPanel() {
       .sort((a, c) => a[0].localeCompare(c[0], "ru"))
       .map(([line, kg]) => ({ line, kg }));
   }, [distBatchesToShip]);
+  const hasDistributionSelection = (distShipBatchIds?.length ?? 0) > 0;
 
   const fromDistributionQ = searchParams.get("fromDistribution");
   useEffect(() => {
@@ -540,9 +541,18 @@ export function OperationsPanel() {
           1. Отгрузить в рейс
         </h3>
         <p style={muted}>
-          POST /api/batches/:batchId/ship-to-trip — снимает массу <strong>с выбранной партии</strong> (строки накладной,
-          калибр). Сначала выберите рейс, затем либо одну партию и кг, либо отгрузите все строки накладной, где есть
-          остаток на складе.
+          {hasDistributionSelection ? (
+            <>
+              Вы пришли из <strong>Распределения</strong>: ниже отгружается <strong>один собранный отбор</strong> (свод по
+              калибрам). Ручные блоки «Одна партия» и «Вся накладная» скрыты, чтобы не дублировать сценарий.
+            </>
+          ) : (
+            <>
+              POST /api/batches/:batchId/ship-to-trip — снимает массу <strong>с выбранной партии</strong> (строки накладной,
+              калибр). Сначала выберите рейс, затем либо одну партию и кг, либо отгрузите все строки накладной, где есть
+              остаток на складе.
+            </>
+          )}
         </p>
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс (tripId) *
@@ -568,7 +578,9 @@ export function OperationsPanel() {
           ))}
         </select>
 
-        <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>
+        {!hasDistributionSelection && (
+          <>
+            <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>
         <label htmlFor="op-sel-ship-batch" style={{ fontSize: "0.88rem" }}>
           Партия *
         </label>
@@ -720,11 +732,13 @@ export function OperationsPanel() {
         >
           {shipAllFromNaklad.isPending ? "Отгрузка…" : "Отгрузить всю накладную в этот рейс"}
         </button>
-        <ErrorText e={shipAllFromNaklad.error as Error | null} />
-        {shipAllFromNaklad.isSuccess && (
-          <p style={successText} role="status">
-            Все строки с остатком отгружены.
-          </p>
+            <ErrorText e={shipAllFromNaklad.error as Error | null} />
+            {shipAllFromNaklad.isSuccess && (
+              <p style={successText} role="status">
+                Все строки с остатком отгружены.
+              </p>
+            )}
+          </>
         )}
 
         {distShipBatchIds != null && distShipBatchIds.length > 0 && (
