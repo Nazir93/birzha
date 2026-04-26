@@ -124,7 +124,7 @@ export function LoadingManifestBlock({
       aria-labelledby="loading-manifest-h"
     >
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
-        Сбор на погрузку: какие накладные в рейс
+        Сбор на погрузку: какие накладные в этот отбор
       </h3>
       <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>
         На склад <strong>{warehouseName}</strong> отметьте закупочные накладные, с которых берёте{" "}

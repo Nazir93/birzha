@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 
 import { apiFetch } from "../api/fetch-api.js";
 import type {
+  BatchesListResponse,
   CreateProductGradeResponse,
   CreateWarehouseResponse,
   ProductGradesListResponse,
@@ -15,6 +16,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { ops, prefix } from "../routes.js";
 import { Link } from "react-router-dom";
 import { btnStyle, errorText, fieldStyle, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
+import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 /**
@@ -51,6 +53,7 @@ export function InventoryAdminPanel() {
     void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
     void queryClient.invalidateQueries({ queryKey: ["ship-destinations"] });
     void queryClient.invalidateQueries({ queryKey: ["trips"] });
+    void queryClient.invalidateQueries({ queryKey: ["batches"] });
   }, [queryClient]);
 
   const warehousesQ = useQuery({
@@ -87,6 +90,17 @@ export function InventoryAdminPanel() {
         throw new Error(`purchase-documents ${res.status}`);
       }
       return res.json() as Promise<PurchaseDocumentsListResponse>;
+    },
+    enabled,
+  });
+  const batchesNaklRefQ = useQuery({
+    queryKey: ["batches"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/batches");
+      if (!res.ok) {
+        throw new Error(`batches ${res.status}`);
+      }
+      return res.json() as Promise<BatchesListResponse>;
     },
     enabled,
   });
@@ -406,6 +420,33 @@ export function InventoryAdminPanel() {
         </Link>{" "}
         ({prefix.operations}).
       </p>
+
+      <div id="batches-nakl-ref" style={{ marginBottom: "0.9rem" }}>
+        <h3
+          style={{
+            fontSize: "0.95rem",
+            margin: "0 0 0.4rem",
+            fontWeight: 600,
+            scrollMarginTop: "0.5rem",
+          }}
+        >
+          Партии по накладным (справка, чтение)
+        </h3>
+        <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.5rem" }}>
+          Свод id партий и кг: сворачивается по каждой накладной. <strong>Отгрузка в рейс</strong> — в{" "}
+          <Link to={ops.operations} style={{ fontWeight: 600 }}>
+            Операциях
+          </Link>
+          .
+        </p>
+        <BatchesByNakladnayaReference
+          batches={batchesNaklRefQ.data?.batches}
+          isLoading={batchesNaklRefQ.isPending}
+          sectionHeadingId="batches-nakl-ref-h"
+          showBulkExpandControls
+        />
+        {batchesNaklRefQ.isError && <p style={errorText}>Партии не загрузились: {String(batchesNaklRefQ.error)}</p>}
+      </div>
 
       {tripsApiEnabled && (
         <>

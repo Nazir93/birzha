@@ -31,13 +31,12 @@ import {
   muted,
   sectionBox,
   successText,
-  tableStyleDense,
-  thHeadDense,
-  thtdDense,
   warnText,
 } from "../ui/styles.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
-import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { adminRoutes, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { BatchesByNakladnayaReference, groupBatchesByPurchaseDocument } from "./BatchesByNakladnayaReference.js";
 import { parseRecordTripShortageForm, parseSellFromTripForm, parseShipForm } from "../validation/api-schemas.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -113,7 +112,7 @@ function ErrorText({ e }: { e: Error | null }) {
 }
 
 export function OperationsPanel() {
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -183,6 +182,16 @@ export function OperationsPanel() {
         : distShipBatchIds.length - distBatchesToShip.length,
     [distShipBatchIds, distBatchesToShip.length],
   );
+  const distByCaliberSummary = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of distBatchesToShip) {
+      const label = formatNakladLineLabel(b);
+      m.set(label, (m.get(label) ?? 0) + b.onWarehouseKg);
+    }
+    return [...m.entries()]
+      .sort((a, c) => a[0].localeCompare(c[0], "ru"))
+      .map(([line, kg]) => ({ line, kg }));
+  }, [distBatchesToShip]);
 
   const fromDistributionQ = searchParams.get("fromDistribution");
   useEffect(() => {
@@ -205,36 +214,10 @@ export function OperationsPanel() {
     });
   }, [distShipBatchIds]);
 
-  /** Партии сгруппированы по накладной — в таблице не смешиваем документы в одной куче. Без накладной (старые данные) в списке не показываем. */
-  const batchesGrouped = useMemo(() => {
-    const list = (batchesQuery.data?.batches ?? []).filter(isFromPurchaseNakladnaya);
-    const byDoc = new Map<string, BatchListItem[]>();
-    for (const b of list) {
-      const did = b.nakladnaya!.documentId!;
-      if (!byDoc.has(did)) {
-        byDoc.set(did, []);
-      }
-      byDoc.get(did)!.push(b);
-    }
-    const groups: {
-      documentId: string;
-      documentNumber: string | null;
-      batches: BatchListItem[];
-    }[] = [];
-    for (const [documentId, batches] of byDoc) {
-      const documentNumber = batches[0]?.nakladnaya?.documentNumber ?? null;
-      batches.sort(
-        (a, b) =>
-          (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru") ||
-          a.id.localeCompare(b.id),
-      );
-      groups.push({ documentId, documentNumber, batches });
-    }
-    groups.sort((a, b) =>
-      (a.documentNumber ?? "").localeCompare(b.documentNumber ?? "", "ru", { numeric: true }),
-    );
-    return groups;
-  }, [batchesQuery.data?.batches]);
+  const batchesGroupedCount = useMemo(
+    () => groupBatchesByPurchaseDocument(batchesQuery.data?.batches).length,
+    [batchesQuery.data?.batches],
+  );
 
   const nakladOptionsForShipAll = useMemo(() => {
     const seen = new Map<string, string>();
@@ -519,74 +502,24 @@ export function OperationsPanel() {
       />
       {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков (GET /api/batches)…" minHeight={96} />}
 
-      {!batchesQuery.isPending && batchesQuery.data && batchesGrouped.length > 0 && (
-        <div style={{ marginBottom: "1rem" }}>
-          <p id="op-batches-heading" style={{ ...muted, marginBottom: "0.5rem" }}>
-            <strong>Партии по накладным</strong> — каждый блок — один документ и его строки (калибры). Технический id партии
-            нужен для API; в работе ориентируйтесь на <strong>номер накладной</strong> и <strong>товар / калибр</strong>.
-            Партии не из оформленной накладной в списке не отображаются.
-          </p>
-          {batchesGrouped.map((grp) => (
-            <div key={grp.documentId} style={{ overflowX: "auto", marginBottom: "1rem" }}>
-              <p
-                style={{
-                  ...muted,
-                  marginBottom: "0.3rem",
-                  fontWeight: 600,
-                  fontSize: "0.92rem",
-                }}
-              >
-                Накладная № {grp.documentNumber ?? "—"}{" "}
-                <Link
-                  to={purchaseNakladnayaDocumentPath(grp.documentId)}
-                  style={{ fontWeight: 400, fontSize: "0.88rem" }}
-                >
-                  открыть документ
-                </Link>
-              </p>
-              <table style={tableStyleDense} aria-labelledby="op-batches-heading">
-                <thead>
-                  <tr>
-                    <th scope="col" style={thHeadDense}>
-                      Товар / калибр
-                    </th>
-                    <th scope="col" style={thHeadDense}>
-                      id партии
-                    </th>
-                    <th scope="col" style={thHeadDense}>
-                      на складе, кг
-                    </th>
-                    <th scope="col" style={thHeadDense}>
-                      в пути
-                    </th>
-                    <th scope="col" style={thHeadDense}>
-                      продано
-                    </th>
-                    <th scope="col" style={thHeadDense}>
-                      ожидает приёмки
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grp.batches.map((b) => (
-                    <tr key={b.id}>
-                      <td style={thtdDense}>{formatNakladLineLabel(b)}</td>
-                      <td style={thtdDense}>
-                        <code style={{ fontSize: "0.75rem" }} title={b.id}>
-                          {formatShortBatchId(b.id)}
-                        </code>
-                      </td>
-                      <td style={thtdDense}>{b.onWarehouseKg}</td>
-                      <td style={thtdDense}>{b.inTransitKg}</td>
-                      <td style={thtdDense}>{b.soldKg}</td>
-                      <td style={thtdDense}>{b.pendingInboundKg}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
+      {!batchesQuery.isPending && batchesQuery.data && (
+        <>
+          <BatchesByNakladnayaReference
+            batches={batchesQuery.data.batches}
+            isLoading={false}
+            sectionHeadingId="op-batches-heading"
+            showBulkExpandControls={false}
+          />
+          {batchesGroupedCount > 0 && user && canManageInventoryCatalog(user) && (
+            <p style={{ ...muted, fontSize: "0.86rem", margin: "-0.35rem 0 0.9rem" }}>
+              Подробная <strong>справочная</strong> сводка с «развернуть все» — в кабинете{" "}
+              <Link to={`${adminRoutes.inventory}#batches-nakl-ref`} style={{ fontWeight: 600 }}>
+                Склады и калибры
+              </Link>{" "}
+              (с кнопками «развернуть/свернуть все»).
+            </p>
+          )}
+        </>
       )}
 
       {trips.isError && (
@@ -826,11 +759,11 @@ export function OperationsPanel() {
             <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
               Сначала выберите <strong>рейс</strong> (создайте выше «Создать рейс», если его ещё нет), затем нажмите кнопку.
             </p>
-            {distBatchesToShip.length > 0 && (
+            {distByCaliberSummary.length > 0 && (
               <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
-                Партии:{" "}
-                {distBatchesToShip
-                  .map((b) => `${formatNakladLineLabel(b)} (${b.onWarehouseKg} кг)`)
+                Свод по калибрам (одна сборная накладная):{" "}
+                {distByCaliberSummary
+                  .map((r) => `${r.line}: ${r.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`)
                   .join(" · ")}
                 .
               </p>

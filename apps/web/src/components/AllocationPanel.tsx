@@ -21,12 +21,6 @@ import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
 /** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
-const ALLOCATION_SELL_TIERS = ["standard", "weak"] as const;
-
-const labelsQuality: Record<(typeof ALLOCATION_SELL_TIERS)[number], string> = {
-  standard: "стандарт (для регионов и «нормальной» реализации)",
-  weak: "слабый (уценка, отдельный контур)",
-};
 
 const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
   moscow: "Москва",
@@ -35,7 +29,7 @@ const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
   writeoff: "Списание",
 };
 
-type RowEdit = { quality: string; destination: string };
+type RowEdit = { destination: string };
 
 function toSelectValue(
   v: string | null | undefined,
@@ -178,9 +172,8 @@ export function AllocationPanel() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   /** Какие накл. вошли в «отбор под рейс» — общий список для сбора на погрузку и для строк качества. */
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
-  /** Партии для «Применить к выбранным» (качество/направление). */
+  /** Партии для «Применить к выбранным» (направление). */
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
-  const [bulkQuality, setBulkQuality] = useState<string>("_notset");
   const [bulkDestination, setBulkDestination] = useState<string>("_notset");
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
 
@@ -199,17 +192,13 @@ export function AllocationPanel() {
     }
     const a = b.allocation;
     return {
-      quality: toSelectValue(a?.qualityTier ?? null, [...ALLOCATION_SELL_TIERS], "not_set"),
       destination: toSelectValue(a?.destination ?? null, destAllowed, "not_set"),
     };
   };
 
   const save = useMutation({
-    mutationFn: async ({ batchId, quality, destination }: { batchId: string; quality: string; destination: string }) => {
-      const body = {
-        qualityTier: (quality === "_notset" ? null : quality) as string | null,
-        destination: (destination === "_notset" ? null : destination) as string | null,
-      };
+    mutationFn: async ({ batchId, destination }: { batchId: string; destination: string }) => {
+      const body = { destination: (destination === "_notset" ? null : destination) as string | null };
       const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/allocation`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -270,10 +259,9 @@ export function AllocationPanel() {
   });
 
   const bulkSave = useMutation({
-    mutationFn: async (payload: { batchIds: string[]; quality: string; destination: string }) => {
-      const hasQ = payload.quality !== "_notset";
+    mutationFn: async (payload: { batchIds: string[]; destination: string }) => {
       const hasD = payload.destination !== "_notset";
-      if (!hasQ && !hasD) {
+      if (!hasD) {
         return;
       }
       for (const batchId of payload.batchIds) {
@@ -281,9 +269,6 @@ export function AllocationPanel() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...(hasQ
-              ? { qualityTier: payload.quality === "_notset" ? null : (payload.quality as string) }
-              : {}),
             ...(hasD
               ? { destination: payload.destination === "_notset" ? null : (payload.destination as string) }
               : {}),
@@ -309,7 +294,7 @@ export function AllocationPanel() {
 
   const onSaveRow = (b: BatchListItem) => {
     const e = getEdit(b);
-    save.mutate({ batchId: b.id, quality: e.quality, destination: e.destination });
+    save.mutate({ batchId: b.id, destination: e.destination });
   };
 
   const list = useMemo(
@@ -467,21 +452,22 @@ export function AllocationPanel() {
   }
 
   return (
-    <div role="region" aria-label="Распределение по качеству и направлению">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по качеству и направлению</h2>
+    <div role="region" aria-label="Распределение по направлению">
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по направлению</h2>
       <p style={muted}>
-        Весь товар, принятый по <strong>разным</strong> накладным на один <strong>склад</strong>, даёт <strong>общий остаток</strong> в
-        кг. <strong>1</strong> — выберите склад, <strong>2</strong> — в блоке ниже отметьте, с каких накладных берёте
-        погрузку, посмотрите <strong>свод по калибру</strong> и <strong>по партиям</strong> (снимите накл., что не везёте —
-        товар <strong>остаётся</strong> на учёте склада), <strong>        3</strong> — отметьте партию(и) (чекбокс), при необходимости
-        <strong> массово</strong> проставьте качество и направление. Часть партии в брак — <strong>кг в
-        отдельной колонке</strong> (списание с остатка; для бух. — выгрузка
-        <code> GET /api/warehouse-write-offs?purchaseDocumentId=</code> с авторизацией, как в Postman).{" "}
-        <strong>Оформить рейс / отгрузку</strong> — в{" "}
+        <strong>Здесь только приём в учёте</strong> (сорт, направление, брак кг, печатный «лист погрузки»). <strong>Факта
+        отгрузки в фуру</strong> здесь нет — она в разделе{" "}
         <Link to={ops.operations} style={{ fontWeight: 600 }}>
-          Операциях
-        </Link>{" "}
-        (кнопка внизу). Расхождения кг/приём — правки в «Операциях»; при необходимости в карточке исходной накл. См.{" "}
+          Операции
+        </Link>
+        , после кнопки <strong>«Погрузка в рейс»</strong> (она переносит список партий, вы выбираете рейс и
+        подтверждаете).
+      </p>
+      <p style={muted}>
+        <strong>1</strong> — склад. <strong>2</strong> — накладные, откуда везёте в этот рейс, свод по калибру/партиям.{" "}
+        <strong>3</strong> — таблица: чекбоксами отметьте партии для <strong>массового</strong> назначения направления («К выбранным»)
+        <strong> и/или</strong> чтобы ограничить, <strong>какие</strong> партии попадут в «Погрузка в рейс» (если
+        <strong>ничего</strong> не отмечено — в рейс пойдут <strong>все</strong> строки отбора). Брак в кг — в колонке. См.{" "}
         <Link to={ops.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
@@ -595,33 +581,17 @@ export function AllocationPanel() {
             (documentOptions.length === 0 || (documentOptions.length > 0 && loadNaklSelection.size > 0)) &&
             tableRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
-              <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
-                2. Качество и направление по отобранным партиям
+                <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+                2. Направление и отбор в рейс (по чекбоксам)
               </h3>
               {tableRows.length > 0 && (
                 <div
                   className="no-print"
                   style={{ margin: "0 0 0.9rem", display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", alignItems: "end" }}
                 >
-                  <span style={{ fontSize: "0.86rem" }}>
-                    Выбрано: <strong>{selectedRowIds.size}</strong> / {tableRows.length}
+                  <span style={{ fontSize: "0.86rem" }} title="Те же чекбоксы используются для кнопки «Погрузка в рейс» (если 0 — берутся все строки)">
+                    Отмечено партий: <strong>{selectedRowIds.size}</strong> / {tableRows.length}
                   </span>
-                  <div>
-                    <span style={muted}>Качество</span>{" "}
-                    <select
-                      aria-label="Качество для выбранных"
-                      value={bulkQuality}
-                      onChange={(ev) => setBulkQuality(ev.target.value)}
-                      style={fieldStyle}
-                    >
-                      <option value="_notset">— пропуск —</option>
-                      {ALLOCATION_SELL_TIERS.map((c) => (
-                        <option key={c} value={c}>
-                          {labelsQuality[c]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   <div>
                     <span style={muted}>Направление</span>{" "}
                     <select
@@ -644,11 +614,11 @@ export function AllocationPanel() {
                       style={btnStyle}
                       disabled={bulkSave.isPending || save.isPending || selectedRowIds.size === 0}
                       onClick={() => {
-                        if (bulkQuality === "_notset" && bulkDestination === "_notset") {
+                        if (bulkDestination === "_notset") {
                           return;
                         }
                         const batchIds = [...selectedRowIds];
-                        bulkSave.mutate({ batchIds, quality: bulkQuality, destination: bulkDestination });
+                        bulkSave.mutate({ batchIds, destination: bulkDestination });
                       }}
                     >
                       {bulkSave.isPending ? "…" : "К выбранным"}
@@ -691,9 +661,6 @@ export function AllocationPanel() {
                       </th>
                     )}
                     <th scope="col" style={thHead}>
-                      Качество
-                    </th>
-                    <th scope="col" style={thHead}>
                       Направление
                     </th>
                     <th scope="col" style={thHead} />
@@ -712,7 +679,7 @@ export function AllocationPanel() {
                             type="checkbox"
                             checked={selectedRowIds.has(b.id)}
                             onChange={() => onToggleSelectRow(b.id)}
-                            aria-label={`Выбрать партию ${label}`}
+                            aria-label={`Партия ${label}: сорт/направление пачкой и/или в список «Погрузка в рейс»`}
                           />
                         </td>
                         <td style={thtd}>
@@ -796,29 +763,13 @@ export function AllocationPanel() {
                         )}
                         <td style={thtd}>
                           <select
-                            aria-label="Качество"
-                            value={e.quality}
-                            onChange={(ev) => {
-                              const v = ev.target.value;
-                              setEdits((prev) => ({ ...prev, [b.id]: { ...e, quality: v } }));
-                            }}
-                            style={fieldStyle}
-                          >
-                            <option value="_notset">— не выбрано —</option>
-                            {ALLOCATION_SELL_TIERS.map((c) => (
-                              <option key={c} value={c}>
-                                {labelsQuality[c]}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={thtd}>
-                          <select
                             aria-label="Направление"
                             value={e.destination}
                             onChange={(ev) => {
                               const v = ev.target.value;
                               setEdits((prev) => ({ ...prev, [b.id]: { ...e, destination: v } }));
+                              // Город/направление сохраняем сразу, чтобы при повторном входе не "сбрасывалось".
+                              save.mutate({ batchId: b.id, destination: v });
                             }}
                             style={fieldStyle}
                           >
@@ -845,16 +796,34 @@ export function AllocationPanel() {
                   type="button"
                   style={btnStyle}
                   onClick={() => {
-                    saveDistributionShipPayload({ v: 1, batchIds: tableRows.map((b) => b.id) });
+                    const idsFromSelection =
+                      selectedRowIds.size > 0
+                        ? tableRows.filter((b) => selectedRowIds.has(b.id)).map((b) => b.id)
+                        : tableRows.map((b) => b.id);
+                    if (idsFromSelection.length === 0) {
+                      return;
+                    }
+                    saveDistributionShipPayload({ v: 1, batchIds: idsFromSelection });
                     void navigate({ pathname: ops.operations, search: "?fromDistribution=1" });
                   }}
                 >
                   Погрузка в рейс
                 </button>{" "}
                 <span style={muted}>
-                  (переносит этот набор партий в «Операции» — укажите рейс и нажмите «Отгрузить весь отбор из
-                  «Распределения»»; рейс при отсутствии создаётся на той же странице)
+                  Переход в <strong>Операции</strong> со списком:{" "}
+                  {selectedRowIds.size > 0 ? (
+                    <>только <strong>отмеченные</strong> партии ({selectedRowIds.size})</>
+                  ) : (
+                    <>
+                      <strong>все</strong> партии в таблице (ничего не отмечали)
+                    </>
+                  )}
+                  . Там — выбор <strong>рейса</strong> и одна кнопка <strong>отгрузить весь</strong> этот список. Это
+                  <strong> не</strong> повтор: здесь — учёт и печать, в Операциях — движение в рейс.
                 </span>
+              </p>
+              <p style={{ ...muted, fontSize: "0.82rem", marginTop: "0.35rem" }}>
+                Направление в строке сохраняется <strong>сразу при выборе</strong> (без отдельной кнопки).
               </p>
             </div>
           )}

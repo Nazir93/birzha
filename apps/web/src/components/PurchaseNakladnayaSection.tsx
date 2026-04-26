@@ -153,7 +153,16 @@ export function PurchaseNakladnayaSection() {
       return res.json() as Promise<CreatePurchaseDocumentResponse>;
     },
     onSuccess: (data) => {
-      setLastOk(`Создан документ: ${data.documentId}`);
+      setLastOk(`Создан документ: ${data.documentId}. Форма очищена — можно ввести новую накладную.`);
+      setFormError(null);
+      setDocumentId("");
+      setDocumentNumber("");
+      setDocDate(todayIsoDate());
+      setWarehouseId("");
+      setSupplierName("");
+      setBuyerLabel("");
+      setExtraCostKopecks("0");
+      setLines([emptyLine()]);
       invalidate();
     },
     onError: (e: Error) => {
