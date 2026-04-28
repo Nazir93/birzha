@@ -340,6 +340,100 @@ main.app-shell {
   align-items: center;
 }
 
+.birzha-actions-row--wrap {
+  gap: 0.65rem;
+}
+
+/* Кабинет продавца: шаги и выбор рейса */
+.birzha-seller-step-badge {
+  display: inline-block;
+  margin: 0 0 0.35rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0369a1;
+  background: #e0f2fe;
+  border-radius: var(--birzha-radius-sm);
+}
+
+.birzha-seller-step-badge--muted {
+  color: var(--color-text-muted);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-seller-trip-card {
+  border-left: 4px solid #38bdf8;
+}
+
+.birzha-seller-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.birzha-seller-trip-select {
+  width: 100%;
+  max-width: min(100%, 32rem);
+  padding: 0.55rem 0.6rem;
+  font-size: 1.05rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+}
+
+.birzha-seller-trip-meta {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  border-radius: var(--birzha-radius-sm);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-seller-trip-meta li + li {
+  margin-top: 0.25rem;
+}
+
+.birzha-seller-trip-meta__k {
+  color: var(--color-text-muted);
+}
+
+.birzha-seller-trip-meta__v {
+  font-weight: 600;
+}
+
+.birzha-seller-actions-card {
+  border-left: 4px solid #059669;
+}
+
+.birzha-seller-overview-secondary {
+  opacity: 0.97;
+}
+
+/* Кабинет продавца: один экран продажи, удобно в PWA (standalone) */
+.birzha-seller-workspace {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.birzha-seller-sell-panel.birzha-panel {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.birzha-seller-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1.15rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
 /* Разделители секций внутри длинных страниц (/o, формы) */
 .birzha-panel {
   margin-bottom: 1.25rem;

@@ -223,7 +223,10 @@ export function AdminCabinetHome() {
                 {aggregates.pendingInboundKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
               </div>
             </div>
-            <div className="birzha-kpi-tile">
+            <div
+              className="birzha-kpi-tile"
+              title="Килограммы по партиям, занесённые как списание с остатка на складе (брак и т.п.). В интерфейсе это не «удалить» — данные в PostgreSQL; тестовый сброс: в README раздел «Тестовые данные», команда db:reset-test-data."
+            >
               <div className="birzha-kpi-tile__label">Списано (партии), кг</div>
               <div className="birzha-kpi-tile__value">
                 {aggregates.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}

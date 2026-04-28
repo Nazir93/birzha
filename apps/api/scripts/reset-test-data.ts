@@ -1,7 +1,8 @@
 /**
  * Очистка **данных** PostgreSQL для ручного тестирования: схема не трогается.
  *
- * - Удаляет: движения рейса, накладные, партии, рейсы, `sync_processed_actions`, контрагентов, склады, калибры.
+ * - Удаляет: движения рейса, накладные, партии (в т.ч. `written_off_grams` / KPI «Списано» в админке), журнал
+ *   `batch_warehouse_write_offs`, рейсы, `sync_processed_actions`, контрагентов, склады, калибры.
  * - Не трогает: `users`, `user_roles`, `roles` (логин и роли остаются).
  * - Снова вставляет **склады и калибры** как в миграции `drizzle/0011_…` (Манас/Каякент, №5… — как у заказчика).
  *
@@ -35,6 +36,7 @@ const TRUNCATE = `
     sync_processed_actions,
     purchase_document_lines,
     purchase_documents,
+    batch_warehouse_write_offs,
     batches,
     trips,
     counterparties,

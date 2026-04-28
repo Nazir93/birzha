@@ -5,6 +5,7 @@ import { AppNav } from "./components/AppNav.js";
 import { CreateTripIfAllowed } from "./components/CreateTripIfAllowed.js";
 import { AdminCabinetHome } from "./components/AdminCabinetHome.js";
 import { SellerCabinetHome } from "./components/SellerCabinetHome.js";
+import { SellerSalesOperationsRedirect } from "./components/SellerSalesOperationsRedirect.js";
 import { AccountingCabinetHome } from "./components/AccountingCabinetHome.js";
 import { CounterpartiesPanel } from "./components/CounterpartiesPanel.js";
 import { LoginPage } from "./components/LoginPage.js";
@@ -245,16 +246,7 @@ export function App() {
                 </RequirePanel>
               }
             />
-            <Route
-              path="operations"
-              element={
-                <RequirePanel panel="operations">
-                  <section className="birzha-card">
-                    <OperationsPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
+            <Route path="operations" element={<SellerSalesOperationsRedirect />} />
             <Route
               path="offline"
               element={

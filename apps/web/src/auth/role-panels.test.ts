@@ -57,6 +57,10 @@ describe("role-panels", () => {
     expect(order[0]).toBe("reports");
   });
 
+  it("operationsPanelOrder: только seller — отчёт и офлайн без дубля «Операции»", () => {
+    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports", "offline"]);
+  });
+
   it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {
     expect(canCreateTrip(userWithRoles("admin"))).toBe(true);
     expect(canCreateTrip(userWithRoles("manager"))).toBe(true);

@@ -225,6 +225,10 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     return base;
   }
   const codes = globalRoleCodes(user);
+  /** Только полевой продавец: продажа на `/s`, без второй вкладки «Операции» (дубль формы). */
+  if (isSellerOnly(codes)) {
+    return ["reports", "offline"];
+  }
   if (codes.has("logistics")) {
     const rest = base.filter((p) => p !== "reports");
     return ["reports", ...rest];

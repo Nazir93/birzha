@@ -23,7 +23,7 @@ export default defineConfig({
         name: "Биржа",
         short_name: "Биржа",
         description: "Учёт: закупка → склад → рейс → продажа",
-        theme_color: "#fafafa",
+        theme_color: "#f4f4f5",
         background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait-primary",
