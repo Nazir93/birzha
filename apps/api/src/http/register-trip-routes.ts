@@ -35,11 +35,13 @@ export function registerTripRoutes(
   shortages: TripShortageRepository,
   batches: BatchRepository,
   routeAuth: BusinessRouteAuth,
+  listAssignableFieldSellers?: () => Promise<{ id: string; login: string }[]>,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
+  const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
 
   app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
@@ -49,6 +51,15 @@ export function registerTripRoutes(
         list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
       }
       return reply.send({ trips: list.map(tripToJson) });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/trips/field-seller-options", { ...withPreHandlers(routeAuth.tripWrite) }, async (_req, reply) => {
+    try {
+      const fieldSellers = await listFieldSellers();
+      return reply.send({ fieldSellers });
     } catch (error) {
       return sendMappedError(reply, error);
     }

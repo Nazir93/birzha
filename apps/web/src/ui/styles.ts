@@ -14,10 +14,10 @@ export const fieldStyle: CSSProperties = {
   fontSize: "0.9375rem",
   fontWeight: 500,
   lineHeight: 1.45,
-  color: "#18181b",
+  color: "var(--color-text)",
   borderRadius: 8,
-  border: "1px solid #d4d4d8",
-  background: "#fff",
+  border: "1px solid var(--color-border)",
+  background: "var(--birzha-surface)",
   boxSizing: "border-box",
   minHeight: "2.625rem",
   transition: "border-color 0.15s ease, box-shadow 0.15s ease",
@@ -27,7 +27,7 @@ export const fieldStyle: CSSProperties = {
 export const dateFieldStyle: CSSProperties = {
   ...fieldStyle,
   colorScheme: "only light",
-  accentColor: "#15803d",
+  accentColor: "var(--birzha-accent)",
 };
 
 /** Как `fieldStyleCompact`, с `color-scheme` / `accent-color` для нативного календаря (см. `index.css`). */
@@ -51,7 +51,7 @@ export const fieldStyleFullWidth: CSSProperties = {
 export const preJson: CSSProperties = {
   margin: "0.5rem 0 0",
   padding: "0.75rem",
-  background: "#f4f4f5",
+  background: "var(--birzha-bg-page)",
   borderRadius: 6,
   overflow: "auto",
   fontSize: "0.85rem",
@@ -68,8 +68,8 @@ export const btnStyle: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid #d4d4d8",
-  background: "#fff",
+  border: "1px solid var(--color-border)",
+  background: "var(--birzha-surface)",
   transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
@@ -83,8 +83,8 @@ export const btnStyleInline: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid #d4d4d8",
-  background: "#fff",
+  border: "1px solid var(--color-border)",
+  background: "var(--birzha-surface)",
   transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
@@ -97,17 +97,11 @@ export const btnSecondary: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid #d4d4d8",
-  background: "#fff",
+  border: "1px solid var(--color-border)",
+  background: "var(--birzha-surface)",
 };
 
-export const sectionBox: CSSProperties = {
-  marginBottom: "1.25rem",
-  paddingBottom: "1rem",
-  borderBottom: "1px solid #e4e4e7",
-};
-
-export const muted: CSSProperties = { color: "#52525b", fontSize: "0.85rem", margin: "0 0 0.75rem" };
+export const muted: CSSProperties = { color: "var(--birzha-text-subtle)", fontSize: "0.85rem", margin: "0 0 0.75rem" };
 
 export const tableStyle: CSSProperties = {
   width: "100%",
@@ -123,47 +117,40 @@ export const tableStyleDense: CSSProperties = {
 };
 
 export const thtd: CSSProperties = {
-  border: "1px solid #e4e4e7",
+  border: "1px solid var(--color-border)",
   padding: "0.35rem 0.5rem",
   textAlign: "left" as const,
 };
 
 export const thtdDense: CSSProperties = {
-  border: "1px solid #e4e4e7",
+  border: "1px solid var(--color-border)",
   padding: "0.3rem 0.45rem",
   textAlign: "left" as const,
 };
 
 export const thHead: CSSProperties = {
   ...thtd,
-  background: "#f4f4f5",
+  background: "var(--birzha-bg-page)",
   fontWeight: 600,
 };
 
 export const thHeadDense: CSSProperties = {
   ...thtdDense,
-  background: "#f4f4f5",
+  background: "var(--birzha-bg-page)",
   fontWeight: 600,
 };
 
-/** Карточка контента в `App`. */
-export const sectionCard: CSSProperties = {
-  marginTop: "1.25rem",
-  fontFamily: fontUi,
-  fontSize: "0.95rem",
-  padding: "1.25rem",
-  border: "1px solid #e4e4e7",
-  borderRadius: 10,
-  background: "#fafafa",
+export const successText: CSSProperties = {
+  color: "var(--birzha-accent)",
+  marginTop: "0.5rem",
+  fontSize: "0.88rem",
 };
 
-export const successText: CSSProperties = { color: "#15803d", marginTop: "0.5rem", fontSize: "0.88rem" };
-
 export const errorText: CSSProperties = {
-  color: "#b91c1c",
+  color: "var(--birzha-danger)",
   marginTop: "0.5rem",
   fontSize: "0.88rem",
   whiteSpace: "pre-wrap" as const,
 };
 
-export const warnText: CSSProperties = { color: "#b45309", fontSize: "0.88rem" };
+export const warnText: CSSProperties = { color: "var(--birzha-warn)", fontSize: "0.88rem" };

@@ -80,7 +80,14 @@
 
 **Ограничение по складу (scoped роли):** у пользователя с ролями `warehouse` или `receiver` и `scope_type = warehouse`, `scope_id = <id склада>` списки **`GET /api/batches`** и **`GET /api/purchase-documents`** содержат только строки этого склада; чужой документ на **`GET /api/purchase-documents/:id`** — ответ **403**. См. `apps/api/src/auth/warehouse-scope.ts`.
 
-**Реализация в API (MVP, текущий код):** в таблицу `trip_batch_sales` пишется `recorded_by_user_id` (пользователь из JWT при `POST /batches/…/sell-from-trip` и `POST /sync` с `sell_from_trip`). Для учётной записи с **глобальной** ролью **только** `seller` (без `warehouse`, `logistics`, `manager` и т.д., см. `isGlobalSellerOnly` / `isFieldSellerOnly`) ответ **`GET /api/trips/:tripId/shipment-report`** строит блоки **`sales`** и связанные **`financials`** только по таким строкам; **отгрузка в рейс** и **недостача** в отчёте — общие по рейсу. Список **`GET /api/trips`** для продавца не сужается. Остальные роли получают полный отчёт.
+**Закупщик и накладные:** при создании накладной в PostgreSQL сохраняется **`created_by_user_id`** (JWT `sub`). Учётная запись с глобальной ролью **`purchaser`** в списке и карточке накладной видит только документы **без автора** (наследие до миграции) или **своего** автора. См. `apps/api/src/auth/purchase-scope.ts`.
+
+**Рейс и полевой продавец:** у рейса опционально **`assigned_seller_user_id`** (кто закреплён «в поле»). Для **`GET /api/trips`** и доступа к **`GET /api/trips/:id`** / отчёту учётная запись с **только** полевой ролью `seller` (см. `isGlobalSellerOnly`) видит только рейсы без закрепления или закреплённые за ней; иначе **403** там, где применимо.
+
+**Реализация в API (MVP, текущий код):** в таблицу `trip_batch_sales` пишется `recorded_by_user_id` (пользователь из JWT при `POST /batches/…/sell-from-trip` и `POST /sync` с `sell_from_trip`). Для учётной записи с **глобальной** ролью **только** `seller` (без `warehouse`, `logistics`, `manager` и т.д., см. `isGlobalSellerOnly` / `isFieldSellerOnly`) блоки **`sales`** и связанные **`financials`** в **`GET /api/trips/:tripId/shipment-report`** строятся только по таким строкам; **отгрузка в рейс** и **недостача** в отчёте — общие по рейсу. Остальные роли получают полный отчёт по продажам.
+
+**Назначение продавца на рейс:** список кандидатов — **`GET /api/trips/field-seller-options`** (роли создания рейса: `admin`, `manager`, `logistics`), активные пользователи с глобальной ролью `seller`.
+
 - руководитель видит агрегаты и детализацию по ролям и регионам
 
 ## Разделение действий

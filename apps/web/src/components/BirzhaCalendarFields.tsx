@@ -51,7 +51,10 @@ export function toDatetimeLocalValue(d: Date): string {
 }
 
 function parseDatetimeLocal(s: string): Date | null {
-  const t = s.trim() ? new Date(s) : Number.NaN;
+  if (!s.trim()) {
+    return null;
+  }
+  const t = new Date(s);
   return Number.isNaN(t.getTime()) ? null : t;
 }
 

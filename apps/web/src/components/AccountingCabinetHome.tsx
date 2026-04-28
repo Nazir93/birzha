@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { adminRoutes, accounting, prefix } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
-import { sectionCard, muted, btnStyle } from "../ui/styles.js";
+import { muted, btnStyle } from "../ui/styles.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
@@ -15,8 +15,8 @@ export function AccountingCabinetHome() {
   const showServiceLink = user && canManageInventoryCatalog(user);
 
   return (
-    <section style={sectionCard} aria-labelledby="acc-home-h">
-      <h2 id="acc-home-h" style={{ fontSize: "1.1rem", margin: "0 0 0.5rem" }}>
+    <section className="birzha-card" aria-labelledby="acc-home-h">
+      <h2 id="acc-home-h" className="birzha-section-title">
         Бухгалтерия — сводка
       </h2>
       <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.55 }}>
@@ -36,7 +36,7 @@ export function AccountingCabinetHome() {
           <a href="#acc-trips" style={{ fontWeight: 600 }}>
             Деньги по рейсам
           </a>{" "}
-          <span style={muted}>— таблица с итоговой строкой.</span>
+          <span style={muted}>— диаграмма выручки и таблица с итоговой строкой.</span>
         </li>
         <li>
           <Link to={accounting.reports} style={{ fontWeight: 600 }}>

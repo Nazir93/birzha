@@ -599,17 +599,7 @@ export function AllocationPanel() {
           )}
 
           {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
-            <div
-              style={{
-                marginBottom: "1rem",
-                padding: "0.65rem 0.75rem",
-                background: "#fafafa",
-                border: "1px solid #e4e4e7",
-                borderRadius: 6,
-              }}
-              role="region"
-              aria-label="Остаток по неотмеченным накладным"
-            >
+            <div className="birzha-inline-panel" role="region" aria-label="Остаток по неотмеченным накладным">
               <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
                 Не вошло в отбор накладных — остаток на складе
               </h3>
@@ -792,7 +782,9 @@ export function AllocationPanel() {
                             </Link>
                           )}
                           <div>
-                            <code style={{ fontSize: "0.75rem", color: "#71717a" }}>{formatShortBatchId(b.id)}</code>
+                            <code className="birzha-text-muted" style={{ fontSize: "0.75rem" }}>
+                              {formatShortBatchId(b.id)}
+                            </code>
                           </div>
                         </td>
                         <td style={thtd}>{b.onWarehouseKg}</td>
@@ -803,7 +795,7 @@ export function AllocationPanel() {
                             "—"
                           )}
                           {linePkg != null && linePkg > 0 && (
-                            <div style={{ fontSize: "0.78rem", color: "#52525b", marginTop: "0.2rem" }}>
+                            <div className="birzha-text-subtle" style={{ fontSize: "0.78rem", marginTop: "0.2rem" }}>
                               в накл.: {linePkg} шт. · вес партии {b.totalKg} кг
                             </div>
                           )}

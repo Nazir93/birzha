@@ -5,11 +5,12 @@ import { Link } from "react-router-dom";
 import { apiGetJson } from "../api/fetch-api.js";
 import type { ShipmentReportResponse, TripsListResponse } from "../api/types.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
+import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { sales } from "../routes.js";
-import { btnStyle, muted, sectionBox } from "../ui/styles.js";
+import { btnStyle, errorText, muted } from "../ui/styles.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 
 /**
@@ -42,7 +43,7 @@ export function SalesCabinetDashboard() {
     queryFn: () => apiGetJson<ShipmentReportResponse>(`/api/trips/${encodeURIComponent(tripId)}/shipment-report`),
     enabled: tripId.length > 0,
     retry: 1,
-    staleTime: 15_000,
+    staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
   });
 
   const summary = reportQ.data
@@ -60,7 +61,7 @@ export function SalesCabinetDashboard() {
 
   if (tripsQ.isError || sortedTrips.length === 0) {
     return (
-      <div style={sectionBox}>
+      <div className="birzha-card">
         <p style={muted}>
           Рейсов пока нет. После того как логист создаст рейс и склад отгрузит товар, здесь появятся цифры. Пока можно
           открыть{" "}
@@ -74,9 +75,9 @@ export function SalesCabinetDashboard() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <section style={sectionBox} aria-labelledby="sales-dash-trip">
-        <h3 id="sales-dash-trip" style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>
+    <div className="birzha-stack">
+      <section className="birzha-card" aria-labelledby="sales-dash-trip">
+        <h3 id="sales-dash-trip" className="birzha-section-title birzha-section-title--sm">
           Рейс
         </h3>
         <label htmlFor="sales-dash-sel-trip" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
@@ -104,44 +105,38 @@ export function SalesCabinetDashboard() {
 
       {tripId && reportQ.isPending && <LoadingBlock label="Загрузка отчёта рейса…" minHeight={64} />}
       {tripId && reportQ.isError && (
-        <p style={{ color: "#b91c1c" }} role="alert">
+        <p style={errorText} role="alert">
           Отчёт не загрузился. Попробуйте позже или откройте «Отчёты и рейсы».
         </p>
       )}
       {summary && reportQ.isSuccess && (
-        <section
-          style={{
-            ...sectionBox,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(9rem, 1fr))",
-            gap: "0.65rem",
-          }}
-          aria-label="Кратко по выбранному рейсу"
-        >
-          <div style={{ padding: "0.65rem", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
-            <div style={{ fontSize: "0.75rem", color: "#166534" }}>Рейс</div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{summary.tripNumber}</div>
-          </div>
-          <div style={{ padding: "0.65rem", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-            <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Отгружено в рейс</div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{summary.shippedKg} кг</div>
-          </div>
-          <div style={{ padding: "0.65rem", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe" }}>
-            <div style={{ fontSize: "0.75rem", color: "#1e40af" }}>
-              {fieldOnly ? "Продано (ваши строки)" : "Продано"}
+        <section className="birzha-card" aria-label="Кратко по выбранному рейсу">
+          <div className="birzha-kpi-grid birzha-kpi-grid--dense">
+            <div className="birzha-kpi-tile birzha-kpi-tile--accent">
+              <div className="birzha-kpi-tile__label">Рейс</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{summary.tripNumber}</div>
             </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{summary.soldKg} кг</div>
-          </div>
-          <div style={{ padding: "0.65rem", background: "#fffbeb", borderRadius: 8, border: "1px solid #fde68a" }}>
-            <div style={{ fontSize: "0.75rem", color: "#92400e" }}>Выручка</div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{summary.revenue}</div>
+            <div className="birzha-kpi-tile">
+              <div className="birzha-kpi-tile__label">Отгружено в рейс</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{summary.shippedKg} кг</div>
+            </div>
+            <div className="birzha-kpi-tile birzha-kpi-tile--blue">
+              <div className="birzha-kpi-tile__label">
+                {fieldOnly ? "Продано (ваши строки)" : "Продано"}
+              </div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{summary.soldKg} кг</div>
+            </div>
+            <div className="birzha-kpi-tile birzha-kpi-tile--amber">
+              <div className="birzha-kpi-tile__label">Выручка</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{summary.revenue}</div>
+            </div>
           </div>
         </section>
       )}
 
-      <section style={sectionBox} aria-label="Быстрые действия">
-        <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>Действия</h3>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+      <section className="birzha-card" aria-label="Быстрые действия">
+        <h3 className="birzha-section-title birzha-section-title--sm">Действия</h3>
+        <div className="birzha-actions-row">
           <Link to={sales.operations} style={{ ...btnStyle, fontSize: "1rem", padding: "0.65rem 1rem" }}>
             Продать с рейса
           </Link>

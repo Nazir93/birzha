@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { apiFetch, onApiUnauthorized, setStoredApiToken } from "../api/fetch-api.js";
+import { prefetchCoreLists } from "../query/prefetch-app-data.js";
 import { invalidateOfflineStorageForScopeChange } from "../sync/outbox-invalidation.js";
 import { resolveOutboxScopeKey, syncOutboxScopeTo } from "../sync/outbox-scope.js";
 
@@ -87,6 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: ["outbox"] });
     }
   }, [queryClient, state.ready, state.meta?.authApi, state.user?.id]);
+
+  /** Прогрев кеша списков после входа или при восстановлении сессии — быстрее первый заход в кабинеты. */
+  useEffect(() => {
+    if (!state.ready || !state.user || !state.meta) {
+      return;
+    }
+    prefetchCoreLists(queryClient, {
+      prefetchPurchaseDocuments: state.meta.purchaseDocumentsApi === "enabled",
+      prefetchCounterparties: state.meta.counterpartyCatalogApi === "enabled",
+    });
+  }, [queryClient, state.ready, state.user?.id, state.meta]);
 
   const refetchSession = useCallback(async () => {
     const meta = state.meta;
@@ -184,8 +196,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStoredApiToken(data.token);
       setState((s) => ({ ...s, user: data.user }));
       await queryClient.invalidateQueries();
+      prefetchCoreLists(queryClient, {
+        prefetchPurchaseDocuments: state.meta?.purchaseDocumentsApi === "enabled",
+        prefetchCounterparties: state.meta?.counterpartyCatalogApi === "enabled",
+      });
     },
-    [queryClient],
+    [queryClient, state.meta],
   );
 
   const logout = useCallback(async () => {

@@ -15,7 +15,7 @@ import type {
 import { useAuth } from "../auth/auth-context.js";
 import { ops, prefix } from "../routes.js";
 import { Link } from "react-router-dom";
-import { btnStyle, errorText, fieldStyle, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
+import { btnStyle, errorText, fieldStyle, muted, thHeadDense, thtdDense } from "../ui/styles.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -399,7 +399,7 @@ export function InventoryAdminPanel() {
 
   if (!enabled) {
     return (
-      <section style={sectionBox}>
+      <section className="birzha-panel">
         <p style={muted}>
           API накладных/справочников недоступен (<code>purchaseDocumentsApi</code>).
         </p>
@@ -408,8 +408,8 @@ export function InventoryAdminPanel() {
   }
 
   return (
-    <section style={sectionBox} aria-labelledby="inv-adm-heading" role="region">
-      <h2 id="inv-adm-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
+    <section className="birzha-panel" aria-labelledby="inv-adm-heading" role="region">
+      <h2 id="inv-adm-heading" className="birzha-section-title">
         Админ: накладные, рейсы, направления, склады, калибры
       </h2>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
@@ -467,7 +467,7 @@ export function InventoryAdminPanel() {
             }}
           >
             <div>
-              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>id (UUID)</label>
+              <label className="birzha-field-label">id (UUID)</label>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <input
                   value={newTripId}
@@ -490,7 +490,7 @@ export function InventoryAdminPanel() {
               </div>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>№ рейса</label>
+              <label className="birzha-field-label">№ рейса</label>
               <input
                 value={newTripNumber}
                 onChange={(e) => setNewTripNumber(e.target.value)}
@@ -500,7 +500,7 @@ export function InventoryAdminPanel() {
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>ТС</label>
+              <label className="birzha-field-label">ТС</label>
               <input
                 value={newTripVehicle}
                 onChange={(e) => setNewTripVehicle(e.target.value)}
@@ -510,7 +510,7 @@ export function InventoryAdminPanel() {
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}>Водитель</label>
+              <label className="birzha-field-label">Водитель</label>
               <input
                 value={newTripDriver}
                 onChange={(e) => setNewTripDriver(e.target.value)}
@@ -522,7 +522,7 @@ export function InventoryAdminPanel() {
             <div>
               <label
                 htmlFor="inv-adm-new-trip-departed"
-                style={{ display: "block", fontSize: "0.78rem", color: "#71717a", marginBottom: 2 }}
+                className="birzha-field-label"
               >
                 Отправл.
               </label>

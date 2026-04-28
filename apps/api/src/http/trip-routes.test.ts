@@ -80,6 +80,20 @@ describe("Trip HTTP", () => {
     await app.close();
   });
 
+  it("GET /trips/field-seller-options — список продавцов для закрепления (in-memory: пусто)", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const app = await buildApp({ env, db: null, batchRepository: new InMemoryBatchRepository(), tripRepository: trips });
+
+    const res = await app.inject({ method: "GET", url: "/trips/field-seller-options" });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { fieldSellers: unknown[] };
+    expect(Array.isArray(body.fieldSellers)).toBe(true);
+    expect(body.fieldSellers).toEqual([]);
+
+    await app.close();
+  });
+
   it("POST /trips/:id/close — затем отгрузка в рейс даёт 409", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const trips = new InMemoryTripRepository();

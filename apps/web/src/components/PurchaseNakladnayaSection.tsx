@@ -35,7 +35,6 @@ import {
   errorText,
   fieldStyle,
   muted,
-  sectionBox,
   successText,
   thHeadDense,
   thtdDense,
@@ -299,7 +298,7 @@ export function PurchaseNakladnayaSection() {
 
   if (!enabled) {
     return (
-      <section style={sectionBox} aria-labelledby="nakl-disabled" role="region" aria-label="Закупочная накладная">
+      <section className="birzha-panel" aria-labelledby="nakl-disabled" role="region" aria-label="Закупочная накладная">
         <h3 id="nakl-disabled" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           Закупочная накладная
         </h3>
@@ -313,7 +312,7 @@ export function PurchaseNakladnayaSection() {
   }
 
   return (
-    <section style={sectionBox} aria-labelledby="nakl-heading" role="region" aria-label="Закупочная накладная">
+    <section className="birzha-panel" aria-labelledby="nakl-heading" role="region" aria-label="Закупочная накладная">
       <h3 id="nakl-heading" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
         Закупочная накладная
       </h3>
@@ -553,7 +552,9 @@ export function PurchaseNakladnayaSection() {
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
-                <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.78rem" }}>кг</span>
+                <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>
+                  кг
+                </span>
               </td>
               <td
                 style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)" }}
@@ -562,29 +563,34 @@ export function PurchaseNakladnayaSection() {
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
                   nakladnayaFormTotals.totalPackages,
                 )}{" "}
-                <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.78rem" }}>кор.</span>
+                <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>
+                  кор.
+                </span>
               </td>
-              <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)", color: "#71717a" }}>—</td>
+              <td className="birzha-text-muted" style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>
+                —
+              </td>
               <td
                 colSpan={1}
                 style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)", verticalAlign: "top" }}
               >
                 <div>По строкам: {nakladnayaFormTotals.totalLineKopecks} коп.</div>
-                <div style={{ fontSize: "0.82rem", color: "#3f3f46" }}>
+                <div className="birzha-text-subtle" style={{ fontSize: "0.82rem" }}>
                   = {kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽
                 </div>
                 {extraCostKopecksForTotals > 0 && (
-                  <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "#1c1917" }}>
+                  <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
                     Всего (строки + доп.): {nakladnayaFormTotals.totalAllKopecks} коп. ={" "}
                     {kopecksToRubLabel(nakladnayaFormTotals.totalAllKopecks.toString())} ₽
-                    <div style={{ fontSize: "0.76rem", fontWeight: 400, color: "#52525b", marginTop: 2 }}>
+                    <div className="birzha-text-subtle" style={{ fontSize: "0.76rem", fontWeight: 400, marginTop: 2 }}>
                       (доп. расходы: {extraCostKopecksForTotals} коп.)
                     </div>
                   </div>
                 )}
               </td>
               <td
-                style={{ ...thtdDense, background: "rgba(0,0,0,0.03)", fontSize: "0.75rem", color: "#52525b" }}
+                className="birzha-text-subtle"
+                style={{ ...thtdDense, background: "rgba(0,0,0,0.03)", fontSize: "0.75rem" }}
               />
             </tr>
           </tfoot>
@@ -647,7 +653,7 @@ export function PurchaseNakladnayaSection() {
                     <td style={thtdDense}>
                       {wh ? (
                         <>
-                          {wh.name} <span style={{ color: "#71717a" }}>({wh.code})</span>
+                          {wh.name} <span className="birzha-text-muted">({wh.code})</span>
                         </>
                       ) : (
                         <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>

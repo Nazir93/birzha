@@ -15,6 +15,7 @@ import {
 } from "../format/trip-report-rows.js";
 import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
+import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
@@ -92,6 +93,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     queryKey: ["shipment-report", tripId],
     queryFn: () => apiGetJson<ShipmentReportResponse>(`/api/trips/${tripId}/shipment-report`),
     enabled: Boolean(tripId),
+    staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
     retry: 1,
   });
 
@@ -257,8 +259,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             <div style={{ marginTop: "0.5rem" }}>
               <button
                 type="button"
-                className="no-print"
-                style={{ ...btnStyle, borderColor: "#b91c1c", color: "#991b1b" }}
+                className="no-print birzha-btn-danger-outline"
+                style={btnStyle}
                 disabled={deleteTripMutation.isPending}
                 onClick={() => {
                   if (
@@ -482,18 +484,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             учёте рейса). Отрицательный остаток подсвечен — перепродажа или ошибка ввода.
           </p>
           {reconciliationIssues.length > 0 && (
-            <p
-              role="status"
-              style={{
-                margin: "0 0 0.5rem",
-                padding: "0.5rem 0.65rem",
-                fontSize: "0.85rem",
-                background: "#fffbeb",
-                border: "1px solid #fcd34d",
-                borderRadius: 6,
-                color: "#92400e",
-              }}
-            >
+            <p role="status" className="birzha-callout-warning">
               <strong>Сверка строк с итогами:</strong> {reconciliationIssues.join("; ")} — проверьте данные или
               сообщите разработчикам.
             </p>
@@ -542,9 +533,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <div style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.35 }}>{caption}</div>
                         {showTechId ? (
                           <code
+                            className="birzha-text-muted"
                             style={{
                               fontSize: "0.72rem",
-                              color: "#71717a",
                               display: "block",
                               marginTop: "0.2rem",
                             }}
@@ -558,9 +549,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
                       <td style={thtd}>{gramsToKgLabel(row.shortageG.toString())}</td>
                       <td
+                        className={row.netTransitG < 0n ? "birzha-text-danger" : undefined}
                         style={{
                           ...thtd,
-                          ...(row.netTransitG < 0n ? { color: "#b91c1c", fontWeight: 600 } : {}),
+                          ...(row.netTransitG < 0n ? { fontWeight: 600 } : {}),
                         }}
                       >
                         {gramsToKgLabel(row.netTransitG.toString())}
@@ -574,26 +566,17 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   })}
                 </tbody>
                 <tfoot>
-                  <tr>
-                    <th scope="row" style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
+                  <tr className="birzha-table-subtotal-row">
+                    <th scope="row" style={thtd}>
                       Итого по партиям
                     </th>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
-                      {gramsToKgLabel(batchAgg.shippedG.toString())}
-                    </td>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
-                      {gramsToKgLabel(batchAgg.soldG.toString())}
-                    </td>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
-                      {gramsToKgLabel(batchAgg.shortageG.toString())}
-                    </td>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
-                      {gramsToKgLabel(batchAgg.netTransitG.toString())}
-                    </td>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
-                      {kopecksToRubLabel(batchAgg.revenueK.toString())} ₽
-                    </td>
-                    <td style={{ ...thtd, background: "#fafafa", fontWeight: 600 }}>
+                    <td style={thtd}>{gramsToKgLabel(batchAgg.shippedG.toString())}</td>
+                    <td style={thtd}>{batchAgg.shippedPackages.toString()}</td>
+                    <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
+                    <td style={thtd}>{gramsToKgLabel(batchAgg.shortageG.toString())}</td>
+                    <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>
+                    <td style={thtd}>{kopecksToRubLabel(batchAgg.revenueK.toString())} ₽</td>
+                    <td style={thtd}>
                       {kopecksToRubLabel(batchAgg.cashK.toString())} / {kopecksToRubLabel(batchAgg.debtK.toString())}
                     </td>
                   </tr>
@@ -603,7 +586,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           )}
 
           <details className="no-print" style={{ marginTop: "0.75rem" }}>
-            <summary style={{ cursor: "pointer", color: "#3f3f46" }}>Сырой JSON отчёта</summary>
+            <summary className="birzha-text-subtle" style={{ cursor: "pointer" }}>
+              Сырой JSON отчёта
+            </summary>
             <pre
               style={{ ...preJson, marginTop: "0.5rem", fontSize: "0.8rem" }}
               tabIndex={0}

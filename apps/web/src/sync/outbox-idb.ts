@@ -60,12 +60,6 @@ async function readMetaFlag(db: IDBDatabase, key: string): Promise<boolean> {
   return Boolean(row && typeof row === "object" && "value" in row && (row as { value: unknown }).value === true);
 }
 
-async function setMetaFlag(db: IDBDatabase, key: string, value: boolean): Promise<void> {
-  const tx = db.transaction(STORE_META, "readwrite");
-  tx.objectStore(STORE_META).put({ key, value });
-  await txDone(tx);
-}
-
 function readLegacyLocalStorageOutbox(): OutboxItem[] {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis) || !globalThis.localStorage) {
     return [];
@@ -153,11 +147,11 @@ export async function idbLoadOutbox(): Promise<OutboxItem[]> {
 
 export async function idbEnqueue(input: EnqueueInput): Promise<OutboxItem> {
   const db = await getOutboxIdb();
-  const row: OutboxItem = {
+  const row = {
     ...input,
     localActionId: input.localActionId ?? randomUuid(),
     createdAt: Date.now(),
-  };
+  } as OutboxItem;
   const tx = db.transaction(STORE_OUTBOX, "readwrite");
   tx.objectStore(STORE_OUTBOX).add(row);
   await txDone(tx);

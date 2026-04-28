@@ -124,6 +124,10 @@ export type TripsListResponse = {
   trips: TripJson[];
 };
 
+/** `GET /api/trips/field-seller-options` — продавцы для назначения на рейс (роли `tripWrite`). */
+export type FieldSellerOptionJson = { id: string; login: string };
+export type FieldSellerOptionsResponse = { fieldSellers: FieldSellerOptionJson[] };
+
 export type CounterpartyJson = {
   id: string;
   displayName: string;

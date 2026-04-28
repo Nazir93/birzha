@@ -29,6 +29,6 @@
 
 ## Качество
 
-- `pnpm check` после значимых изменений; тесты рядом с кодом; контракты в `packages/contracts` при смене HTTP.
+- `pnpm check` — **typecheck** (`tsc` по web, в т.ч. `src/sw.ts` через `tsconfig.sw.json`, плюс packages/api) + **vitest** + **сборка**; при необходимости полного UI-прогона: `pnpm e2e` (Playwright, три теста в `e2e/role-nav-auth.spec.ts` помечены skip без PostgreSQL). Тесты рядом с кодом; контракты в `packages/contracts` при смене HTTP.
 
 Спорные места: `.cursor/rules/07-debts-returns-and-role-edge-cases.mdc` — не тянуть в код сомнительную логику без согласования.

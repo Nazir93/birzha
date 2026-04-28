@@ -52,11 +52,11 @@ export type EnqueueInput = Omit<OutboxItem, "createdAt" | "localActionId"> & {
 /** FIFO: новые в конец. */
 export function enqueueSync(item: EnqueueInput, storage: StorageLike = defaultStorage()): OutboxItem {
   const queue = loadOutboxSync(storage);
-  const row: OutboxItem = {
+  const row = {
     ...item,
     localActionId: item.localActionId ?? randomUuid(),
     createdAt: Date.now(),
-  };
+  } as OutboxItem;
   queue.push(row);
   saveOutbox(queue, storage);
   return row;

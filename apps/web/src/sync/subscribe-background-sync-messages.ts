@@ -1,5 +1,6 @@
 import { BG_SYNC_RUN_OUTBOX_MESSAGE } from "./background-sync-shared.js";
-import { processSyncQueueSerialized, type ProcessSyncResult } from "./process-sync-queue-serial.js";
+import { processSyncQueueSerialized } from "./process-sync-queue-serial.js";
+import type { ProcessSyncResult } from "./process-sync-queue.js";
 
 export type SubscribeBackgroundSyncMessagesOptions = {
   onResult?: (result: ProcessSyncResult) => void;

@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from "react-router-dom";
-import type { CSSProperties } from "react";
 
 import {
   cabinetIdFromPathname,
@@ -11,27 +10,6 @@ import {
 } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { accounting, adminRoutes, login, ops, prefix, sales } from "../routes.js";
-import { btnStyleInline, muted } from "../ui/styles.js";
-
-const navStyle: CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "0.4rem",
-  marginBottom: "1rem",
-  paddingBottom: "0.75rem",
-  borderBottom: "1px solid #e4e4e7",
-};
-
-const tab = (active: boolean): CSSProperties => ({
-  padding: "0.5rem 0.9rem",
-  fontSize: "0.92rem",
-  cursor: "pointer",
-  borderRadius: 6,
-  border: active ? "1px solid #15803d" : "1px solid #d4d4d8",
-  background: active ? "#ecfdf5" : "#fff",
-  color: active ? "#14532d" : "#3f3f46",
-  fontWeight: active ? 600 : 400,
-});
 
 const panelLabel: Record<PanelId, string> = {
   nakladnaya: "Накладная",
@@ -42,6 +20,10 @@ const panelLabel: Record<PanelId, string> = {
   service: "Служебное (meta)",
   inventory: "Склады и калибры",
 };
+
+function navLinkClass(active: boolean): string {
+  return `birzha-nav__link${active ? " birzha-nav__link--active" : ""}`;
+}
 
 export function AppNav() {
   const { meta, user, logout, ready } = useAuth();
@@ -92,33 +74,34 @@ export function AppNav() {
   const prefixForCabinet = prefix[cabinet as keyof typeof prefix] ?? prefix.operations;
 
   return (
-    <nav style={navStyle} aria-label="Разделы приложения">
+    <nav className="birzha-nav" aria-label="Разделы приложения">
       {buildLinks.map(({ to, label, key }) => (
         <NavLink
           key={`${key}-${to}`}
           to={to}
-          style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}
+          className={({ isActive }) => navLinkClass(isActive)}
+          end={to === prefix.admin || to === prefix.sales || to === prefix.accounting}
         >
           {label}
         </NavLink>
       ))}
       {ready && meta?.authApi === "enabled" && (
-        <span style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
+        <div className="birzha-nav__user">
           {user ? (
             <>
-              <span style={{ ...muted, fontSize: "0.88rem" }} title={`${titleSuffix[cabinet]} · ${prefixForCabinet}`}>
+              <span className="birzha-nav__user-label" title={`${titleSuffix[cabinet]} · ${prefixForCabinet}`}>
                 {user.login}
               </span>
-              <button type="button" style={btnStyleInline} onClick={() => void logout()}>
+              <button type="button" className="birzha-btn-ghost" onClick={() => void logout()}>
                 Выйти
               </button>
             </>
           ) : (
-            <NavLink to={login} style={({ isActive }) => ({ ...tab(isActive), textDecoration: "none" })}>
+            <NavLink to={login} end className={({ isActive }) => navLinkClass(isActive)}>
               Вход
             </NavLink>
           )}
-        </span>
+        </div>
       )}
     </nav>
   );

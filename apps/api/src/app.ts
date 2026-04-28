@@ -45,6 +45,7 @@ import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/driz
 import { DrizzleProductGradeRepository } from "./infrastructure/persistence/drizzle-product-grade.repository.js";
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
 import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
+import { listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
 import { InMemoryCounterpartyRepository } from "./infrastructure/persistence/in-memory-counterparty.repository.js";
 import { InMemoryPurchaseDocumentRepository } from "./infrastructure/persistence/in-memory-purchase-document.repository.js";
 import { StaticProductGradeRepository } from "./infrastructure/persistence/static-product-grade.repository.js";
@@ -340,6 +341,7 @@ export async function buildApp(options: {
       shortageRepository,
       batchRepository,
       routeAuth,
+      db ? () => listGlobalSellerUsers(db) : undefined,
     );
     registerBatchRoutes(
       app,

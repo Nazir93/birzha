@@ -8,14 +8,19 @@ import { AuthProvider } from "./auth/auth-context.js";
 import { App } from "./App";
 
 import "./index.css";
+import { QUERY_GC_MS, QUERY_STALE_LISTS_MS } from "./query/query-defaults.js";
 
 registerSW({ immediate: true });
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      /** Меньше лишних повторных запросов при возврате на вкладку / повторном маунте. */
-      staleTime: 30_000,
+      /** Списки и отчёты в интерфейсе не обязаны опрашивать API каждые секунды — см. `query/query-defaults.ts`. */
+      staleTime: QUERY_STALE_LISTS_MS,
+      gcTime: QUERY_GC_MS,
+      /** Иначе при Alt+Tab каждый раз полный refetch активных запросов — ощущение «тормозов». */
+      refetchOnWindowFocus: false,
+      retry: 1,
     },
   },
 });

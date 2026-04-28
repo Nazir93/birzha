@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import type { AuthRoleGrant } from "../../auth/role-grant.js";
 import type { DbClient } from "../../db/client.js";
@@ -36,4 +36,33 @@ export async function findUserWithRolesByLogin(db: DbClient, login: string): Pro
 
 export async function touchUserLastLogin(db: DbClient, userId: string): Promise<void> {
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
+}
+
+/** Пользователи с глобальной ролью `seller` (активные) — для назначения на рейс в UI. */
+export type FieldSellerOptionRow = { id: string; login: string };
+
+export async function listGlobalSellerUsers(db: DbClient): Promise<FieldSellerOptionRow[]> {
+  const rows = await db
+    .select({ id: users.id, login: users.login })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .where(
+      and(
+        eq(users.isActive, true),
+        eq(userRoles.roleCode, "seller"),
+        eq(userRoles.scopeType, "global"),
+        eq(userRoles.scopeId, ""),
+      ),
+    )
+    .orderBy(asc(users.login));
+
+  const seen = new Set<string>();
+  const out: FieldSellerOptionRow[] = [];
+  for (const r of rows) {
+    if (!seen.has(r.id)) {
+      seen.add(r.id);
+      out.push(r);
+    }
+  }
+  return out;
 }

@@ -112,17 +112,7 @@ export function LoadingManifestBlock({
   }, [buildCsv]);
 
   return (
-    <section
-      className="loading-manifest-print"
-      style={{
-        marginBottom: "1.5rem",
-        padding: "0.9rem 1rem",
-        border: "1px solid #d4d4d8",
-        borderRadius: 8,
-        background: "#fefce8",
-      }}
-      aria-labelledby="loading-manifest-h"
-    >
+    <section className="loading-manifest-print birzha-loading-manifest" aria-labelledby="loading-manifest-h">
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
         Сбор на погрузку: какие накладные в этот отбор
       </h3>
@@ -272,7 +262,9 @@ export function LoadingManifestBlock({
                         <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{formatNakladLineLabel(b)}</span>
                       </td>
                       <td style={thtd}>
-                        <code style={{ fontSize: "0.8rem", color: "#52525b" }}>{formatShortBatchId(b.id)}</code>
+                        <code className="birzha-text-subtle" style={{ fontSize: "0.8rem" }}>
+                          {formatShortBatchId(b.id)}
+                        </code>
                       </td>
                       <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>{b.onWarehouseKg}</td>
                       <td style={{ ...thtd, textAlign: "right" }}>{pkgE == null ? "—" : `≈ ${pkgE}`}</td>

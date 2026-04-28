@@ -5,7 +5,9 @@ import { Link } from "react-router-dom";
 import { apiGetJson } from "../api/fetch-api.js";
 import type { ShipmentReportResponse, TripsListResponse } from "../api/types.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
 import { accounting } from "../routes.js";
+import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -34,12 +36,38 @@ export function AccountingTripsSummary() {
       queryKey: ["shipment-report", t.id] as const,
       queryFn: () => apiGetJson<ShipmentReportResponse>(`/api/trips/${encodeURIComponent(t.id)}/shipment-report`),
       enabled: sortedTrips.length > 0,
-      staleTime: 20_000,
+      staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
     })),
   });
 
   const anyLoading = reportQueries.some((q) => q.isPending) && sortedTrips.length > 0;
   const hasError = reportQueries.some((q) => q.isError);
+
+  const reportRevenueFingerprint = reportQueries
+    .map((q) => `${q.status}:${q.data?.financials.revenueKopecks ?? ""}`)
+    .join("|");
+
+  const revenueChartItems = useMemo(() => {
+    const items: { label: string; value: number; display: string }[] = [];
+    for (let i = 0; i < sortedTrips.length; i++) {
+      const q = reportQueries[i];
+      const t = sortedTrips[i];
+      if (!t || !q?.data) {
+        continue;
+      }
+      const kopecks = Number(q.data.financials.revenueKopecks || 0);
+      const rub = kopecks / 100;
+      if (rub <= 0) {
+        continue;
+      }
+      items.push({
+        label: t.tripNumber,
+        value: rub,
+        display: `${rub.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₽`,
+      });
+    }
+    return items;
+  }, [sortedTrips, reportRevenueFingerprint]);
 
   const tripTotals = useMemo(() => {
     let kg = 0n;
@@ -107,6 +135,16 @@ export function AccountingTripsSummary() {
           Всего в системе {totalInDb} рейсов; в сводку попадают первые {MAX_TRIPS} (по номеру). Остальные — выберите
           вручную в «Отчётах».
         </p>
+      ) : null}
+      {revenueChartItems.length > 0 ? (
+        <div className="birzha-chart-card" style={{ marginBottom: "0.9rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 600 }}>Выручка по рейсам</h4>
+          <HorizontalBarChart
+            items={revenueChartItems}
+            emptyHint="Нет данных для диаграммы."
+            valueSuffix="₽"
+          />
+        </div>
       ) : null}
       {anyLoading && (
         <p style={muted} role="status" aria-live="polite">
@@ -206,7 +244,7 @@ export function AccountingTripsSummary() {
               );
             })}
             {!anyLoading && tripTotals.rows > 0 && (
-              <tr style={{ background: "#f1f5f9", fontWeight: 600 }}>
+              <tr className="birzha-table-subtotal-row">
                 <th scope="row" style={{ ...thtd, textAlign: "left" }}>
                   Итого ({tripTotals.rows} рейс.)
                 </th>

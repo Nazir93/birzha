@@ -1,13 +1,13 @@
 /* Справочник «партии по накладным» — раскрываемые карточки, без лишней высоты. */
 .birzha-nakl-details {
   margin-bottom: 0.5rem;
-  border: 1px solid #e4e4e7;
-  border-radius: 8px;
-  background: #fafafa;
+  border: 1px solid var(--color-border);
+  border-radius: var(--birzha-radius-sm);
+  background: var(--birzha-surface-muted);
 }
 .birzha-nakl-details[open] {
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
 }
 .birzha-nakl-details__summary {
   list-style: none;
@@ -19,11 +19,11 @@
   display: none;
 }
 .birzha-nakl-details[open] .birzha-nakl-details__summary {
-  border-bottom: 1px solid #e4e4e7;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.25rem;
 }
 
-/* Глобальные стили: Montserrat, поля ввода, фокус (остальное — inline в компонентах). */
+/* Дизайн-токены: тексты, акцент, поверхности, навигация (остальное — `styles.ts` + компоненты). */
 :root {
   --font-ui: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-text: #18181b;
@@ -32,6 +32,20 @@
   --color-border-focus: #15803d;
   --color-surface-input: #ffffff;
   --focus-ring: 0 0 0 3px rgba(21, 128, 61, 0.2);
+
+  --birzha-bg-page: #f4f4f5;
+  --birzha-surface: #ffffff;
+  --birzha-surface-muted: #fafafa;
+  --birzha-accent: #15803d;
+  --birzha-accent-strong: #14532d;
+  --birzha-accent-soft: #ecfdf5;
+  --birzha-danger: #b91c1c;
+  --birzha-warn: #b45309;
+  --birzha-text-subtle: #52525b;
+  --birzha-radius: 10px;
+  --birzha-radius-sm: 8px;
+  --birzha-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --birzha-shadow-nav: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 html,
@@ -57,17 +71,358 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: var(--color-text);
+  background: var(--birzha-bg-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Корневой layout: на десктопе на всю ширину окна (без max-width ~880px). */
+/* Корневой layout: контент на светлой подложке страницы */
 main.app-shell {
   width: 100%;
-  max-width: 100%;
+  max-width: min(96rem, 100%);
   box-sizing: border-box;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+@media (min-width: 48rem) {
+  main.app-shell {
+    padding: 1.25rem 1.75rem 2.5rem;
+  }
+}
+
+.birzha-app-header {
+  margin-bottom: 1rem;
+}
+
+.birzha-page-title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+.birzha-page-title__suffix {
+  font-weight: 500;
+  color: var(--birzha-text-subtle);
+}
+
+/* Верхняя навигация по разделам */
+.birzha-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 -0.25rem 1.25rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.birzha-nav__link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--birzha-text-subtle);
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.birzha-nav__link:hover {
+  background: var(--birzha-surface-muted);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.birzha-nav__link--active {
+  font-weight: 600;
+  color: var(--birzha-accent-strong);
+  background: var(--birzha-accent-soft);
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.birzha-nav__user {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.birzha-nav__user-label {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.birzha-btn-ghost {
   margin: 0;
-  padding: 1.5rem;
+  padding: 0.45rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  color: var(--color-text);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.birzha-btn-ghost:hover:not(:disabled) {
+  background: var(--birzha-surface-muted);
+  border-color: #a1a1aa;
+}
+
+/* Карточка входа */
+.birzha-login-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem 3rem;
+  min-height: min(70vh, 32rem);
+  align-items: flex-start;
+}
+
+.birzha-login-card {
+  width: 100%;
+  max-width: 22rem;
+  padding: 1.5rem 1.35rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow:
+    var(--birzha-shadow-sm),
+    0 12px 40px -12px rgba(15, 23, 42, 0.12);
+}
+
+.birzha-btn-primary {
+  margin-top: 0.65rem;
+  padding: 0.55rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--birzha-accent-strong);
+  background: var(--birzha-accent);
+  color: #fff;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.birzha-btn-primary:hover:not(:disabled) {
+  background: #166534;
+  border-color: #14532d;
+}
+
+.birzha-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Карточки секций и KPI (дашборды кабинетов) */
+.birzha-card {
+  margin-top: 1.25rem;
+  padding: 1.15rem 1.25rem;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--birzha-radius);
+  background: var(--birzha-surface-muted);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.birzha-card:first-child {
+  margin-top: 0;
+}
+
+.birzha-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.birzha-stack > .birzha-card {
+  margin-top: 0;
+}
+
+.birzha-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.birzha-section-title--sm {
+  font-size: 1rem;
+}
+
+.birzha-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.birzha-kpi-tile {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+}
+
+.birzha-kpi-tile__label {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  margin-bottom: 0.15rem;
+}
+
+.birzha-kpi-tile__value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.birzha-kpi-tile--accent {
+  background: var(--birzha-accent-soft);
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.birzha-kpi-tile--accent .birzha-kpi-tile__label {
+  color: var(--birzha-accent-strong);
+}
+
+.birzha-kpi-tile--amber {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.birzha-kpi-tile--amber .birzha-kpi-tile__label {
+  color: #92400e;
+}
+
+.birzha-kpi-tile--blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.birzha-kpi-tile--blue .birzha-kpi-tile__label {
+  color: #1e40af;
+}
+
+.birzha-kpi-grid--dense {
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+}
+
+.birzha-kpi-grid--wide {
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+.birzha-kpi-tile__value--md {
+  font-size: 1.1rem;
+}
+
+.birzha-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Разделители секций внутри длинных страниц (/o, формы) */
+.birzha-panel {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.birzha-panel:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.birzha-callout-warning {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.birzha-banner-distribution {
+  margin-top: 0.9rem;
+  margin-bottom: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid #bae6fd;
+  background: linear-gradient(90deg, #e0f2fe 0%, var(--birzha-accent-soft) 100%);
+}
+
+.birzha-table-subtotal-row th,
+.birzha-table-subtotal-row td {
+  background: var(--birzha-surface-muted);
+  font-weight: 600;
+}
+
+.birzha-text-danger {
+  color: var(--birzha-danger);
+}
+
+.birzha-text-muted {
+  color: var(--color-muted);
+}
+
+.birzha-text-subtle {
+  color: var(--birzha-text-subtle);
+}
+
+.birzha-field-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  margin-bottom: 2px;
+}
+
+.birzha-inline-panel {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-loading-manifest {
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: #fefce8;
+}
+
+.birzha-divider-top {
+  margin: 0.4rem 0 0;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.birzha-btn-danger-outline {
+  border-color: var(--birzha-danger) !important;
+  color: #991b1b !important;
 }
 
 /* Индикаторы загрузки (см. `ui/LoadingIndicator.tsx`) */
@@ -96,7 +451,7 @@ main.app-shell {
   font-size: 0.9rem;
 }
 
-main h1 {
+main h1:not(.birzha-page-title) {
   font-family: var(--font-ui);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -460,6 +815,178 @@ summary:focus-visible {
 button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+/* Дашборды: сетка карточек с графиками */
+.birzha-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.birzha-dashboard-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.birzha-chart-card {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.birzha-chart-card > h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.65rem;
+  color: var(--color-text);
+}
+
+.birzha-chart-card-inner__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.birzha-chart-empty {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+
+/* Горизонтальные столбики */
+.birzha-hbar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.birzha-hbar-list__item {
+  display: grid;
+  grid-template-columns: minmax(4rem, 7.5rem) 1fr auto;
+  gap: 0.4rem 0.5rem;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.birzha-hbar-list__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.birzha-hbar-list__track {
+  height: 0.55rem;
+  border-radius: 4px;
+  background: var(--birzha-surface-muted);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.birzha-hbar-list__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--birzha-accent) 0%, #38bdf8 100%);
+  min-width: 2px;
+  transition: width 0.2s ease;
+}
+
+.birzha-hbar-list__value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+/* Полоса «склад / путь / продано» */
+.birzha-mass-strip__bar {
+  display: flex;
+  width: 100%;
+  height: 1rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.birzha-mass-strip__seg {
+  min-width: 2px;
+  transition: flex 0.15s ease;
+}
+
+.birzha-mass-strip__seg--wh {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+}
+
+.birzha-mass-strip__seg--tr {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+}
+
+.birzha-mass-strip__seg--sold {
+  background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 100%);
+}
+
+.birzha-mass-strip__legend {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.birzha-mass-strip__legend li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.birzha-mass-strip__dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.birzha-mass-strip__dot--wh {
+  background: #059669;
+}
+
+.birzha-mass-strip__dot--tr {
+  background: #d97706;
+}
+
+.birzha-mass-strip__dot--sold {
+  background: #3b82f6;
+}
+
+.birzha-admin-trips-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.birzha-admin-trips-table th,
+.birzha-admin-trips-table td {
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.birzha-admin-trips-table th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
 }
 
 /* Печать отчёта по рейсу: экранный chrome скрыт классом .no-print */

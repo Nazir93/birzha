@@ -5,7 +5,7 @@ import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { purchaseNakladnayaDocumentPath } from "../routes.js";
-import { btnStyle, btnStyleInline, muted, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
+import { btnStyleInline, muted, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 export type BatchesNaklGroup = {
   documentId: string;
@@ -90,7 +90,15 @@ export function BatchesByNakladnayaReference({
     return null;
   }
   if (groups.length === 0) {
-    return <p style={muted}>Нет партий, привязанных к оформленной накладной (или данные пусты).</p>;
+    return (
+      <div className="birzha-batches-nakl-ref" style={{ marginBottom: "1rem" }}>
+        <p id={sectionHeadingId} style={{ ...muted, marginBottom: "0.5rem" }}>
+          <strong>Партии по накладным</strong> — нажмите на строку, чтобы раскрыть список строк (калибр). id партии для API;
+          в работе — номер накладной и калибр. Без оформленной накладной партии в список не попадают.
+        </p>
+        <p style={muted}>Нет партий, привязанных к оформленной накладной (или данные пусты).</p>
+      </div>
+    );
   }
 
   const setAll = (v: boolean) => {
@@ -131,7 +139,7 @@ export function BatchesByNakladnayaReference({
             <summary className="birzha-nakl-details__summary" style={{ cursor: "pointer" }}>
               <span style={{ fontWeight: 600, fontSize: "0.92rem" }}>
                 Накладная № {grp.documentNumber ?? "—"}{" "}
-                <span style={{ color: "#71717a", fontWeight: 500, fontSize: "0.85rem" }}>
+                <span className="birzha-text-muted" style={{ fontWeight: 500, fontSize: "0.85rem" }}>
                   (строк: {nLines})
                 </span>
               </span>{" "}

@@ -29,7 +29,6 @@ import {
   errorText,
   fieldStyle,
   muted,
-  sectionBox,
   successText,
   warnText,
 } from "../ui/styles.js";
@@ -580,7 +579,7 @@ export function OperationsPanel() {
         </p>
       )}
 
-      <section style={sectionBox} aria-labelledby="op-sec-ship">
+      <section className="birzha-panel" aria-labelledby="op-sec-ship">
         <h3 id="op-sec-ship" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           1. Отгрузить в рейс
         </h3>
@@ -786,19 +785,7 @@ export function OperationsPanel() {
         )}
 
         {distShipBatchIds != null && distShipBatchIds.length > 0 && (
-          <div
-            className="no-print"
-            style={{
-              marginTop: "0.9rem",
-              marginBottom: "0.5rem",
-              padding: "0.65rem 0.8rem",
-              background: "linear-gradient(90deg, #e0f2fe 0%, #f0fdf4 100%)",
-              border: "1px solid #bae6fd",
-              borderRadius: 6,
-            }}
-            role="region"
-            aria-labelledby="dist-ship-h"
-          >
+          <div className="no-print birzha-banner-distribution" role="region" aria-labelledby="dist-ship-h">
             <h4 id="dist-ship-h" style={{ fontSize: "0.9rem", margin: "0 0 0.4rem" }}>
               Отбор из «Распределения» → рейс
             </h4>
@@ -858,7 +845,7 @@ export function OperationsPanel() {
         )}
       </section>
 
-      <section style={sectionBox} aria-labelledby="op-sec-sell">
+      <section className="birzha-panel" aria-labelledby="op-sec-sell">
         <h3 id="op-sec-sell" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           2. Продать с рейса
         </h3>
@@ -1129,7 +1116,7 @@ export function OperationsPanel() {
         )}
       </section>
 
-      <section style={{ ...sectionBox, borderBottom: "none", marginBottom: 0, paddingBottom: 0 }} aria-labelledby="op-sec-short">
+      <section className="birzha-panel" aria-labelledby="op-sec-short">
         <h3 id="op-sec-short" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           3. Недостача по рейсу (приёмка)
         </h3>

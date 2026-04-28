@@ -494,6 +494,11 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
+    const listRes = await request.get("/api/batches");
+    expect(listRes.ok()).toBeTruthy();
+    const listBody = (await listRes.json()) as { batches: { id: string }[] };
+    expect(listBody.batches.some((b) => b.id === batchId)).toBeTruthy();
+
     await page.goto("/operations");
     await expect(page.getByRole("region", { name: "Операции по партиям и рейсу" })).toBeVisible({
       timeout: 15_000,
@@ -501,8 +506,10 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible();
     await expect(page.locator("#op-batches-heading")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Партии по накладным", { exact: false })).toBeVisible();
-    /** В таблице id показывается сокращённо, полный UUID — в `title` на `<code>`. */
-    await expect(page.getByTitle(batchId, { exact: true })).toBeVisible({ timeout: 15_000 });
+    /** Блок «Партии по накладным» показывает только строки с документом закупки; сырой POST /batches без накладной — подсказка «нет привязанных». */
+    await expect(
+      page.getByText("Нет партий, привязанных к оформленной накладной", { exact: false }),
+    ).toBeVisible();
   });
 
   test("навигация: вкладки AppNav (накладная → отчёты → операции → офлайн → служебное → отчёты)", async ({ page }) => {

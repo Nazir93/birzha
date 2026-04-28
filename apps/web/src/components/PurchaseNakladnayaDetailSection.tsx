@@ -9,7 +9,7 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, sectionBox, thHeadDense, thtdDense } from "../ui/styles.js";
+import { errorText, muted, thHeadDense, thtdDense } from "../ui/styles.js";
 
 function formatRubFromKopecks(k: string): string {
   const n = BigInt(k);
@@ -101,7 +101,7 @@ export function PurchaseNakladnayaDetailSection() {
   const doc = docQ.data;
   if (!doc) {
     return (
-      <div style={sectionBox}>
+      <div className="birzha-panel">
         <p style={errorText}>Документ не найден.</p>
         <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.92rem" }}>
           ← Назад к новой накладной
@@ -116,7 +116,7 @@ export function PurchaseNakladnayaDetailSection() {
   );
 
   return (
-    <section style={sectionBox} aria-labelledby="nakl-detail-heading" role="region">
+    <section className="birzha-panel" aria-labelledby="nakl-detail-heading" role="region">
       <div style={{ marginBottom: "0.5rem" }}>
         <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.88rem" }}>
           ← Все накладные и новая
@@ -209,18 +209,26 @@ export function PurchaseNakladnayaDetailSection() {
                   title="Сумма кг по строкам"
                 >
                   {totalKgLabel}{" "}
-                  <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.8rem" }}>кг</span>
+                  <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+                    кг
+                  </span>
                 </td>
                 <td style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.04)" }}>
                   {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
                     totals.totalPackages,
                   )}{" "}
-                  <span style={{ color: "#71717a", fontWeight: 400, fontSize: "0.8rem" }}>кор.</span>
+                  <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+                    кор.
+                  </span>
                 </td>
-                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)", color: "#71717a" }}>—</td>
+                <td className="birzha-text-muted" style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>
+                  —
+                </td>
                 <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>
                   <div style={{ fontWeight: 600 }}>{totals.lineKopSum} коп.</div>
-                  <div style={{ fontSize: "0.8rem", color: "#3f3f46" }}>= {kopecksToRubLabel(totals.lineKopSum.toString())} ₽</div>
+                  <div className="birzha-text-subtle" style={{ fontSize: "0.8rem" }}>
+                    = {kopecksToRubLabel(totals.lineKopSum.toString())} ₽
+                  </div>
                 </td>
                 <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>—</td>
               </tr>
@@ -258,20 +266,12 @@ export function PurchaseNakladnayaDetailSection() {
 
       {totals && (
         <div
+          className="birzha-inline-panel"
           role="region"
           aria-label="Итого по накладной"
-          style={{
-            marginTop: "0.75rem",
-            maxWidth: "100%",
-            padding: "0.6rem 0.75rem",
-            border: "1px solid #e4e4e7",
-            borderRadius: 6,
-            background: "#fafafa",
-            fontSize: "0.9rem",
-            lineHeight: 1.5,
-          }}
+          style={{ marginTop: "0.75rem", marginBottom: 0, maxWidth: "100%", fontSize: "0.9rem", lineHeight: 1.5 }}
         >
-          <h4 id="nakl-totals-heading" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
+          <h4 id="nakl-totals-heading" className="birzha-section-title birzha-section-title--sm">
             Итого
           </h4>
           <p style={{ margin: "0.2rem 0" }}>
@@ -287,7 +287,7 @@ export function PurchaseNakladnayaDetailSection() {
             <strong>Доп. расходы</strong> (к документу): {totals.extraKop} коп. = {kopecksToRubLabel(totals.extraKop.toString())} ₽
             {totals.extraKop === 0 && <span style={muted}>, не указаны</span>}
           </p>
-          <p style={{ margin: "0.4rem 0 0", paddingTop: "0.35rem", borderTop: "1px solid #e4e4e7", fontWeight: 600 }}>
+          <p className="birzha-divider-top">
             <strong style={{ fontSize: "1.02rem" }}>К оплате (всего):</strong> {totals.allKop} коп. = {kopecksToRubLabel(totals.allKop.toString())} ₽
           </p>
         </div>

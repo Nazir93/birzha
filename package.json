@@ -9,7 +9,8 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "check": "pnpm test && pnpm build",
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "typecheck": "pnpm --filter @birzha/web typecheck && pnpm exec tsc -p packages/contracts/tsconfig.json && pnpm exec tsc -p packages/domain/tsconfig.json && pnpm exec tsc -p apps/api/tsconfig.json",
     "e2e": "pnpm --filter @birzha/web build && playwright test",
     "e2e:run": "playwright test",
     "e2e:roles": "pnpm --filter @birzha/web build && playwright test e2e/role-nav-auth.spec.ts",

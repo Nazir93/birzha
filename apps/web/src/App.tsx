@@ -19,9 +19,9 @@ import { TripReportPanel } from "./components/TripReportPanel.js";
 import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
 import { InventoryAdminPanel } from "./components/InventoryAdminPanel.js";
 import { OfflineQueuePanel } from "./components/OfflineQueuePanel.js";
-import { adminRoutes, legacyPathList, login, ops, prefix } from "./routes.js";
+import { legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingBlock } from "./ui/LoadingIndicator.js";
-import { muted, preJson, errorText, sectionCard } from "./ui/styles.js";
+import { muted, preJson, errorText } from "./ui/styles.js";
 
 function HomeRedirect() {
   const { ready, meta, user } = useAuth();
@@ -40,38 +40,38 @@ function AppHeading() {
   const { pathname } = useLocation();
   if (pathname.startsWith(prefix.admin)) {
     return (
-      <h1 className="no-print" style={{ marginTop: 0 }}>
-        Биржа <span style={{ fontWeight: 500, color: "#52525b" }}>— админ</span>
+      <h1 className="birzha-page-title no-print">
+        Биржа <span className="birzha-page-title__suffix">— админ</span>
       </h1>
     );
   }
   if (pathname.startsWith(prefix.operations)) {
     return (
-      <h1 className="no-print" style={{ marginTop: 0 }}>
-        Биржа <span style={{ fontWeight: 500, color: "#52525b" }}>— склад, закуп, рейс</span>
+      <h1 className="birzha-page-title no-print">
+        Биржа <span className="birzha-page-title__suffix">— склад, закуп, рейс</span>
       </h1>
     );
   }
   if (pathname.startsWith(prefix.sales)) {
     return (
-      <h1 className="no-print" style={{ marginTop: 0 }}>
-        Биржа <span style={{ fontWeight: 500, color: "#52525b" }}>— продавец</span>
+      <h1 className="birzha-page-title no-print">
+        Биржа <span className="birzha-page-title__suffix">— продавец</span>
       </h1>
     );
   }
   if (pathname.startsWith(prefix.accounting)) {
     return (
-      <h1 className="no-print" style={{ marginTop: 0 }}>
-        Биржа <span style={{ fontWeight: 500, color: "#52525b" }}>— бухгалтерия</span>
+      <h1 className="birzha-page-title no-print">
+        Биржа <span className="birzha-page-title__suffix">— бухгалтерия</span>
       </h1>
     );
   }
-  return <h1 className="no-print" style={{ marginTop: 0 }}>Биржа</h1>;
+  return <h1 className="birzha-page-title no-print">Биржа</h1>;
 }
 
 function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | null; metaJson: string | null }) {
   return (
-    <section style={sectionCard} aria-labelledby="service-heading">
+    <section className="birzha-card" aria-labelledby="service-heading">
       <h2 id="service-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
         GET /api/meta
       </h2>
@@ -92,20 +92,23 @@ function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | nul
 export function App() {
   const { meta, bootstrapError } = useAuth();
   const metaJson = meta ? JSON.stringify(meta, null, 2) : null;
+  const { pathname } = useLocation();
+  const showChrome = pathname !== login;
 
   return (
     <main className="app-shell">
-      <AppHeading />
-      {import.meta.env.DEV ? (
-        <p className="no-print" style={muted}>
-          Клиент: Vite + React + TanStack Query + React Router. API: <code>pnpm dev:api</code> на порту 3000, в dev — прокси
-          <code> /api/…</code>.
-        </p>
+      {showChrome ? (
+        <header className="birzha-app-header no-print">
+          <AppHeading />
+          {import.meta.env.DEV ? (
+            <p style={{ ...muted, marginBottom: "0.65rem" }}>
+              Клиент: Vite + React + TanStack Query + React Router. API: <code>pnpm dev:api</code> на порту 3000, в dev —
+              прокси <code> /api/…</code>.
+            </p>
+          ) : null}
+          <AppNav />
+        </header>
       ) : null}
-
-      <div className="no-print">
-        <AppNav />
-      </div>
 
       <Routes>
         <Route path={login} element={<LoginPage />} />
@@ -127,7 +130,7 @@ export function App() {
               path="reports"
               element={
                 <RequirePanel panel="reports">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <div className="no-print">
                       <CreateTripIfAllowed />
                     </div>
@@ -141,7 +144,7 @@ export function App() {
               path="purchase-nakladnaya"
               element={
                 <RequirePanel panel="nakladnaya">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <Outlet />
                   </section>
                 </RequirePanel>
@@ -154,7 +157,7 @@ export function App() {
               path="distribution"
               element={
                 <RequirePanel panel="distribution">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <AllocationPanel />
                   </section>
                 </RequirePanel>
@@ -164,7 +167,7 @@ export function App() {
               path="operations"
               element={
                 <RequirePanel panel="operations">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <OperationsPanel />
                   </section>
                 </RequirePanel>
@@ -174,7 +177,7 @@ export function App() {
               path="offline"
               element={
                 <RequirePanel panel="offline">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <OfflineQueuePanel sectionStyle={{}} />
                   </section>
                 </RequirePanel>
@@ -195,7 +198,7 @@ export function App() {
               path="inventory"
               element={
                 <RequirePanel panel="inventory">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <InventoryAdminPanel />
                   </section>
                 </RequirePanel>
@@ -213,7 +216,7 @@ export function App() {
               index
               element={
                 <RequirePanel panel="reports">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <AdminCabinetHome />
                   </section>
                 </RequirePanel>
@@ -233,7 +236,7 @@ export function App() {
               path="reports"
               element={
                 <RequirePanel panel="reports">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <div className="no-print">
                       <CreateTripIfAllowed />
                     </div>
@@ -246,7 +249,7 @@ export function App() {
               path="operations"
               element={
                 <RequirePanel panel="operations">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <OperationsPanel />
                   </section>
                 </RequirePanel>
@@ -256,7 +259,7 @@ export function App() {
               path="offline"
               element={
                 <RequirePanel panel="offline">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <OfflineQueuePanel sectionStyle={{}} />
                   </section>
                 </RequirePanel>
@@ -266,7 +269,9 @@ export function App() {
               index
               element={
                 <RequirePanel panel="reports">
-                  <SellerCabinetHome />
+                  <section className="birzha-card">
+                    <SellerCabinetHome />
+                  </section>
                 </RequirePanel>
               }
             />
@@ -284,7 +289,7 @@ export function App() {
               path="reports"
               element={
                 <RequirePanel panel="reports">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <div className="no-print">
                       <CreateTripIfAllowed />
                     </div>
@@ -297,7 +302,7 @@ export function App() {
               path="counterparties"
               element={
                 <RequirePanel panel="reports">
-                  <section style={sectionCard}>
+                  <section className="birzha-card">
                     <CounterpartiesPanel />
                   </section>
                 </RequirePanel>

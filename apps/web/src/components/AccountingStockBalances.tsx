@@ -5,7 +5,7 @@ import { apiGetJson } from "../api/fetch-api.js";
 import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, sectionBox, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 /** Копейки: кг × руб/кг с округлением по строке партии. */
 function inventoryValueKopecks(batches: readonly BatchListItem[], kgOf: (b: BatchListItem) => number): bigint {
@@ -112,8 +112,8 @@ export function AccountingStockBalances() {
   }
 
   return (
-    <section style={sectionBox} id="acc-stock" aria-labelledby="acc-stock-h">
-      <h3 id="acc-stock-h" style={{ fontSize: "1rem", margin: "0 0 0.35rem" }}>
+    <section className="birzha-panel" id="acc-stock" aria-labelledby="acc-stock-h">
+      <h3 id="acc-stock-h" className="birzha-section-title birzha-section-title--sm">
         Остатки товара и оценка по закупу
       </h3>
       <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>
@@ -121,29 +121,26 @@ export function AccountingStockBalances() {
         продано). Оценка — по <strong>цене закупа руб/кг</strong> из партии (как в отчёте по рейсу); доп. расходы по шапке
         накладной в этой оценке не делятся на кг.
       </p>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(11rem, 1fr))",
-          gap: "0.65rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <div style={{ padding: "0.65rem 0.75rem", background: "#f8fafc", borderRadius: 6, border: "1px solid #e2e8f0" }}>
-          <div style={{ fontSize: "0.78rem", color: "#64748b" }}>На складе, кг</div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>{totals.whKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</div>
+      <div className="birzha-kpi-grid birzha-kpi-grid--wide">
+        <div className="birzha-kpi-tile">
+          <div className="birzha-kpi-tile__label">На складе, кг</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+            {totals.whKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+          </div>
         </div>
-        <div style={{ padding: "0.65rem 0.75rem", background: "#f8fafc", borderRadius: 6, border: "1px solid #e2e8f0" }}>
-          <div style={{ fontSize: "0.78rem", color: "#64748b" }}>Оценка остатка на складе</div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>{kopecksToRubLabel(totals.valWhKop.toString())}</div>
+        <div className="birzha-kpi-tile">
+          <div className="birzha-kpi-tile__label">Оценка остатка на складе</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valWhKop.toString())}</div>
         </div>
-        <div style={{ padding: "0.65rem 0.75rem", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
-          <div style={{ fontSize: "0.78rem", color: "#92400e" }}>В пути (в рейсах), кг</div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>{totals.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</div>
+        <div className="birzha-kpi-tile birzha-kpi-tile--amber">
+          <div className="birzha-kpi-tile__label">В пути (в рейсах), кг</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+            {totals.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+          </div>
         </div>
-        <div style={{ padding: "0.65rem 0.75rem", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
-          <div style={{ fontSize: "0.78rem", color: "#92400e" }}>Оценка товара в пути</div>
-          <div style={{ fontSize: "1.15rem", fontWeight: 700 }}>{kopecksToRubLabel(totals.valTrKop.toString())}</div>
+        <div className="birzha-kpi-tile birzha-kpi-tile--amber">
+          <div className="birzha-kpi-tile__label">Оценка товара в пути</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
         </div>
       </div>
       <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.65rem" }}>

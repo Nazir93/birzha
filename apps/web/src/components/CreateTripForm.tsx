@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import type { FieldSellerOptionsResponse } from "../api/types.js";
 import { apiFetch } from "../api/fetch-api.js";
 import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
@@ -8,6 +9,17 @@ import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 export function CreateTripForm() {
   const queryClient = useQueryClient();
+  const fieldSellersQuery = useQuery({
+    queryKey: ["trips-field-seller-options"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/trips/field-seller-options");
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<FieldSellerOptionsResponse>;
+    },
+  });
   const [tripNumber, setTripNumber] = useState("");
   const [tripId, setTripId] = useState("");
   const [vehicleLabel, setVehicleLabel] = useState("");
@@ -52,8 +64,8 @@ export function CreateTripForm() {
   }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, assignedSellerUserId, mutation]);
 
   return (
-    <div style={{ marginBottom: "1.25rem", paddingBottom: "1rem", borderBottom: "1px solid #e4e4e7" }}>
-      <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>Создать рейс (POST /api/trips)</h3>
+    <div className="birzha-panel">
+      <h3 className="birzha-section-title birzha-section-title--sm">Создать рейс (POST /api/trips)</h3>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
         Онлайн-вызов API (не через офлайн-очередь). ID можно оставить пустым — будет UUID. ТС, водитель и время —
         для «общей накладной» в отчёте рейса.
@@ -114,16 +126,36 @@ export function CreateTripForm() {
         emptyLabel="— не задано —"
       />
       <label htmlFor="ct-assigned-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
-        ID продавца в поле (опционально, users.id)
+        Продавец в поле (опционально)
       </label>
-      <input
+      <select
         id="ct-assigned-seller"
         value={assignedSellerUserId}
         onChange={(e) => setAssignedSellerUserId(e.target.value)}
-        placeholder="пусто — общий рейс для всех продавцов"
-        style={fieldStyleCompact}
-        autoComplete="off"
-      />
+        style={{ ...fieldStyleCompact, maxWidth: "100%" }}
+        disabled={fieldSellersQuery.isPending}
+      >
+        <option value="">— общий рейс (не закреплять) —</option>
+        {(fieldSellersQuery.data?.fieldSellers ?? []).map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.login}
+          </option>
+        ))}
+      </select>
+      {fieldSellersQuery.isError && (
+        <p role="alert" style={{ ...errorText, fontSize: "0.85rem", marginTop: "0.35rem" }}>
+          Список продавцов не загрузился: {(fieldSellersQuery.error as Error).message}. Можно создать рейс без
+          закрепления или проверьте права (нужна роль логиста / руководителя).
+        </p>
+      )}
+      {fieldSellersQuery.isSuccess &&
+        (fieldSellersQuery.data?.fieldSellers?.length ?? 0) === 0 &&
+        !fieldSellersQuery.isPending && (
+          <p style={{ ...muted, fontSize: "0.85rem", marginTop: "0.35rem" }}>
+            В БД нет активных пользователей с глобальной ролью <code>seller</code> — закрепление недоступно до
+            настройки учётных записей.
+          </p>
+        )}
       <div>
         <button
           type="button"
