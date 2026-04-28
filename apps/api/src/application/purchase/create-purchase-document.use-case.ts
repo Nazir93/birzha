@@ -38,7 +38,10 @@ export class CreatePurchaseDocumentUseCase {
     private readonly purchaseDocuments: PurchaseDocumentRepository,
   ) {}
 
-  async execute(body: CreatePurchaseDocumentBody): Promise<{ documentId: string }> {
+  async execute(
+    body: CreatePurchaseDocumentBody,
+    ctx?: { createdByUserId?: string | null },
+  ): Promise<{ documentId: string }> {
     const documentId = body.id ?? randomUUID();
 
     const wh = await this.warehouses.findById(body.warehouseId);
@@ -46,6 +49,7 @@ export class CreatePurchaseDocumentUseCase {
       throw new WarehouseNotFoundError(body.warehouseId);
     }
 
+    const createdBy = ctx?.createdByUserId?.trim();
     const header: PurchaseDocumentHeaderRow = {
       id: documentId,
       documentNumber: body.documentNumber.trim(),
@@ -54,6 +58,7 @@ export class CreatePurchaseDocumentUseCase {
       buyerLabel: body.buyerLabel?.trim() || null,
       warehouseId: body.warehouseId,
       extraCostKopecks: BigInt(body.extraCostKopecks ?? 0),
+      createdByUserId: createdBy && createdBy.length > 0 ? createdBy : null,
     };
 
     const lines: NewPurchaseDocumentLine[] = [];

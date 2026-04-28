@@ -5,6 +5,7 @@ import {
   cabinetIdFromPathname,
   cabinetForUser,
   hrefForPanelInCabinet,
+  operationsPanelOrder,
   type CabinetId,
   type PanelId,
 } from "../auth/role-panels.js";
@@ -31,16 +32,6 @@ const tab = (active: boolean): CSSProperties => ({
   color: active ? "#14532d" : "#3f3f46",
   fontWeight: active ? 600 : 400,
 });
-
-const panelOrder: PanelId[] = [
-  "nakladnaya",
-  "distribution",
-  "reports",
-  "operations",
-  "offline",
-  "inventory",
-  "service",
-];
 
 const panelLabel: Record<PanelId, string> = {
   nakladnaya: "Накладная",
@@ -72,6 +63,9 @@ export function AppNav() {
     }
 
     const out: { to: string; label: string; key: string }[] = [];
+    if (cabinet === "admin") {
+      out.push({ to: adminRoutes.home, label: "Сводка", key: "admin-home" });
+    }
     if (cabinet === "sales") {
       out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
     }
@@ -79,6 +73,7 @@ export function AppNav() {
       out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
       out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     }
+    const panelOrder = operationsPanelOrder(user);
     for (const p of panelOrder) {
       const to = hrefForPanelInCabinet(user, p, cabinet);
       if (to) {

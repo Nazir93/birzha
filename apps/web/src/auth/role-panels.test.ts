@@ -8,6 +8,7 @@ import {
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
   isFieldSellerOnly,
+  operationsPanelOrder,
 } from "./role-panels.js";
 
 function userWithRoles(...roleCodes: string[]) {
@@ -48,7 +49,12 @@ describe("role-panels", () => {
     expect(defaultRouteForUser(userWithRoles("seller"))).toBe(sales.home);
     expect(defaultRouteForUser(userWithRoles("warehouse"))).toBe(ops.purchaseNakladnaya);
     expect(defaultRouteForUser(userWithRoles("purchaser"))).toBe(ops.purchaseNakladnaya);
-    expect(defaultRouteForUser(userWithRoles("admin"))).toBe(adminRoutes.inventory);
+    expect(defaultRouteForUser(userWithRoles("admin"))).toBe(adminRoutes.home);
+  });
+
+  it("operationsPanelOrder: у logistics отчёты первые", () => {
+    const order = operationsPanelOrder(userWithRoles("logistics"));
+    expect(order[0]).toBe("reports");
   });
 
   it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {

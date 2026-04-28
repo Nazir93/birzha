@@ -7,7 +7,7 @@
 | Вопрос | Куда |
 |--------|------|
 | Команды, HTTP API, стек | `README.md` |
-| **Кабинеты, отдельные входы, план** | `docs/architecture/cabinets.md` |
+| **Кабинеты, отдельные входы, план** | `docs/architecture/cabinets.md` (матрица экранов по ролям — раздел «Матрица экранов») |
 | Роли, матрица прав, документы | `docs/architecture/processes/roles-and-permissions.md` |
 | Риски (долги, офлайн, возвраты) | `docs/architecture/risks-and-guardrails.md` |
 | Термины, глоссарий | `docs/architecture/business-glossary.md` |
@@ -17,6 +17,7 @@
 | Эскиз ER, таблицы, единицы | `docs/architecture/data-model/` (er-model, table-catalog, units) |
 | Золотой сценарий теста | `docs/testing/golden-scenario.md` |
 | **Правила кода** | `.cursor/rules/*.mdc` (в т.ч. `00-master.mdc`, `07-…` для граничных ролей/долгов) |
+| **Безопасность API (GET, токен)** | `docs/architecture/security-api-read-audit.md` |
 
 **Навигация по `docs`:** `docs/architecture/README.md` — короткий индекс (не дублирует `README`).
 

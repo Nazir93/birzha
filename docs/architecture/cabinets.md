@@ -24,9 +24,27 @@
 
 **Старые пути** без префи (`/reports`, `/purchase-nakladnaya`, …) **редиректят** в кабинет согласно роли (`LegacyPathRedirect` в `App.tsx`).
 
+## Матрица экранов по ролям (реализация)
+
+Сводная таблица: стартовый URL после входа (`defaultRouteForUser`), главный экран кабинета, типичные действия. Детальная матрица прав по документам — в [`processes/roles-and-permissions.md`](processes/roles-and-permissions.md).
+
+| Роль (глобальная) | Кабинет | Старт | Главный экран | Важные разделы |
+|-------------------|---------|-------|----------------|----------------|
+| **admin** | `/a` | `/a` | Сводка админа (KPI + ссылки) | `/a/inventory`, `/a/service`, переход в `/o/*` |
+| **manager** | `/o` | `/o/reports` или накладная | Отчёты / закуп по умолчанию | Все панели `/o`, при необходимости `/a/inventory` |
+| **purchaser**, **warehouse** | `/o` | `/o/purchase-nakladnaya` при доступе к накладной | Накладная, распределение | При **scoped** роли `warehouse` + `scope_type=warehouse` списки партий и накладных на API фильтруются по складу |
+| **logistics** | `/o` | `/o/reports` | Отчёты и рейсы первыми в навигации | Создание рейса (если есть право), отгрузки |
+| **receiver** | `/o` | `/o/reports` | Отчёты, операции | Приёмка; scoped склад — как у кладовщика |
+| **seller** (только полевой) | `/s` | `/s` | Дашборд продаж (рейс, быстрые действия) | `/s/operations`, `/s/offline`, отчёт «свои» продажи |
+| **seller** + роли `/o` | `/o` | по приоритету операций | Закуп/склад | При совмещении ролей «домашний» кабинет задаёт `cabinetForUser` |
+| **accountant** | `/b` | `/b` | Бух-сводка | `/b/reports`, `/b/counterparties` |
+
+**Отдельный вход по URL:** один логин `/login`; после успеха редирект на свой префикс. Закладка «войти как склад» — `https://…/o`, «продавец» — `https://…/s`. PWA для полевых: сборка с `VITE_PWA_START_URL=/s` (см. `apps/web/vite.config.ts`, деплой — `docs/deployment/vps-ubuntu.md`).
+
 ## С чем сверяться
 
 - **Код панелей и кабинетов:** `apps/web/src/auth/role-panels.ts` — `canAccessPanel`, `canAccessCabinet`, `hrefForPanelInCabinet`; `RequireCabinet` + `RequirePanel` в `App.tsx`.
 - **API и права:** `apps/api/src/http/route-auth.ts` — **POST/DELETE** `/warehouses` и `/product-grades` только `admin` и `manager` (`inventoryCatalogWrite`).
+- **Ограничение по складу (scoped):** `apps/api/src/auth/warehouse-scope.ts`, фильтры в `GET /api/batches`, `GET /api/purchase-documents`; чтение документа `GET /api/purchase-documents/:id` — 403 при чужом складе.
 
 Короткие сценарии ввода для сотрудников: [`../guides/dlya-zakazchika-zapolnenie.md`](../guides/dlya-zakazchika-zapolnenie.md).

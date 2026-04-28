@@ -376,11 +376,12 @@ export function OperationsPanel() {
     return buildTripBatchRows(sellReportQuery.data).filter((r) => r.netTransitG > 0n);
   }, [sellReportQuery.data]);
 
-  const formatSellBatchOptionLabel = (row: TripBatchTableRow): string => {
+  const formatSellBatchOptionLabel = (row: TripBatchTableRow, opts?: { includeNakladPrefix?: boolean }): string => {
+    const includeNakladPrefix = opts?.includeNakladPrefix !== false;
     const b = batchByIdForSell.get(row.batchId);
     const line = b ? formatNakladLineLabel(b) : `Партия ${formatShortBatchId(row.batchId)}`;
     const docNum = b?.nakladnaya?.documentNumber?.trim();
-    const prefix = docNum ? `№ ${docNum} · ` : "";
+    const prefix = includeNakladPrefix && docNum ? `№ ${docNum} · ` : "";
     const kg = gramsBigIntToKgDecimalString(row.netTransitG);
     const estPkg = estimateNetTransitPackageCount(row);
     if (row.shippedPackages > 0n && estPkg > 0n) {
@@ -394,6 +395,49 @@ export function OperationsPanel() {
     }
     return `${prefix}${line} — ${kg} кг`;
   };
+
+  /** Группы для селекта продажи: одна «накладная» — один optgroup, внутри строки по калибрам. */
+  const sellTripRowsByNaklad = useMemo(() => {
+    type Group = { key: string; optgroupLabel: string; sortKey: string; rows: TripBatchTableRow[] };
+    const m = new Map<string, Group>();
+    for (const row of sellableOnTripRows) {
+      const b = batchByIdForSell.get(row.batchId);
+      const docId = b?.nakladnaya?.documentId?.trim() ?? "";
+      const docNum = b?.nakladnaya?.documentNumber?.trim() ?? "";
+      const key = docId || "__no_naklad";
+      if (!m.has(key)) {
+        const optgroupLabel = docNum
+          ? `Накладная № ${docNum}`
+          : docId
+            ? `Накладная (id ${docId.slice(0, 8)}…)`
+            : "Без привязки к накладной в данных";
+        m.set(key, {
+          key,
+          optgroupLabel,
+          sortKey: docNum || docId || key,
+          rows: [],
+        });
+      }
+      m.get(key)!.rows.push(row);
+    }
+    const groups = [...m.values()]
+      .map((g) => ({
+        ...g,
+        rows: g.rows.slice().sort((a, c) => {
+          const ba = batchByIdForSell.get(a.batchId);
+          const bc = batchByIdForSell.get(c.batchId);
+          const la = ba ? formatNakladLineLabel(ba) : a.batchId;
+          const lc = bc ? formatNakladLineLabel(bc) : c.batchId;
+          const cmp = la.localeCompare(lc, "ru");
+          if (cmp !== 0) {
+            return cmp;
+          }
+          return a.batchId.localeCompare(c.batchId);
+        }),
+      }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey, "ru"));
+    return groups;
+  }, [sellableOnTripRows, batchByIdForSell]);
 
   const sellSelectionSummary = useMemo((): {
     line: string;
@@ -820,9 +864,8 @@ export function OperationsPanel() {
         </h3>
         <p style={muted}>
           Партия приходит из <strong>уже созданной накладной</strong> (строка = калибр). Сначала выберите <strong>рейс</strong>, затем
-          партию: в списке — <strong>кг в пути</strong> и <strong>оценка ящиков</strong> (пропорционально кг отгрузки, если ящики вводили при
-          «Отгрузить в рейс»). <strong>Килограммы</strong> в продаже обязательны; <strong>ящики</strong> в теле API не
-          уходят — оценка только для подсказки, как на бумажной накладной.
+          строку: список сгруппирован <strong>по накладной</strong> (как одна общая отгрузка по рейсу), внутри группы — калибры и кг в пути.
+          <strong>Килограммы</strong> в продаже обязательны; <strong>ящики</strong> в теле API не уходят — оценка только для подсказки.
         </p>
         <p style={muted}>
           <code>POST /api/batches/:batchId/sell-from-trip</code> — кг по умолчанию = весь доступный остаток в пути.
@@ -874,7 +917,7 @@ export function OperationsPanel() {
           </p>
         )}
         <label htmlFor="op-sel-sell-batch-line" style={{ fontSize: "0.88rem" }}>
-          Партия (накладная · калибр · кг и ящики в пути) *
+          Партия (по накладным и калибрам · кг в пути) *
         </label>
         <select
           id="op-sel-sell-batch-line"
@@ -902,12 +945,16 @@ export function OperationsPanel() {
                 ? "… загрузка остатков …"
                 : sellReportQuery.isError
                   ? "— отчёт не загрузился, batchId ниже —"
-                  : "— выберите партию и калибр —"}
+                  : "— выберите калибр в группе накладной —"}
           </option>
-          {sellableOnTripRows.map((row) => (
-            <option key={row.batchId} value={row.batchId}>
-              {formatSellBatchOptionLabel(row)}
-            </option>
+          {sellTripRowsByNaklad.map((g) => (
+            <optgroup key={g.key} label={g.optgroupLabel}>
+              {g.rows.map((row) => (
+                <option key={row.batchId} value={row.batchId}>
+                  {formatSellBatchOptionLabel(row, { includeNakladPrefix: false })}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         {sellSelectionSummary && (

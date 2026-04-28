@@ -38,4 +38,20 @@ describe("Trip", () => {
     expect(t.getDriverName()).toBe("Иванов");
     expect(t.getDepartedAt()?.getTime()).toBe(d.getTime());
   });
+
+  it("хранит назначенного продавца", () => {
+    const t = Trip.create({
+      id: "t-5",
+      tripNumber: "Ф-100",
+      assignedSellerUserId: "user-sell-1",
+    });
+    expect(t.getAssignedSellerUserId()).toBe("user-sell-1");
+    const r = Trip.restore({
+      id: "t-6",
+      tripNumber: "Ф-101",
+      status: "open",
+      assignedSellerUserId: "u2",
+    });
+    expect(r.getAssignedSellerUserId()).toBe("u2");
+  });
 });

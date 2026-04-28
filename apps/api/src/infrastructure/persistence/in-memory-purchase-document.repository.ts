@@ -71,6 +71,7 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
         docDate: formatHeaderDate(d.docDate),
         warehouseId: d.warehouseId,
         lineCount: this.linesByDoc.get(d.id)?.length ?? 0,
+        createdByUserId: d.createdByUserId ?? null,
       }))
       .sort((a, b) => b.id.localeCompare(a.id));
   }
@@ -106,6 +107,7 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
       warehouseId: header.warehouseId,
       extraCostKopecks: header.extraCostKopecks.toString(),
       createdAt: null,
+      createdByUserId: header.createdByUserId ?? null,
       lines: detailLines,
     };
   }

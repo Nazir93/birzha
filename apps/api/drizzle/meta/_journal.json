@@ -134,6 +134,13 @@
       "when": 1777100000000,
       "tag": "0018_batch_warehouse_write_offs",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777200000000,
+      "tag": "0019_purchase_created_by_trip_assigned_seller",
+      "breakpoints": true
     }
   ]
 }

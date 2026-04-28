@@ -263,6 +263,7 @@ describe("createTripBodySchema", () => {
       vehicleLabel: null,
       driverName: null,
       departedAt: null,
+      assignedSellerUserId: null,
     });
   });
 
@@ -277,6 +278,16 @@ describe("createTripBodySchema", () => {
     expect(r.vehicleLabel).toBe("А 123");
     expect(r.driverName).toBe("Иванов");
     expect(r.departedAt).toBe("2026-04-21T10:00:00.000Z");
+    expect(r.assignedSellerUserId).toBeNull();
+  });
+
+  it("принимает assignedSellerUserId", () => {
+    const r = createTripBodySchema.parse({
+      id: "t1",
+      tripNumber: "Ф-03",
+      assignedSellerUserId: "  usr-1  ",
+    });
+    expect(r.assignedSellerUserId).toBe("usr-1");
   });
 
   it("отклоняет пустой id", () => {

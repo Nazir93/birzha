@@ -30,9 +30,21 @@ describe("Trip HTTP", () => {
 
     res = await app.inject({ method: "GET", url: "/trips/http-t1" });
     expect(res.statusCode).toBe(200);
-    const one = JSON.parse(res.body) as { trip: { tripNumber: string; status: string } };
+    const one = JSON.parse(res.body) as {
+      trip: { tripNumber: string; status: string; assignedSellerUserId: string | null };
+    };
     expect(one.trip.tripNumber).toBe("Ф-99");
     expect(one.trip.status).toBe("open");
+    expect(one.trip.assignedSellerUserId).toBeNull();
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "http-t-assigned", tripNumber: "Ф-ASG", assignedSellerUserId: "seller-u1" },
+    });
+    res = await app.inject({ method: "GET", url: "/trips" });
+    const list2 = JSON.parse(res.body) as { trips: { id: string; assignedSellerUserId: string | null }[] };
+    expect(list2.trips.find((t) => t.id === "http-t-assigned")?.assignedSellerUserId).toBe("seller-u1");
 
     res = await app.inject({ method: "GET", url: "/trips/http-t1/shipment-report" });
     expect(res.statusCode).toBe(200);

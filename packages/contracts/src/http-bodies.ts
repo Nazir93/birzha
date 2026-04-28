@@ -109,6 +109,12 @@ export const createTripBodySchema = z.object({
     .nullish()
     .transform((s) => (s == null || s.trim() === "" ? null : s.trim()))
     .refine((s) => s == null || !Number.isNaN(Date.parse(s)), { message: "departedAt: неверная дата" }),
+  /** Кому закрепить рейс в поле (users.id); пусто — общий рейс. */
+  assignedSellerUserId: z
+    .string()
+    .max(200)
+    .nullish()
+    .transform((s) => (s == null || s.trim() === "" ? null : s.trim())),
 });
 
 /** Payload `ship_to_trip` в POST /sync */

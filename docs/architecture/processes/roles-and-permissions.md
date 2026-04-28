@@ -78,6 +78,8 @@
 - продавец видит только свои продажи и долги
 - бухгалтер видит все продажи и все оплаты
 
+**Ограничение по складу (scoped роли):** у пользователя с ролями `warehouse` или `receiver` и `scope_type = warehouse`, `scope_id = <id склада>` списки **`GET /api/batches`** и **`GET /api/purchase-documents`** содержат только строки этого склада; чужой документ на **`GET /api/purchase-documents/:id`** — ответ **403**. См. `apps/api/src/auth/warehouse-scope.ts`.
+
 **Реализация в API (MVP, текущий код):** в таблицу `trip_batch_sales` пишется `recorded_by_user_id` (пользователь из JWT при `POST /batches/…/sell-from-trip` и `POST /sync` с `sell_from_trip`). Для учётной записи с **глобальной** ролью **только** `seller` (без `warehouse`, `logistics`, `manager` и т.д., см. `isGlobalSellerOnly` / `isFieldSellerOnly`) ответ **`GET /api/trips/:tripId/shipment-report`** строит блоки **`sales`** и связанные **`financials`** только по таким строкам; **отгрузка в рейс** и **недостача** в отчёте — общие по рейсу. Список **`GET /api/trips`** для продавца не сужается. Остальные роли получают полный отчёт.
 - руководитель видит агрегаты и детализацию по ролям и регионам
 

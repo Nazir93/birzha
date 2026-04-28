@@ -39,12 +39,22 @@ import type { RecordTripShortageTransactionRunner } from "../application/trip/re
 import { RecordTripShortageUseCase } from "../application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "../application/trip/ship-to-trip.use-case.js";
 
+import { warehouseReadScopeIds } from "../auth/warehouse-scope.js";
+import { filterBatchJsonByWarehouseScope } from "./batch-json-warehouse-filter.js";
 import { listBatchesForHttp } from "./batch-list-http.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
 type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
+
+function batchesPayloadForUser(payload: Awaited<ReturnType<typeof listBatchesForHttp>>, user: JwtRequestUser | undefined) {
+  const scope = user ? warehouseReadScopeIds(user) : null;
+  if (scope && scope.size > 0) {
+    return filterBatchJsonByWarehouseScope(payload, scope);
+  }
+  return payload;
+}
 
 export function registerBatchRoutes(
   app: FastifyInstance,
@@ -82,10 +92,11 @@ export function registerBatchRoutes(
     runRecordTripShortageInTransaction,
   );
 
-  app.get("/batches", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+  app.get("/batches", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const payload = await listBatchesForHttp(batches, db);
-      return reply.send({ batches: payload });
+      const user = req.user as JwtRequestUser | undefined;
+      return reply.send({ batches: batchesPayloadForUser(payload, user) });
     } catch (error) {
       return sendMappedError(reply, error);
     }

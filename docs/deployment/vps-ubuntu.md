@@ -216,6 +216,18 @@ pnpm db:reset-test-data
 sudo systemctl restart birzha-api
 ```
 
+### 10.2. PWA для полевых продавцов (`/s`)
+
+Один билд фронта; при сборке задайте стартовый URL установки PWA на кабинет продаж:
+
+```bash
+# пример: перед turbo build / полным build
+export VITE_PWA_START_URL=/s
+pnpm exec turbo run build --force
+```
+
+Подробнее — комментарий в `apps/web/vite.config.ts`. После установки ярлык открывает `/s` (дашборд продаж); офлайн-очередь — раздел «Офлайн» в том же кабинете.
+
 ---
 
 ## Важно

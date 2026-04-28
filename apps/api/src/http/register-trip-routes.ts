@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createTripBodySchema } from "@birzha/contracts";
 import { z } from "zod";
 
-import { isGlobalSellerOnly } from "../auth/seller-scope.js";
+import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { TripNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
@@ -41,9 +41,13 @@ export function registerTripRoutes(
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
 
-  app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+  app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
-      const list = await trips.list();
+      let list = await trips.list();
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles)) {
+        list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
+      }
       return reply.send({ trips: list.map(tripToJson) });
     } catch (error) {
       return sendMappedError(reply, error);
@@ -53,7 +57,14 @@ export function registerTripRoutes(
   app.get("/trips/:tripId/shipment-report", { ...withPreHandlers(routeAuth.tripReportRead) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      const tripRow = await trips.findById(tripId);
+      if (!tripRow) {
+        throw new TripNotFoundError(tripId);
+      }
       const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles) && !tripVisibleToFieldSeller(tripRow, u.sub)) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
       const onlySales = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
       const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(
         tripId,
@@ -77,6 +88,10 @@ export function registerTripRoutes(
       const trip = await trips.findById(tripId);
       if (!trip) {
         throw new TripNotFoundError(tripId);
+      }
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles) && !tripVisibleToFieldSeller(trip, u.sub)) {
+        return reply.code(403).send({ error: "forbidden" });
       }
       return reply.send({ trip: tripToJson(trip) });
     } catch (error) {

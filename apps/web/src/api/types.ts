@@ -62,6 +62,8 @@ export type PurchaseDocumentSummary = {
   docDate: string;
   warehouseId: string;
   lineCount: number;
+  /** Автор накладной (`users.id`), если записан при создании. */
+  createdByUserId: string | null;
 };
 
 /** Строка `GET /purchase-documents/:id` — согласовано с `PurchaseDocumentDetail` в API. */
@@ -85,6 +87,7 @@ export type PurchaseDocumentDetail = {
   warehouseId: string;
   extraCostKopecks: string;
   createdAt: string | null;
+  createdByUserId: string | null;
   lines: PurchaseDocumentLineDetail[];
 };
 
@@ -113,6 +116,8 @@ export type TripJson = {
   driverName: string | null;
   /** UTC, ISO-8601. */
   departedAt: string | null;
+  /** Полевой продавец; null — общий рейс. */
+  assignedSellerUserId: string | null;
 };
 
 export type TripsListResponse = {

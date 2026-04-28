@@ -9,5 +9,6 @@ export function tripToJson(trip: Trip) {
     vehicleLabel: trip.getVehicleLabel(),
     driverName: trip.getDriverName(),
     departedAt: departedAt ? departedAt.toISOString() : null,
+    assignedSellerUserId: trip.getAssignedSellerUserId(),
   };
 }

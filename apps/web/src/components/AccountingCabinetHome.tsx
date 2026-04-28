@@ -4,10 +4,11 @@ import { adminRoutes, accounting, prefix } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { sectionCard, muted, btnStyle } from "../ui/styles.js";
+import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
 /**
- * Сводка бухкабинета: ссылка на отчёты; без форм ввода рейса/партий.
+ * Главная бухкабинета: остатки, выручка и прибыль по данным API; без форм ввода рейса/партий.
  */
 export function AccountingCabinetHome() {
   const { user } = useAuth();
@@ -16,24 +17,38 @@ export function AccountingCabinetHome() {
   return (
     <section style={sectionCard} aria-labelledby="acc-home-h">
       <h2 id="acc-home-h" style={{ fontSize: "1.1rem", margin: "0 0 0.5rem" }}>
-        Бухгалтерия
+        Бухгалтерия — сводка
       </h2>
-      <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Сверка и контроль по рейсам: <strong>выручка, закуп, валовая, нал/долг</strong> — таблица ниже и в «Отчётах»
-        по рейсу. Закуп и склад — в <code>{prefix.operations}</code>. Рейс создаётся логистом/руководителем.
+      <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.55 }}>
+        На этой странице автоматически собираются <strong>остатки товара</strong> (склад и «в пути») с оценкой по цене
+        закупа партии и <strong>финансовые итоги по рейсам</strong>: выручка, себестоимость продаж и недостач, валовая
+        прибыль, наличные и долг. Ввод закупок и движений — в <code>{prefix.operations}</code>; детальная сверка по рейсу и
+        печать — в отчётах.
       </p>
-      <ul style={{ margin: 0, paddingLeft: "1.15rem", lineHeight: 1.55 }}>
+      <ul style={{ margin: "0 0 1rem", paddingLeft: "1.15rem", lineHeight: 1.55 }}>
+        <li>
+          <a href="#acc-stock" style={{ fontWeight: 600 }}>
+            Остатки и оценка закупом
+          </a>{" "}
+          <span style={muted}>— блок ниже.</span>
+        </li>
+        <li>
+          <a href="#acc-trips" style={{ fontWeight: 600 }}>
+            Деньги по рейсам
+          </a>{" "}
+          <span style={muted}>— таблица с итоговой строкой.</span>
+        </li>
         <li>
           <Link to={accounting.reports} style={{ fontWeight: 600 }}>
             Отчёты по рейсам
           </Link>{" "}
-          — детализация по рейсу (клиенты, партии, печать); для быстрого смотрите сводку ниже.
+          — клиенты, партии, недостачи, печать.
         </li>
         <li>
           <Link to={accounting.counterparties} style={{ fontWeight: 600 }}>
             Справочник контрагентов
           </Link>{" "}
-          <span style={muted}>— список, добавление и снятие записи (роли: как на API для каталога).</span>
+          <span style={muted}>— клиенты продаж с рейса.</span>
         </li>
         {showServiceLink ? (
           <li>
@@ -44,10 +59,14 @@ export function AccountingCabinetHome() {
           </li>
         ) : null}
       </ul>
+
+      <AccountingStockBalances />
+
       <AccountingTripsSummary />
-      <p className="no-print" style={{ marginTop: "0.9rem" }}>
+
+      <p className="no-print" style={{ marginTop: "1rem" }}>
         <Link to={accounting.reports} style={btnStyle}>
-          Подробный отчёт по рейсу
+          Открыть отчёт по рейсу
         </Link>
       </p>
     </section>

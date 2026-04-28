@@ -9,7 +9,8 @@ export type CreateTripInput = {
   driverName?: string | null;
   /** ISO-строка или null (дата валидируется в `createTripBodySchema`). */
   departedAt?: string | null;
-}
+  assignedSellerUserId?: string | null;
+};
 
 export class CreateTripUseCase {
   constructor(private readonly trips: TripRepository) {}
@@ -23,6 +24,7 @@ export class CreateTripUseCase {
         vehicleLabel: input.vehicleLabel,
         driverName: input.driverName,
         departedAt: iso == null || iso.trim() === "" ? null : new Date(iso),
+        assignedSellerUserId: input.assignedSellerUserId ?? null,
       }),
     );
   }

@@ -8,6 +8,7 @@ export type PurchaseDocumentHeaderRow = {
   buyerLabel: string | null;
   warehouseId: string;
   extraCostKopecks: bigint;
+  createdByUserId?: string | null;
 };
 
 /** Строка накладной для сохранения: партия создаётся в use case и передаётся целиком. */
@@ -29,6 +30,7 @@ export type PurchaseDocumentSummary = {
   docDate: string;
   warehouseId: string;
   lineCount: number;
+  createdByUserId: string | null;
 };
 
 export type PurchaseDocumentLineDetail = {
@@ -51,6 +53,7 @@ export type PurchaseDocumentDetail = {
   warehouseId: string;
   extraCostKopecks: string;
   createdAt: string | null;
+  createdByUserId: string | null;
   lines: PurchaseDocumentLineDetail[];
 };
 

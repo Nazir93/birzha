@@ -151,6 +151,7 @@ export function parseCreateTripForm(
   vehicleLabelRaw = "",
   driverNameRaw = "",
   departedAtLocal = "",
+  assignedSellerUserIdRaw = "",
 ) {
   return mapZod(() => {
     const id = tripIdRaw.trim() || randomUuid();
@@ -163,12 +164,15 @@ export function parseCreateTripForm(
       }
       departedAt = d.toISOString();
     }
+    const assignedSellerUserId =
+      assignedSellerUserIdRaw.trim() === "" ? null : assignedSellerUserIdRaw.trim();
     return createTripBodySchema.parse({
       id,
       tripNumber,
       vehicleLabel: vehicleLabelRaw,
       driverName: driverNameRaw,
       departedAt,
+      assignedSellerUserId,
     });
   });
 }

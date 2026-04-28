@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiFetch } from "../api/fetch-api.js";
@@ -26,6 +26,7 @@ import {
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import { adminRoutes, login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
@@ -225,6 +226,17 @@ export function PurchaseNakladnayaSection() {
 
   const warehouseCount = warehousesQ.data?.warehouses?.length ?? 0;
   const gradeCount = gradesQ.data?.productGrades?.length ?? 0;
+
+  useEffect(() => {
+    if (warehouseId !== "" || !warehousesQ.isSuccess || warehouseCount === 0) {
+      return;
+    }
+    const pref = readPreferredWarehouseId();
+    const ids = (warehousesQ.data?.warehouses ?? []).map((w) => w.id);
+    if (pref && ids.includes(pref)) {
+      setWarehouseId(pref);
+    }
+  }, [warehouseId, warehouseCount, warehousesQ.data?.warehouses, warehousesQ.isSuccess]);
   const catalogsEmptyOk =
     warehousesQ.isSuccess && gradesQ.isSuccess && (warehouseCount === 0 || gradeCount === 0);
 
@@ -367,7 +379,11 @@ export function PurchaseNakladnayaSection() {
           Склад *
           <select
             value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setWarehouseId(v);
+              writePreferredWarehouseId(v === "" ? null : v);
+            }}
             style={{ ...fieldStyle, maxWidth: "100%" }}
           >
             <option value="">— выберите —</option>

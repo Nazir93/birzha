@@ -1,4 +1,11 @@
 import type { FastifyInstance } from "fastify";
+
+import {
+  filterPurchaseSummariesForPurchaserScope,
+  purchaseDocumentReadableByPurchaser,
+} from "../auth/purchase-scope.js";
+import type { AuthRoleGrant } from "../auth/role-grant.js";
+import { warehouseReadScopeIds } from "../auth/warehouse-scope.js";
 import {
   createProductGradeBodySchema,
   createPurchaseDocumentBodySchema,
@@ -16,6 +23,8 @@ import { DeleteWarehouseUseCase } from "../application/warehouse/delete-warehous
 
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
+
+type JwtUser = { sub: string; roles: AuthRoleGrant[] };
 
 export function registerPurchaseDocumentRoutes(
   app: FastifyInstance,
@@ -111,10 +120,15 @@ export function registerPurchaseDocumentRoutes(
     }
   });
 
-  app.get("/purchase-documents", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+  app.get("/purchase-documents", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const documents = await purchaseDocuments.listSummaries();
-      return reply.send({ purchaseDocuments: documents });
+      const user = req.user as JwtUser | undefined;
+      const scope = user ? warehouseReadScopeIds(user) : null;
+      let filtered =
+        scope && scope.size > 0 ? documents.filter((d) => scope.has(d.warehouseId.trim())) : documents;
+      filtered = filterPurchaseSummariesForPurchaserScope(filtered, user, user?.sub);
+      return reply.send({ purchaseDocuments: filtered });
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -127,6 +141,14 @@ export function registerPurchaseDocumentRoutes(
       if (!doc) {
         return reply.code(404).send({ error: "purchase_document_not_found", documentId: params.documentId });
       }
+      const user = req.user as JwtUser | undefined;
+      const scope = user ? warehouseReadScopeIds(user) : null;
+      if (scope && scope.size > 0 && !scope.has(doc.warehouseId.trim())) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+      if (user?.sub && !purchaseDocumentReadableByPurchaser(doc, user, user.sub)) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
       return reply.send(doc);
     } catch (error) {
       return sendMappedError(reply, error);
@@ -136,7 +158,8 @@ export function registerPurchaseDocumentRoutes(
   app.post("/purchase-documents", { ...withPreHandlers(routeAuth.batchCreate) }, async (req, reply) => {
     try {
       const body = createPurchaseDocumentBodySchema.parse(req.body);
-      const result = await createPurchaseDocument.execute(body);
+      const user = req.user as JwtUser | undefined;
+      const result = await createPurchaseDocument.execute(body, { createdByUserId: user?.sub });
       return reply.code(201).send(result);
     } catch (error) {
       return sendMappedError(reply, error);

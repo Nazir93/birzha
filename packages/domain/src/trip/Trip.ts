@@ -16,6 +16,7 @@ export class Trip {
     private readonly vehicleLabel: string | null,
     private readonly driverName: string | null,
     private readonly departedAt: Date | null,
+    private readonly assignedSellerUserId: string | null,
   ) {}
 
   static create(config: {
@@ -24,6 +25,7 @@ export class Trip {
     vehicleLabel?: string | null;
     driverName?: string | null;
     departedAt?: Date | null;
+    assignedSellerUserId?: string | null;
   }): Trip {
     if (!config.id.trim()) {
       throw new Error("trip id не может быть пустым");
@@ -38,6 +40,7 @@ export class Trip {
       normText(config.vehicleLabel ?? null),
       normText(config.driverName ?? null),
       config.departedAt == null || Number.isNaN(config.departedAt.getTime()) ? null : config.departedAt,
+      normText(config.assignedSellerUserId ?? null),
     );
   }
 
@@ -65,6 +68,11 @@ export class Trip {
     return this.departedAt;
   }
 
+  /** Продавец, закреплённый за рейсом; `null` — без закрепления (видят все с доступом к рейсам). */
+  getAssignedSellerUserId(): string | null {
+    return this.assignedSellerUserId;
+  }
+
   canAcceptShipments(): boolean {
     return this.status === "open";
   }
@@ -80,6 +88,7 @@ export class Trip {
     vehicleLabel?: string | null;
     driverName?: string | null;
     departedAt?: Date | null;
+    assignedSellerUserId?: string | null;
   }): Trip {
     return new Trip(
       config.id,
@@ -88,6 +97,7 @@ export class Trip {
       normText(config.vehicleLabel ?? null),
       normText(config.driverName ?? null),
       config.departedAt == null || Number.isNaN(new Date(config.departedAt).getTime()) ? null : new Date(config.departedAt),
+      normText(config.assignedSellerUserId ?? null),
     );
   }
 }

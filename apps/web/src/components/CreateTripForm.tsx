@@ -13,10 +13,18 @@ export function CreateTripForm() {
   const [vehicleLabel, setVehicleLabel] = useState("");
   const [driverName, setDriverName] = useState("");
   const [departedAtLocal, setDepartedAtLocal] = useState("");
+  const [assignedSellerUserId, setAssignedSellerUserId] = useState("");
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const body = parseCreateTripForm(tripId, tripNumber, vehicleLabel, driverName, departedAtLocal);
+      const body = parseCreateTripForm(
+        tripId,
+        tripNumber,
+        vehicleLabel,
+        driverName,
+        departedAtLocal,
+        assignedSellerUserId,
+      );
       const res = await apiFetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -35,12 +43,13 @@ export function CreateTripForm() {
       setVehicleLabel("");
       setDriverName("");
       setDepartedAtLocal("");
+      setAssignedSellerUserId("");
     },
   });
 
   useEffect(() => {
     mutation.reset();
-  }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, mutation]);
+  }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, assignedSellerUserId, mutation]);
 
   return (
     <div style={{ marginBottom: "1.25rem", paddingBottom: "1rem", borderBottom: "1px solid #e4e4e7" }}>
@@ -103,6 +112,17 @@ export function CreateTripForm() {
         style={dateFieldStyleCompact}
         className="birzha-input-date"
         emptyLabel="— не задано —"
+      />
+      <label htmlFor="ct-assigned-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+        ID продавца в поле (опционально, users.id)
+      </label>
+      <input
+        id="ct-assigned-seller"
+        value={assignedSellerUserId}
+        onChange={(e) => setAssignedSellerUserId(e.target.value)}
+        placeholder="пусто — общий рейс для всех продавцов"
+        style={fieldStyleCompact}
+        autoComplete="off"
       />
       <div>
         <button

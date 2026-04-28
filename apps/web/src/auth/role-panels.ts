@@ -218,6 +218,20 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
 /**
  * Href панели с учётом кабинета. Если панель в этом кабинете не показывается — null.
  */
+/** Порядок вкладок в `/o` и в админке для блоков операций: у логиста «Отчёты и рейсы» первыми. */
+export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
+  const base: PanelId[] = ["nakladnaya", "distribution", "reports", "operations", "offline", "inventory", "service"];
+  if (!user) {
+    return base;
+  }
+  const codes = globalRoleCodes(user);
+  if (codes.has("logistics")) {
+    const rest = base.filter((p) => p !== "reports");
+    return ["reports", ...rest];
+  }
+  return base;
+}
+
 export function hrefForPanelInCabinet(
   user: AuthUser,
   panel: PanelId,
@@ -303,7 +317,7 @@ export function defaultRouteForUser(user: AuthUser | null): string {
   }
   const c = cabinetForUser(user);
   if (c === "admin") {
-    return canManageInventoryCatalog(user) ? adminRoutes.inventory : adminRoutes.service;
+    return adminRoutes.home;
   }
   if (c === "operations") {
     const codes = globalRoleCodes(user);

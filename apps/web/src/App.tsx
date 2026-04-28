@@ -3,6 +3,7 @@ import { useAuth } from "./auth/auth-context.js";
 import { defaultRouteForUser } from "./auth/role-panels.js";
 import { AppNav } from "./components/AppNav.js";
 import { CreateTripIfAllowed } from "./components/CreateTripIfAllowed.js";
+import { AdminCabinetHome } from "./components/AdminCabinetHome.js";
 import { SellerCabinetHome } from "./components/SellerCabinetHome.js";
 import { AccountingCabinetHome } from "./components/AccountingCabinetHome.js";
 import { CounterpartiesPanel } from "./components/CounterpartiesPanel.js";
@@ -135,6 +136,7 @@ export function App() {
                 </RequirePanel>
               }
             />
+            <Route path="trips" element={<Navigate to="reports" replace />} />
             <Route
               path="purchase-nakladnaya"
               element={
@@ -207,7 +209,16 @@ export function App() {
                 </RequirePanel>
               }
             />
-            <Route index element={<Navigate to="inventory" replace />} />
+            <Route
+              index
+              element={
+                <RequirePanel panel="reports">
+                  <section style={sectionCard}>
+                    <AdminCabinetHome />
+                  </section>
+                </RequirePanel>
+              }
+            />
           </Route>
 
           <Route

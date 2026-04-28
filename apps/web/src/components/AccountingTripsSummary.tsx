@@ -41,6 +41,33 @@ export function AccountingTripsSummary() {
   const anyLoading = reportQueries.some((q) => q.isPending) && sortedTrips.length > 0;
   const hasError = reportQueries.some((q) => q.isError);
 
+  const tripTotals = useMemo(() => {
+    let kg = 0n;
+    let revenue = 0n;
+    let costSold = 0n;
+    let costShort = 0n;
+    let gross = 0n;
+    let cash = 0n;
+    let debt = 0n;
+    let rows = 0;
+    for (let i = 0; i < sortedTrips.length; i++) {
+      const q = reportQueries[i];
+      if (!q?.data) {
+        continue;
+      }
+      const r = q.data;
+      kg += BigInt(r.sales.totalGrams || "0");
+      revenue += BigInt(r.financials.revenueKopecks || "0");
+      costSold += BigInt(r.financials.costOfSoldKopecks || "0");
+      costShort += BigInt(r.financials.costOfShortageKopecks || "0");
+      gross += BigInt(r.financials.grossProfitKopecks || "0");
+      cash += BigInt(r.sales.totalCashKopecks || "0");
+      debt += BigInt(r.sales.totalDebtKopecks || "0");
+      rows += 1;
+    }
+    return { kg, revenue, costSold, costShort, gross, cash, debt, rows };
+  }, [sortedTrips, reportQueries]);
+
   if (tripsQuery.isPending) {
     return <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} />;
   }
@@ -64,13 +91,16 @@ export function AccountingTripsSummary() {
   const moreThanTable = totalInDb > MAX_TRIPS;
 
   return (
-    <div style={{ marginTop: "1.25rem" }} role="region" aria-labelledby="acc-ledger-h">
+    <div style={{ marginTop: "1.25rem" }} role="region" aria-labelledby="acc-ledger-h" id="acc-trips">
       <h3 id="acc-ledger-h" style={{ fontSize: "1rem", margin: "0 0 0.35rem" }}>
-        Деньги по рейсам (сводка)
+        Выручка, себестоимость и валовая прибыль по рейсам
       </h3>
-      <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Выручка, себестоимость закупа по проданной массе, валовая прибыль — как в детальном отчёте. До {MAX_TRIPS}{" "}
-        рейсов.         Разбивка по клиентам и печать — в «Детали».
+      <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.55 }}>
+        <strong>Выручка</strong> — из журнала продаж; <strong>себестоимость проданного</strong> и{" "}
+        <strong>недостачи</strong> — по закупочной цене партии (руб/кг);{" "}
+        <strong>валовая прибыль</strong> = выручка − себестоимость продаж − себестоимость недостач (как в API отчёта
+        рейса). Расходы на логистику и прочие накладные в этой цифре <strong>не вычитаются</strong> — отдельного учёта
+        расходов рейса в системе нет. До {MAX_TRIPS} рейсов в таблице; разбивка по клиентам — в «Детали».
       </p>
       {moreThanTable ? (
         <p style={{ ...muted, margin: "0 0 0.5rem" }}>
@@ -84,7 +114,7 @@ export function AccountingTripsSummary() {
         </p>
       )}
       <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <table style={{ ...tableStyle, minWidth: 720, fontSize: "0.88rem" }} aria-label="Сводка по деньгам и рейсам">
+        <table style={{ ...tableStyle, minWidth: 880, fontSize: "0.88rem" }} aria-label="Сводка по деньгам и рейсам">
           <thead>
             <tr>
               <th scope="col" style={thHead}>
@@ -97,10 +127,13 @@ export function AccountingTripsSummary() {
                 Выручка, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Себестоим. проданного, ₽
+                Себ. продаж, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Валовая, ₽
+                Себ. недостачи, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                Валовая прибыль, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Нал / долг, ₽
@@ -119,7 +152,7 @@ export function AccountingTripsSummary() {
               if (q.isError) {
                 return (
                   <tr key={t.id}>
-                    <td colSpan={7} style={thtd}>
+                    <td colSpan={8} style={thtd}>
                       <span role="alert" style={errorText}>
                         Нет отчёта: {t.tripNumber}
                       </span>
@@ -133,7 +166,7 @@ export function AccountingTripsSummary() {
                     <td style={thtd}>
                       <strong>{t.tripNumber}</strong>
                     </td>
-                    <td colSpan={5} style={{ ...thtd, ...muted }}>
+                    <td colSpan={6} style={{ ...thtd, ...muted }}>
                       …
                     </td>
                     <td style={thtd}>
@@ -154,6 +187,7 @@ export function AccountingTripsSummary() {
                   <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(r.sales.totalGrams)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.revenueKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)}</td>
+                  <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
                     {kopecksToRubLabel(r.financials.grossProfitKopecks)}
                   </td>
@@ -171,6 +205,22 @@ export function AccountingTripsSummary() {
                 </tr>
               );
             })}
+            {!anyLoading && tripTotals.rows > 0 && (
+              <tr style={{ background: "#f1f5f9", fontWeight: 600 }}>
+                <th scope="row" style={{ ...thtd, textAlign: "left" }}>
+                  Итого ({tripTotals.rows} рейс.)
+                </th>
+                <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(tripTotals.kg.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.revenue.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costSold.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costShort.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.gross.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right", fontSize: "0.85rem" }}>
+                  {kopecksToRubLabel(tripTotals.cash.toString())} / {kopecksToRubLabel(tripTotals.debt.toString())}
+                </td>
+                <td style={thtd} />
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

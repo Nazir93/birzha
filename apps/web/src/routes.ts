@@ -13,6 +13,8 @@ export type CabinetPrefix = (typeof prefix)[keyof typeof prefix];
 /** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
 export const ops = {
   reports: `${prefix.operations}/reports`,
+  /** Алиас на отчёты/рейсы (удобно логисту и закладкам). */
+  trips: `${prefix.operations}/trips`,
   purchaseNakladnaya: `${prefix.operations}/purchase-nakladnaya`,
   distribution: `${prefix.operations}/distribution`,
   operations: `${prefix.operations}/operations`,
@@ -21,6 +23,8 @@ export const ops = {
 
 /** Справочники (склады, калибры) и meta — узкий круг. */
 export const adminRoutes = {
+  /** Главная админки — сводка KPI. */
+  home: prefix.admin,
   inventory: `${prefix.admin}/inventory`,
   service: `${prefix.admin}/service`,
 } as const;

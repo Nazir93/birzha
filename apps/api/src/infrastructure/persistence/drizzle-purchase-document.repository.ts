@@ -38,6 +38,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
         buyerLabel: header.buyerLabel,
         warehouseId: header.warehouseId,
         extraCostKopecks: header.extraCostKopecks,
+        createdByUserId: header.createdByUserId ?? null,
       });
 
       for (const line of lines) {
@@ -79,6 +80,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       docDate: formatPgDate(d.docDate),
       warehouseId: d.warehouseId,
       lineCount: countMap.get(d.id) ?? 0,
+      createdByUserId: d.createdByUserId ?? null,
     }));
   }
 
@@ -141,6 +143,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       warehouseId: doc.warehouseId,
       extraCostKopecks: doc.extraCostKopecks.toString(),
       createdAt: doc.createdAt.toISOString(),
+      createdByUserId: doc.createdByUserId ?? null,
       lines: lineRows.map(({ line, gradeCode }) => ({
         lineNo: line.lineNo,
         productGradeId: line.productGradeId,

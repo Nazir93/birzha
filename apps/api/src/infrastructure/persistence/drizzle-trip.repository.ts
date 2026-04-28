@@ -23,6 +23,7 @@ export class DrizzleTripRepository implements TripRepository {
       vehicleLabel: trip.getVehicleLabel(),
       driverName: trip.getDriverName(),
       departedAt: trip.getDepartedAt(),
+      assignedSellerUserId: trip.getAssignedSellerUserId(),
     };
 
     const existing = await this.db
@@ -52,6 +53,7 @@ export class DrizzleTripRepository implements TripRepository {
       vehicleLabel: row.vehicleLabel,
       driverName: row.driverName,
       departedAt: row.departedAt,
+      assignedSellerUserId: row.assignedSellerUserId,
     });
   }
 
@@ -65,6 +67,7 @@ export class DrizzleTripRepository implements TripRepository {
         vehicleLabel: row.vehicleLabel,
         driverName: row.driverName,
         departedAt: row.departedAt,
+        assignedSellerUserId: row.assignedSellerUserId,
       }),
     );
   }

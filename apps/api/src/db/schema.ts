@@ -33,6 +33,8 @@ export const purchaseDocuments = pgTable("purchase_documents", {
     .references(() => warehouses.id),
   /** default через sql — иначе drizzle-kit push падает на JSON.stringify(BigInt). */
   extraCostKopecks: bigint("extra_cost_kopecks", { mode: "bigint" }).notNull().default(sql`0`),
+  /** Кто создал накладную (JWT `sub`); для закупщика — фильтр «свои». */
+  createdByUserId: text("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
@@ -121,6 +123,8 @@ export const trips = pgTable("trips", {
   driverName: text("driver_name"),
   /** План/факт отправления. */
   departedAt: timestamp("departed_at", { withTimezone: true, mode: "date" }),
+  /** Полевой продавец; null — общий рейс. Список GET /trips для seller-only режется по этому полю. */
+  assignedSellerUserId: text("assigned_seller_user_id").references(() => users.id, { onDelete: "set null" }),
 });
 
 /** Строка журнала: отгрузка массы партии в рейс (сходимость отчёта по рейсу). */

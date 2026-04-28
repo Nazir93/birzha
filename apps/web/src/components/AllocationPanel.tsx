@@ -12,9 +12,10 @@ import type {
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
-import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { formatBatchPartyCaption, formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
+import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -350,6 +351,16 @@ export function AllocationPanel() {
     return out;
   }, [warehousesQuery.data?.warehouses, byWarehouse, warehouseOrder]);
 
+  useEffect(() => {
+    if (selectedWarehouse !== "" || allocationWarehouseOptions.length === 0) {
+      return;
+    }
+    const pref = readPreferredWarehouseId();
+    if (pref && allocationWarehouseOptions.some((o) => o.id === pref)) {
+      setSelectedWarehouse(pref);
+    }
+  }, [allocationWarehouseOptions, selectedWarehouse]);
+
   const whSummary = useMemo(() => {
     if (!selectedWarehouse) {
       return null;
@@ -429,9 +440,27 @@ export function AllocationPanel() {
       return batchesInWh;
     }
     if (loadNaklSelection.size === 0) {
-      return [];
+      /** Все строки с остатком на складе — без фильтра по накладным (как «все накладные»). */
+      return filterBatchesForLoadingManifest(batchesInWh, 0, new Set());
     }
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
+  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
+
+  /** Партии с остатком по накладным, которые сознательно не отмечены в отборе — чтобы видеть складской хвост. */
+  const batchesOutsideNaklSelection = useMemo(() => {
+    if (!selectedWarehouse || documentOptions.length === 0 || loadNaklSelection.size === 0) {
+      return [] as BatchListItem[];
+    }
+    return batchesInWh.filter((b) => {
+      if (b.onWarehouseKg <= 0) {
+        return false;
+      }
+      const docId = b.nakladnaya?.documentId;
+      if (!docId) {
+        return false;
+      }
+      return !loadNaklSelection.has(docId);
+    });
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
   const onSelectAllTableRows = useCallback(() => {
@@ -467,7 +496,9 @@ export function AllocationPanel() {
         <strong>1</strong> — склад. <strong>2</strong> — накладные, откуда везёте в этот рейс, свод по калибру/партиям.{" "}
         <strong>3</strong> — таблица: чекбоксами отметьте партии для <strong>массового</strong> назначения направления («К выбранным»)
         <strong> и/или</strong> чтобы ограничить, <strong>какие</strong> партии попадут в «Погрузка в рейс» (если
-        <strong>ничего</strong> не отмечено — в рейс пойдут <strong>все</strong> строки отбора). Брак в кг — в колонке. См.{" "}
+        <strong>ни одной накладной</strong> не отмечено в блоке выше — показывается <strong>весь остаток</strong> склада;
+        в рейс по кнопке «Погрузка» по-прежнему уходят выбранные строки таблицы или все, если чекбоксы партий пустые).
+        Брак в кг — в колонке. См.{" "}
         <Link to={ops.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
@@ -510,7 +541,9 @@ export function AllocationPanel() {
               id="alloc-sel-warehouse"
               value={selectedWarehouse}
               onChange={(e) => {
-                setSelectedWarehouse(e.target.value);
+                const v = e.target.value;
+                setSelectedWarehouse(v);
+                writePreferredWarehouseId(v === "" ? null : v);
               }}
               style={{ ...fieldStyle, maxWidth: "100%" }}
             >
@@ -565,6 +598,71 @@ export function AllocationPanel() {
             />
           )}
 
+          {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "0.65rem 0.75rem",
+                background: "#fafafa",
+                border: "1px solid #e4e4e7",
+                borderRadius: 6,
+              }}
+              role="region"
+              aria-label="Остаток по неотмеченным накладным"
+            >
+              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
+                Не вошло в отбор накладных — остаток на складе
+              </h3>
+              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+                Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
+                числятся — видно кг и калибр.
+              </p>
+              <table style={{ ...tableStyle, fontSize: "0.88rem" }}>
+                <thead>
+                  <tr>
+                    <th scope="col" style={thHead}>
+                      Накладная
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Калибр / строка
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Остаток, кг
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batchesOutsideNaklSelection.map((b) => (
+                    <tr key={b.id}>
+                      <td style={thtd}>
+                        {b.nakladnaya?.documentNumber ? (
+                          <>
+                            № {b.nakladnaya.documentNumber}
+                            {b.nakladnaya.documentId && (
+                              <>
+                                {" "}
+                                <Link
+                                  to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
+                                  style={{ fontSize: "0.82rem" }}
+                                >
+                                  открыть
+                                </Link>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td style={thtd}>{formatNakladLineLabel(b)}</td>
+                      <td style={thtd}>{b.onWarehouseKg}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {selectedWarehouse && documentOptions.length === 0 && batchesInWh.length > 0 && (
             <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
               На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
@@ -574,12 +672,13 @@ export function AllocationPanel() {
           )}
 
           {selectedWarehouse && documentOptions.length > 0 && loadNaklSelection.size === 0 && (
-            <p style={warnText}>Отметьте в блоке выше хотя бы одну накладную — иначе не к чему проставлять сорт в таблице.</p>
+            <p style={{ ...muted, fontSize: "0.88rem", marginBottom: "0.75rem" }} role="status">
+              <strong>Накладные не отфильтрованы</strong> — в таблице ниже показан <strong>полный остаток</strong> на этом
+              складе. Отметьте накладные в блоке выше, чтобы сузить список только к выбранным документам.
+            </p>
           )}
 
-          {selectedWarehouse &&
-            (documentOptions.length === 0 || (documentOptions.length > 0 && loadNaklSelection.size > 0)) &&
-            tableRows.length > 0 && (
+          {selectedWarehouse && tableRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
                 <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
                 2. Направление и отбор в рейс (по чекбоксам)
