@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import helmet from "@fastify/helmet";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import type { BatchRepository } from "./application/ports/batch-repository.port.js";
@@ -71,6 +72,12 @@ export async function buildApp(options: {
 }): Promise<FastifyInstance> {
   const { env, db } = options;
   const app = Fastify({ logger: env.NODE_ENV !== "test" });
+
+  await app.register(helmet, {
+    global: true,
+    /** Отдельно задаётся для SPA (Vite); здесь только JSON API. */
+    contentSecurityPolicy: false,
+  });
 
   const batchRepository =
     options.batchRepository !== undefined

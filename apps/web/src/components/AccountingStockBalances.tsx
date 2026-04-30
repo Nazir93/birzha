@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { apiGetJson } from "../api/fetch-api.js";
-import type { BatchListItem, BatchesListResponse, WarehousesListResponse } from "../api/types.js";
+import type { BatchListItem, WarehousesListResponse } from "../api/types.js";
+import { batchesFullListQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -38,16 +38,8 @@ function warehouseLabel(
  * Остатки товара в штуках учёта: кг на складе, в пути, оценка закупочной стоимости по цене партии из накладной.
  */
 export function AccountingStockBalances() {
-  const batchesQ = useQuery({
-    queryKey: ["batches"],
-    queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
-    retry: 1,
-  });
-  const whQ = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: () => apiGetJson<WarehousesListResponse>("/api/warehouses"),
-    retry: 1,
-  });
+  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const whQ = useQuery(warehousesFullListQueryOptions());
 
   const totals = useMemo(() => {
     const batches = batchesQ.data?.batches ?? [];

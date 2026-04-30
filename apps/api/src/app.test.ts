@@ -14,6 +14,17 @@ describe("API", () => {
     await app.close();
   });
 
+  it("GET /health выставляет заголовки безопасности (@fastify/helmet)", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({ env, db: null });
+    const res = await app.inject({ method: "GET", url: "/health" });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["x-frame-options"]).toBe("SAMEORIGIN");
+    expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    await app.close();
+  });
+
   it("GET /health/ready без БД сообщает not_configured", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const app = await buildApp({ env, db: null });

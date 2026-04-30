@@ -90,7 +90,7 @@ export function AppNav() {
           {user ? (
             <>
               <span className="birzha-nav__user-label" title={`${titleSuffix[cabinet]} · ${prefixForCabinet}`}>
-                {user.login}
+                Вы: {user.login}
               </span>
               <button type="button" className="birzha-btn-ghost" onClick={() => void logout()}>
                 Выйти

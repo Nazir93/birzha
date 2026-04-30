@@ -2,10 +2,9 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import { apiGetJson } from "../api/fetch-api.js";
-import type { ShipmentReportResponse, TripsListResponse } from "../api/types.js";
+import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
+import { shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
-import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
 import { accounting } from "../routes.js";
 import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -18,25 +17,16 @@ const MAX_TRIPS = 50;
  * Каждая строка = тот же отчёт, что в «Отчётах» по рейсу, без N+1 ручного выбора.
  */
 export function AccountingTripsSummary() {
-  const tripsQuery = useQuery({
-    queryKey: ["trips"],
-    queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
-    retry: 1,
-  });
+  const tripsQuery = useQuery(tripsFullListQueryOptions());
 
   const sortedTrips = useMemo(() => {
-    const list = tripsQuery.data?.trips ?? [];
-    return [...list]
-      .sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru"))
-      .slice(0, MAX_TRIPS);
+    return sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []).slice(0, MAX_TRIPS);
   }, [tripsQuery.data?.trips]);
 
   const reportQueries = useQueries({
     queries: sortedTrips.map((t) => ({
-      queryKey: ["shipment-report", t.id] as const,
-      queryFn: () => apiGetJson<ShipmentReportResponse>(`/api/trips/${encodeURIComponent(t.id)}/shipment-report`),
+      ...shipmentReportQueryOptions(t.id),
       enabled: sortedTrips.length > 0,
-      staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
     })),
   });
 

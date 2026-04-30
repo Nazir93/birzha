@@ -1,25 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import type { FieldSellerOptionsResponse } from "../api/types.js";
-import { apiFetch } from "../api/fetch-api.js";
+import { apiPostJson } from "../api/fetch-api.js";
+import { queryRoots, tripsFieldSellerOptionsQueryOptions } from "../query/core-list-queries.js";
 import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 export function CreateTripForm() {
   const queryClient = useQueryClient();
-  const fieldSellersQuery = useQuery({
-    queryKey: ["trips-field-seller-options"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/trips/field-seller-options");
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<FieldSellerOptionsResponse>;
-    },
-  });
+  const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const [tripNumber, setTripNumber] = useState("");
   const [tripId, setTripId] = useState("");
   const [vehicleLabel, setVehicleLabel] = useState("");
@@ -37,19 +27,10 @@ export function CreateTripForm() {
         departedAtLocal,
         assignedSellerUserId,
       );
-      const res = await apiFetch("/api/trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<{ ok?: boolean }>;
+      return apiPostJson("/api/trips", body) as Promise<{ ok?: boolean }>;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["trips"] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       setTripNumber("");
       setTripId("");
       setVehicleLabel("");

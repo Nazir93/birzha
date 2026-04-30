@@ -434,6 +434,21 @@ main.app-shell {
   border-top: 1px solid var(--color-border);
 }
 
+/* Длинные списки в подборщиках (рейсы, подсказки id партий) */
+.birzha-scroll-panel {
+  max-height: min(42vh, 18rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border);
+  border-radius: var(--birzha-radius-sm);
+  background: var(--birzha-surface);
+}
+
+.birzha-trip-search-picker__option:hover:not(:disabled) {
+  border-color: var(--color-border) !important;
+  background: var(--birzha-surface-muted) !important;
+}
+
 /* Разделители секций внутри длинных страниц (/o, формы) */
 .birzha-panel {
   margin-bottom: 1.25rem;

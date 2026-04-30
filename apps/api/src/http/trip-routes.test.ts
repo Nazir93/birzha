@@ -80,6 +80,50 @@ describe("Trip HTTP", () => {
     await app.close();
   });
 
+  it("GET /trips?limit=&search= — подборщик и listMeta", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+      tripRepository: trips,
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "pick-a", tripNumber: "AAA-1" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "pick-b", tripNumber: "BBB-2" },
+    });
+
+    let res = await app.inject({
+      method: "GET",
+      url: "/trips?limit=1&order=departedAtDesc",
+    });
+    expect(res.statusCode).toBe(200);
+    let body = JSON.parse(res.body) as {
+      trips: { id: string }[];
+      listMeta?: { limit: number; offset: number; hasMore: boolean };
+    };
+    expect(body.trips.length).toBe(1);
+    expect(body.listMeta?.hasMore).toBe(true);
+
+    res = await app.inject({
+      method: "GET",
+      url: "/trips?search=BBB&limit=10",
+    });
+    expect(res.statusCode).toBe(200);
+    body = JSON.parse(res.body) as { trips: { id: string }[] };
+    expect(body.trips.some((t) => t.id === "pick-b")).toBe(true);
+
+    await app.close();
+  });
+
   it("GET /trips/field-seller-options — список продавцов для закрепления (in-memory: пусто)", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const trips = new InMemoryTripRepository();

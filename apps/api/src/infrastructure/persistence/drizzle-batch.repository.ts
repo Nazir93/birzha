@@ -1,7 +1,7 @@
 import { Batch, type BatchPersistenceState } from "@birzha/domain";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, ilike, inArray } from "drizzle-orm";
 
-import type { BatchRepository } from "../../application/ports/batch-repository.port.js";
+import type { BatchListFilter, BatchRepository } from "../../application/ports/batch-repository.port.js";
 import type { DbClient } from "../../db/client.js";
 import { batches } from "../../db/schema.js";
 
@@ -49,8 +49,32 @@ export class DrizzleBatchRepository implements BatchRepository {
     return Batch.restoreFromPersistence(rowToPersistenceState(row));
   }
 
-  async list(): Promise<Batch[]> {
-    const rows = await this.db.select().from(batches).orderBy(asc(batches.id));
+  async list(filter?: BatchListFilter): Promise<Batch[]> {
+    if (!filter) {
+      const rows = await this.db.select().from(batches).orderBy(asc(batches.id));
+      return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
+    }
+
+    if (filter.ids && filter.ids.length > 0) {
+      const uniqueIds = [...new Set(filter.ids.map((id) => id.trim()).filter(Boolean))];
+      if (uniqueIds.length === 0) {
+        return [];
+      }
+      const rows = await this.db.select().from(batches).where(inArray(batches.id, uniqueIds));
+      const byId = new Map(rows.map((row) => [row.id, row] as const));
+      return uniqueIds
+        .map((id) => byId.get(id))
+        .filter((row): row is NonNullable<typeof row> => row != null)
+        .map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
+    }
+
+    const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
+    const offset = Math.max(filter.offset ?? 0, 0);
+    const base = this.db.select().from(batches);
+    const filtered = filter.search?.trim()
+      ? base.where(ilike(batches.id, `%${filter.search.trim()}%`))
+      : base;
+    const rows = await filtered.orderBy(asc(batches.id)).limit(limit).offset(offset);
     return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
   }
 

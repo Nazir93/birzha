@@ -1,14 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { apiGetJson } from "../api/fetch-api.js";
-import type {
-  BatchesListResponse,
-  CounterpartiesListResponse,
-  ProductGradesListResponse,
-  PurchaseDocumentsListResponse,
-  TripsListResponse,
-  WarehousesListResponse,
-} from "../api/types.js";
+import {
+  batchesFullListQueryOptions,
+  counterpartiesFullListQueryOptions,
+  productGradesFullListQueryOptions,
+  purchaseDocumentsFullListQueryOptions,
+  tripsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "./core-list-queries.js";
 import { QUERY_STALE_LISTS_MS } from "./query-defaults.js";
 
 function fireAndForget(p: Promise<unknown>): void {
@@ -28,52 +27,19 @@ export type PrefetchCoreListsOptions = {
 export function prefetchCoreLists(queryClient: QueryClient, opts?: PrefetchCoreListsOptions): void {
   const stale = QUERY_STALE_LISTS_MS;
 
-  fireAndForget(
-    queryClient.prefetchQuery({
-      queryKey: ["trips"],
-      queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
-      staleTime: stale,
-    }),
-  );
-  fireAndForget(
-    queryClient.prefetchQuery({
-      queryKey: ["batches"],
-      queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
-      staleTime: stale,
-    }),
-  );
-  fireAndForget(
-    queryClient.prefetchQuery({
-      queryKey: ["warehouses"],
-      queryFn: () => apiGetJson<WarehousesListResponse>("/api/warehouses"),
-      staleTime: stale,
-    }),
-  );
-
-  fireAndForget(
-    queryClient.prefetchQuery({
-      queryKey: ["product-grades"],
-      queryFn: () => apiGetJson<ProductGradesListResponse>("/api/product-grades"),
-      staleTime: stale,
-    }),
-  );
+  fireAndForget(queryClient.prefetchQuery({ ...tripsFullListQueryOptions(), staleTime: stale }));
+  fireAndForget(queryClient.prefetchQuery({ ...batchesFullListQueryOptions(), staleTime: stale }));
+  fireAndForget(queryClient.prefetchQuery({ ...warehousesFullListQueryOptions(), staleTime: stale }));
+  fireAndForget(queryClient.prefetchQuery({ ...productGradesFullListQueryOptions(), staleTime: stale }));
 
   if (opts?.prefetchPurchaseDocuments) {
     fireAndForget(
-      queryClient.prefetchQuery({
-        queryKey: ["purchase-documents"],
-        queryFn: () => apiGetJson<PurchaseDocumentsListResponse>("/api/purchase-documents"),
-        staleTime: stale,
-      }),
+      queryClient.prefetchQuery({ ...purchaseDocumentsFullListQueryOptions(), staleTime: stale }),
     );
   }
   if (opts?.prefetchCounterparties) {
     fireAndForget(
-      queryClient.prefetchQuery({
-        queryKey: ["counterparties"],
-        queryFn: () => apiGetJson<CounterpartiesListResponse>("/api/counterparties"),
-        staleTime: stale,
-      }),
+      queryClient.prefetchQuery({ ...counterpartiesFullListQueryOptions(), staleTime: stale }),
     );
   }
 }

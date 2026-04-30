@@ -1,25 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiFetch } from "../api/fetch-api.js";
-import type { CounterpartiesListResponse } from "../api/types.js";
+import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
+import { counterpartiesFullListQueryOptions, queryRoots } from "../query/core-list-queries.js";
 import { canWriteCounterpartyCatalog } from "../auth/role-panels.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyleDense, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
-
-async function postJson(url: string, body: unknown): Promise<unknown> {
-  const res = await apiFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(t || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 
 /**
  * Справочник контрагентов: список, добавление и удаление (когда разрешено API и ролью).
@@ -32,18 +19,7 @@ export function CounterpartiesPanel() {
 
   const [newName, setNewName] = useState("");
 
-  const listQ = useQuery({
-    queryKey: ["counterparties"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/counterparties");
-      if (!res.ok) {
-        throw new Error(`counterparties ${res.status}`);
-      }
-      return res.json() as Promise<CounterpartiesListResponse>;
-    },
-    enabled,
-    retry: 1,
-  });
+  const listQ = useQuery({ ...counterpartiesFullListQueryOptions(), enabled });
 
   const createM = useMutation({
     mutationFn: async () => {
@@ -51,11 +27,11 @@ export function CounterpartiesPanel() {
       if (!displayName) {
         throw new Error("Введите название");
       }
-      await postJson("/api/counterparties", { displayName });
+      await apiPostJson("/api/counterparties", { displayName });
     },
     onSuccess: async () => {
       setNewName("");
-      await queryClient.invalidateQueries({ queryKey: ["counterparties"] });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.counterparties });
     },
   });
 
@@ -65,13 +41,10 @@ export function CounterpartiesPanel() {
       if (res.status === 404 || res.status === 405) {
         throw new Error("Удаление на этом стенде недоступно");
       }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await assertOkResponse(res);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["counterparties"] });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.counterparties });
     },
   });
 

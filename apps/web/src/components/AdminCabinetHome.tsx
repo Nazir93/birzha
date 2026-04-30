@@ -2,15 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import { apiGetJson } from "../api/fetch-api.js";
-import type {
-  BatchesListResponse,
-  CounterpartiesListResponse,
-  ProductGradesListResponse,
-  PurchaseDocumentsListResponse,
-  TripsListResponse,
-  WarehousesListResponse,
-} from "../api/types.js";
+import {
+  batchesFullListQueryOptions,
+  counterpartiesFullListQueryOptions,
+  productGradesFullListQueryOptions,
+  purchaseDocumentsFullListQueryOptions,
+  tripsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes, ops, prefix } from "../routes.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
@@ -24,40 +23,19 @@ import { btnStyle, errorText, muted, tableStyle, thHead, thtd } from "../ui/styl
 export function AdminCabinetHome() {
   const { meta } = useAuth();
 
-  const tripsQ = useQuery({
-    queryKey: ["trips"],
-    queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
-    retry: 1,
-  });
-  const batchesQ = useQuery({
-    queryKey: ["batches"],
-    queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
-    retry: 1,
-  });
-  const whQ = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: () => apiGetJson<WarehousesListResponse>("/api/warehouses"),
-    retry: 1,
-  });
-
-  const gradesQ = useQuery({
-    queryKey: ["product-grades"],
-    queryFn: () => apiGetJson<ProductGradesListResponse>("/api/product-grades"),
-    retry: 1,
-  });
+  const tripsQ = useQuery(tripsFullListQueryOptions());
+  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const whQ = useQuery(warehousesFullListQueryOptions());
+  const gradesQ = useQuery(productGradesFullListQueryOptions());
 
   const purchaseDocsQ = useQuery({
-    queryKey: ["purchase-documents"],
-    queryFn: () => apiGetJson<PurchaseDocumentsListResponse>("/api/purchase-documents"),
+    ...purchaseDocumentsFullListQueryOptions(),
     enabled: meta?.purchaseDocumentsApi === "enabled",
-    retry: 1,
   });
 
   const counterpartiesQ = useQuery({
-    queryKey: ["counterparties"],
-    queryFn: () => apiGetJson<CounterpartiesListResponse>("/api/counterparties"),
+    ...counterpartiesFullListQueryOptions(),
     enabled: meta?.counterpartyCatalogApi === "enabled",
-    retry: 1,
   });
 
   const whById = useMemo(() => {

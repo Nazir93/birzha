@@ -3,19 +3,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-import { apiFetch } from "../api/fetch-api.js";
-import type {
-  BatchListItem,
-  BatchesListResponse,
-  ShipDestinationsListResponse,
-  WarehousesListResponse,
-} from "../api/types.js";
+import { patchBatchAllocation, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
+import type { BatchListItem } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { formatBatchPartyCaption, formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
+import {
+  batchesFullListQueryOptions,
+  queryRoots,
+  shipDestinationsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -120,16 +121,8 @@ export function AllocationPanel() {
   const showWarehouseWriteOff = meta?.warehouseWriteOffApi === "enabled";
   const queryClient = useQueryClient();
   const shipDestQ = useQuery({
-    queryKey: ["ship-destinations"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/ship-destinations");
-      if (!res.ok) {
-        throw new Error(`ship-destinations ${res.status}`);
-      }
-      return res.json() as Promise<ShipDestinationsListResponse>;
-    },
+    ...shipDestinationsFullListQueryOptions(),
     enabled: meta?.shipDestinationsApi === "enabled",
-    retry: 1,
   });
   const { destAllowed, labelDest } = useMemo((): { destAllowed: readonly string[]; labelDest: Record<string, string> } => {
     const act = (shipDestQ.data?.shipDestinations ?? []).filter((r) => r.isActive);
@@ -145,29 +138,9 @@ export function AllocationPanel() {
     return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
   }, [shipDestQ.data]);
 
-  const batchesQuery = useQuery({
-    queryKey: ["batches"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/batches");
-      if (!res.ok) {
-        throw new Error(`batches ${res.status}`);
-      }
-      return res.json() as Promise<BatchesListResponse>;
-    },
-    retry: 1,
-  });
+  const batchesQuery = useQuery(batchesFullListQueryOptions());
 
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/warehouses");
-      if (!res.ok) {
-        throw new Error(`warehouses ${res.status}`);
-      }
-      return res.json() as Promise<WarehousesListResponse>;
-    },
-    retry: 1,
-  });
+  const warehousesQuery = useQuery(warehousesFullListQueryOptions());
 
   const [edits, setEdits] = useState<Record<string, RowEdit | undefined>>({});
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
@@ -200,21 +173,7 @@ export function AllocationPanel() {
   const save = useMutation({
     mutationFn: async ({ batchId, destination }: { batchId: string; destination: string }) => {
       const body = { destination: (destination === "_notset" ? null : destination) as string | null };
-      const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/allocation`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.status === 503) {
-        throw new Error("Нужна PostgreSQL на сервере (распределение не доступно in-memory).");
-      }
-      if (res.status === 403) {
-        throw new Error("Недостаточно прав (нужна роль закупки/склада/руководства).");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await patchBatchAllocation(batchId, body);
     },
     onSuccess: (_d, { batchId }) => {
       setEdits((prev) => {
@@ -222,32 +181,13 @@ export function AllocationPanel() {
         delete next[batchId];
         return next;
       });
-      void queryClient.invalidateQueries({ queryKey: ["batches"] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     },
   });
 
   const writeOff = useMutation({
     mutationFn: async ({ batchId, kg }: { batchId: string; kg: number }) => {
-      const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/warehouse-write-off`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "quality_reject", kg }),
-      });
-      if (res.status === 503) {
-        throw new Error("Нужна PostgreSQL (списание на складе не настроено).");
-      }
-      if (res.status === 409) {
-        const t = await res.json().catch(() => ({}));
-        const msg = typeof t === "object" && t && "message" in t ? String(t.message) : "Недостаточно кг на остатке";
-        throw new Error(msg);
-      }
-      if (res.status === 403) {
-        throw new Error("Недостаточно прав (роль закупки/склада/руководства).");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await postBatchWarehouseWriteOffQualityReject(batchId, kg);
     },
     onSuccess: (_d, { batchId }) => {
       setRejectScrapInput((prev) => {
@@ -255,7 +195,7 @@ export function AllocationPanel() {
         delete next[batchId];
         return next;
       });
-      void queryClient.invalidateQueries({ queryKey: ["batches"] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     },
   });
 
@@ -266,30 +206,14 @@ export function AllocationPanel() {
         return;
       }
       for (const batchId of payload.batchIds) {
-        const res = await apiFetch(`/api/batches/${encodeURIComponent(batchId)}/allocation`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...(hasD
-              ? { destination: payload.destination === "_notset" ? null : (payload.destination as string) }
-              : {}),
-          }),
+        await patchBatchAllocation(batchId, {
+          destination: payload.destination === "_notset" ? null : (payload.destination as string),
         });
-        if (res.status === 503) {
-          throw new Error("Нужна PostgreSQL на сервере (распределение не доступно in-memory).");
-        }
-        if (res.status === 403) {
-          throw new Error("Недостаточно прав (нужна роль закупки/склада/руководства).");
-        }
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(t || `HTTP ${res.status}`);
-        }
       }
     },
     onSuccess: () => {
       setEdits({});
-      void queryClient.invalidateQueries({ queryKey: ["batches"] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     },
   });
 

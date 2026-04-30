@@ -6,7 +6,7 @@ import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-sco
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { TripNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
-import type { TripRepository } from "../application/ports/trip-repository.port.js";
+import type { TripListFilter, TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../application/ports/trip-shortage-repository.port.js";
@@ -43,12 +43,48 @@ export function registerTripRoutes(
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
   const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
 
+  const tripsListQuerySchema = z.object({
+    search: z.string().optional(),
+    limit: z.coerce.number().int().min(1).max(500).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    order: z.enum(["tripNumber", "departedAtDesc"]).optional(),
+  });
+
   app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
-      let list = await trips.list();
+      const raw = req.query as Record<string, string | undefined>;
+      const pickerKeys = ["search", "limit", "offset", "order"] as const;
+      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
+
+      let list;
+      let listMeta: { limit: number; offset: number; hasMore: boolean } | undefined;
+
+      if (!isPicker) {
+        list = await trips.list();
+      } else {
+        const parsed = tripsListQuerySchema.safeParse(raw);
+        if (!parsed.success) {
+          return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
+        }
+        const d = parsed.data;
+        const limit = d.limit ?? 100;
+        const offset = d.offset ?? 0;
+        const filter: TripListFilter = {
+          search: d.search?.trim() || undefined,
+          limit,
+          offset,
+          order: d.order === "tripNumber" ? "tripNumberAsc" : "departedAtDesc",
+        };
+        list = await trips.list(filter);
+        listMeta = { limit, offset, hasMore: list.length === limit };
+      }
+
       const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
       if (u && isGlobalSellerOnly(u.roles)) {
         list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
+      }
+      if (listMeta) {
+        return reply.send({ trips: list.map(tripToJson), listMeta });
       }
       return reply.send({ trips: list.map(tripToJson) });
     } catch (error) {

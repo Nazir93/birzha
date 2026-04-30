@@ -105,14 +105,18 @@ pnpm build
 
 Должны собраться `@birzha/web` (статика в `apps/web/dist`) и `@birzha/api`. Для PWA «установка» в поле сразу в кабинет продавца: перед сборкой задайте **`VITE_PWA_START_URL=/s`** (см. комментарий в `apps/web/vite.config.ts`); по умолчанию `start_url` в манифесте — **`/`**, дальше редирект по роли.
 
-## 6. Пользователь для первого входа
+## 6. Учётные записи для входа
 
-При **`REQUIRE_API_AUTH=true`** создайте учётную запись после сборки:
+При **`REQUIRE_API_AUTH=true`** создавайте **отдельную** учётку на каждого человека (свой `--login` и пароль). Команду `create-user` повторяют для каждого сотрудника — так не смешиваются действия и права.
+
+Первый вход (часто админ):
 
 ```bash
 cd /opt/birzha/apps/api
 pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' --role admin
 ```
+
+Остальные — аналогично с другими логинами и ролями.
 
 Роли: `admin`, `manager`, `purchaser`, `warehouse`, `logistics`, `receiver`, `seller`, `accountant`. Подробнее — **`docs/deployment/runbook.md`**. Альтернатива — INSERT в `users` / `user_roles` и хэш через `hashPassword` (`README.md`).
 

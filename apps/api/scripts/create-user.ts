@@ -1,8 +1,12 @@
 /**
- * Создание пользователя и глобальной роли в PostgreSQL (одноразово на сервере / локально).
+ * Создание **одной** учётной записи: уникальный логин + пароль на человека (повторять скрипт для каждого сотрудника).
  * Запуск из каталога apps/api при заполненном .env (DATABASE_URL).
  *
- *   pnpm exec tsx scripts/create-user.ts --login admin --password 'ВашПароль' --role admin
+ * Примеры:
+ *   pnpm create-user -- --login ivan.petrov --password '…' --role seller
+ *   pnpm create-user -- --login admin --password '…' --role admin
+ *
+ * Логин в БД уникален (`users.login`). Общий логин на нескольких людей не использовать — путаница в отчётах и правах.
  */
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -108,7 +112,10 @@ try {
       scopeId: "",
     });
 
-    console.log(`Создан пользователь: login=${login.trim()}, role=${role}, id=${id}`);
+    console.log(
+      `Создан пользователь: login=${login.trim()}, role=${role}, id=${id}\n` +
+        `Передайте логин и пароль только этому человеку. Для следующего сотрудника снова create-user с другим --login.`,
+    );
   });
 } catch (e) {
   const msg = e instanceof Error ? e.message : "";

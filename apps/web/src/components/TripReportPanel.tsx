@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { apiFetch, apiGetJson } from "../api/fetch-api.js";
-import type { BatchListItem, BatchesListResponse, ShipmentReportResponse, TripsListResponse } from "../api/types.js";
+import { deleteTripById } from "../api/fetch-api.js";
+import type { BatchListItem } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
@@ -15,7 +16,12 @@ import {
 } from "../format/trip-report-rows.js";
 import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
-import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
+import {
+  batchesFullListQueryOptions,
+  queryRoots,
+  shipmentReportQueryOptions,
+  tripsFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
@@ -50,17 +56,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const [tripId, setTripId] = useState<string | "">("");
   const initialTripFromUrl = useRef(false);
 
-  const tripsQuery = useQuery({
-    queryKey: ["trips"],
-    queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
-    retry: 1,
-  });
+  const tripsQuery = useQuery(tripsFullListQueryOptions());
 
-  const batchesQuery = useQuery({
-    queryKey: ["batches"],
-    queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
-    retry: 1,
-  });
+  const batchesQuery = useQuery(batchesFullListQueryOptions());
 
   const batchById = useMemo(() => {
     const m = new Map<string, BatchListItem>();
@@ -70,10 +68,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     return m;
   }, [batchesQuery.data?.batches]);
 
-  const sortedTrips = useMemo(() => {
-    const list = tripsQuery.data?.trips ?? [];
-    return [...list].sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru"));
-  }, [tripsQuery.data?.trips]);
+  const sortedTrips = useMemo(
+    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    [tripsQuery.data?.trips],
+  );
 
   useEffect(() => {
     if (initialTripFromUrl.current) {
@@ -90,11 +88,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   }, [searchParams, sortedTrips]);
 
   const reportQuery = useQuery({
-    queryKey: ["shipment-report", tripId],
-    queryFn: () => apiGetJson<ShipmentReportResponse>(`/api/trips/${tripId}/shipment-report`),
+    ...shipmentReportQueryOptions(tripId || ""),
     enabled: Boolean(tripId),
-    staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
-    retry: 1,
   });
 
   const r = reportQuery.data;
@@ -121,23 +116,12 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const deleteTripMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiFetch(`/api/trips/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (res.status === 409) {
-        const j = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(j?.message ?? "Рейс нельзя удалить: есть движения по рейсу.");
-      }
-      if (res.status === 403) {
-        throw new Error("Недостаточно прав (нужна роль логиста, менеджера или администратора).");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await deleteTripById(id, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
     },
     onSuccess: async () => {
       setTripId("");
-      await queryClient.invalidateQueries({ queryKey: ["trips"] });
-      await queryClient.invalidateQueries({ queryKey: ["shipment-report"] });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     },
   });
 

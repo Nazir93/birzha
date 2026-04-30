@@ -1,17 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { apiFetch } from "../api/fetch-api.js";
+import {
+  apiDelete,
+  apiDeleteOr403,
+  apiPostJson,
+  apiPostJsonOr403,
+  deleteTripById,
+} from "../api/fetch-api.js";
 import type {
-  BatchesListResponse,
   CreateProductGradeResponse,
   CreateWarehouseResponse,
-  ProductGradesListResponse,
-  PurchaseDocumentsListResponse,
-  ShipDestinationsListResponse,
-  TripsListResponse,
-  WarehousesListResponse,
 } from "../api/types.js";
+import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
+import {
+  batchesFullListQueryOptions,
+  productGradesFullListQueryOptions,
+  purchaseDocumentsFullListQueryOptions,
+  queryRoots,
+  shipDestinationsFullListQueryOptions,
+  tripsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { ops, prefix } from "../routes.js";
 import { Link } from "react-router-dom";
@@ -48,85 +58,40 @@ export function InventoryAdminPanel() {
   const [tripError, setTripError] = useState<string | null>(null);
 
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["warehouses"] });
-    void queryClient.invalidateQueries({ queryKey: ["product-grades"] });
-    void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
-    void queryClient.invalidateQueries({ queryKey: ["ship-destinations"] });
-    void queryClient.invalidateQueries({ queryKey: ["trips"] });
-    void queryClient.invalidateQueries({ queryKey: ["batches"] });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.warehouses });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.productGrades });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.shipDestinations });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   }, [queryClient]);
 
-  const warehousesQ = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/warehouses");
-      if (!res.ok) {
-        throw new Error(`warehouses ${res.status}`);
-      }
-      return res.json() as Promise<WarehousesListResponse>;
-    },
-    enabled,
-  });
+  const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
 
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const tripsQ = useQuery({
-    queryKey: ["trips"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/trips");
-      if (!res.ok) {
-        throw new Error(`trips ${res.status}`);
-      }
-      return res.json() as Promise<TripsListResponse>;
-    },
+    ...tripsFullListQueryOptions(),
     enabled: enabled && tripsApiEnabled,
   });
-  const purchaseDocsQ = useQuery({
-    queryKey: ["purchase-documents"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/purchase-documents");
-      if (!res.ok) {
-        throw new Error(`purchase-documents ${res.status}`);
-      }
-      return res.json() as Promise<PurchaseDocumentsListResponse>;
-    },
-    enabled,
-  });
+  const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
   const batchesNaklRefQ = useQuery({
-    queryKey: ["batches"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/batches");
-      if (!res.ok) {
-        throw new Error(`batches ${res.status}`);
-      }
-      return res.json() as Promise<BatchesListResponse>;
-    },
+    ...batchesFullListQueryOptions(),
     enabled,
   });
   const shipDestQ = useQuery({
-    queryKey: ["ship-destinations"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/ship-destinations");
-      if (!res.ok) {
-        throw new Error(`ship-destinations ${res.status}`);
-      }
-      return res.json() as Promise<ShipDestinationsListResponse>;
-    },
+    ...shipDestinationsFullListQueryOptions(),
     enabled: enabled && shipDestEnabled,
   });
 
   const deletePurchaseDocument = useMutation({
     mutationFn: async (documentId: string) => {
       setNakladError(null);
-      const res = await apiFetch(`/api/purchase-documents/${encodeURIComponent(documentId)}`, { method: "DELETE" });
-      if (res.status === 403) {
-        throw new Error("Недостаточно прав: удаление накладных — только admin/manager (инвентарь).");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiDeleteOr403(
+        `/api/purchase-documents/${encodeURIComponent(documentId)}`,
+        "Недостаточно прав: удаление накладных — только admin/manager (инвентарь).",
+      );
     },
     onSuccess: () => {
       invalidate();
@@ -153,18 +118,7 @@ export function InventoryAdminPanel() {
         }
         body.sortOrder = n;
       }
-      const res = await apiFetch("/api/ship-destinations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.status === 403) {
-        throw new Error("Нет прав: только admin/manager");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiPostJsonOr403("/api/ship-destinations", body, "Нет прав: только admin/manager");
     },
     onSuccess: () => {
       setNewDestCode("");
@@ -180,14 +134,10 @@ export function InventoryAdminPanel() {
   const deleteShipDest = useMutation({
     mutationFn: async (code: string) => {
       setDestFormError(null);
-      const res = await apiFetch(`/api/ship-destinations/${encodeURIComponent(code)}`, { method: "DELETE" });
-      if (res.status === 403) {
-        throw new Error("Нет прав: только admin/manager");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiDeleteOr403(
+        `/api/ship-destinations/${encodeURIComponent(code)}`,
+        "Нет прав: только admin/manager",
+      );
     },
     onSuccess: () => {
       invalidate();
@@ -197,17 +147,7 @@ export function InventoryAdminPanel() {
     },
   });
 
-  const gradesQ = useQuery({
-    queryKey: ["product-grades"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/product-grades");
-      if (!res.ok) {
-        throw new Error(`product-grades ${res.status}`);
-      }
-      return res.json() as Promise<ProductGradesListResponse>;
-    },
-    enabled,
-  });
+  const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
   const createWarehouse = useMutation({
     mutationFn: async () => {
@@ -221,16 +161,7 @@ export function InventoryAdminPanel() {
       if (codeRaw) {
         body.code = codeRaw;
       }
-      const res = await apiFetch("/api/warehouses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<CreateWarehouseResponse>;
+      return apiPostJson("/api/warehouses", body) as Promise<CreateWarehouseResponse>;
     },
     onSuccess: () => {
       setNewWarehouseName("");
@@ -244,11 +175,7 @@ export function InventoryAdminPanel() {
 
   const deleteWarehouse = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiFetch(`/api/warehouses/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiDelete(`/api/warehouses/${encodeURIComponent(id)}`);
     },
     onSuccess: () => {
       invalidate();
@@ -276,16 +203,7 @@ export function InventoryAdminPanel() {
         }
         body.sortOrder = n;
       }
-      const res = await apiFetch("/api/product-grades", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<CreateProductGradeResponse>;
+      return apiPostJson("/api/product-grades", body) as Promise<CreateProductGradeResponse>;
     },
     onSuccess: () => {
       setNewGradeCode("");
@@ -301,11 +219,7 @@ export function InventoryAdminPanel() {
 
   const deleteProductGrade = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiFetch(`/api/product-grades/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiDelete(`/api/product-grades/${encodeURIComponent(id)}`);
     },
     onSuccess: () => {
       invalidate();
@@ -342,18 +256,11 @@ export function InventoryAdminPanel() {
         }
         body.departedAt = t.toISOString();
       }
-      const res = await apiFetch("/api/trips", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (res.status === 403) {
-        throw new Error("Нет прав: создание рейса — роли admin, manager, logistics");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await apiPostJsonOr403(
+        "/api/trips",
+        body,
+        "Нет прав: создание рейса — роли admin, manager, logistics",
+      );
     },
     onSuccess: () => {
       setNewTripId("");
@@ -371,23 +278,7 @@ export function InventoryAdminPanel() {
   const deleteTrip = useMutation({
     mutationFn: async (tripId: string) => {
       setTripError(null);
-      const res = await apiFetch(`/api/trips/${encodeURIComponent(tripId)}`, { method: "DELETE" });
-      if (res.status === 403) {
-        throw new Error("Нет прав на удаление рейса");
-      }
-      if (res.status === 409) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-        if (j.error === "trip_not_empty") {
-          throw new Error(
-            "Нельзя удалить: в рейсе есть отгрузка, продажа или недостача. Сначала уберите движения в «Операциях» и отчётах.",
-          );
-        }
-        throw new Error(j.message ?? "Конфликт при удалении (409)");
-      }
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
+      await deleteTripById(tripId, "Нет прав на удаление рейса");
     },
     onSuccess: () => {
       invalidate();
@@ -560,10 +451,7 @@ export function InventoryAdminPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(tripsQ.data.trips ?? [])
-                    .slice()
-                    .sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru", { numeric: true }))
-                    .map((t) => (
+                  {sortTripsByTripNumberNumericAsc(tripsQ.data.trips ?? []).map((t) => (
                       <tr key={t.id}>
                         <td style={thtdDense}>
                           <strong>№ {t.tripNumber}</strong>{" "}

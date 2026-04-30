@@ -2,27 +2,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
-import { apiFetch } from "../api/fetch-api.js";
+import { apiPostJson } from "../api/fetch-api.js";
 import {
   clearDistributionShipPayload,
   readDistributionShipPayload,
 } from "../distribution/distribution-ship-payload.js";
-import type { BatchListItem, BatchesListResponse, TripsListResponse } from "../api/types.js";
+import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
+import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
 import { useAuth } from "../auth/auth-context.js";
-import {
-  btnStyle,
-  errorText,
-  fieldStyle,
-  muted,
-  successText,
-  warnText,
-} from "../ui/styles.js";
+import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
+import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import {
+  batchesFullListQueryOptions,
+  queryRoots,
+  tripsFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { adminRoutes, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { BatchesByNakladnayaReference, groupBatchesByPurchaseDocument } from "./BatchesByNakladnayaReference.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
@@ -44,46 +44,6 @@ function formatBatchShipLabel(b: BatchListItem): string {
   return `Партия ${formatShortBatchId(b.id)} — ${kg} кг на складе`;
 }
 
-async function postJson(url: string, body: unknown): Promise<unknown> {
-  const res = await apiFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(t || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-function useTripsOptions() {
-  const q = useQuery({
-    queryKey: ["trips"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/trips");
-      if (!res.ok) {
-        throw new Error(`trips ${res.status}`);
-      }
-      return res.json() as Promise<TripsListResponse>;
-    },
-    retry: 1,
-  });
-  const options = (q.data?.trips ?? []).slice().sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru"));
-  return { ...q, options };
-}
-
-function ErrorText({ e }: { e: Error | null }) {
-  if (!e) {
-    return null;
-  }
-  return (
-    <p role="alert" style={errorText}>
-      {e.message}
-    </p>
-  );
-}
-
 export function OperationsPanel() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -91,23 +51,17 @@ export function OperationsPanel() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const invalidateDomain = () => {
-    void queryClient.invalidateQueries({ queryKey: ["shipment-report"] });
-    void queryClient.invalidateQueries({ queryKey: ["batches"] });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   };
 
-  const batchesQuery = useQuery({
-    queryKey: ["batches"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/batches");
-      if (!res.ok) {
-        throw new Error(`batches ${res.status}`);
-      }
-      return res.json() as Promise<BatchesListResponse>;
-    },
-    retry: 1,
-  });
+  const batchesQuery = useQuery(batchesFullListQueryOptions());
 
-  const trips = useTripsOptions();
+  const tripsQuery = useQuery(tripsFullListQueryOptions());
+  const tripSelectOptions = useMemo(
+    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    [tripsQuery.data?.trips],
+  );
 
   const shippableBatches = useMemo(() => {
     const list = batchesQuery.data?.batches ?? [];
@@ -218,7 +172,7 @@ export function OperationsPanel() {
   const ship = useMutation({
     mutationFn: async () => {
       const { batchId, body } = parseShipForm(shipBatchId, shipTripId, shipKg, shipPackages);
-      await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+      await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
     },
     onSuccess: () => invalidateDomain(),
   });
@@ -264,7 +218,7 @@ export function OperationsPanel() {
               ? String(perLinePackages[i])
               : "";
         const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), pkgStr);
-        await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+        await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
       }
     },
     onSuccess: () => {
@@ -285,7 +239,7 @@ export function OperationsPanel() {
       }
       for (const b of distBatchesToShip) {
         const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
-        await postJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+        await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
       }
     },
     onSuccess: () => {
@@ -303,7 +257,7 @@ export function OperationsPanel() {
   const shortage = useMutation({
     mutationFn: async () => {
       const { batchId, body } = parseRecordTripShortageForm(shortBatchId, shortTripId, shortKg, shortReason);
-      await postJson(`/api/batches/${encodeURIComponent(batchId)}/record-trip-shortage`, body);
+      await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/record-trip-shortage`, body);
     },
     onSuccess: () => invalidateDomain(),
   });
@@ -358,7 +312,7 @@ export function OperationsPanel() {
         </>
       )}
 
-      {trips.isError && (
+      {tripsQuery.isError && (
         <p style={warnText}>Список рейсов не загрузился — выберите tripId вручную.</p>
       )}
 
@@ -383,7 +337,7 @@ export function OperationsPanel() {
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс (tripId) *
         </label>
-        {trips.isPending && (
+        {tripsQuery.isPending && (
           <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
             <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
           </p>
@@ -393,11 +347,11 @@ export function OperationsPanel() {
           value={shipTripId}
           onChange={(e) => setShipTripId(e.target.value)}
           style={{ ...selectWide, marginBottom: "0.75rem" }}
-          disabled={trips.isPending}
-          aria-busy={trips.isPending || undefined}
+          disabled={tripsQuery.isPending}
+          aria-busy={tripsQuery.isPending || undefined}
         >
-          <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
-          {trips.options.map((t) => (
+          <option value="">{tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
+          {tripSelectOptions.map((t) => (
             <option key={t.id} value={t.id}>
               {formatTripSelectLabel(t)}
             </option>
@@ -493,7 +447,7 @@ export function OperationsPanel() {
         >
           {ship.isPending ? "…" : "Отгрузить"}
         </button>
-        <ErrorText e={ship.error as Error | null} />
+        <FieldError error={ship.error as Error | null} />
         {ship.isSuccess && (
           <p style={successText} role="status">
             Готово.
@@ -558,7 +512,7 @@ export function OperationsPanel() {
         >
           {shipAllFromNaklad.isPending ? "Отгрузка…" : "Отгрузить всю накладную в этот рейс"}
         </button>
-            <ErrorText e={shipAllFromNaklad.error as Error | null} />
+            <FieldError error={shipAllFromNaklad.error as Error | null} />
             {shipAllFromNaklad.isSuccess && (
               <p style={successText} role="status">
                 Все строки с остатком отгружены.
@@ -623,7 +577,7 @@ export function OperationsPanel() {
                 к распределению
               </Link>
             </p>
-            <ErrorText e={shipFromDistribution.error as Error | null} />
+            <FieldError error={shipFromDistribution.error as Error | null} />
           </div>
         )}
       </section>
@@ -654,11 +608,11 @@ export function OperationsPanel() {
           value={shortTripId}
           onChange={(e) => setShortTripId(e.target.value)}
           style={selectWide}
-          disabled={trips.isPending}
-          aria-busy={trips.isPending || undefined}
+          disabled={tripsQuery.isPending}
+          aria-busy={tripsQuery.isPending || undefined}
         >
-          <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
-          {trips.options.map((t) => (
+          <option value="">{tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
+          {tripSelectOptions.map((t) => (
             <option key={t.id} value={t.id}>
               {formatTripSelectLabel(t)}
             </option>
@@ -694,7 +648,7 @@ export function OperationsPanel() {
         >
           {shortage.isPending ? "…" : "Зафиксировать недостачу"}
         </button>
-        <ErrorText e={shortage.error as Error | null} />
+        <FieldError error={shortage.error as Error | null} />
         {shortage.isSuccess && (
           <p style={successText} role="status">
             Готово.

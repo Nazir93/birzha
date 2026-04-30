@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { apiFetch } from "../api/fetch-api.js";
-import type { PurchaseDocumentDetail, WarehousesListResponse } from "../api/types.js";
+import {
+  purchaseDocumentDetailQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
@@ -25,29 +27,12 @@ export function PurchaseNakladnayaDetailSection() {
   const id = documentId ? decodeURIComponent(documentId) : "";
 
   const warehousesQ = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/warehouses");
-      if (!res.ok) {
-        throw new Error(`warehouses ${res.status}`);
-      }
-      return res.json() as Promise<WarehousesListResponse>;
-    },
+    ...warehousesFullListQueryOptions(),
     enabled: enabled && Boolean(id),
   });
 
   const docQ = useQuery({
-    queryKey: ["purchase-document", id],
-    queryFn: async () => {
-      const res = await apiFetch(`/api/purchase-documents/${encodeURIComponent(id)}`);
-      if (res.status === 404) {
-        return null;
-      }
-      if (!res.ok) {
-        throw new Error(`purchase-documents/${id} ${res.status}`);
-      }
-      return res.json() as Promise<PurchaseDocumentDetail>;
-    },
+    ...purchaseDocumentDetailQueryOptions(id),
     enabled: enabled && Boolean(id),
   });
 

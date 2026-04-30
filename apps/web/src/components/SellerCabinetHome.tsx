@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+import { useAuth } from "../auth/auth-context.js";
+import { canAccessCabinet } from "../auth/role-panels.js";
 import { ops, sales } from "../routes.js";
 import { muted, btnStyle } from "../ui/styles.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
@@ -9,14 +11,27 @@ import { SellFromTripSection } from "./SellFromTripSection.js";
  * PWA: см. `birzha-seller-workspace` в CSS (safe-area, крупная кнопка в форме).
  */
 export function SellerCabinetHome() {
+  const { user } = useAuth();
+  const canOpsCabinet = user ? canAccessCabinet(user, "operations") : false;
+
   return (
     <div className="birzha-seller-workspace" aria-labelledby="seller-work-h">
       <h2 id="seller-work-h" className="birzha-section-title">
         Продажи с рейса
       </h2>
       <p style={{ ...muted, margin: "0 0 1rem", lineHeight: 1.55, fontSize: "0.95rem" }}>
-        Выберите <strong>рейс</strong> и <strong>партию (накладная · калибр)</strong>, затем заполните сделку. Отчёт и синхронизация — ссылки внизу;
-        закуп и отгрузка на склад — в кабинете <code>/o</code>.
+        Выберите <strong>рейс</strong> и <strong>партию (накладная · калибр)</strong>, затем заполните сделку. Отчёт и офлайн — ссылки внизу.
+        {canOpsCabinet ? (
+          <>
+            {" "}
+            Закуп и отгрузка на склад — в кабинете <code>/o</code>.
+          </>
+        ) : (
+          <>
+            {" "}
+            Здесь только ваши продажи с рейса; закуп и склад — у сотрудников с доступом к операциям.
+          </>
+        )}
       </p>
       <SellFromTripSection variant="seller" />
       <nav className="birzha-seller-footer-nav no-print" aria-label="Дополнительно">
@@ -26,9 +41,11 @@ export function SellerCabinetHome() {
         <Link to={sales.offline} style={{ ...btnStyle, fontSize: "0.95rem", padding: "0.55rem 0.85rem" }}>
           Офлайн-очередь
         </Link>
-        <Link to={ops.operations} style={{ ...btnStyle, fontSize: "0.92rem", padding: "0.5rem 0.75rem", fontWeight: 500 }}>
-          Все операции склада (/o)
-        </Link>
+        {canOpsCabinet && (
+          <Link to={ops.operations} style={{ ...btnStyle, fontSize: "0.92rem", padding: "0.5rem 0.75rem", fontWeight: 500 }}>
+            Все операции склада (/o)
+          </Link>
+        )}
       </nav>
     </div>
   );

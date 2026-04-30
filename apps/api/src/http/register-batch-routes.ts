@@ -28,7 +28,7 @@ import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.u
 import { SellFromTripUseCase } from "../application/sale/sell-from-trip.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import { ReceiveOnWarehouseUseCase } from "../application/warehouse/receive-on-warehouse.use-case.js";
-import type { BatchRepository } from "../application/ports/batch-repository.port.js";
+import type { BatchListFilter, BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
@@ -92,11 +92,60 @@ export function registerBatchRoutes(
     runRecordTripShortageInTransaction,
   );
 
+  const batchesListQuerySchema = z.object({
+    ids: z.string().optional(),
+    search: z.string().optional(),
+    limit: z.coerce.number().int().min(1).max(500).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+  });
+
   app.get("/batches", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
-      const payload = await listBatchesForHttp(batches, db);
+      const raw = req.query as Record<string, string | undefined>;
+      const pickerKeys = ["ids", "search", "limit", "offset"] as const;
+      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
+
+      let filter: BatchListFilter | undefined;
+      let listMeta: { limit: number; offset: number; hasMore: boolean } | undefined;
+
+      if (isPicker) {
+        const parsed = batchesListQuerySchema.safeParse(raw);
+        if (!parsed.success) {
+          return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
+        }
+        const d = parsed.data;
+        const ids =
+          d.ids
+            ?.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean) ?? undefined;
+        if (ids && ids.length > 0) {
+          filter = { ids };
+        } else {
+          const limit = d.limit ?? 100;
+          const offset = d.offset ?? 0;
+          filter = {
+            search: d.search?.trim() || undefined,
+            limit,
+            offset,
+          };
+          listMeta = { limit, offset, hasMore: false };
+        }
+      }
+
+      let payload = await listBatchesForHttp(batches, db, filter);
+      if (listMeta && filter && !filter.ids) {
+        listMeta = {
+          ...listMeta,
+          hasMore: payload.length === (filter.limit ?? 100),
+        };
+      }
       const user = req.user as JwtRequestUser | undefined;
-      return reply.send({ batches: batchesPayloadForUser(payload, user) });
+      const batchesOut = batchesPayloadForUser(payload, user);
+      if (listMeta) {
+        return reply.send({ batches: batchesOut, listMeta });
+      }
+      return reply.send({ batches: batchesOut });
     } catch (error) {
       return sendMappedError(reply, error);
     }

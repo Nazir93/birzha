@@ -2,14 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { apiFetch } from "../api/fetch-api.js";
-import type {
-  CreatePurchaseDocumentResponse,
-  ProductGradeJson,
-  ProductGradesListResponse,
-  PurchaseDocumentsListResponse,
-  WarehousesListResponse,
-} from "../api/types.js";
+import { apiPostJson } from "../api/fetch-api.js";
+import type { CreatePurchaseDocumentResponse, ProductGradeJson } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
@@ -27,6 +21,12 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
+import {
+  productGradesFullListQueryOptions,
+  purchaseDocumentsFullListQueryOptions,
+  queryRoots,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { adminRoutes, login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
@@ -76,41 +76,10 @@ export function PurchaseNakladnayaSection() {
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
 
-  const warehousesQ = useQuery({
-    queryKey: ["warehouses"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/warehouses");
-      if (!res.ok) {
-        throw new Error(`warehouses ${res.status}`);
-      }
-      return res.json() as Promise<WarehousesListResponse>;
-    },
-    enabled,
-  });
+  const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
+  const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
-  const gradesQ = useQuery({
-    queryKey: ["product-grades"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/product-grades");
-      if (!res.ok) {
-        throw new Error(`product-grades ${res.status}`);
-      }
-      return res.json() as Promise<ProductGradesListResponse>;
-    },
-    enabled,
-  });
-
-  const listQ = useQuery({
-    queryKey: ["purchase-documents"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/purchase-documents");
-      if (!res.ok) {
-        throw new Error(`purchase-documents ${res.status}`);
-      }
-      return res.json() as Promise<PurchaseDocumentsListResponse>;
-    },
-    enabled,
-  });
+  const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
 
   const [documentId, setDocumentId] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
@@ -123,8 +92,8 @@ export function PurchaseNakladnayaSection() {
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["batches"] });
-    void queryClient.invalidateQueries({ queryKey: ["purchase-documents"] });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
   }, [queryClient]);
 
   const submit = useMutation({
@@ -141,16 +110,7 @@ export function PurchaseNakladnayaSection() {
         extraCostKopecks,
         lines,
       });
-      const res = await apiFetch("/api/purchase-documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || `HTTP ${res.status}`);
-      }
-      return res.json() as Promise<CreatePurchaseDocumentResponse>;
+      return apiPostJson("/api/purchase-documents", body) as Promise<CreatePurchaseDocumentResponse>;
     },
     onSuccess: (data) => {
       setLastOk(`Создан документ: ${data.documentId}. Форма очищена — можно ввести новую накладную.`);

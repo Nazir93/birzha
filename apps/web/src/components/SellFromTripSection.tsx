@@ -2,17 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
-import { apiFetch } from "../api/fetch-api.js";
-import type {
-  BatchListItem,
-  BatchesListResponse,
-  CounterpartiesListResponse,
-  ShipmentReportResponse,
-  TripsListResponse,
-} from "../api/types.js";
+import { apiPostJson } from "../api/fetch-api.js";
+import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
-import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
-import { formatTripSelectLabel } from "../format/trip-label.js";
 import {
   buildTripBatchRows,
   estimateNetTransitPackageCount,
@@ -20,17 +12,18 @@ import {
 } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
-import { QUERY_STALE_SHIPMENT_REPORT_MS } from "../query/query-defaults.js";
-import { parseSellFromTripForm } from "../validation/api-schemas.js";
-import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
-  btnStyle,
-  errorText,
-  fieldStyle,
-  muted,
-  successText,
-  warnText,
-} from "../ui/styles.js";
+  batchesByIdsQueryOptions,
+  batchesSearchQueryOptions,
+  counterpartiesFullListQueryOptions,
+  queryRoots,
+  shipmentReportQueryOptions,
+} from "../query/core-list-queries.js";
+import { parseSellFromTripForm } from "../validation/api-schemas.js";
+import { TripSearchPicker } from "./TripSearchPicker.js";
+import { FieldError } from "../ui/FieldError.js";
+import { LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
@@ -49,44 +42,13 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
-async function postJson(url: string, body: unknown): Promise<unknown> {
-  const res = await apiFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(t || `HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-function ErrorLine({ e }: { e: Error | null }) {
-  if (!e) {
-    return null;
-  }
-  return (
-    <p role="alert" style={errorText}>
-      {e.message}
-    </p>
-  );
-}
-
-function useTripsOptions() {
-  const q = useQuery({
-    queryKey: ["trips"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/trips");
-      if (!res.ok) {
-        throw new Error(`trips ${res.status}`);
-      }
-      return res.json() as Promise<TripsListResponse>;
-    },
-    retry: 1,
-  });
-  const options = (q.data?.trips ?? []).slice().sort((a, b) => a.tripNumber.localeCompare(b.tripNumber, "ru"));
-  return { ...q, options };
+function useDebouncedValue<T>(value: T, ms: number): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = window.setTimeout(() => setV(value), ms);
+    return () => window.clearTimeout(t);
+  }, [value, ms]);
+  return v;
 }
 
 export type SellFromTripVariant = "seller" | "operations";
@@ -109,36 +71,15 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const headingId = `${scrollTargetId}-h`;
 
   const invalidateDomain = () => {
-    void queryClient.invalidateQueries({ queryKey: ["shipment-report"] });
-    void queryClient.invalidateQueries({ queryKey: ["batches"] });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
   };
-
-  const batchesQuery = useQuery({
-    queryKey: ["batches"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/batches");
-      if (!res.ok) {
-        throw new Error(`batches ${res.status}`);
-      }
-      return res.json() as Promise<BatchesListResponse>;
-    },
-    retry: 1,
-  });
-
-  const trips = useTripsOptions();
 
   const counterpartiesCatalog = meta?.counterpartyCatalogApi === "enabled";
   const counterpartiesQ = useQuery({
-    queryKey: ["counterparties"],
-    queryFn: async () => {
-      const res = await apiFetch("/api/counterparties");
-      if (!res.ok) {
-        throw new Error(`counterparties ${res.status}`);
-      }
-      return res.json() as Promise<CounterpartiesListResponse>;
-    },
+    ...counterpartiesFullListQueryOptions(),
     enabled: counterpartiesCatalog,
-    retry: 1,
   });
 
   const [sellBatchId, setSellBatchId] = useState("");
@@ -151,19 +92,23 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [sellClientLabel, setSellClientLabel] = useState("");
   const [sellCounterpartyId, setSellCounterpartyId] = useState("");
   const [newCounterpartyName, setNewCounterpartyName] = useState("");
+  const [partyFilter, setPartyFilter] = useState("");
+  const [batchIdSearch, setBatchIdSearch] = useState("");
+  const debouncedBatchIdSearch = useDebouncedValue(batchIdSearch, 300);
 
   useEffect(() => {
     const p = searchParams.get("trip")?.trim() ?? "";
-    if (!p || trips.isPending) {
-      return;
-    }
-    if (!trips.options.some((t) => t.id === p)) {
+    if (!p) {
       return;
     }
     setSellTripId(p);
     setSellBatchId("");
     setSellKg("");
-  }, [searchParams, trips.isPending, trips.options]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    setPartyFilter("");
+  }, [sellTripId]);
 
   useLayoutEffect(() => {
     if (searchParams.get("focus") !== "sell") {
@@ -180,26 +125,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
 
   const sellTripIdTrim = sellTripId.trim();
   const sellReportQuery = useQuery({
-    queryKey: ["shipment-report", sellTripIdTrim],
-    queryFn: async () => {
-      const res = await apiFetch(`/api/trips/${encodeURIComponent(sellTripIdTrim)}/shipment-report`);
-      if (!res.ok) {
-        throw new Error(`Отчёт рейса ${res.status}`);
-      }
-      return res.json() as Promise<ShipmentReportResponse>;
-    },
+    ...shipmentReportQueryOptions(sellTripIdTrim),
     enabled: sellTripIdTrim.length > 0,
-    retry: 1,
-    staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
   });
-
-  const batchByIdForSell = useMemo(() => {
-    const m = new Map<string, BatchListItem>();
-    for (const b of batchesQuery.data?.batches ?? []) {
-      m.set(b.id, b);
-    }
-    return m;
-  }, [batchesQuery.data?.batches]);
 
   const sellableOnTripRows = useMemo(() => {
     if (!sellReportQuery.data) {
@@ -207,6 +135,21 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     }
     return buildTripBatchRows(sellReportQuery.data).filter((r) => r.netTransitG > 0n);
   }, [sellReportQuery.data]);
+
+  const batchIdsOnTrip = useMemo(
+    () => [...new Set(sellableOnTripRows.map((r) => r.batchId))].sort(),
+    [sellableOnTripRows],
+  );
+
+  const batchesForTripQuery = useQuery(batchesByIdsQueryOptions(batchIdsOnTrip));
+
+  const batchByIdForSell = useMemo(() => {
+    const m = new Map<string, BatchListItem>();
+    for (const b of batchesForTripQuery.data?.batches ?? []) {
+      m.set(b.id, b);
+    }
+    return m;
+  }, [batchesForTripQuery.data?.batches]);
 
   const formatSellBatchOptionLabel = (row: TripBatchTableRow, opts?: { includeNakladPrefix?: boolean }): string => {
     const includeNakladPrefix = opts?.includeNakladPrefix !== false;
@@ -270,6 +213,24 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     return groups;
   }, [sellableOnTripRows, batchByIdForSell]);
 
+  const sellTripRowsFiltered = useMemo(() => {
+    const q = partyFilter.trim().toLowerCase();
+    if (!q) {
+      return sellTripRowsByNaklad;
+    }
+    return sellTripRowsByNaklad
+      .map((g) => ({
+        ...g,
+        rows: g.rows.filter((row) => {
+          const label = formatSellBatchOptionLabel(row).toLowerCase();
+          return label.includes(q) || row.batchId.toLowerCase().includes(q);
+        }),
+      }))
+      .filter((g) => g.rows.length > 0);
+  }, [sellTripRowsByNaklad, partyFilter]);
+
+  const batchSuggestQuery = useQuery(batchesSearchQueryOptions(debouncedBatchIdSearch, 20));
+
   const sellSelectionSummary = useMemo((): {
     line: string;
     doc: string;
@@ -305,13 +266,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       if (!displayName) {
         throw new Error("Укажите название контрагента");
       }
-      const j = await postJson("/api/counterparties", { displayName });
+      const j = await apiPostJson("/api/counterparties", { displayName });
       return j as { counterparty: { id: string; displayName: string } };
     },
     onSuccess: async (data) => {
       setNewCounterpartyName("");
       setSellCounterpartyId(data.counterparty.id);
-      await queryClient.invalidateQueries({ queryKey: ["counterparties"] });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.counterparties });
     },
   });
 
@@ -328,13 +289,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         clientLabel: sellClientLabel,
         counterpartyId: sellCounterpartyId || undefined,
       });
-      await postJson(`/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`, body);
+      await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`, body);
       return { saleId: body.saleId };
     },
     onSuccess: () => invalidateDomain(),
   });
-
-  const datalistId = `${idPrefix}-batch-datalist`;
 
   return (
     <section
@@ -368,45 +327,22 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         </>
       )}
 
-      {batchesQuery.data && (
-        <datalist id={datalistId}>
-          {batchesQuery.data.batches
-            .filter(isFromPurchaseNakladnaya)
-            .map((b) => (
-              <option key={b.id} value={b.id} />
-            ))}
-        </datalist>
-      )}
-
       {fieldOnly && (
         <p style={{ ...muted, fontSize: "0.86rem", marginBottom: "0.5rem", lineHeight: 1.45 }}>
           Для вашего входа в отчёте учитываются <strong>только ваши</strong> строки продажи.
         </p>
       )}
 
-      <label htmlFor={`${idPrefix}-sel-trip`} style={{ fontSize: "0.88rem" }}>
-        Рейс *
-      </label>
-      <select
-        id={`${idPrefix}-sel-trip`}
+      <span style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.25rem" }}>Рейс *</span>
+      <TripSearchPicker
+        idPrefix={idPrefix}
         value={sellTripId}
-        onChange={(e) => {
-          const v = e.target.value;
+        onChange={(v) => {
           setSellTripId(v);
           setSellBatchId("");
           setSellKg("");
         }}
-        style={{ ...selectWide, marginBottom: "0.5rem" }}
-        disabled={trips.isPending}
-        aria-busy={trips.isPending || undefined}
-      >
-        <option value="">{trips.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
-        {trips.options.map((t) => (
-          <option key={t.id} value={t.id}>
-            {formatTripSelectLabel(t)}
-          </option>
-        ))}
-      </select>
+      />
       {sellTripIdTrim && sellReportQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
           <LoadingIndicator
@@ -427,6 +363,26 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           На этом рейсе нет массы для продажи: не было отгрузок в рейс или весь товар уже продан / списан по недостаче.
         </p>
       )}
+      {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
+        <p style={{ ...muted, marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
+          <LoadingIndicator size="sm" label="Загрузка накладных по строкам рейса…" />
+        </p>
+      )}
+      {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && (
+        <>
+          <label htmlFor={`${idPrefix}-party-filter`} style={{ fontSize: "0.88rem" }}>
+            Фильтр списка партий (накладная, калибр, id)
+          </label>
+          <input
+            id={`${idPrefix}-party-filter`}
+            value={partyFilter}
+            onChange={(e) => setPartyFilter(e.target.value)}
+            style={{ ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
+            placeholder="Сузить длинный список…"
+            autoComplete="off"
+          />
+        </>
+      )}
       <label htmlFor={`${idPrefix}-sel-batch`} style={{ fontSize: "0.88rem" }}>
         Накладная и калибр (кг в машине) *
       </label>
@@ -441,12 +397,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
           }
         }}
-        style={{ ...selectWide, marginBottom: "0.2rem" }}
+        style={{ ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }}
         disabled={
           !sellTripIdTrim ||
           (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
           (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) ||
-          (sellReportQuery.isFetched && sellReportQuery.isError)
+          (sellReportQuery.isFetched && sellReportQuery.isError) ||
+          (batchIdsOnTrip.length > 0 && batchesForTripQuery.isPending)
         }
       >
         <option value="">
@@ -456,9 +413,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               ? "… загрузка остатков …"
               : sellReportQuery.isError
                 ? "— список недоступен, введите ID партии ниже —"
-                : "— выберите партию (калибр) —"}
+                : batchesForTripQuery.isPending && batchIdsOnTrip.length > 0
+                  ? "… загрузка партий …"
+                  : "— выберите партию (калибр) —"}
         </option>
-        {sellTripRowsByNaklad.map((g) => (
+        {sellTripRowsFiltered.map((g) => (
           <optgroup key={g.key} label={g.optgroupLabel}>
             {g.rows.map((row) => (
               <option key={row.batchId} value={row.batchId}>
@@ -497,10 +456,50 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         value={sellBatchId}
         onChange={(e) => setSellBatchId(e.target.value)}
         style={fieldStyle}
-        list={datalistId}
         autoComplete="off"
         placeholder="совпадает с выбором выше"
       />
+      <label htmlFor={`${idPrefix}-batch-id-search`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.45rem" }}>
+        Подбор партии по фрагменту id (от 2 символов)
+      </label>
+      <input
+        id={`${idPrefix}-batch-id-search`}
+        value={batchIdSearch}
+        onChange={(e) => setBatchIdSearch(e.target.value)}
+        style={fieldStyle}
+        autoComplete="off"
+        placeholder="введите часть id партии"
+      />
+      {batchSuggestQuery.data && batchSuggestQuery.data.batches.length > 0 && (
+        <ul
+          className="birzha-scroll-panel"
+          style={{ listStyle: "none", margin: "0.35rem 0 0", padding: "0.35rem 0.45rem" }}
+          aria-label="Подходящие партии"
+        >
+          {batchSuggestQuery.data.batches.map((b) => (
+            <li key={b.id} style={{ marginBottom: "0.25rem" }}>
+              <button
+                type="button"
+                style={{
+                  ...btnStyle,
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  fontSize: "0.86rem",
+                  padding: "0.4rem 0.55rem",
+                  wordBreak: "break-all",
+                }}
+                onClick={() => {
+                  setSellBatchId(b.id);
+                  setBatchIdSearch("");
+                }}
+              >
+                {b.id}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <label htmlFor={`${idPrefix}-in-kg`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
         Сколько килограмм в этой продаже *
       </label>
@@ -575,7 +574,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           >
             {createCounterparty.isPending ? "…" : "Добавить в справочник"}
           </button>
-          <ErrorLine e={createCounterparty.error as Error | null} />
+          <FieldError error={createCounterparty.error as Error | null} />
         </>
       )}
       <label htmlFor={`${idPrefix}-in-client`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
@@ -634,7 +633,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       >
         {sell.isPending ? "Сохранение…" : "Зафиксировать продажу"}
       </button>
-      <ErrorLine e={sell.error as Error | null} />
+      <FieldError error={sell.error as Error | null} />
       {sell.isSuccess && (
         <p style={successText} role="status">
           Готово.

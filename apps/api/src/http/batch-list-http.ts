@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 
-import type { BatchRepository } from "../application/ports/batch-repository.port.js";
+import type { BatchListFilter, BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DbClient } from "../db/client.js";
 import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
@@ -50,8 +50,12 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
   };
 }
 
-export async function listBatchesForHttp(batches: BatchRepository, db: DbClient | null): Promise<BatchJson[]> {
-  const list = await batches.list();
+export async function listBatchesForHttp(
+  batches: BatchRepository,
+  db: DbClient | null,
+  filter?: BatchListFilter,
+): Promise<BatchJson[]> {
+  const list = await batches.list(filter);
   if (list.length === 0) {
     return list.map((b) => batchToJson(b, mergeNakladnyaForList(undefined, b), undefined));
   }

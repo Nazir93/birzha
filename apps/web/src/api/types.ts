@@ -37,8 +37,15 @@ export type WarehouseWriteOffsByDocumentResponse = {
   lines: { id: string; batchId: string; kg: number; createdAt: string; productGradeCode: string | null }[];
 };
 
+export type BatchesListMeta = {
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 export type BatchesListResponse = {
   batches: BatchListItem[];
+  listMeta?: BatchesListMeta;
 };
 
 export type WarehouseJson = { id: string; code: string; name: string };
@@ -120,8 +127,16 @@ export type TripJson = {
   assignedSellerUserId: string | null;
 };
 
+/** Мета для ответа `GET /api/trips?search=&limit=` (подбор без полной выборки). */
+export type TripsListMeta = {
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
 export type TripsListResponse = {
   trips: TripJson[];
+  listMeta?: TripsListMeta;
 };
 
 /** `GET /api/trips/field-seller-options` — продавцы для назначения на рейс (роли `tripWrite`). */

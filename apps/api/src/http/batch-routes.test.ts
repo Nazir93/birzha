@@ -35,6 +35,46 @@ describe("Batch HTTP", () => {
     await app.close();
   });
 
+  it("GET /batches?ids= — только перечисленные партии", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const batches = new InMemoryBatchRepository();
+    const app = await buildApp({ env, db: null, batchRepository: batches });
+
+    await app.inject({
+      method: "POST",
+      url: "/batches",
+      payload: {
+        id: "id-a",
+        purchaseId: "p-1",
+        totalKg: 10,
+        pricePerKg: 1,
+        distribution: "on_hand",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches",
+      payload: {
+        id: "id-b",
+        purchaseId: "p-1",
+        totalKg: 20,
+        pricePerKg: 1,
+        distribution: "on_hand",
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/batches?ids=id-b",
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { batches: { id: string }[] };
+    expect(body.batches.length).toBe(1);
+    expect(body.batches[0]!.id).toBe("id-b");
+
+    await app.close();
+  });
+
   it("POST /batches с неверным телом — 400", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const app = await buildApp({

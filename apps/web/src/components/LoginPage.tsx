@@ -60,11 +60,15 @@ export function LoginPage() {
         <h2 id="login-heading" className="birzha-page-title" style={{ marginTop: 0 }}>
           Вход
         </h2>
-        <p style={{ ...muted, marginBottom: "1rem" }}>
-          Требуется, когда на сервере включён <code>REQUIRE_API_AUTH</code>.
+        <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55 }}>
+          У <strong>каждого пользователя свой логин и пароль</strong> — их выдаёт администратор (отдельная учётная запись на человека,
+          без «общих» входов). Не передавайте свои данные другим.
+        </p>
+        <p style={{ ...muted, marginBottom: "1rem", fontSize: "0.88rem", lineHeight: 1.45 }}>
+          Форма ниже нужна, когда на сервере включён <code>REQUIRE_API_AUTH</code>.
         </p>
         <label htmlFor="login-user" style={{ fontSize: "0.88rem" }}>
-          Логин
+          Логин (ваш)
         </label>
         <input
           id="login-user"
@@ -74,7 +78,7 @@ export function LoginPage() {
           style={{ ...fieldStyle, display: "block", width: "100%", marginBottom: "0.75rem" }}
         />
         <label htmlFor="login-pass" style={{ fontSize: "0.88rem" }}>
-          Пароль
+          Пароль (ваш)
         </label>
         <input
           id="login-pass"
