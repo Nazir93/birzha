@@ -100,6 +100,33 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     await app.close();
   });
 
+  it("POST /auth/login ограничивает частые попытки входа", async () => {
+    const env = loadEnv({
+      NODE_ENV: "test",
+      DATABASE_URL: pgUrl,
+      JWT_SECRET: "k".repeat(32),
+    });
+    const app = await buildApp({ env, db });
+
+    for (let i = 0; i < 10; i++) {
+      const res = await app.inject({
+        method: "POST",
+        url: "/auth/login",
+        payload: { login, password: `wrong-${i}` },
+      });
+      expect(res.statusCode).toBe(401);
+    }
+
+    const limited = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { login, password: "wrong-limited" },
+    });
+    expect(limited.statusCode).toBe(429);
+
+    await app.close();
+  });
+
   it("REQUIRE_API_AUTH: без JWT на бизнес-маршрут 401; с admin — 200; seller не создаёт рейс (403)", async () => {
     const sellerId = randomUUID();
     const sellerLogin = `u_seller_${randomUUID().slice(0, 8)}`;

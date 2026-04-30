@@ -292,7 +292,7 @@ export function InventoryAdminPanel() {
     return (
       <section className="birzha-panel">
         <p style={muted}>
-          API накладных/справочников недоступен (<code>purchaseDocumentsApi</code>).
+          Накладные и справочники временно недоступны. Проверьте сервер или обратитесь к администратору.
         </p>
       </section>
     );
@@ -344,8 +344,8 @@ export function InventoryAdminPanel() {
           <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Рейсы</h3>
           {tripError && <p style={errorText}>{tripError}</p>}
           <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
-            Создание и удаление (пустой рейс) — <code>POST/DELETE /api/trips</code>. Удалить можно только если нет
-            отгрузок, продаж и недостач по рейсу. Использование в грузообороте — в{" "}
+            Создавайте рейс здесь или в кабинете операций. Удалить можно только пустой рейс — без отгрузок, продаж и недостач.
+            Использование в грузообороте — в{" "}
             <Link to={ops.operations}>Операциях</Link>.
           </p>
           <div
@@ -358,13 +358,13 @@ export function InventoryAdminPanel() {
             }}
           >
             <div>
-              <label className="birzha-field-label">id (UUID)</label>
+              <label className="birzha-field-label">Идентификатор</label>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <input
                   value={newTripId}
                   onChange={(e) => setNewTripId(e.target.value)}
                   style={{ ...fieldStyle, width: 250 }}
-                  placeholder="технический id"
+                  placeholder="можно оставить пустым"
                   autoComplete="off"
                 />
                 <button

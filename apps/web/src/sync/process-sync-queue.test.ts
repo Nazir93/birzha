@@ -84,4 +84,24 @@ describe("processSyncQueue", () => {
     const q = JSON.parse(raw!) as unknown[];
     expect(q.length).toBe(1);
   });
+
+  it("401 от /api/sync возвращает unauthorized и оставляет очередь", async () => {
+    const s = memoryStorage();
+    clearOutboxSync(s);
+    enqueueSync(
+      {
+        actionType: "create_trip",
+        payload: { id: "t1", tripNumber: "X" },
+        localActionId: "a1",
+      },
+      s,
+    );
+
+    const fetchImpl = async () => new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+
+    const r = await processSyncQueue({ storage: s, fetchImpl });
+    expect(r.stoppedReason).toBe("unauthorized");
+    expect(r.httpStatus).toBe(401);
+    expect(loadOutboxSync(s)).toHaveLength(1);
+  });
 });

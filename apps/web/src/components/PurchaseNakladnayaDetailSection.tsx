@@ -62,7 +62,7 @@ export function PurchaseNakladnayaDetailSection() {
   if (!enabled) {
     return (
       <p style={muted}>
-        API накладных недоступен (<code>purchaseDocumentsApi</code>).
+        Раздел накладных временно недоступен. Обратитесь к администратору.
       </p>
     );
   }
@@ -72,7 +72,7 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   if (docQ.isPending) {
-    return <LoadingBlock label="Загрузка накладной (GET /api/purchase-documents/…)…" minHeight={100} />;
+    return <LoadingBlock label="Загрузка накладной…" minHeight={100} />;
   }
 
   if (docQ.isError) {

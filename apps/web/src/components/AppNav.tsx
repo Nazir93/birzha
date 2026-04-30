@@ -17,7 +17,7 @@ const panelLabel: Record<PanelId, string> = {
   reports: "Отчёты и рейсы",
   operations: "Операции",
   offline: "Офлайн-очередь",
-  service: "Служебное (meta)",
+  service: "Диагностика",
   inventory: "Склады и калибры",
 };
 
@@ -40,7 +40,6 @@ export function AppNav() {
         { key: "rep", to: ops.reports, label: "Отчёты и рейсы" },
         { key: "op", to: ops.operations, label: "Операции" },
         { key: "off", to: ops.offline, label: "Офлайн-очередь" },
-        { key: "svc", to: adminRoutes.service, label: "Служебное" },
       ];
     }
 
@@ -71,7 +70,6 @@ export function AppNav() {
     sales: "продавец",
     accounting: "бухгалтерия",
   };
-  const prefixForCabinet = prefix[cabinet as keyof typeof prefix] ?? prefix.operations;
 
   return (
     <nav className="birzha-nav" aria-label="Разделы приложения">
@@ -89,7 +87,7 @@ export function AppNav() {
         <div className="birzha-nav__user">
           {user ? (
             <>
-              <span className="birzha-nav__user-label" title={`${titleSuffix[cabinet]} · ${prefixForCabinet}`}>
+              <span className="birzha-nav__user-label" title={titleSuffix[cabinet]}>
                 Вы: {user.login}
               </span>
               <button type="button" className="birzha-btn-ghost" onClick={() => void logout()}>

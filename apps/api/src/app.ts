@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import type { BatchRepository } from "./application/ports/batch-repository.port.js";
@@ -71,12 +72,18 @@ export async function buildApp(options: {
   counterpartyRepository?: CounterpartyRepository | null;
 }): Promise<FastifyInstance> {
   const { env, db } = options;
-  const app = Fastify({ logger: env.NODE_ENV !== "test" });
+  const app = Fastify({
+    logger: env.NODE_ENV !== "test",
+    trustProxy: env.NODE_ENV === "production",
+  });
 
   await app.register(helmet, {
     global: true,
     /** Отдельно задаётся для SPA (Vite); здесь только JSON API. */
     contentSecurityPolicy: false,
+  });
+  await app.register(rateLimit, {
+    global: false,
   });
 
   const batchRepository =

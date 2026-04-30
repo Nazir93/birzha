@@ -53,7 +53,7 @@ export function CounterpartiesPanel() {
       <div role="region" aria-label="Справочник контрагентов">
         <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Контрагенты</h2>
         <p style={muted}>
-          Справочник отключён в <code>GET /api/meta</code> (поле <code>counterpartyCatalogApi</code>).
+          Справочник контрагентов временно недоступен. Обратитесь к администратору.
         </p>
       </div>
     );
@@ -63,8 +63,7 @@ export function CounterpartiesPanel() {
     <div role="region" aria-label="Справочник контрагентов">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Контрагенты</h2>
       <p style={{ ...muted, marginTop: 0 }}>
-        Активные записи из <code>GET /api/counterparties</code>. Продавец выбирает контрагента при продаже с рейса; бухучёт
-        ведёт список (POST/DELETE — согласно ролям на API).
+        Продавец выбирает контрагента при продаже с рейса. Бухгалтерия ведёт список клиентов и покупателей.
       </p>
 
       {listQ.isError && <p style={warnText}>Список не загрузился.</p>}

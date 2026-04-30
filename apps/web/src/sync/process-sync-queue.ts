@@ -14,13 +14,13 @@ export type ProcessSyncOptions = {
   fetchImpl?: typeof fetch;
 };
 
-export type ProcessSyncStoppedReason = "empty" | "rejected" | "network_error";
+export type ProcessSyncStoppedReason = "empty" | "rejected" | "network_error" | "unauthorized";
 
 export type ProcessSyncResult = {
   processed: number;
   stoppedReason: ProcessSyncStoppedReason;
   lastSync?: SyncResponse;
-  /** Только при network_error — ответ не разобран. */
+  /** Только при network_error / unauthorized — ответ не разобран. */
   httpStatus?: number;
 };
 
@@ -71,6 +71,10 @@ export async function processSyncQueue(options: ProcessSyncOptions = {}): Promis
       });
     } catch {
       return { processed, stoppedReason: "network_error" };
+    }
+
+    if (res.status === 401) {
+      return { processed, stoppedReason: "unauthorized", httpStatus: res.status };
     }
 
     if (!res.ok) {

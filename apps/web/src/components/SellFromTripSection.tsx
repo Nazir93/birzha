@@ -318,12 +318,15 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             <strong>способ оплаты</strong> (наличные, долг или смешанно). Ящики в заявке не отправляются — при необходимости смотрите подсказку
             по строке.
           </p>
-          <details style={{ ...muted, marginBottom: "0.6rem", fontSize: "0.82rem" }}>
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Технические детали API</summary>
-            <p style={{ margin: "0.35rem 0 0", lineHeight: 1.45 }}>
-              <code>POST /api/batches/:batchId/sell-from-trip</code> — поле кг по умолчанию подставляется из остатка «в пути» по партии.
-            </p>
-          </details>
+          {import.meta.env.DEV && (
+            <details style={{ ...muted, marginBottom: "0.6rem", fontSize: "0.82rem" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600 }}>Технические детали API</summary>
+              <p style={{ margin: "0.35rem 0 0", lineHeight: 1.45 }}>
+                <code>POST /api/batches/:batchId/sell-from-trip</code> — поле кг по умолчанию подставляется из остатка
+                «в пути» по партии.
+              </p>
+            </details>
+          )}
         </>
       )}
 

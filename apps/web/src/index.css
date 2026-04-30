@@ -28,6 +28,7 @@
   --font-ui: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-text: #18181b;
   --color-muted: #71717a;
+  --color-text-muted: #71717a;
   --color-border: #d4d4d8;
   --color-border-focus: #15803d;
   --color-surface-input: #ffffff;
@@ -82,7 +83,13 @@ main.app-shell {
   max-width: min(96rem, 100%);
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 1rem 1.25rem 2rem;
+  padding: 0.75rem 0.8rem 1.75rem;
+}
+
+@media (min-width: 36rem) {
+  main.app-shell {
+    padding: 1rem 1.25rem 2rem;
+  }
 }
 
 @media (min-width: 48rem) {
@@ -115,7 +122,7 @@ main.app-shell {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.45rem;
-  margin: 0 -0.25rem 1.25rem;
+  margin: 0 0 1.1rem;
   padding: 0.65rem 0.75rem;
   border-radius: var(--birzha-radius);
   border: 1px solid var(--color-border);
@@ -126,6 +133,7 @@ main.app-shell {
 .birzha-nav__link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 0.45rem 0.85rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -159,6 +167,28 @@ main.app-shell {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+}
+
+@media (max-width: 40rem) {
+  .birzha-nav {
+    align-items: stretch;
+    gap: 0.4rem;
+    padding: 0.55rem;
+  }
+
+  .birzha-nav__link {
+    flex: 1 1 calc(50% - 0.4rem);
+    min-width: 8.5rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .birzha-nav__user {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--color-border);
+  }
 }
 
 .birzha-nav__user-label {
@@ -233,13 +263,19 @@ main.app-shell {
 /* Карточки секций и KPI (дашборды кабинетов) */
 .birzha-card {
   margin-top: 1.25rem;
-  padding: 1.15rem 1.25rem;
+  padding: 0.9rem 0.85rem;
   font-family: var(--font-ui);
   font-size: 0.95rem;
   border: 1px solid var(--color-border);
   border-radius: var(--birzha-radius);
   background: var(--birzha-surface-muted);
   box-shadow: var(--birzha-shadow-sm);
+}
+
+@media (min-width: 48rem) {
+  .birzha-card {
+    padding: 1.15rem 1.25rem;
+  }
 }
 
 .birzha-card:first-child {

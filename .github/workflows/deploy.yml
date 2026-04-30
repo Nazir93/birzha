@@ -4,11 +4,22 @@ name: Deploy to server
 
 on:
   workflow_dispatch:
+    inputs:
+      backup_confirmed:
+        description: "Свежий pg_dump/backup перед db:push сделан или db:push не нужен"
+        required: true
+        type: boolean
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      BIRZHA_BACKUP_CONFIRMED: ${{ inputs.backup_confirmed && '1' || '0' }}
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -22,4 +33,4 @@ jobs:
             ROOT='${{ secrets.BIRZHA_DEPLOY_PATH }}'
             if [ -z "$ROOT" ]; then ROOT="/opt/birzha"; fi
             cd "$ROOT"
-            bash deploy/server-update.sh
+            BIRZHA_BACKUP_CONFIRMED="$BIRZHA_BACKUP_CONFIRMED" bash deploy/server-update.sh

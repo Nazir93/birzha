@@ -74,11 +74,11 @@ function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | nul
   return (
     <section className="birzha-card" aria-labelledby="service-heading">
       <h2 id="service-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
-        GET /api/meta
+        Диагностика сервера
       </h2>
       {bootstrapError && (
         <p role="alert" style={errorText}>
-          Нет ответа — запустите API.
+          Сервер временно недоступен.
         </p>
       )}
       {!bootstrapError && metaJson && (

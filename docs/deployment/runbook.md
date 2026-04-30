@@ -13,6 +13,8 @@
 cd /opt/birzha   # или каталог клона
 pnpm install
 pnpm --filter @birzha/domain build
+set -a && source apps/api/.env && set +a
+pg_dump "$DATABASE_URL" --format=custom --file "birzha-before-schema-$(date +%F-%H%M).dump"
 cd apps/api && pnpm db:push
 cd ../.. && pnpm build
 ```
@@ -20,7 +22,7 @@ cd ../.. && pnpm build
 ## 3. Переменные `apps/api/.env`
 
 - **`DATABASE_URL`**, **`JWT_SECRET`** (≥ 32 символов), **`NODE_ENV=production`**, **`HOST=127.0.0.1`**, **`PORT=3000`**.
-- **`REQUIRE_API_AUTH=true`** — если нужен вход в веб по логину/паролю.
+- **`REQUIRE_API_AUTH`** — `true` для обязательного входа; в **production** при заданных **`DATABASE_URL`** и **`JWT_SECRET`** можно не задавать переменную — тогда вход включается автоматически. **`false`** — только если API должен быть без персональной авторизации.
 
 ## 4. Учётные записи (если включён вход)
 
@@ -29,10 +31,11 @@ cd ../.. && pnpm build
 Первый пользователь (часто администратор), из **`apps/api`** с тем же `.env`:
 
 ```bash
-pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' --role admin
+BIRZHA_CREATE_USER_PASSWORD='ВАШ_ПАРОЛЬ' pnpm create-user -- --login ВАШ_ЛОГИН --role admin
 ```
 
 Дальше — так же для продавца, кладовщика и т.д., каждый раз **другой** `--login`.
+Не передавайте пароль через `--password` без необходимости: он может попасть в историю команд shell.
 
 Роли: `admin`, `manager`, `purchaser`, `warehouse`, `logistics`, `receiver`, `seller`, `accountant`.
 
@@ -41,6 +44,7 @@ pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' -
 ## 5. systemd и nginx
 
 - Сервис API: `node dist/index.js` из `apps/api`, `EnvironmentFile` на `.env`.
+- Пользователь systemd должен совпадать с владельцем `/opt/birzha` и `apps/api/.env` (пример в `vps-ubuntu.md`: Unix-пользователь `birzha`, `.env` с правами `600`).
 - Nginx: статика `apps/web/dist`, `location /api/` → `http://127.0.0.1:3000/`.
 - Пример конфига: **`deploy/nginx-birzha.example.conf`**.
 
@@ -58,12 +62,52 @@ cd /opt/birzha
 git fetch origin && git checkout main && git pull --ff-only origin main
 pnpm install --frozen-lockfile
 pnpm exec turbo run build --force
+set -a && source apps/api/.env && set +a
+pg_dump "$DATABASE_URL" --format=custom --file "birzha-before-update-$(date +%F-%H%M).dump"
 cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
+curl -fsS http://127.0.0.1:3000/health
 ```
 
-**Опционально:** `deploy/server-update.sh` тот же смысл, см. `deploy/README.md`.
+**Опционально:** `BIRZHA_BACKUP_CONFIRMED=1 ./deploy/server-update.sh` — тот же смысл, см. `deploy/README.md`. Без подтверждения бэкапа скрипт остановится перед `db:push`.
 
-## 8. Резервные копии
+## 8. Откат кода
 
-Периодически **`pg_dump`** базы в безопасное хранилище (скрипт и расписание — по политике хостинга).
+Если после обновления `/health` не проходит:
+
+```bash
+cd /opt/birzha
+git checkout ПРЕДЫДУЩИЙ_COMMIT
+pnpm install --frozen-lockfile
+pnpm exec turbo run build --force
+sudo systemctl restart birzha-api
+curl -fsS http://127.0.0.1:3000/health
+```
+
+Откат схемы БД автоматически не делается. Если `db:push` уже изменил схему и нужен полный откат данных/схемы — восстанавливайте отдельный проверенный `pg_dump` по процедуре ниже.
+
+## 9. Резервные копии
+
+Минимальный регламент:
+
+- Перед `pnpm db:push` на production — свежий **`pg_dump`**.
+- По расписанию — ежедневный `pg_dump` в хранилище вне VPS (или снапшоты провайдера + копия вне сервера).
+- Ретеншн: например 7 ежедневных + 4 еженедельных копии.
+- Не реже раза в месяц — пробное восстановление в отдельную БД и проверка запуска API.
+
+Пример ручного дампа:
+
+```bash
+pg_dump "$DATABASE_URL" --format=custom --file "birzha-$(date +%F-%H%M).dump"
+```
+
+Восстановление проверяйте в отдельную тестовую БД, не поверх рабочей.
+
+Пример проверки восстановления:
+
+```bash
+createdb birzha_restore_check
+pg_restore --dbname=birzha_restore_check "birzha-YYYY-MM-DD-HHMM.dump"
+DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/birzha_restore_check pnpm --filter @birzha/api test
+dropdb birzha_restore_check
+```

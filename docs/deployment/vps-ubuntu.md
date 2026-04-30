@@ -33,11 +33,14 @@ corepack prepare pnpm@latest --activate
 
 ## 2. Клонирование репозитория
 
+Рекомендуемый вариант: один Unix-пользователь владеет кодом, `.env` и запускает systemd-сервис. Ниже это пользователь `birzha`; если у вас уже есть deploy-пользователь, используйте его имя и в `chown`, и в `User=` systemd.
+
 ```bash
+sudo useradd --system --create-home --home-dir /opt/birzha --shell /usr/sbin/nologin birzha || true
 sudo mkdir -p /opt/birzha
-sudo chown "$USER":"$USER" /opt/birzha
+sudo chown birzha:birzha /opt/birzha
 cd /opt/birzha
-git clone https://github.com/Nazir93/birzha.git .
+sudo -u birzha git clone https://github.com/Nazir93/birzha.git .
 ```
 
 (Если репозиторий приватный — настройте deploy key или PAT.)
@@ -80,17 +83,20 @@ nano apps/api/.env   # или vim
 - `HOST=127.0.0.1` (API только за nginx) или `0.0.0.0` при другой схеме.
 - `PORT=3000`
 
-Для продакшена с входом в UI обычно:
+Для продакшена с **персональным входом** (отдельный логин на каждого):
 
-- `REQUIRE_API_AUTH=true`
+- Задайте **`REQUIRE_API_AUTH=true`** **или** просто **не указывайте** переменную: при **`NODE_ENV=production`**, **`DATABASE_URL`** и **`JWT_SECRET`** API сам включает обязательный JWT на бизнес-маршрутах (см. `apps/api/src/config.ts`).
+- Явно **`REQUIRE_API_AUTH=false`** оставляет API открытым без входа — только если это осознанное решение.
 
 После сохранения:
 
 ```bash
 cd /opt/birzha
-pnpm install
-pnpm --filter @birzha/domain build
-cd apps/api && pnpm db:push
+sudo chown birzha:birzha apps/api/.env
+sudo chmod 600 apps/api/.env
+sudo -u birzha pnpm install
+sudo -u birzha pnpm --filter @birzha/domain build
+sudo -u birzha bash -lc 'cd /opt/birzha/apps/api && pnpm db:push'
 ```
 
 `db:push` применяет схему Drizzle к БД (см. `README.md`).
@@ -107,16 +113,17 @@ pnpm build
 
 ## 6. Учётные записи для входа
 
-При **`REQUIRE_API_AUTH=true`** создавайте **отдельную** учётку на каждого человека (свой `--login` и пароль). Команду `create-user` повторяют для каждого сотрудника — так не смешиваются действия и права.
+При **обязательном входе** (переменная **`REQUIRE_API_AUTH=true`** или автоматически в production при БД и JWT, см. выше) создавайте **отдельную** учётку на каждого человека (свой `--login` и пароль). Команду `create-user` повторяют для каждого сотрудника — так не смешиваются действия и права.
 
 Первый вход (часто админ):
 
 ```bash
 cd /opt/birzha/apps/api
-pnpm create-user -- --login ВАШ_ЛОГИН --password 'ВАШ_ПАРОЛЬ' --role admin
+BIRZHA_CREATE_USER_PASSWORD='ВАШ_ПАРОЛЬ' pnpm create-user -- --login ВАШ_ЛОГИН --role admin
 ```
 
 Остальные — аналогично с другими логинами и ролями.
+Не передавайте пароль через `--password` без необходимости: он может попасть в историю команд shell.
 
 Роли: `admin`, `manager`, `purchaser`, `warehouse`, `logistics`, `receiver`, `seller`, `accountant`. Подробнее — **`docs/deployment/runbook.md`**. Альтернатива — INSERT в `users` / `user_roles` и хэш через `hashPassword` (`README.md`).
 
@@ -131,17 +138,20 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=www-data
+User=birzha
+Group=birzha
 WorkingDirectory=/opt/birzha/apps/api
 EnvironmentFile=/opt/birzha/apps/api/.env
 ExecStart=/usr/bin/node dist/index.js
 Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Убедитесь, что `node` в PATH для этого пользователя, или укажите полный путь к `node` (`which node`).
+Убедитесь, что `node` в PATH для этого пользователя, или укажите полный путь к `node` (`which node`). Важно: пользователь в `User=` должен читать `apps/api/.env` и `dist`, поэтому владелец клона и systemd-пользователь должны совпадать (или права должны быть выданы явно).
 
 ```bash
 sudo systemctl daemon-reload
@@ -201,11 +211,14 @@ cd /opt/birzha
 git fetch origin && git checkout main && git pull --ff-only origin main
 pnpm install --frozen-lockfile
 pnpm exec turbo run build --force
+set -a && source apps/api/.env && set +a
+pg_dump "$DATABASE_URL" --format=custom --file "birzha-$(date +%F-%H%M).dump"
 cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
+curl -fsS http://127.0.0.1:3000/health
 ```
 
-**Опционально:** `chmod +x deploy/server-update.sh` (один раз) и `./deploy/server-update.sh` — эквивалент тому же, см. `deploy/server-update.sh`.
+**Опционально:** `chmod +x deploy/server-update.sh` (один раз) и после свежего бэкапа `BIRZHA_BACKUP_CONFIRMED=1 ./deploy/server-update.sh` — эквивалент тому же, см. `deploy/server-update.sh`. Без подтверждения бэкапа скрипт остановится перед `db:push`.
 
 ### 10.1. Только сброс данных (для тестов), без смены схемы
 

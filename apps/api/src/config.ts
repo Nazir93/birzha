@@ -9,8 +9,9 @@ const envSchema = z
     /** Обязателен, если задан `DATABASE_URL` (подпись JWT для `/auth/*`). */
     JWT_SECRET: z.string().min(32).optional(),
     /**
-     * Если `true` / `1`: бизнес-маршруты требуют JWT и глобальные роли по матрице MVP.
-     * Пока UI без входа — оставлять выключенным или выдавать токен клиенту вручную.
+     * Если `true` / `1`: бизнес-маршруты требуют JWT и роли; веб уводит на `/login`.
+     * В **production** при заданных `DATABASE_URL` и `JWT_SECRET`, если переменную **не задавать** —
+     * считается `true` (см. `loadEnv`). Явно `false` / `0` отключает проверку (только если осознанно).
      */
     REQUIRE_API_AUTH: z
       .string()
@@ -45,5 +46,18 @@ export type AppEnv = z.infer<typeof envSchema>;
 
 export function loadEnv(overrides?: Partial<Record<string, string | undefined>>): AppEnv {
   const merged = { ...process.env, ...overrides };
-  return envSchema.parse(merged);
+  const explicitRequireApiAuth = merged.REQUIRE_API_AUTH;
+  const parsed = envSchema.parse(merged);
+
+  const inferProdRequireAuth =
+    parsed.NODE_ENV === "production" &&
+    Boolean(parsed.DATABASE_URL) &&
+    Boolean(parsed.JWT_SECRET) &&
+    explicitRequireApiAuth === undefined;
+
+  if (inferProdRequireAuth) {
+    return { ...parsed, REQUIRE_API_AUTH: true };
+  }
+
+  return parsed;
 }

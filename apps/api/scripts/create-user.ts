@@ -3,8 +3,8 @@
  * Запуск из каталога apps/api при заполненном .env (DATABASE_URL).
  *
  * Примеры:
- *   pnpm create-user -- --login ivan.petrov --password '…' --role seller
- *   pnpm create-user -- --login admin --password '…' --role admin
+ *   BIRZHA_CREATE_USER_PASSWORD='…' pnpm create-user -- --login ivan.petrov --role seller
+ *   BIRZHA_CREATE_USER_PASSWORD='…' pnpm create-user -- --login admin --role admin
  *
  * Логин в БД уникален (`users.login`). Общий логин на нескольких людей не использовать — путаница в отчётах и правах.
  */
@@ -43,9 +43,9 @@ const ROLE_SEED: { code: string; name: string }[] = [
 ];
 
 /** Аргументы после `node` / `tsx` и пути к скрипту; `pnpm … --` даёт лишний `--`. */
-function parseArgs(argv: string[]): { login: string; password: string; role: string } {
+function parseArgs(argv: string[]): { login: string; cliPassword: string; role: string } {
   let login = "";
-  let password = "";
+  let cliPassword = "";
   let role = "admin";
   const args = argv.slice(2).filter((a) => a !== "--");
   let i = 0;
@@ -57,18 +57,27 @@ function parseArgs(argv: string[]): { login: string; password: string; role: str
     if (a === "--login" && args[i + 1]) {
       login = args[++i] ?? "";
     } else if (a === "--password" && args[i + 1]) {
-      password = args[++i] ?? "";
+      cliPassword = args[++i] ?? "";
     } else if (a === "--role" && args[i + 1]) {
       role = args[++i] ?? "admin";
     }
   }
-  return { login, password, role };
+  return { login, cliPassword, role };
+}
+
+function resolvePassword(cliPassword: string): string {
+  if (cliPassword) {
+    console.warn("Предупреждение: --password может попасть в историю shell. Лучше использовать BIRZHA_CREATE_USER_PASSWORD.");
+    return cliPassword;
+  }
+  return process.env.BIRZHA_CREATE_USER_PASSWORD ?? "";
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const { login, password, role } = parseArgs(process.argv);
+const { login, cliPassword, role } = parseArgs(process.argv);
+const password = resolvePassword(cliPassword);
 
 if (!process.env.DATABASE_URL) {
   console.error("Нет DATABASE_URL в apps/api/.env");
@@ -77,8 +86,14 @@ if (!process.env.DATABASE_URL) {
 
 if (!login.trim() || !password) {
   console.error(
-    "Использование: pnpm exec tsx scripts/create-user.ts --login ЛОГИН --password ПАРОЛЬ [--role admin|manager|...]",
+    "Использование: BIRZHA_CREATE_USER_PASSWORD='ПАРОЛЬ' pnpm create-user -- --login ЛОГИН [--role admin|manager|...]\n" +
+      "Допустимо старое --password, но оно может попасть в историю команд.",
   );
+  process.exit(1);
+}
+
+if (password.length < 10) {
+  console.error("Пароль должен быть не короче 10 символов.");
   process.exit(1);
 }
 

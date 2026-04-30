@@ -46,10 +46,9 @@ export function CreateTripForm() {
 
   return (
     <div className="birzha-panel">
-      <h3 className="birzha-section-title birzha-section-title--sm">Создать рейс (POST /api/trips)</h3>
+      <h3 className="birzha-section-title birzha-section-title--sm">Создать рейс</h3>
       <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Онлайн-вызов API (не через офлайн-очередь). ID можно оставить пустым — будет UUID. ТС, водитель и время —
-        для «общей накладной» в отчёте рейса.
+        ID можно оставить пустым — система создаст его сама. ТС, водитель и время попадут в отчёт рейса.
       </p>
       <label htmlFor="ct-trip-number" style={{ fontSize: "0.88rem" }}>
         Номер рейса *
@@ -63,13 +62,13 @@ export function CreateTripForm() {
         autoComplete="off"
       />
       <label htmlFor="ct-trip-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
-        ID рейса (опционально)
+        Идентификатор рейса (опционально)
       </label>
       <input
         id="ct-trip-id"
         value={tripId}
         onChange={(e) => setTripId(e.target.value)}
-        placeholder="пусто = случайный UUID"
+        placeholder="пусто = создать автоматически"
         style={fieldStyleCompact}
         autoComplete="off"
       />
@@ -133,8 +132,7 @@ export function CreateTripForm() {
         (fieldSellersQuery.data?.fieldSellers?.length ?? 0) === 0 &&
         !fieldSellersQuery.isPending && (
           <p style={{ ...muted, fontSize: "0.85rem", marginTop: "0.35rem" }}>
-            В БД нет активных пользователей с глобальной ролью <code>seller</code> — закрепление недоступно до
-            настройки учётных записей.
+            Нет активных продавцов для закрепления рейса — администратор должен создать отдельные учётные записи продавцов.
           </p>
         )}
       <div>

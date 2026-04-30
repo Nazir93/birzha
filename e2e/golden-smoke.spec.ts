@@ -40,7 +40,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
 
     await page.goto("/service");
-    await expect(page.getByRole("heading", { name: "GET /api/meta" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible();
     const pre = page.getByLabel("JSON ответа GET /api/meta");
     await expect(pre).toContainText('"batchesApi": "enabled"', { timeout: 30_000 });
     await expect(pre).toContainText('"syncApi": "enabled"');
@@ -458,9 +458,9 @@ test.describe("золотой smoke (UI + API)", () => {
 
   test("офлайн: очередь, create_trip и успешная синхронизация", async ({ page }) => {
     await page.goto("/offline");
-    await expect(page.locator("#offline-heading")).toContainText("Офлайн-очередь");
+    await expect(page.locator("#offline-heading")).toContainText("Неотправленные действия");
     await expect(page.getByRole("button", { name: /Синхронизировать/ })).toBeVisible();
-    const enqueueBtn = page.getByRole("button", { name: /Добавить в очередь/ });
+    const enqueueBtn = page.getByRole("button", { name: /добавить тестовое действие/i });
     await expect(enqueueBtn).toBeVisible();
 
     const count = page.locator("#offline-queue-count");
@@ -473,11 +473,11 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.getByRole("button", { name: /Синхронизировать/ }).click();
     await expect(count).toHaveText(String(before), { timeout: 20_000 });
-    await expect(page.getByLabel("Результат последней синхронизации очереди, JSON")).toContainText(
+    await expect(page.getByLabel("Технический результат последней синхронизации, JSON")).toContainText(
       '"stoppedReason": "empty"',
       { timeout: 15_000 },
     );
-    await expect(page.getByLabel("Результат последней синхронизации очереди, JSON")).toContainText('"processed": 1');
+    await expect(page.getByLabel("Технический результат последней синхронизации, JSON")).toContainText('"processed": 1');
   });
 
   test("операции: панель и таблица партий (GET /api/batches)", async ({ page, request }) => {
@@ -512,7 +512,7 @@ test.describe("золотой smoke (UI + API)", () => {
     ).toBeVisible();
   });
 
-  test("навигация: вкладки AppNav (накладная → отчёты → операции → офлайн → служебное → отчёты)", async ({ page }) => {
+  test("навигация: вкладки AppNav (накладная → операции → офлайн → диагностика по URL → отчёты)", async ({ page }) => {
     await page.goto("/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -529,9 +529,10 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/offline$/);
     await expect(page.locator("#offline-heading")).toBeVisible();
 
-    await nav.getByRole("link", { name: "Служебное" }).click();
-    await expect(page).toHaveURL(/\/service$/);
-    await expect(page.getByRole("heading", { name: "GET /api/meta" })).toBeVisible({ timeout: 30_000 });
+    /* Ссылка «Диагностика» в шапке только у admin/manager; анонимный e2e — прямой legacy URL. */
+    await page.goto("/service");
+    await expect(page).toHaveURL(/\/a\/service$/);
+    await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible({ timeout: 30_000 });
 
     await nav.getByRole("link", { name: "Отчёты и рейсы" }).click();
     await expect(page).toHaveURL(/\/reports$/);

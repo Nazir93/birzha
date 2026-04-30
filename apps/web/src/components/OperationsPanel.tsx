@@ -285,12 +285,12 @@ export function OperationsPanel() {
         </datalist>
       )}
 
-      {batchesQuery.isError && <p style={warnText}>Список партий (GET /api/batches) не загрузился.</p>}
+      {batchesQuery.isError && <p style={warnText}>Список партий не загрузился. Проверьте связь и повторите.</p>}
       <StaleDataNotice
         show={batchesQuery.isFetching && !batchesQuery.isPending}
         label="Обновление списка партий…"
       />
-      {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков (GET /api/batches)…" minHeight={96} />}
+      {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков…" minHeight={96} />}
 
       {!batchesQuery.isPending && batchesQuery.data && (
         <>
@@ -313,7 +313,7 @@ export function OperationsPanel() {
       )}
 
       {tripsQuery.isError && (
-        <p style={warnText}>Список рейсов не загрузился — выберите tripId вручную.</p>
+        <p style={warnText}>Список рейсов не загрузился — выберите рейс вручную или повторите позже.</p>
       )}
 
       <section className="birzha-panel" aria-labelledby="op-sec-ship">
@@ -328,14 +328,13 @@ export function OperationsPanel() {
             </>
           ) : (
             <>
-              POST /api/batches/:batchId/ship-to-trip — снимает массу <strong>с выбранной партии</strong> (строки накладной,
-              калибр). Сначала выберите рейс, затем либо одну партию и кг, либо отгрузите все строки накладной, где есть
-              остаток на складе.
+              Отгрузка снимает массу <strong>с выбранной партии</strong> (строки накладной, калибр). Сначала выберите рейс,
+              затем либо одну партию и кг, либо отгрузите все строки накладной, где есть остаток на складе.
             </>
           )}
         </p>
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
-          Рейс (tripId) *
+          Рейс *
         </label>
         {tripsQuery.isPending && (
           <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
@@ -393,11 +392,11 @@ export function OperationsPanel() {
           </p>
         )}
         <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
-          В выпадающем списке — только партии с остатком на складе. Ниже можно ввести или вставить batchId из таблицы
-          выше (в т.ч. если нужна партия не из списка).
+          В выпадающем списке — только партии с остатком на складе. Ниже можно ввести или вставить идентификатор партии
+          из таблицы выше (в т.ч. если нужна партия не из списка).
         </p>
         <label htmlFor="op-in-ship-batch-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.35rem" }}>
-          batchId (дублирует выбор выше)
+          Идентификатор партии (дублирует выбор выше)
         </label>
         <input
           id="op-in-ship-batch-id"
@@ -413,7 +412,7 @@ export function OperationsPanel() {
           style={fieldStyle}
           list="batch-suggestions"
           autoComplete="off"
-          placeholder="или вставьте UUID партии"
+          placeholder="или вставьте идентификатор партии"
         />
         <label htmlFor="op-in-ship-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
           kg *
@@ -529,8 +528,7 @@ export function OperationsPanel() {
             <p style={{ ...muted, margin: "0 0 0.4rem", fontSize: "0.86rem", lineHeight: 1.5 }}>
               Перенесён список <strong>{distShipBatchIds.length}</strong> {distShipBatchIds.length === 1 ? "партии" : "партий"}.
               С <strong>остатком сейчас</strong> готово к отгрузке: <strong>{distBatchesToShip.length}</strong>. Для
-              каждой вызывается <code>POST /api/batches/…/ship-to-trip</code> (кг = полный остаток по партии, как в одиночной
-              отгрузке). {distBatchesMissingCount > 0 && (
+              каждой будет отгружен полный остаток по партии, как в одиночной отгрузке. {distBatchesMissingCount > 0 && (
                 <>
                   {" "}
                   {distBatchesMissingCount} из списка уже <strong>без остатка</strong> (часть увезли раньше) — в отгрузку не
@@ -588,9 +586,9 @@ export function OperationsPanel() {
         <h3 id="op-sec-short" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
           3. Недостача по рейсу (приёмка)
         </h3>
-        <p style={muted}>POST /api/batches/:batchId/record-trip-shortage</p>
+        <p style={muted}>Зафиксируйте недостачу при приёмке рейса: выберите партию, рейс, кг и причину.</p>
         <label htmlFor="op-in-short-batch" style={{ fontSize: "0.88rem" }}>
-          batchId *
+          Партия *
         </label>
         <input
           id="op-in-short-batch"
@@ -601,7 +599,7 @@ export function OperationsPanel() {
           autoComplete="off"
         />
         <label htmlFor="op-sel-short-trip" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          tripId *
+          Рейс *
         </label>
         <select
           id="op-sel-short-trip"
@@ -630,7 +628,7 @@ export function OperationsPanel() {
           autoComplete="off"
         />
         <label htmlFor="op-in-short-reason" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          reason *
+          Причина *
         </label>
         <input
           id="op-in-short-reason"

@@ -326,13 +326,13 @@ export function AdminCabinetHome() {
           Склады и калибры
         </Link>
         <Link to={adminRoutes.service} style={btnStyle}>
-          Служебное (meta)
+          Диагностика сервера
         </Link>
         <Link to={ops.reports} style={btnStyle}>
-          Отчёты и рейсы (/o)
+          Отчёты и рейсы
         </Link>
         <Link to={ops.purchaseNakladnaya} style={btnStyle}>
-          Накладная (/o)
+          Накладная
         </Link>
       </div>
     </section>

@@ -32,6 +32,17 @@ if (devMemoryBatches) {
   );
 }
 
+if (
+  env.NODE_ENV === "production" &&
+  env.DATABASE_URL &&
+  env.JWT_SECRET &&
+  !env.REQUIRE_API_AUTH
+) {
+  app.log.warn(
+    "REQUIRE_API_AUTH=false: API без обязательного персонального входа. На продакшене обычно нужен true и отдельная учётная запись на каждого сотрудника (pnpm create-user).",
+  );
+}
+
 const close = async () => {
   await app.close();
   if (sql) {

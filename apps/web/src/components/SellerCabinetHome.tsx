@@ -24,7 +24,7 @@ export function SellerCabinetHome() {
         {canOpsCabinet ? (
           <>
             {" "}
-            Закуп и отгрузка на склад — в кабинете <code>/o</code>.
+            Закуп и отгрузка на склад — в кабинете операций.
           </>
         ) : (
           <>
@@ -43,7 +43,7 @@ export function SellerCabinetHome() {
         </Link>
         {canOpsCabinet && (
           <Link to={ops.operations} style={{ ...btnStyle, fontSize: "0.92rem", padding: "0.5rem 0.75rem", fontWeight: 500 }}>
-            Все операции склада (/o)
+            Все операции склада
           </Link>
         )}
       </nav>

@@ -247,7 +247,7 @@ export function PurchaseNakladnayaSection() {
           {user ? " (сессия могла истечь — войдите снова)." : "."}
         </>
       ) : (
-        <>Запрос к API вернул 401 — проверьте nginx и прокси <code>/api</code> на сервере.</>
+        <>Сессия не подтверждена — войдите заново или обратитесь к администратору.</>
       );
     }
     if (/\b403\b/.test(m)) {
@@ -263,9 +263,7 @@ export function PurchaseNakladnayaSection() {
           Закупочная накладная
         </h3>
         <p style={muted}>
-          API накладных недоступен: в <code>GET /api/meta</code> сейчас не <code>purchaseDocumentsApi: &quot;enabled&quot;</code>.
-          Обычно так бывает без <code>DATABASE_URL</code> на API (в production нужна БД и миграции, в т.ч. закупка) или при неполном контуре на сервере.
-          После обновления API в режиме разработки без БД контур поднимается в памяти — перезапустите <code>pnpm dev:api</code>.
+          Раздел накладных временно недоступен. Проверьте подключение к серверу или обратитесь к администратору.
         </p>
       </section>
     );
@@ -292,8 +290,7 @@ export function PurchaseNakladnayaSection() {
       {catalogsEmptyOk && canManageCatalog && (
         <p role="status" style={warnText}>
           В справочнике нет складов или калибров — нечего выбирать в списках. Добавьте их в разделе{" "}
-          <strong>Склады и калибры</strong> (кабинет админа) или на сервере примените миграции с начальными данными: в каталоге{" "}
-          <code>apps/api</code> выполните <code>pnpm db:migrate</code> (один раз; не только <code>db:push</code>).
+          <strong>Склады и калибры</strong> (кабинет админа) или попросите администратора проверить начальные справочники.
         </p>
       )}
       {catalogsEmptyOk && !canManageCatalog && (
@@ -363,7 +360,7 @@ export function PurchaseNakladnayaSection() {
           </p>
         )}
         <label style={{ fontSize: "0.88rem" }}>
-          ID документа (опц., иначе UUID на сервере)
+          Идентификатор документа (опционально)
           <input value={documentId} onChange={(e) => setDocumentId(e.target.value)} style={fieldStyle} placeholder="" />
         </label>
         <label style={{ fontSize: "0.88rem" }}>
@@ -577,7 +574,7 @@ export function PurchaseNakladnayaSection() {
       )}
       {lastOk && <p style={successText}>{lastOk}</p>}
 
-      {listQ.isPending && <LoadingBlock label="Загрузка списка накладных (GET /api/purchase-documents)…" minHeight={80} />}
+      {listQ.isPending && <LoadingBlock label="Загрузка списка накладных…" minHeight={80} />}
 
       {listQ.isFetching && !listQ.isPending && (
         <p style={{ margin: "0.35rem 0" }} role="status" aria-live="polite">

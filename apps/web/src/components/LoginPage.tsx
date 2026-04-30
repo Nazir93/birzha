@@ -23,7 +23,7 @@ export function LoginPage() {
             Нет связи с API
           </h2>
           <p role="alert" style={errorText}>
-            Нет ответа от API ({bootstrapError.message}). Запустите бэкенд.
+            Сервер временно недоступен ({bootstrapError.message}). Попробуйте обновить страницу или обратитесь к администратору.
           </p>
         </section>
       </div>
@@ -65,7 +65,7 @@ export function LoginPage() {
           без «общих» входов). Не передавайте свои данные другим.
         </p>
         <p style={{ ...muted, marginBottom: "1rem", fontSize: "0.88rem", lineHeight: 1.45 }}>
-          Форма ниже нужна, когда на сервере включён <code>REQUIRE_API_AUTH</code>.
+          Если забыли пароль или нужен новый доступ, обратитесь к администратору.
         </p>
         <label htmlFor="login-user" style={{ fontSize: "0.88rem" }}>
           Логин (ваш)

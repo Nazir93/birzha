@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { adminRoutes, accounting, prefix } from "../routes.js";
+import { adminRoutes, accounting } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { muted, btnStyle } from "../ui/styles.js";
@@ -22,7 +22,7 @@ export function AccountingCabinetHome() {
       <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.55 }}>
         На этой странице автоматически собираются <strong>остатки товара</strong> (склад и «в пути») с оценкой по цене
         закупа партии и <strong>финансовые итоги по рейсам</strong>: выручка, себестоимость продаж и недостач, валовая
-        прибыль, наличные и долг. Ввод закупок и движений — в <code>{prefix.operations}</code>; детальная сверка по рейсу и
+        прибыль, наличные и долг. Ввод закупок и движений — в кабинете операций; детальная сверка по рейсу и
         печать — в отчётах.
       </p>
       <ul style={{ margin: "0 0 1rem", paddingLeft: "1.15rem", lineHeight: 1.55 }}>
@@ -53,7 +53,7 @@ export function AccountingCabinetHome() {
         {showServiceLink ? (
           <li>
             <Link to={adminRoutes.service} style={{ fontWeight: 600 }}>
-              Служебное (GET /api/meta)
+              Диагностика сервера
             </Link>{" "}
             <span style={muted}>(admin/manager)</span>
           </li>

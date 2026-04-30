@@ -16,6 +16,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { btnStyleInline, errorText, muted, preJson, warnText } from "../ui/styles.js";
 
 type Props = { sectionStyle: CSSProperties };
+const showDeveloperTools = import.meta.env.DEV;
 
 /**
  * Блок «офлайн-очередь / sync» — вынесен, чтобы маршруты /o и /s использовали один сценарий.
@@ -81,28 +82,25 @@ export function OfflineQueuePanel({ sectionStyle }: Props) {
 
   return (
     <section style={sectionStyle} aria-labelledby="offline-heading">
-      <strong id="offline-heading">Офлайн-очередь → POST /api/sync</strong>
+      <strong id="offline-heading">Неотправленные действия</strong>
       <p style={{ ...muted, margin: "0.5rem 0" }}>
-        Очередь в браузере — <strong>IndexedDB</strong> (однократная миграция из <code>localStorage</code>); в среде
-        без IDB — память / <code>localStorage</code>. Отправка по одному запросу. При появлении сети и при возврате на
-        вкладку выполняется автоматическая попытка синка (тот же конвейер, что и по кнопке); пока вкладка открыта и
-        есть сеть — дополнительно раз в ~2 минуты. В поддерживаемых браузерах после добавления в очередь
-        запрашивается <strong>Background Sync</strong> (при срабатывании SW просит вкладку прогнать тот же конвейер).
-        При ответе <code>rejected</code> очередь останавливается, первое действие не удаляется.
+        Если связь пропала, действия сохраняются на устройстве и отправляются при появлении сети. При ошибке первое
+        действие остаётся в очереди, чтобы его можно было проверить и повторить.
       </p>
       {!syncEnabled && meta && (
         <p style={{ ...warnText, margin: "0.5rem 0" }}>
-          <code>syncApi</code> не enabled — эндпоинт <code>/sync</code> на сервере отключён (нужен полный контур
-          репозиториев). Кнопка всё равно шлёт запрос (удобно для отладки).
+          Синхронизация временно недоступна на сервере. Проверьте связь или обратитесь к администратору.
         </p>
       )}
       <p style={{ margin: "0.35rem 0" }}>
         В очереди: <strong id="offline-queue-count">{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
-        <button type="button" style={btnStyleInline} onClick={handleEnqueueDemo}>
-          Добавить в очередь (create_trip)
-        </button>
+        {showDeveloperTools && (
+          <button type="button" style={btnStyleInline} onClick={handleEnqueueDemo}>
+            Dev: добавить тестовое действие
+          </button>
+        )}
         <button
           type="button"
           style={btnStyleInline}
@@ -122,17 +120,24 @@ export function OfflineQueuePanel({ sectionStyle }: Props) {
           )}
           {lastSync.stoppedReason === "network_error" && (
             <p role="alert" style={{ ...errorText, marginTop: "0.75rem", marginBottom: 0 }}>
-              Запрос к <code>/api/sync</code> не выполнен{lastSync.httpStatus != null ? ` (HTTP ${lastSync.httpStatus})` : ""}
-              .
+              Синхронизация не выполнена{lastSync.httpStatus != null ? ` (HTTP ${lastSync.httpStatus})` : ""}. Проверьте
+              сеть и повторите.
             </p>
           )}
-          <pre
-            style={{ ...preJson, marginTop: "0.75rem" }}
-            tabIndex={0}
-            aria-label="Результат последней синхронизации очереди, JSON"
-          >
-            {JSON.stringify(lastSync, null, 2)}
-          </pre>
+          {lastSync.stoppedReason === "unauthorized" && (
+            <p role="alert" style={{ ...errorText, marginTop: "0.75rem", marginBottom: 0 }}>
+              Сессия истекла или вход не выполнен. Войдите заново, затем повторите синхронизацию.
+            </p>
+          )}
+          {showDeveloperTools && (
+            <pre
+              style={{ ...preJson, marginTop: "0.75rem" }}
+              tabIndex={0}
+              aria-label="Технический результат последней синхронизации, JSON"
+            >
+              {JSON.stringify(lastSync, null, 2)}
+            </pre>
+          )}
         </>
       )}
       {syncMutation.isError && (

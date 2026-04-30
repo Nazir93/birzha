@@ -93,12 +93,12 @@ export function AccountingStockBalances() {
   }, [batchesQ.data?.batches, whQ.data?.warehouses]);
 
   if (batchesQ.isPending) {
-    return <LoadingBlock label="Загрузка остатков (GET /api/batches)…" minHeight={72} />;
+    return <LoadingBlock label="Загрузка остатков…" minHeight={72} />;
   }
   if (batchesQ.isError) {
     return (
       <p style={errorText} role="alert">
-        Остатки не загрузились. Проверьте API.
+        Остатки не загрузились. Проверьте связь и повторите.
       </p>
     );
   }

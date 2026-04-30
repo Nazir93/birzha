@@ -426,16 +426,16 @@ export function AllocationPanel() {
         <Link to={ops.reports}>отчёты</Link>.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
-        Требуется <strong>PostgreSQL</strong>: <code>PATCH /api/batches/…/allocation</code> без БД на сервере не выполняется.
+        Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
       </p>
 
       {warehousesQuery.isError && (
         <p style={warnText} role="alert">
-          Справочник складов (GET /api/warehouses) не загружен — подписи к складу могут быть неполны.
+          Справочник складов не загрузился — подписи к складу могут быть неполны.
         </p>
       )}
 
-      {loading && <LoadingBlock label="Загрузка партий (GET /api/batches)…" minHeight={100} />}
+      {loading && <LoadingBlock label="Загрузка партий…" minHeight={100} />}
 
       <StaleDataNotice show={refetching} label="Обновление списка партий…" />
 

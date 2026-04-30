@@ -19,7 +19,7 @@ export default defineConfig({
     },
     {
       command:
-        "pnpm exec wait-on -t 120000 http-get://127.0.0.1:3099/health && cross-env E2E_API_PORT=3099 pnpm --filter @birzha/web exec vite preview --host 127.0.0.1 --port 4173 --strictPort",
+        "pnpm exec wait-on -t 120000 http-get://127.0.0.1:3099/health && cross-env E2E_API_PORT=3099 pnpm --filter @birzha/web exec vite dev --host 127.0.0.1 --port 4173 --strictPort",
       url: "http://127.0.0.1:4173",
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,

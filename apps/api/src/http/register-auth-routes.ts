@@ -38,24 +38,34 @@ export async function registerAuthRoutes(app: FastifyInstance, opts: { db: DbCli
     }
   });
 
-  app.post("/auth/login", async (req, reply) => {
-    const body = loginBodySchema.parse(req.body);
-    const row = await findUserWithRolesByLogin(db, body.login);
-    if (!row || !verifyPassword(body.password, row.passwordHash)) {
-      return reply.code(401).send({ error: "invalid_credentials" });
-    }
-    if (!row.isActive) {
-      return reply.code(403).send({ error: "account_disabled" });
-    }
-    await touchUserLastLogin(db, row.id);
-    const payload = { sub: row.id, login: row.login, roles: row.roles };
-    const token = await reply.jwtSign(payload);
-    reply.setCookie(AUTH_ACCESS_COOKIE_NAME, token, accessCookieOptions(env));
-    return reply.send({
-      token,
-      user: { id: row.id, login: row.login, roles: row.roles },
-    });
-  });
+  app.post(
+    "/auth/login",
+    {
+      preHandler: app.rateLimit({
+        max: 10,
+        timeWindow: "1 minute",
+        groupId: "auth-login",
+      }),
+    },
+    async (req, reply) => {
+      const body = loginBodySchema.parse(req.body);
+      const row = await findUserWithRolesByLogin(db, body.login);
+      if (!row || !verifyPassword(body.password, row.passwordHash)) {
+        return reply.code(401).send({ error: "invalid_credentials" });
+      }
+      if (!row.isActive) {
+        return reply.code(403).send({ error: "account_disabled" });
+      }
+      await touchUserLastLogin(db, row.id);
+      const payload = { sub: row.id, login: row.login, roles: row.roles };
+      const token = await reply.jwtSign(payload);
+      reply.setCookie(AUTH_ACCESS_COOKIE_NAME, token, accessCookieOptions(env));
+      return reply.send({
+        token,
+        user: { id: row.id, login: row.login, roles: row.roles },
+      });
+    },
+  );
 
   app.post("/auth/logout", async (_req, reply) => {
     reply.clearCookie(AUTH_ACCESS_COOKIE_NAME, { path: "/" });
