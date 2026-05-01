@@ -25,7 +25,7 @@
 
 ## Синхронизация
 
-Если меняется «кто что видит» / роли: обновить `roles-and-permissions.md` и **в коде** `apps/web/src/auth/role-panels.ts`, `apps/api/src/http/route-auth.ts` согласовано.
+Если меняется «кто что видит» / роли: обновить `roles-and-permissions.md` и **в коде** `apps/web/src/auth/role-panels.ts`, `apps/api/src/http/route-auth.ts` согласовано (в т.ч. **`userManagement`**, экран **`/a/users`**).
 
 ## Качество
 

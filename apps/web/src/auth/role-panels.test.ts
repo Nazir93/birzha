@@ -98,4 +98,11 @@ describe("role-panels", () => {
     expect(canAccessCabinet(userWithRoles("seller"), "operations")).toBe(false);
     expect(canAccessCabinet(userWithRoles("warehouse"), "operations")).toBe(true);
   });
+
+  it("панель users (сотрудники) — только admin и manager", () => {
+    expect(canAccessPanel(userWithRoles("admin"), "users")).toBe(true);
+    expect(canAccessPanel(userWithRoles("manager"), "users")).toBe(true);
+    expect(canAccessPanel(userWithRoles("seller"), "users")).toBe(false);
+    expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
+  });
 });

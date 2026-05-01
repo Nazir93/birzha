@@ -21,7 +21,7 @@ import { btnStyle, errorText, muted, tableStyle, thHead, thtd } from "../ui/styl
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
 export function AdminCabinetHome() {
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const batchesQ = useQuery(batchesFullListQueryOptions());
@@ -325,6 +325,11 @@ export function AdminCabinetHome() {
         <Link to={adminRoutes.inventory} style={btnStyle}>
           Склады и калибры
         </Link>
+        {meta?.adminUsersApi === "enabled" && user ? (
+          <Link to={adminRoutes.users} style={btnStyle}>
+            Сотрудники
+          </Link>
+        ) : null}
         <Link to={adminRoutes.service} style={btnStyle}>
           Диагностика сервера
         </Link>

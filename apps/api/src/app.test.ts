@@ -53,6 +53,7 @@ describe("API", () => {
       syncApi: string;
       authApi: string;
       requireApiAuth: string;
+      adminUsersApi: string;
     };
     expect(body.batchesApi).toBe("disabled");
     expect(body.purchaseDocumentsApi).toBe("disabled");
@@ -66,6 +67,7 @@ describe("API", () => {
     expect(body.syncApi).toBe("disabled");
     expect(body.authApi).toBe("disabled");
     expect(body.requireApiAuth).toBe("disabled");
+    expect(body.adminUsersApi).toBe("disabled");
     await app.close();
   });
 });

@@ -26,6 +26,7 @@ export const adminRoutes = {
   /** Главная админки — сводка KPI. */
   home: prefix.admin,
   inventory: `${prefix.admin}/inventory`,
+  users: `${prefix.admin}/users`,
   service: `${prefix.admin}/service`,
 } as const;
 

@@ -9,7 +9,8 @@ export type PanelId =
   | "operations"
   | "offline"
   | "service"
-  | "inventory";
+  | "inventory"
+  | "users";
 
 const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   reports: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller", "accountant"],
@@ -21,6 +22,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   service: ["admin", "manager"],
   /** Склады и калибры — только admin и manager (согласовано с API). */
   inventory: ["admin", "manager"],
+  /** Учётные записи (логин/роль) — как `userManagement` на API. */
+  users: ["admin", "manager"],
 };
 
 const OPERATIONS_CABINET_ROLES = new Set<string>(["purchaser", "warehouse", "logistics", "receiver", "manager"]);
@@ -220,7 +223,16 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
  */
 /** Порядок вкладок в `/o` и в админке для блоков операций: у логиста «Отчёты и рейсы» первыми. */
 export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
-  const base: PanelId[] = ["nakladnaya", "distribution", "reports", "operations", "offline", "inventory", "service"];
+  const base: PanelId[] = [
+    "nakladnaya",
+    "distribution",
+    "reports",
+    "operations",
+    "offline",
+    "inventory",
+    "users",
+    "service",
+  ];
   if (!user) {
     return base;
   }
@@ -253,6 +265,9 @@ export function hrefForPanelInCabinet(
   if (currentCabinet === "admin") {
     if (panel === "inventory") {
       return adminRoutes.inventory;
+    }
+    if (panel === "users") {
+      return adminRoutes.users;
     }
     if (panel === "service") {
       return adminRoutes.service;
@@ -291,6 +306,9 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "inventory" && canManageInventoryCatalog(user)) {
       return adminRoutes.inventory;
+    }
+    if (panel === "users" && canAccessPanel(user, "users")) {
+      return adminRoutes.users;
     }
     if (panel === "service" && canAccessPanel(user, "service")) {
       return adminRoutes.service;

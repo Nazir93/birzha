@@ -19,6 +19,7 @@ const panelLabel: Record<PanelId, string> = {
   offline: "Офлайн-очередь",
   service: "Диагностика",
   inventory: "Склады и калибры",
+  users: "Сотрудники",
 };
 
 function navLinkClass(active: boolean): string {

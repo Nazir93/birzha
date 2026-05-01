@@ -23,6 +23,7 @@ import type { RecordTripShortageTransactionRunner } from "./application/trip/rec
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
 import type { AppEnv } from "./config.js";
 import type { DbClient } from "./db/client.js";
+import { registerAdminUserRoutes } from "./http/register-admin-user-routes.js";
 import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
@@ -302,6 +303,8 @@ export async function buildApp(options: {
     syncApi: syncIdempotency ? "enabled" : "disabled",
     authApi: db && env.JWT_SECRET ? "enabled" : "disabled",
     requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
+    adminUsersApi:
+      db && env.JWT_SECRET && env.REQUIRE_API_AUTH ? "enabled" : "disabled",
   }));
 
   if (db && env.JWT_SECRET) {
@@ -309,6 +312,10 @@ export async function buildApp(options: {
   }
 
   const routeAuth = createBusinessRouteAuth(app, env);
+
+  if (db && env.JWT_SECRET && env.REQUIRE_API_AUTH) {
+    registerAdminUserRoutes(app, db, routeAuth);
+  }
 
   if (counterpartyRepository) {
     registerCounterpartyRoutes(

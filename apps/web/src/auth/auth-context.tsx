@@ -34,6 +34,8 @@ export type ApiMeta = {
   syncApi: string;
   authApi: string;
   requireApiAuth: string;
+  /** `GET/POST /admin/users` при PostgreSQL + JWT + REQUIRE_API_AUTH. */
+  adminUsersApi?: string;
 };
 
 export type AuthUser = {

@@ -60,6 +60,9 @@ export function userMayPerformSyncAction(
 
 export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => void | Promise<void>;
 
+/** Управление учётными записями (`GET/POST /admin/users`) — только admin/manager. */
+const USER_MANAGEMENT_ROLES = ["admin", "manager"] as const;
+
 export type BusinessRouteAuth = {
   dataRead: AuthPreHandler[];
   tripReportRead: AuthPreHandler[];
@@ -74,6 +77,8 @@ export type BusinessRouteAuth = {
   catalogWrite: AuthPreHandler[];
   /** POST/DELETE /warehouses, /product-grades — только admin/manager. */
   inventoryCatalogWrite: AuthPreHandler[];
+  /** Список и создание пользователей — только admin/manager (зам не выдаёт роли admin/manager без самого admin). */
+  userManagement: AuthPreHandler[];
 };
 
 const EMPTY_AUTH: BusinessRouteAuth = {
@@ -89,6 +94,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   catalogRead: [],
   catalogWrite: [],
   inventoryCatalogWrite: [],
+  userManagement: [],
 };
 
 function requireGlobalRoles(allowed: readonly string[]): AuthPreHandler {
@@ -125,6 +131,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
+    userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
   };
 }
 

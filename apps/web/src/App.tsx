@@ -18,6 +18,7 @@ import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { TripReportPanel } from "./components/TripReportPanel.js";
 import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
+import { AdminUsersPanel } from "./components/AdminUsersPanel.js";
 import { InventoryAdminPanel } from "./components/InventoryAdminPanel.js";
 import { OfflineQueuePanel } from "./components/OfflineQueuePanel.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
@@ -202,6 +203,14 @@ export function App() {
                   <section className="birzha-card">
                     <InventoryAdminPanel />
                   </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <RequirePanel panel="users">
+                  <AdminUsersPanel />
                 </RequirePanel>
               }
             />
