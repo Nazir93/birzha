@@ -1,26 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
 
-import {
-  cabinetIdFromPathname,
-  cabinetForUser,
-  hrefForPanelInCabinet,
-  operationsPanelOrder,
-  type CabinetId,
-  type PanelId,
-} from "../auth/role-panels.js";
+import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "../auth/cabinet-nav.js";
+import { cabinetIdFromPathname, cabinetForUser, type CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
-import { accounting, adminRoutes, login, ops, prefix, sales } from "../routes.js";
-
-const panelLabel: Record<PanelId, string> = {
-  nakladnaya: "Накладная",
-  distribution: "Распределение",
-  reports: "Отчёты и рейсы",
-  operations: "Операции",
-  offline: "Офлайн-очередь",
-  service: "Диагностика",
-  inventory: "Склады и калибры",
-  users: "Сотрудники",
-};
 
 function navLinkClass(active: boolean): string {
   return `birzha-nav__link${active ? " birzha-nav__link--active" : ""}`;
@@ -29,41 +11,10 @@ function navLinkClass(active: boolean): string {
 export function AppNav() {
   const { meta, user, logout, ready } = useAuth();
   const { pathname } = useLocation();
-  const cabinet = cabinetIdFromPathname(pathname) ?? (user ? cabinetForUser(user) : "operations");
+  const cabinet: CabinetId = cabinetIdFromPathname(pathname) ?? (user ? cabinetForUser(user) : "operations");
 
   const showRestricted = ready && meta?.authApi === "enabled" && user !== null;
-
-  const buildLinks: { to: string; label: string; key: string }[] = (() => {
-    if (!user || !showRestricted) {
-      return [
-        { key: "nakl", to: ops.purchaseNakladnaya, label: "Накладная" },
-        { key: "dist", to: ops.distribution, label: "Распределение" },
-        { key: "rep", to: ops.reports, label: "Отчёты и рейсы" },
-        { key: "op", to: ops.operations, label: "Операции" },
-        { key: "off", to: ops.offline, label: "Офлайн-очередь" },
-      ];
-    }
-
-    const out: { to: string; label: string; key: string }[] = [];
-    if (cabinet === "admin") {
-      out.push({ to: adminRoutes.home, label: "Сводка", key: "admin-home" });
-    }
-    if (cabinet === "sales") {
-      out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
-    }
-    if (cabinet === "accounting") {
-      out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
-      out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
-    }
-    const panelOrder = operationsPanelOrder(user);
-    for (const p of panelOrder) {
-      const to = hrefForPanelInCabinet(user, p, cabinet);
-      if (to) {
-        out.push({ to, label: panelLabel[p], key: p });
-      }
-    }
-    return out;
-  })();
+  const buildLinks = buildCabinetNavEntries(cabinet, user, showRestricted);
 
   const titleSuffix: Record<CabinetId, string> = {
     admin: "админ",
@@ -79,7 +30,7 @@ export function AppNav() {
           key={`${key}-${to}`}
           to={to}
           className={({ isActive }) => navLinkClass(isActive)}
-          end={to === prefix.admin || to === prefix.sales || to === prefix.accounting}
+          end={cabinetNavLinkUsesEnd(cabinet, to)}
         >
           {label}
         </NavLink>
@@ -96,7 +47,7 @@ export function AppNav() {
               </button>
             </>
           ) : (
-            <NavLink to={login} end className={({ isActive }) => navLinkClass(isActive)}>
+            <NavLink to="/login" end className={({ isActive }) => navLinkClass(isActive)}>
               Вход
             </NavLink>
           )}

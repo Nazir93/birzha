@@ -256,35 +256,65 @@ export function AdminUsersPanel() {
 
   if (!showApi) {
     return (
-      <section className="birzha-card" aria-labelledby="admin-users-heading">
-        <h2 id="admin-users-heading" className="birzha-section-title">
-          Сотрудники
-        </h2>
-        <p style={muted}>
-          Раздел доступен при работающей базе, JWT и обязательном входе. Выполните вход под администратором или
-          руководителем ({adminRoutes.home} → Вход).
-        </p>
-        <Link to={ops.operations} style={{ ...btnStyle, display: "inline-block", marginTop: "0.75rem" }}>
-          Перейти к операциям
-        </Link>
+      <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
+        <header className="birzha-home-hero">
+          <div>
+            <p className="birzha-home-hero__eyebrow">Доступ</p>
+            <h2 id="admin-users-heading" className="birzha-home-hero__title">
+              Сотрудники
+            </h2>
+            <p className="birzha-home-hero__lead">
+              Раздел доступен при работающей базе, JWT и обязательном входе под администратором или руководителем.
+            </p>
+          </div>
+          <nav className="birzha-home-actions no-print" aria-label="Действия">
+            <Link to={ops.operations} className="birzha-home-action">
+              <span>Кабинет</span>
+              <strong>Перейти к операциям</strong>
+            </Link>
+            <Link to={adminRoutes.home} className="birzha-home-action">
+              <span>Админка</span>
+              <strong>Сводка</strong>
+            </Link>
+          </nav>
+        </header>
       </section>
     );
   }
 
   return (
-    <section className="birzha-card" aria-labelledby="admin-users-heading">
-      <h2 id="admin-users-heading" className="birzha-section-title">
-        Сотрудники
-      </h2>
-      <p style={{ ...muted, marginTop: 0 }}>
-        У каждого человека — свой логин и одна роль. Зам (роль «Руководитель») не создаёт и не удаляет учётки
-        администраторов и руководителей; смена пароля — только сотрудникам без этих ролей (свой пароль меняет любой).
-        Последнего администратора удалить нельзя.
-      </p>
+    <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
+      <header className="birzha-home-hero">
+        <div>
+          <p className="birzha-home-hero__eyebrow">Команда</p>
+          <h2 id="admin-users-heading" className="birzha-home-hero__title">
+            Сотрудники
+          </h2>
+          <p className="birzha-home-hero__lead">
+            Логины, роли и пароли в одном защищённом разделе. Последнего администратора удалить нельзя.
+          </p>
+        </div>
+        <div className="birzha-home-actions no-print" aria-label="Правила доступа">
+          <div className="birzha-home-action" role="note">
+            <span>Роль manager</span>
+            <strong>Без admin/manager</strong>
+          </div>
+          <div className="birzha-home-action" role="note">
+            <span>Пароль</span>
+            <strong>От 10 символов</strong>
+          </div>
+        </div>
+      </header>
 
-      <div style={{ marginTop: "1rem" }}>
-        <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", alignItems: "flex-end", marginTop: "0.5rem" }}>
+      <div className="birzha-home-work-card">
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Создание</p>
+            <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
+          </div>
+          <p className="birzha-section-heading__note">Один человек — один логин и одна роль</p>
+        </div>
+        <div className="birzha-form-grid birzha-form-grid--actions">
           <label style={{ fontSize: "0.88rem" }}>
             Логин
             <input
@@ -343,8 +373,14 @@ export function AdminUsersPanel() {
         )}
       </div>
 
-      <div style={{ marginTop: "1.35rem" }}>
-        <h3 className="birzha-section-title birzha-section-title--sm">Список учётных записей</h3>
+      <div className="birzha-home-work-card">
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Учётные записи</p>
+            <h3 className="birzha-section-title birzha-section-title--sm">Список пользователей</h3>
+          </div>
+          <p className="birzha-section-heading__note">Пароли и удаление — в строке сотрудника</p>
+        </div>
         {listQ.isPending && <LoadingBlock label="Загрузка списка…" minHeight={72} />}
         {listQ.isError && (
           <p role="alert" style={errorText}>
@@ -352,8 +388,8 @@ export function AdminUsersPanel() {
           </p>
         )}
         {listQ.data && user && (
-          <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
-            <table style={tableStyle} aria-label="Пользователи">
+          <div className="birzha-table-scroll">
+            <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Пользователи">
               <thead>
                 <tr>
                   <th scope="col" style={thHead}>

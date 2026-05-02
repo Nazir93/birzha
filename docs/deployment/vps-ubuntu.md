@@ -218,6 +218,10 @@ sudo systemctl restart birzha-api
 curl -fsS http://127.0.0.1:3000/health
 ```
 
+Проверка, что поднялся **новый** API (после релизов с новыми полями в `/meta`): `curl -sS http://127.0.0.1:3000/meta` — в JSON должны быть в том числе **`adminUsersApi`** и **`requireApiAuth`**. Если полей нет, чаще всего **не пересобрали** `apps/api` (`pnpm exec turbo run build --force --filter=@birzha/api`) или unit systemd указывает на другой каталог/старый `dist`.
+
+Если **`git pull`** ругается на локальный **`deploy/server-update.sh`** (часто это только смена режима **`chmod +x`**): `git restore deploy/server-update.sh` и снова pull, либо один раз **`git config core.filemode false`** в клоне на сервере.
+
 **Опционально:** `chmod +x deploy/server-update.sh` (один раз) и после свежего бэкапа `BIRZHA_BACKUP_CONFIRMED=1 ./deploy/server-update.sh` — эквивалент тому же, см. `deploy/server-update.sh`. Без подтверждения бэкапа скрипт остановится перед `db:push`.
 
 ### 10.1. Только сброс данных (для тестов), без смены схемы

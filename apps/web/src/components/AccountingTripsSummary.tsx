@@ -109,17 +109,16 @@ export function AccountingTripsSummary() {
   const moreThanTable = totalInDb > MAX_TRIPS;
 
   return (
-    <div style={{ marginTop: "1.25rem" }} role="region" aria-labelledby="acc-ledger-h" id="acc-trips">
-      <h3 id="acc-ledger-h" style={{ fontSize: "1rem", margin: "0 0 0.35rem" }}>
-        Выручка, себестоимость и валовая прибыль по рейсам
-      </h3>
-      <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.55 }}>
-        <strong>Выручка</strong> — из журнала продаж; <strong>себестоимость проданного</strong> и{" "}
-        <strong>недостачи</strong> — по закупочной цене партии (руб/кг);{" "}
-        <strong>валовая прибыль</strong> = выручка − себестоимость продаж − себестоимость недостач. Расходы на логистику
-        и прочие накладные в этой цифре <strong>не вычитаются</strong> — отдельного учёта расходов рейса в системе нет.
-        До {MAX_TRIPS} рейсов в таблице; разбивка по клиентам — в «Детали».
-      </p>
+    <section className="birzha-home-work-card" role="region" aria-labelledby="acc-ledger-h" id="acc-trips">
+      <div className="birzha-section-heading">
+        <div>
+          <p className="birzha-section-heading__eyebrow">Рейсы</p>
+          <h3 id="acc-ledger-h" className="birzha-section-title birzha-section-title--sm">
+            Выручка, себестоимость и валовая прибыль
+          </h3>
+        </div>
+        <p className="birzha-section-heading__note">До {MAX_TRIPS} рейсов в сводке</p>
+      </div>
       {moreThanTable ? (
         <p style={{ ...muted, margin: "0 0 0.5rem" }}>
           Всего в системе {totalInDb} рейсов; в сводку попадают первые {MAX_TRIPS} (по номеру). Остальные — выберите
@@ -127,7 +126,7 @@ export function AccountingTripsSummary() {
         </p>
       ) : null}
       {revenueChartItems.length > 0 ? (
-        <div className="birzha-chart-card" style={{ marginBottom: "0.9rem" }}>
+        <div className="birzha-chart-card birzha-chart-card--premium" style={{ marginBottom: "0.9rem" }}>
           <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 600 }}>Выручка по рейсам</h4>
           <HorizontalBarChart
             items={revenueChartItems}
@@ -255,6 +254,6 @@ export function AccountingTripsSummary() {
       {hasError && !anyLoading ? (
         <p style={{ ...muted, marginTop: "0.5rem" }}>Часть отчётов не загрузилась — обновите страницу.</p>
       ) : null}
-    </div>
+    </section>
   );
 }

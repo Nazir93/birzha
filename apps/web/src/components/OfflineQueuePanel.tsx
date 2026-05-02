@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   enqueue,
@@ -15,13 +15,12 @@ import { getOutboxScopeKey } from "../sync/outbox-scope.js";
 import { useAuth } from "../auth/auth-context.js";
 import { btnStyleInline, errorText, muted, preJson, warnText } from "../ui/styles.js";
 
-type Props = { sectionStyle: CSSProperties };
 const showDeveloperTools = import.meta.env.DEV;
 
 /**
  * Блок «офлайн-очередь / sync» — вынесен, чтобы маршруты /o и /s использовали один сценарий.
  */
-export function OfflineQueuePanel({ sectionStyle }: Props) {
+export function OfflineQueuePanel() {
   const { meta } = useAuth();
   const [queueTick, setQueueTick] = useState(0);
   const refreshQueue = useCallback(() => setQueueTick((t) => t + 1), []);
@@ -81,8 +80,18 @@ export function OfflineQueuePanel({ sectionStyle }: Props) {
   const syncEnabled = meta?.syncApi === "enabled";
 
   return (
-    <section style={sectionStyle} aria-labelledby="offline-heading">
-      <strong id="offline-heading">Неотправленные действия</strong>
+    <section className="birzha-home-work-card" aria-labelledby="offline-heading">
+      <div className="birzha-section-heading">
+        <div>
+          <p className="birzha-section-heading__eyebrow">Офлайн</p>
+          <h2 id="offline-heading" className="birzha-section-title">
+            Неотправленные действия
+          </h2>
+        </div>
+        <p className="birzha-section-heading__note">
+          В очереди: <strong id="offline-queue-count">{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
+        </p>
+      </div>
       <p style={{ ...muted, margin: "0.5rem 0" }}>
         Если связь пропала, действия сохраняются на устройстве и отправляются при появлении сети. При ошибке первое
         действие остаётся в очереди, чтобы его можно было проверить и повторить.
@@ -92,9 +101,6 @@ export function OfflineQueuePanel({ sectionStyle }: Props) {
           Синхронизация временно недоступна на сервере. Проверьте связь или обратитесь к администратору.
         </p>
       )}
-      <p style={{ margin: "0.35rem 0" }}>
-        В очереди: <strong id="offline-queue-count">{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
-      </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.5rem" }}>
         {showDeveloperTools && (
           <button type="button" style={btnStyleInline} onClick={handleEnqueueDemo}>

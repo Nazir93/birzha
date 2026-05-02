@@ -1,29 +1,73 @@
+import { Suspense, lazy } from "react";
 import { useLocation, Navigate, Outlet, Route, Routes } from "react-router-dom";
+
 import { useAuth } from "./auth/auth-context.js";
 import { defaultRouteForUser } from "./auth/role-panels.js";
+import {
+  AccountingCabinetLayout,
+  AdminCabinetLayout,
+  OperationsCabinetLayout,
+  SalesCabinetLayout,
+} from "./components/CabinetShellLayout.js";
 import { AppNav } from "./components/AppNav.js";
-import { CreateTripIfAllowed } from "./components/CreateTripIfAllowed.js";
-import { AdminCabinetHome } from "./components/AdminCabinetHome.js";
-import { SellerCabinetHome } from "./components/SellerCabinetHome.js";
-import { SellerSalesOperationsRedirect } from "./components/SellerSalesOperationsRedirect.js";
-import { AccountingCabinetHome } from "./components/AccountingCabinetHome.js";
-import { CounterpartiesPanel } from "./components/CounterpartiesPanel.js";
-import { LoginPage } from "./components/LoginPage.js";
-import { AllocationPanel } from "./components/AllocationPanel.js";
-import { OperationsPanel } from "./components/OperationsPanel.js";
-import { PurchaseNakladnayaDetailSection } from "./components/PurchaseNakladnayaDetailSection.js";
-import { PurchaseNakladnayaSection } from "./components/PurchaseNakladnayaSection.js";
+import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
-import { TripReportPanel } from "./components/TripReportPanel.js";
-import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
-import { AdminUsersPanel } from "./components/AdminUsersPanel.js";
-import { InventoryAdminPanel } from "./components/InventoryAdminPanel.js";
-import { OfflineQueuePanel } from "./components/OfflineQueuePanel.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingBlock } from "./ui/LoadingIndicator.js";
-import { muted, preJson, errorText } from "./ui/styles.js";
+import { errorText, muted, preJson } from "./ui/styles.js";
+
+const AccountingCabinetHome = lazy(() =>
+  import("./components/AccountingCabinetHome.js").then((m) => ({ default: m.AccountingCabinetHome })),
+);
+const AdminCabinetHome = lazy(() =>
+  import("./components/AdminCabinetHome.js").then((m) => ({ default: m.AdminCabinetHome })),
+);
+const AdminUsersPanel = lazy(() =>
+  import("./components/AdminUsersPanel.js").then((m) => ({ default: m.AdminUsersPanel })),
+);
+const AllocationPanel = lazy(() =>
+  import("./components/AllocationPanel.js").then((m) => ({ default: m.AllocationPanel })),
+);
+const CounterpartiesPanel = lazy(() =>
+  import("./components/CounterpartiesPanel.js").then((m) => ({ default: m.CounterpartiesPanel })),
+);
+const CreateTripIfAllowed = lazy(() =>
+  import("./components/CreateTripIfAllowed.js").then((m) => ({ default: m.CreateTripIfAllowed })),
+);
+const InventoryAdminPanel = lazy(() =>
+  import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
+);
+const LoginPage = lazy(() => import("./components/LoginPage.js").then((m) => ({ default: m.LoginPage })));
+const OfflineQueuePanel = lazy(() =>
+  import("./components/OfflineQueuePanel.js").then((m) => ({ default: m.OfflineQueuePanel })),
+);
+const OperationsPanel = lazy(() =>
+  import("./components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
+);
+const PurchaseNakladnayaDetailSection = lazy(() =>
+  import("./components/PurchaseNakladnayaDetailSection.js").then((m) => ({
+    default: m.PurchaseNakladnayaDetailSection,
+  })),
+);
+const PurchaseNakladnayaSection = lazy(() =>
+  import("./components/PurchaseNakladnayaSection.js").then((m) => ({ default: m.PurchaseNakladnayaSection })),
+);
+const SellerCabinetHome = lazy(() =>
+  import("./components/SellerCabinetHome.js").then((m) => ({ default: m.SellerCabinetHome })),
+);
+const SellerSalesOperationsRedirect = lazy(() =>
+  import("./components/SellerSalesOperationsRedirect.js").then((m) => ({ default: m.SellerSalesOperationsRedirect })),
+);
+const TripReportPanel = lazy(() =>
+  import("./components/TripReportPanel.js").then((m) => ({ default: m.TripReportPanel })),
+);
+
+function isCabinetShellPath(pathname: string): boolean {
+  const roots = [prefix.admin, prefix.operations, prefix.sales, prefix.accounting] as const;
+  return roots.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 function HomeRedirect() {
   const { ready, meta, user } = useAuth();
@@ -39,36 +83,11 @@ function HomeRedirect() {
 }
 
 function AppHeading() {
-  const { pathname } = useLocation();
-  if (pathname.startsWith(prefix.admin)) {
-    return (
-      <h1 className="birzha-page-title no-print">
-        Биржа <span className="birzha-page-title__suffix">— админ</span>
-      </h1>
-    );
-  }
-  if (pathname.startsWith(prefix.operations)) {
-    return (
-      <h1 className="birzha-page-title no-print">
-        Биржа <span className="birzha-page-title__suffix">— склад, закуп, рейс</span>
-      </h1>
-    );
-  }
-  if (pathname.startsWith(prefix.sales)) {
-    return (
-      <h1 className="birzha-page-title no-print">
-        Биржа <span className="birzha-page-title__suffix">— продавец</span>
-      </h1>
-    );
-  }
-  if (pathname.startsWith(prefix.accounting)) {
-    return (
-      <h1 className="birzha-page-title no-print">
-        Биржа <span className="birzha-page-title__suffix">— бухгалтерия</span>
-      </h1>
-    );
-  }
   return <h1 className="birzha-page-title no-print">Биржа</h1>;
+}
+
+function RouteFallback() {
+  return <LoadingBlock label="Загрузка раздела…" minHeight={96} />;
 }
 
 function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | null; metaJson: string | null }) {
@@ -96,10 +115,11 @@ export function App() {
   const metaJson = meta ? JSON.stringify(meta, null, 2) : null;
   const { pathname } = useLocation();
   const showChrome = pathname !== login;
+  const cabinetShell = isCabinetShellPath(pathname);
 
   return (
-    <main className="app-shell">
-      {showChrome ? (
+    <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
+      {showChrome && !cabinetShell ? (
         <header className="birzha-app-header no-print">
           <AppHeading />
           {import.meta.env.DEV ? (
@@ -112,19 +132,20 @@ export function App() {
         </header>
       ) : null}
 
-      <Routes>
-        <Route path={login} element={<LoginPage />} />
-        <Route element={<RequireApiAuthGate />}>
-          <Route path="/" element={<HomeRedirect />} />
-          {legacyPathList.map((p) => (
-            <Route key={p} path={p} element={<LegacyPathRedirect />} />
-          ))}
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path={login} element={<LoginPage />} />
+          <Route element={<RequireApiAuthGate />}>
+            <Route path="/" element={<HomeRedirect />} />
+            {legacyPathList.map((p) => (
+              <Route key={p} path={p} element={<LegacyPathRedirect />} />
+            ))}
 
           <Route
             path={prefix.operations}
             element={
               <RequireCabinet id="operations">
-                <Outlet />
+                <OperationsCabinetLayout />
               </RequireCabinet>
             }
           >
@@ -179,9 +200,7 @@ export function App() {
               path="offline"
               element={
                 <RequirePanel panel="offline">
-                  <section className="birzha-card">
-                    <OfflineQueuePanel sectionStyle={{}} />
-                  </section>
+                  <OfflineQueuePanel />
                 </RequirePanel>
               }
             />
@@ -192,7 +211,7 @@ export function App() {
             path={prefix.admin}
             element={
               <RequireCabinet id="admin">
-                <Outlet />
+                <AdminCabinetLayout />
               </RequireCabinet>
             }
           >
@@ -226,9 +245,7 @@ export function App() {
               index
               element={
                 <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <AdminCabinetHome />
-                  </section>
+                  <AdminCabinetHome />
                 </RequirePanel>
               }
             />
@@ -238,7 +255,7 @@ export function App() {
             path={prefix.sales}
             element={
               <RequireCabinet id="sales">
-                <Outlet />
+                <SalesCabinetLayout />
               </RequireCabinet>
             }
           >
@@ -260,9 +277,7 @@ export function App() {
               path="offline"
               element={
                 <RequirePanel panel="offline">
-                  <section className="birzha-card">
-                    <OfflineQueuePanel sectionStyle={{}} />
-                  </section>
+                  <OfflineQueuePanel />
                 </RequirePanel>
               }
             />
@@ -282,7 +297,7 @@ export function App() {
             path={prefix.accounting}
             element={
               <RequireCabinet id="accounting">
-                <Outlet />
+                <AccountingCabinetLayout />
               </RequireCabinet>
             }
           >
@@ -319,9 +334,10 @@ export function App() {
             />
           </Route>
 
-          <Route path="*" element={<HomeRedirect />} />
-        </Route>
-      </Routes>
+            <Route path="*" element={<HomeRedirect />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </main>
   );
 }

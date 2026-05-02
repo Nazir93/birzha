@@ -317,10 +317,16 @@ export function OperationsPanel() {
       )}
 
       <section className="birzha-panel" aria-labelledby="op-sec-ship">
-        <h3 id="op-sec-ship" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          1. Отгрузить в рейс
-        </h3>
-        <p style={muted}>
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Шаг 1</p>
+            <h3 id="op-sec-ship" className="birzha-section-title birzha-section-title--sm">
+              Отгрузить в рейс
+            </h3>
+          </div>
+          <p className="birzha-section-heading__note">Партия, накладная или отбор из распределения</p>
+        </div>
+        <p style={{ ...muted, marginTop: 0 }}>
           {hasDistributionSelection ? (
             <>
               Вы пришли из <strong>Распределения</strong>: ниже отгружается <strong>один собранный отбор</strong> (свод по
@@ -583,10 +589,15 @@ export function OperationsPanel() {
       <SellFromTripSection variant="operations" />
 
       <section className="birzha-panel" aria-labelledby="op-sec-short">
-        <h3 id="op-sec-short" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          3. Недостача по рейсу (приёмка)
-        </h3>
-        <p style={muted}>Зафиксируйте недостачу при приёмке рейса: выберите партию, рейс, кг и причину.</p>
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Шаг 3</p>
+            <h3 id="op-sec-short" className="birzha-section-title birzha-section-title--sm">
+              Недостача по рейсу
+            </h3>
+          </div>
+          <p className="birzha-section-heading__note">Партия, рейс, кг и причина при приёмке</p>
+        </div>
         <label htmlFor="op-in-short-batch" style={{ fontSize: "0.88rem" }}>
           Партия *
         </label>

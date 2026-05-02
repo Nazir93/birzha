@@ -271,20 +271,24 @@ export function PurchaseNakladnayaSection() {
 
   return (
     <section className="birzha-panel" aria-labelledby="nakl-heading" role="region" aria-label="Закупочная накладная">
-      <h3 id="nakl-heading" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-        Закупочная накладная
-      </h3>
-      <p style={{ ...muted, marginBottom: "0.6rem" }}>
-        <strong>Шаг 1 (приём):</strong> ввод по факту приёмки — как на бумаге. После сохранения на выбранном складе появятся партии; дальше —{" "}
-        <Link to={ops.distribution} style={{ fontWeight: 600 }}>
-          Распределение
-        </Link>{" "}
-        и{" "}
-        <Link to={ops.operations} style={{ fontWeight: 600 }}>
-          Операции
-        </Link>
-        .
-      </p>
+      <div className="birzha-section-heading">
+        <div>
+          <p className="birzha-section-heading__eyebrow">Приёмка</p>
+          <h3 id="nakl-heading" className="birzha-section-title birzha-section-title--sm">
+            Закупочная накладная
+          </h3>
+        </div>
+        <p className="birzha-section-heading__note">
+          После сохранения партии появятся в{" "}
+          <Link to={ops.distribution} style={{ fontWeight: 600 }}>
+            распределении
+          </Link>{" "}
+          и{" "}
+          <Link to={ops.operations} style={{ fontWeight: 600 }}>
+            операциях
+          </Link>
+        </p>
+      </div>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
       {catalogsEmptyOk && canManageCatalog && (
@@ -407,8 +411,8 @@ export function PurchaseNakladnayaSection() {
           , затем обновите страницу.
         </p>
       )}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>
+      <div className="birzha-table-scroll">
+        <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", minWidth: 780, width: "100%" }}>
           <thead>
             <tr>
               <th style={thHeadDense}>Товар / калибр</th>
@@ -587,41 +591,43 @@ export function PurchaseNakladnayaSection() {
           <p style={{ ...muted, marginBottom: "0.35rem" }}>
             Сохранённые накладные — нажмите на <strong>номер</strong>, чтобы открыть документ со всеми строками и партиями.
           </p>
-          <table style={{ borderCollapse: "collapse", fontSize: "0.82rem" }}>
-            <thead>
-              <tr>
-                <th style={thHeadDense}>Номер</th>
-                <th style={thHeadDense}>Дата</th>
-                <th style={thHeadDense}>Склад</th>
-                <th style={thHeadDense}>Строк</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listQ.data.purchaseDocuments.slice(0, 50).map((d) => {
-                const wh = warehousesQ.data?.warehouses.find((w) => w.id === d.warehouseId);
-                return (
-                  <tr key={d.id}>
-                    <td style={thtdDense}>
-                      <Link to={purchaseNakladnayaDocumentPath(d.id)} style={{ fontWeight: 600 }}>
-                        {d.documentNumber}
-                      </Link>
-                    </td>
-                    <td style={thtdDense}>{d.docDate}</td>
-                    <td style={thtdDense}>
-                      {wh ? (
-                        <>
-                          {wh.name} <span className="birzha-text-muted">({wh.code})</span>
-                        </>
-                      ) : (
-                        <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>
-                      )}
-                    </td>
-                    <td style={thtdDense}>{d.lineCount}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="birzha-table-scroll">
+            <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
+              <thead>
+                <tr>
+                  <th style={thHeadDense}>Номер</th>
+                  <th style={thHeadDense}>Дата</th>
+                  <th style={thHeadDense}>Склад</th>
+                  <th style={thHeadDense}>Строк</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listQ.data.purchaseDocuments.slice(0, 50).map((d) => {
+                  const wh = warehousesQ.data?.warehouses.find((w) => w.id === d.warehouseId);
+                  return (
+                    <tr key={d.id}>
+                      <td style={thtdDense}>
+                        <Link to={purchaseNakladnayaDocumentPath(d.id)} style={{ fontWeight: 600 }}>
+                          {d.documentNumber}
+                        </Link>
+                      </td>
+                      <td style={thtdDense}>{d.docDate}</td>
+                      <td style={thtdDense}>
+                        {wh ? (
+                          <>
+                            {wh.name} <span className="birzha-text-muted">({wh.code})</span>
+                          </>
+                        ) : (
+                          <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>
+                        )}
+                      </td>
+                      <td style={thtdDense}>{d.lineCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>

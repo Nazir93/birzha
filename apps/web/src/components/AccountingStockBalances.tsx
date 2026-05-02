@@ -104,33 +104,34 @@ export function AccountingStockBalances() {
   }
 
   return (
-    <section className="birzha-panel" id="acc-stock" aria-labelledby="acc-stock-h">
-      <h3 id="acc-stock-h" className="birzha-section-title birzha-section-title--sm">
-        Остатки товара и оценка по закупу
-      </h3>
-      <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-        Данные из движений партий: <strong>на складе</strong> и <strong>в пути</strong> (отгружено в рейс, ещё не
-        продано). Оценка — по <strong>цене закупа руб/кг</strong> из партии (как в отчёте по рейсу); доп. расходы по шапке
-        накладной в этой оценке не делятся на кг.
-      </p>
+    <section className="birzha-panel birzha-home-work-card" id="acc-stock" aria-labelledby="acc-stock-h">
+      <div className="birzha-section-heading">
+        <div>
+          <p className="birzha-section-heading__eyebrow">Остатки</p>
+          <h3 id="acc-stock-h" className="birzha-section-title birzha-section-title--sm">
+            Товар и оценка по закупу
+          </h3>
+        </div>
+        <p className="birzha-section-heading__note">Склад, путь и закупочная стоимость</p>
+      </div>
       <div className="birzha-kpi-grid birzha-kpi-grid--wide">
-        <div className="birzha-kpi-tile">
+        <div className="birzha-kpi-tile birzha-kpi-tile--premium">
           <div className="birzha-kpi-tile__label">На складе, кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {totals.whKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
-        <div className="birzha-kpi-tile">
+        <div className="birzha-kpi-tile birzha-kpi-tile--premium">
           <div className="birzha-kpi-tile__label">Оценка остатка на складе</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valWhKop.toString())}</div>
         </div>
-        <div className="birzha-kpi-tile birzha-kpi-tile--amber">
+        <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
           <div className="birzha-kpi-tile__label">В пути (в рейсах), кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {totals.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
-        <div className="birzha-kpi-tile birzha-kpi-tile--amber">
+        <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
           <div className="birzha-kpi-tile__label">Оценка товара в пути</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
         </div>

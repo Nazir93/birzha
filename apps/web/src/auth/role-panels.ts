@@ -12,6 +12,18 @@ export type PanelId =
   | "inventory"
   | "users";
 
+/** Подписи вкладок навигации (шапка / сайдбар). */
+export const NAV_PANEL_LABELS: Record<PanelId, string> = {
+  nakladnaya: "Накладная",
+  distribution: "Распределение",
+  reports: "Отчёты и рейсы",
+  operations: "Операции",
+  offline: "Офлайн-очередь",
+  service: "Диагностика",
+  inventory: "Склады и калибры",
+  users: "Сотрудники",
+};
+
 const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   reports: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller", "accountant"],
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */

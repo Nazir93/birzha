@@ -299,37 +299,46 @@ export function InventoryAdminPanel() {
   }
 
   return (
-    <section className="birzha-panel" aria-labelledby="inv-adm-heading" role="region">
-      <h2 id="inv-adm-heading" className="birzha-section-title">
-        Админ: накладные, рейсы, направления, склады, калибры
-      </h2>
-      <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        Управление справочниками и <strong>данными</strong> закупочных накладных (только admin/manager). Ввод новых
-        накладных — в разделе{" "}
-        <Link to={ops.purchaseNakladnaya} style={{ fontWeight: 600 }}>
-          Накладная
-        </Link>{" "}
-        ({prefix.operations}).
-      </p>
-
-      <div id="batches-nakl-ref" style={{ marginBottom: "0.9rem" }}>
-        <h3
-          style={{
-            fontSize: "0.95rem",
-            margin: "0 0 0.4rem",
-            fontWeight: 600,
-            scrollMarginTop: "0.5rem",
-          }}
-        >
-          Партии по накладным (справка, чтение)
-        </h3>
-        <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.5rem" }}>
-          Свод id партий и кг: сворачивается по каждой накладной. <strong>Отгрузка в рейс</strong> — в{" "}
-          <Link to={ops.operations} style={{ fontWeight: 600 }}>
-            Операциях
+    <section className="birzha-home-premium" aria-labelledby="inv-adm-heading">
+      <header className="birzha-home-hero">
+        <div>
+          <p className="birzha-home-hero__eyebrow">Справочники</p>
+          <h2 id="inv-adm-heading" className="birzha-home-hero__title">
+            Склады и калибры
+          </h2>
+          <p className="birzha-home-hero__lead">
+            Справочники закупки, рейсы и справочная сводка партий для контроля данных.
+          </p>
+        </div>
+        <nav className="birzha-home-actions no-print" aria-label="Быстрые действия справочников">
+          <Link to={ops.purchaseNakladnaya} className="birzha-home-action">
+            <span>Ввод</span>
+            <strong>Накладная</strong>
           </Link>
-          .
-        </p>
+          <Link to={ops.operations} className="birzha-home-action">
+            <span>Движение</span>
+            <strong>Операции</strong>
+          </Link>
+        </nav>
+      </header>
+
+      <div id="batches-nakl-ref" className="birzha-home-work-card">
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Партии</p>
+            <h3
+              style={{
+                fontSize: "0.95rem",
+                margin: 0,
+                fontWeight: 600,
+                scrollMarginTop: "0.5rem",
+              }}
+            >
+              Партии по накладным
+            </h3>
+          </div>
+          <p className="birzha-section-heading__note">Справка: id партий и кг по документам</p>
+        </div>
         <BatchesByNakladnayaReference
           batches={batchesNaklRefQ.data?.batches}
           isLoading={batchesNaklRefQ.isPending}
@@ -340,14 +349,15 @@ export function InventoryAdminPanel() {
       </div>
 
       {tripsApiEnabled && (
-        <>
-          <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Рейсы</h3>
+        <div className="birzha-home-work-card">
+          <div className="birzha-section-heading">
+            <div>
+              <p className="birzha-section-heading__eyebrow">Логистика</p>
+              <h3 style={{ fontSize: "0.95rem", margin: 0 }}>Рейсы</h3>
+            </div>
+            <p className="birzha-section-heading__note">Создание и удаление пустых рейсов</p>
+          </div>
           {tripError && <p style={errorText}>{tripError}</p>}
-          <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
-            Создавайте рейс здесь или в кабинете операций. Удалить можно только пустой рейс — без отгрузок, продаж и недостач.
-            Использование в грузообороте — в{" "}
-            <Link to={ops.operations}>Операциях</Link>.
-          </p>
           <div
             style={{
               display: "flex",
@@ -438,8 +448,8 @@ export function InventoryAdminPanel() {
           {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
           {tripsQ.isPending && <p style={muted}>Список рейсов…</p>}
           {tripsQ.isSuccess && (
-            <div style={{ overflowX: "auto", marginBottom: "0.9rem" }}>
-              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+            <div className="birzha-table-scroll" style={{ marginBottom: "0.9rem" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 720 }}>
                 <thead>
                   <tr>
                     <th style={thHeadDense}>№ (борт)</th>
@@ -491,7 +501,7 @@ export function InventoryAdminPanel() {
               </table>
             </div>
           )}
-        </>
+        </div>
       )}
 
       <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Закупочные накладные (удаление)</h3>
@@ -499,8 +509,8 @@ export function InventoryAdminPanel() {
       {purchaseDocsQ.isError && <p style={errorText}>Не загрузились накладные: {String(purchaseDocsQ.error)}</p>}
       {purchaseDocsQ.isPending && <p style={muted}>Список накладных…</p>}
       {purchaseDocsQ.isSuccess && (
-        <div style={{ overflowX: "auto", marginBottom: "0.75rem" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+        <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 520 }}>
             <thead>
               <tr>
                 <th style={thHeadDense}>№</th>
@@ -589,8 +599,8 @@ export function InventoryAdminPanel() {
             </button>
           </div>
           {shipDestQ.isSuccess && (
-            <div style={{ overflowX: "auto", marginBottom: "0.75rem" }}>
-              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+            <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 620 }}>
                 <thead>
                   <tr>
                     <th style={thHeadDense}>Код</th>
@@ -671,8 +681,8 @@ export function InventoryAdminPanel() {
         </button>
       </div>
       {warehouseFormError && <p style={errorText}>{warehouseFormError}</p>}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+      <div className="birzha-table-scroll">
+        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 420 }}>
           <thead>
             <tr>
               <th style={thHeadDense}>Название</th>
@@ -749,8 +759,8 @@ export function InventoryAdminPanel() {
         </button>
       </div>
       {gradeFormError && <p style={errorText}>{gradeFormError}</p>}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem" }}>
+      <div className="birzha-table-scroll">
+        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 560 }}>
           <thead>
             <tr>
               <th style={thHeadDense}>Код</th>

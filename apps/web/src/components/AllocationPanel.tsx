@@ -531,49 +531,51 @@ export function AllocationPanel() {
                 Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
                 числятся — видно кг и калибр.
               </p>
-              <table style={{ ...tableStyle, fontSize: "0.88rem" }}>
-                <thead>
-                  <tr>
-                    <th scope="col" style={thHead}>
-                      Накладная
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Калибр / строка
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Остаток, кг
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {batchesOutsideNaklSelection.map((b) => (
-                    <tr key={b.id}>
-                      <td style={thtd}>
-                        {b.nakladnaya?.documentNumber ? (
-                          <>
-                            № {b.nakladnaya.documentNumber}
-                            {b.nakladnaya.documentId && (
-                              <>
-                                {" "}
-                                <Link
-                                  to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
-                                  style={{ fontSize: "0.82rem" }}
-                                >
-                                  открыть
-                                </Link>
-                              </>
-                            )}
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td style={thtd}>{formatNakladLineLabel(b)}</td>
-                      <td style={thtd}>{b.onWarehouseKg}</td>
+              <div className="birzha-table-scroll">
+                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 560 }}>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Накладная
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Калибр / строка
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Остаток, кг
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {batchesOutsideNaklSelection.map((b) => (
+                      <tr key={b.id}>
+                        <td style={thtd}>
+                          {b.nakladnaya?.documentNumber ? (
+                            <>
+                              № {b.nakladnaya.documentNumber}
+                              {b.nakladnaya.documentId && (
+                                <>
+                                  {" "}
+                                  <Link
+                                    to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
+                                    style={{ fontSize: "0.82rem" }}
+                                  >
+                                    открыть
+                                  </Link>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td style={thtd}>{formatNakladLineLabel(b)}</td>
+                        <td style={thtd}>{b.onWarehouseKg}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -593,8 +595,8 @@ export function AllocationPanel() {
           )}
 
           {selectedWarehouse && tableRows.length > 0 && (
-            <div style={{ overflowX: "auto" }}>
-                <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+            <div>
+              <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
                 2. Направление и отбор в рейс (по чекбоксам)
               </h3>
               {tableRows.length > 0 && (
@@ -645,10 +647,11 @@ export function AllocationPanel() {
                   </div>
                 </div>
               )}
-              <table style={tableStyle} aria-labelledby="alloc-table">
-                <thead>
-                  <tr>
-                    <th scope="col" style={{ ...thHead, width: "2.5rem" }}>
+              <div className="birzha-table-scroll">
+                <table style={{ ...tableStyle, minWidth: 920 }} aria-labelledby="alloc-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={{ ...thHead, width: "2.5rem" }}>
                       <input
                         type="checkbox"
                         title="Переключить все"
@@ -804,8 +807,9 @@ export function AllocationPanel() {
                       </tr>
                     );
                   })}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
               <p className="no-print" style={{ marginTop: "0.9rem" }}>
                 <button
                   type="button"
