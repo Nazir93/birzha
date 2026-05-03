@@ -71,6 +71,8 @@ export async function buildApp(options: {
   syncIdempotencyRepository?: SyncIdempotencyRepository;
   /** Справочник контрагентов; при `db` по умолчанию Drizzle, при полном in-memory стеке — in-memory. */
   counterpartyRepository?: CounterpartyRepository | null;
+  /** Для тестов: список полевых продавцов без PostgreSQL. */
+  listAssignableFieldSellers?: () => Promise<{ id: string; login: string }[]>;
 }): Promise<FastifyInstance> {
   const { env, db } = options;
   const app = Fastify({
@@ -362,7 +364,7 @@ export async function buildApp(options: {
       shortageRepository,
       batchRepository,
       routeAuth,
-      db ? () => listGlobalSellerUsers(db) : undefined,
+      options.listAssignableFieldSellers ?? (db ? () => listGlobalSellerUsers(db) : undefined),
     );
     registerBatchRoutes(
       app,

@@ -16,7 +16,7 @@ export class Trip {
     private readonly vehicleLabel: string | null,
     private readonly driverName: string | null,
     private readonly departedAt: Date | null,
-    private readonly assignedSellerUserId: string | null,
+    private assignedSellerUserId: string | null,
   ) {}
 
   static create(config: {
@@ -68,9 +68,17 @@ export class Trip {
     return this.departedAt;
   }
 
-  /** Продавец, закреплённый за рейсом; `null` — без закрепления (видят все с доступом к рейсам). */
+  /** Продавец, закреплённый за рейсом; только он видит рейс в полевом кабинете. */
   getAssignedSellerUserId(): string | null {
     return this.assignedSellerUserId;
+  }
+
+  assignSeller(userId: string): void {
+    const normalized = normText(userId);
+    if (!normalized) {
+      throw new Error("assignedSellerUserId не может быть пустым");
+    }
+    this.assignedSellerUserId = normalized;
   }
 
   canAcceptShipments(): boolean {

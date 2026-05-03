@@ -24,6 +24,7 @@ export type { UpdateBatchAllocationBody } from "./batch-allocation.js";
 export { postWarehouseWriteOffBodySchema } from "./warehouse-write-off.js";
 export type { PostWarehouseWriteOffBody } from "./warehouse-write-off.js";
 export {
+  assignTripSellerBodySchema,
   createBatchBodySchema,
   createCounterpartyBodySchema,
   createProductGradeBodySchema,

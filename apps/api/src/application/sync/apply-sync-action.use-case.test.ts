@@ -69,4 +69,51 @@ describe("ApplySyncActionUseCase", () => {
     const sold = await sales.totalGramsForTripAndBatch("t1", "b1");
     expect(sold).toBe(10_000n);
   });
+
+  it("seller sync не продаёт с неназначенного рейса", async () => {
+    const batches = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    const idem = new InMemorySyncIdempotencyRepository();
+
+    await new CreateTripUseCase(trips).execute({ id: "t-unassigned", tripNumber: "Ф-U" });
+    await new CreatePurchaseUseCase(batches).execute({
+      id: "b-u",
+      purchaseId: "p-u",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(batches, trips, shipments).execute({
+      batchId: "b-u",
+      kg: 10,
+      tripId: "t-unassigned",
+    });
+
+    const uc = new ApplySyncActionUseCase(idem, batches, trips, shipments, sales, shortages, counterparties);
+    const res = await uc.execute(
+      {
+        deviceId: "dev-seller",
+        localActionId: "loc-seller",
+        actionType: "sell_from_trip",
+        payload: {
+          batchId: "b-u",
+          tripId: "t-unassigned",
+          kg: 1,
+          saleId: "s-u",
+          pricePerKg: 1,
+        },
+      },
+      { recordedByUserId: "seller-1", roles: [{ roleCode: "seller", scopeType: "global", scopeId: "" }] },
+    );
+
+    expect(res.status).toBe("rejected");
+    if (res.status === "rejected") {
+      expect(res.errorCode).toBe("sync_forbidden");
+    }
+    expect(await sales.totalGramsForTripAndBatch("t-unassigned", "b-u")).toBe(0n);
+  });
 });

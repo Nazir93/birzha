@@ -138,6 +138,62 @@ describe("Trip HTTP", () => {
     await app.close();
   });
 
+  it("POST /trips/:id/assign-seller закрепляет рейс за продавцом", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+      tripRepository: trips,
+      listAssignableFieldSellers: async () => [{ id: "seller-u1", login: "seller1" }],
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "assign-t1", tripNumber: "Ф-ASG-1" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/trips/assign-t1/assign-seller",
+      payload: { sellerUserId: "seller-u1" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { trip: { assignedSellerUserId: string | null } | null };
+    expect(body.trip?.assignedSellerUserId).toBe("seller-u1");
+
+    await app.close();
+  });
+
+  it("POST /trips/:id/assign-seller отклоняет неизвестного продавца, если список доступен", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+      tripRepository: new InMemoryTripRepository(),
+      listAssignableFieldSellers: async () => [{ id: "seller-u1", login: "seller1" }],
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "assign-t2", tripNumber: "Ф-ASG-2" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/trips/assign-t2/assign-seller",
+      payload: { sellerUserId: "unknown" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect((JSON.parse(res.body) as { error: string }).error).toBe("seller_user_not_assignable");
+
+    await app.close();
+  });
+
   it("POST /trips/:id/close — затем отгрузка в рейс даёт 409", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const trips = new InMemoryTripRepository();

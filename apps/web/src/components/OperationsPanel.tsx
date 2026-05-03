@@ -21,6 +21,7 @@ import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import {
   batchesFullListQueryOptions,
   queryRoots,
+  tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { adminRoutes, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
@@ -58,10 +59,18 @@ export function OperationsPanel() {
   const batchesQuery = useQuery(batchesFullListQueryOptions());
 
   const tripsQuery = useQuery(tripsFullListQueryOptions());
+  const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const tripSelectOptions = useMemo(
     () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
     [tripsQuery.data?.trips],
   );
+  const fieldSellerLoginById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of fieldSellersQuery.data?.fieldSellers ?? []) {
+      m.set(s.id, s.login);
+    }
+    return m;
+  }, [fieldSellersQuery.data?.fieldSellers]);
 
   const shippableBatches = useMemo(() => {
     const list = batchesQuery.data?.batches ?? [];
@@ -168,6 +177,8 @@ export function OperationsPanel() {
   const [shipAllDocumentId, setShipAllDocumentId] = useState("");
   /** Всего ящиков в отгрузке «вся накладная»; распределяются по строкам пропорционально кг. */
   const [shipAllTotalPackages, setShipAllTotalPackages] = useState("");
+  const [assignTripId, setAssignTripId] = useState("");
+  const [assignSellerUserId, setAssignSellerUserId] = useState("");
 
   const ship = useMutation({
     mutationFn: async () => {
@@ -246,6 +257,24 @@ export function OperationsPanel() {
       invalidateDomain();
       setDistShipBatchIds(null);
       clearDistributionShipPayload();
+    },
+  });
+
+  const assignSellerToTrip = useMutation({
+    mutationFn: async () => {
+      const tripId = assignTripId.trim();
+      const sellerUserId = assignSellerUserId.trim();
+      if (!tripId) {
+        throw new Error("Выберите рейс");
+      }
+      if (!sellerUserId) {
+        throw new Error("Выберите продавца");
+      }
+      await apiPostJson(`/api/trips/${encodeURIComponent(tripId)}/assign-seller`, { sellerUserId });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     },
   });
 
@@ -586,12 +615,91 @@ export function OperationsPanel() {
         )}
       </section>
 
+      <section className="birzha-panel" aria-labelledby="op-sec-assign-seller">
+        <div className="birzha-section-heading">
+          <div>
+            <p className="birzha-section-heading__eyebrow">Шаг 2</p>
+            <h3 id="op-sec-assign-seller" className="birzha-section-title birzha-section-title--sm">
+              Отгрузить с рейса продавцу
+            </h3>
+          </div>
+          <p className="birzha-section-heading__note">Закрепить рейс за конкретным продавцом</p>
+        </div>
+        <p style={{ ...muted, marginTop: 0 }}>
+          После этого рейс появится только у выбранного продавца в кабинете продаж. Другие продавцы не увидят этот рейс и не
+          смогут провести по нему продажу.
+        </p>
+        <label htmlFor="op-sel-assign-trip" style={{ fontSize: "0.88rem" }}>
+          Рейс *
+        </label>
+        <select
+          id="op-sel-assign-trip"
+          value={assignTripId}
+          onChange={(e) => setAssignTripId(e.target.value)}
+          style={selectWide}
+          disabled={tripsQuery.isPending}
+        >
+          <option value="">{tripsQuery.isPending ? "— загрузка рейсов —" : "— выберите рейс —"}</option>
+          {tripSelectOptions.map((t) => {
+            const assigned = t.assignedSellerUserId ? fieldSellerLoginById.get(t.assignedSellerUserId) ?? t.assignedSellerUserId : null;
+            return (
+              <option key={t.id} value={t.id}>
+                {formatTripSelectLabel(t)}
+                {assigned ? ` · продавец: ${assigned}` : ""}
+              </option>
+            );
+          })}
+        </select>
+        <label htmlFor="op-sel-assign-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          Продавец *
+        </label>
+        <select
+          id="op-sel-assign-seller"
+          value={assignSellerUserId}
+          onChange={(e) => setAssignSellerUserId(e.target.value)}
+          style={selectWide}
+          disabled={fieldSellersQuery.isPending}
+        >
+          <option value="">{fieldSellersQuery.isPending ? "— загрузка продавцов —" : "— выберите продавца —"}</option>
+          {(fieldSellersQuery.data?.fieldSellers ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.login}
+            </option>
+          ))}
+        </select>
+        {fieldSellersQuery.isError && (
+          <p role="alert" style={{ ...warnText, marginTop: "0.35rem", fontSize: "0.86rem" }}>
+            Список продавцов не загрузился. Проверьте вход и права администратора, руководителя, закупщика или логиста.
+          </p>
+        )}
+        {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 && (
+          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.86rem" }}>
+            Активных продавцов нет — создайте учётную запись с ролью продавца в разделе «Сотрудники».
+          </p>
+        )}
+        <button
+          type="button"
+          style={{ ...btnStyle, marginTop: "0.5rem" }}
+          disabled={assignSellerToTrip.isPending}
+          aria-busy={assignSellerToTrip.isPending || undefined}
+          onClick={() => assignSellerToTrip.mutate()}
+        >
+          {assignSellerToTrip.isPending ? "Отгрузка…" : "Отгрузить с рейса продавцу"}
+        </button>
+        <FieldError error={assignSellerToTrip.error as Error | null} />
+        {assignSellerToTrip.isSuccess && (
+          <p style={successText} role="status">
+            Рейс закреплён за продавцом. У него появится этот рейс в кабинете продаж.
+          </p>
+        )}
+      </section>
+
       <SellFromTripSection variant="operations" />
 
       <section className="birzha-panel" aria-labelledby="op-sec-short">
         <div className="birzha-section-heading">
           <div>
-            <p className="birzha-section-heading__eyebrow">Шаг 3</p>
+            <p className="birzha-section-heading__eyebrow">Шаг 4</p>
             <h3 id="op-sec-short" className="birzha-section-title birzha-section-title--sm">
               Недостача по рейсу
             </h3>

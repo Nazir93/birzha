@@ -54,4 +54,11 @@ describe("Trip", () => {
     });
     expect(r.getAssignedSellerUserId()).toBe("u2");
   });
+
+  it("назначает продавца после создания рейса", () => {
+    const t = Trip.create({ id: "t-7", tripNumber: "Ф-102" });
+    t.assignSeller("  seller-1  ");
+    expect(t.getAssignedSellerUserId()).toBe("seller-1");
+    expect(() => t.assignSeller(" ")).toThrow("assignedSellerUserId");
+  });
 });

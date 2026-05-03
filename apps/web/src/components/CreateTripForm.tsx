@@ -106,7 +106,7 @@ export function CreateTripForm() {
         emptyLabel="— не задано —"
       />
       <label htmlFor="ct-assigned-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
-        Продавец в поле (опционально)
+        Продавец в поле (опционально, можно назначить позже)
       </label>
       <select
         id="ct-assigned-seller"
@@ -115,7 +115,7 @@ export function CreateTripForm() {
         style={{ ...fieldStyleCompact, maxWidth: "100%" }}
         disabled={fieldSellersQuery.isPending}
       >
-        <option value="">— общий рейс (не закреплять) —</option>
+        <option value="">— пока не показывать продавцам —</option>
         {(fieldSellersQuery.data?.fieldSellers ?? []).map((u) => (
           <option key={u.id} value={u.id}>
             {u.login}

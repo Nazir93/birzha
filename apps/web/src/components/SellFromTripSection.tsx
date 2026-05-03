@@ -302,11 +302,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       id={scrollTargetId}
     >
       <h3 id={headingId} style={{ margin: "0 0 0.35rem", fontSize: variant === "seller" ? "1.05rem" : "0.98rem" }}>
-        {variant === "seller" ? "Продажа с рейса" : "2. Продажа с рейса"}
+        {variant === "seller" ? "Продажа с рейса" : "3. Продажа с рейса"}
       </h3>
       {variant === "seller" ? (
         <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55, fontSize: "0.95rem" }}>
-          Выберите <strong>рейс</strong>, затем <strong>партию (накладная · калибр)</strong> — это товар в машине. Укажите{" "}
+          Рейс появится здесь после того, как админ, закупщик или логист выполнит <strong>«Отгрузить с рейса»</strong> на
+          вашу учётную запись. Выберите <strong>рейс</strong>, затем <strong>партию (накладная · калибр)</strong> — это товар в машине. Укажите{" "}
           <strong>килограммы</strong>, <strong>цену за кг</strong> и <strong>оплату</strong>. Для печати и сверки позже — раздел «Отчёты» в
           меню.
         </p>
@@ -363,7 +364,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
         <p style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
-          На этом рейсе нет массы для продажи: не было отгрузок в рейс или весь товар уже продан / списан по недостаче.
+          На этом рейсе нет массы для продажи: не было отгрузок со склада в рейс или весь товар уже продан / списан по недостаче.
         </p>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
@@ -447,7 +448,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
           {sellSelectionSummary.subUnitPackages && <> · остаток в пути &lt; 1 ящ (оценка по кг), в сделке — кг</>}
           {sellSelectionSummary.hasShipped && !sellSelectionSummary.hasPkgData && (
-            <> · ящики в отчёте не заданы — введите при «Отгрузить в рейс», иначе оценки нет</>
+            <> · ящики в отчёте не заданы — введите при отгрузке со склада в рейс, иначе оценки нет</>
           )}
         </p>
       )}

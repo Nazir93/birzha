@@ -123,7 +123,7 @@ export type TripJson = {
   driverName: string | null;
   /** UTC, ISO-8601. */
   departedAt: string | null;
-  /** Полевой продавец; null — общий рейс. */
+  /** Полевой продавец; null — рейс ещё не показывается продавцам. */
   assignedSellerUserId: string | null;
 };
 

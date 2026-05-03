@@ -39,6 +39,7 @@ import type { RecordTripShortageTransactionRunner } from "../application/trip/re
 import { RecordTripShortageUseCase } from "../application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "../application/trip/ship-to-trip.use-case.js";
 
+import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
 import { warehouseReadScopeIds } from "../auth/warehouse-scope.js";
 import { filterBatchJsonByWarehouseScope } from "./batch-json-warehouse-filter.js";
 import { listBatchesForHttp } from "./batch-list-http.js";
@@ -199,6 +200,15 @@ export function registerBatchRoutes(
             ? BigInt(body.cashKopecksMixed)
             : BigInt(body.cashKopecksMixed);
       const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles)) {
+        const trip = await trips.findById(body.tripId);
+        if (!trip) {
+          return reply.code(404).send({ error: "trip_not_found", tripId: body.tripId });
+        }
+        if (!tripVisibleToFieldSeller(trip, u.sub)) {
+          return reply.code(403).send({ error: "forbidden" });
+        }
+      }
       await sell.execute({
         batchId: params.batchId,
         tripId: body.tripId,

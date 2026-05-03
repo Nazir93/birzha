@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assignTripSellerBodySchema,
   createBatchBodySchema,
   createTripBodySchema,
   createProductGradeBodySchema,
@@ -297,5 +298,16 @@ describe("createTripBodySchema", () => {
         tripNumber: "1",
       }),
     ).toThrow();
+  });
+});
+
+describe("assignTripSellerBodySchema", () => {
+  it("принимает и trim sellerUserId", () => {
+    const r = assignTripSellerBodySchema.parse({ sellerUserId: "  seller-1  " });
+    expect(r.sellerUserId).toBe("seller-1");
+  });
+
+  it("отклоняет пустой sellerUserId", () => {
+    expect(() => assignTripSellerBodySchema.parse({ sellerUserId: "" })).toThrow();
   });
 });

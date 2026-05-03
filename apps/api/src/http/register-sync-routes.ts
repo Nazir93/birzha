@@ -30,7 +30,7 @@ export function registerSyncRoutes(
         }
       }
       const u = req.user as { sub: string; roles: AuthRoleGrant[] } | undefined;
-      const result = await applySync.execute(body, u ? { recordedByUserId: u.sub } : undefined);
+      const result = await applySync.execute(body, u ? { recordedByUserId: u.sub, roles: u.roles } : undefined);
       return reply.code(200).send(result);
     } catch (error) {
       return sendMappedError(reply, error);

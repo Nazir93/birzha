@@ -30,8 +30,8 @@ export function isGlobalSellerOnly(roles: AuthRoleGrant[]): boolean {
   return codes.has("seller");
 }
 
-/** Рейс виден полевому продавцу, если не закреплён или закреплён за ним. */
+/** Рейс виден полевому продавцу только после закрепления именно за ним. */
 export function tripVisibleToFieldSeller(trip: { getAssignedSellerUserId(): string | null }, sellerUserId: string): boolean {
   const a = trip.getAssignedSellerUserId();
-  return a == null || a === sellerUserId;
+  return a === sellerUserId;
 }

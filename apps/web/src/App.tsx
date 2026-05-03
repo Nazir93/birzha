@@ -15,7 +15,7 @@ import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
-import { LoadingBlock } from "./ui/LoadingIndicator.js";
+import { LoadingBlock, LoadingScreen } from "./ui/LoadingIndicator.js";
 import { errorText, muted, preJson } from "./ui/styles.js";
 
 const AccountingCabinetHome = lazy(() =>
@@ -87,7 +87,7 @@ function AppHeading() {
 }
 
 function RouteFallback() {
-  return <LoadingBlock label="Загрузка раздела…" minHeight={96} />;
+  return <LoadingScreen label="Загрузка раздела…" />;
 }
 
 function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | null; metaJson: string | null }) {

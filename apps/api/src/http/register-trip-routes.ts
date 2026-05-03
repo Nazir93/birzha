@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { createTripBodySchema } from "@birzha/contracts";
+import { assignTripSellerBodySchema, createTripBodySchema } from "@birzha/contracts";
 import { z } from "zod";
 
 import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
@@ -10,6 +10,7 @@ import type { TripListFilter, TripRepository } from "../application/ports/trip-r
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../application/ports/trip-shortage-repository.port.js";
+import { AssignTripSellerUseCase } from "../application/trip/assign-trip-seller.use-case.js";
 import { CloseTripUseCase } from "../application/trip/close-trip.use-case.js";
 import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
 import { DeleteTripUseCase } from "../application/trip/delete-trip.use-case.js";
@@ -38,6 +39,7 @@ export function registerTripRoutes(
   listAssignableFieldSellers?: () => Promise<{ id: string; login: string }[]>,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
+  const assignTripSeller = new AssignTripSellerUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
@@ -92,7 +94,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.get("/trips/field-seller-options", { ...withPreHandlers(routeAuth.tripWrite) }, async (_req, reply) => {
+  app.get("/trips/field-seller-options", { ...withPreHandlers(routeAuth.tripAssignSeller) }, async (_req, reply) => {
     try {
       const fieldSellers = await listFieldSellers();
       return reply.send({ fieldSellers });
@@ -151,6 +153,22 @@ export function registerTripRoutes(
       const body = createTripBodySchema.parse(req.body);
       await createTrip.execute(body);
       return reply.code(201).send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/trips/:tripId/assign-seller", { ...withPreHandlers(routeAuth.tripAssignSeller) }, async (req, reply) => {
+    try {
+      const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      const body = assignTripSellerBodySchema.parse(req.body);
+      const sellers = await listFieldSellers();
+      if (sellers.length > 0 && !sellers.some((s) => s.id === body.sellerUserId)) {
+        return reply.code(400).send({ error: "seller_user_not_assignable", sellerUserId: body.sellerUserId });
+      }
+      await assignTripSeller.execute({ tripId, sellerUserId: body.sellerUserId });
+      const trip = await trips.findById(tripId);
+      return reply.code(200).send({ ok: true, trip: trip ? tripToJson(trip) : null });
     } catch (error) {
       return sendMappedError(reply, error);
     }

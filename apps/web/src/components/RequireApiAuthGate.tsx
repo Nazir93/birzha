@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
 import { login } from "../routes.js";
-import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { LoadingScreen } from "../ui/LoadingIndicator.js";
 import { errorText } from "../ui/styles.js";
 
 /** Если `requireApiAuth` на сервере и сессии нет — редирект на `/login`. */
@@ -24,11 +24,7 @@ export function RequireApiAuthGate() {
   }
 
   if (!ready) {
-    return (
-      <div style={{ maxWidth: 400, margin: "2rem 1rem" }} role="status" aria-live="polite">
-        <LoadingBlock label="Проверяем вход и настройки…" minHeight={80} />
-      </div>
-    );
+    return <LoadingScreen label="Проверяем вход и настройки…" />;
   }
 
   if (meta?.requireApiAuth === "enabled" && !user) {

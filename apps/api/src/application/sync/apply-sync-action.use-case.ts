@@ -13,6 +13,9 @@ import type { ShipToTripTransactionRunner } from "../trip/ship-to-trip.use-case.
 import { ReceiveOnWarehouseUseCase } from "../warehouse/receive-on-warehouse.use-case.js";
 import { SellFromTripUseCase } from "../sale/sell-from-trip.use-case.js";
 import type { SellFromTripTransactionRunner } from "../sale/sell-from-trip.use-case.js";
+import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../../auth/seller-scope.js";
+import type { AuthRoleGrant } from "../../auth/role-grant.js";
+import { TripNotFoundError } from "../errors.js";
 
 import { mapErrorToSyncRejection } from "./map-sync-rejection.js";
 import type { SyncRequestBody } from "./sync-request.schema.js";
@@ -38,7 +41,7 @@ export class ApplySyncActionUseCase {
   constructor(
     private readonly idempotency: SyncIdempotencyRepository,
     batches: BatchRepository,
-    trips: TripRepository,
+    private readonly trips: TripRepository,
     shipments: TripShipmentRepository,
     sales: TripSaleRepository,
     shortages: TripShortageRepository,
@@ -71,7 +74,7 @@ export class ApplySyncActionUseCase {
 
   async execute(
     body: SyncRequestBody,
-    ctx?: { recordedByUserId: string | undefined },
+    ctx?: { recordedByUserId: string | undefined; roles?: AuthRoleGrant[] },
   ): Promise<SyncApplyResult> {
     const { deviceId, localActionId } = body;
     if (await this.idempotency.hasProcessed(deviceId, localActionId)) {
@@ -82,6 +85,22 @@ export class ApplySyncActionUseCase {
       switch (body.actionType) {
         case "sell_from_trip": {
           const p = body.payload;
+          if (ctx?.recordedByUserId && ctx.roles && isGlobalSellerOnly(ctx.roles)) {
+            const trip = await this.trips.findById(p.tripId);
+            if (!trip) {
+              throw new TripNotFoundError(p.tripId);
+            }
+            if (!tripVisibleToFieldSeller(trip, ctx.recordedByUserId)) {
+              return {
+                status: "rejected",
+                actionId: localActionId,
+                reason: "Этот рейс не закреплён за текущим продавцом.",
+                resolution: "Попросите администратора или закупщика выполнить «Отгрузить с рейса» на вашу учётную запись.",
+                errorCode: "sync_forbidden",
+                details: { tripId: p.tripId },
+              };
+            }
+          }
           const cashKopecksMixed =
             p.cashKopecksMixed === undefined
               ? undefined

@@ -123,7 +123,7 @@ export const trips = pgTable("trips", {
   driverName: text("driver_name"),
   /** План/факт отправления. */
   departedAt: timestamp("departed_at", { withTimezone: true, mode: "date" }),
-  /** Полевой продавец; null — общий рейс. Список GET /trips для seller-only режется по этому полю. */
+  /** Полевой продавец; null — продавцам не показывается. Список GET /trips для seller-only режется по этому полю. */
   assignedSellerUserId: text("assigned_seller_user_id").references(() => users.id, { onDelete: "set null" }),
 });
 

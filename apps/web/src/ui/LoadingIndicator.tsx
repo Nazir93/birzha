@@ -55,6 +55,21 @@ export function LoadingBlock({ label, minHeight = 100 }: { label: string; minHei
   );
 }
 
+/** Центрированный экран ожидания для загрузки кабинета/сессии. */
+export function LoadingScreen({ label }: { label: string }) {
+  return (
+    <section className="birzha-loader-screen" role="status" aria-live="polite" aria-label={label}>
+      <div className="birzha-loader-screen__card">
+        <div className="birzha-loader-screen__mark" aria-hidden>
+          <span className="birzha-loader-screen__pulse" />
+        </div>
+        <LoadingIndicator label={label} size="md" />
+        <p className="birzha-loader-screen__note">Подготавливаем кабинет и актуальные данные.</p>
+      </div>
+    </section>
+  );
+}
+
 /** Мягкое уведомление о фоновом обновлении кэша (есть устаревшие данные, идёт refetch). */
 export function StaleDataNotice({ show, label = "Обновление данных…" }: { show: boolean; label?: string }) {
   if (!show) {
