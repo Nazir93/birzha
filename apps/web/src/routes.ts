@@ -17,7 +17,9 @@ export const ops = {
   trips: `${prefix.operations}/trips`,
   purchaseNakladnaya: `${prefix.operations}/purchase-nakladnaya`,
   distribution: `${prefix.operations}/distribution`,
+  loadingManifests: `${prefix.operations}/loading-manifests`,
   operations: `${prefix.operations}/operations`,
+  sellerDispatch: `${prefix.operations}/seller-dispatch`,
   assignSeller: `${prefix.operations}/assign-seller`,
   offline: `${prefix.operations}/offline`,
 } as const;
@@ -33,6 +35,7 @@ export const adminRoutes = {
   distribution: `${prefix.admin}/distribution`,
   loadingManifests: `${prefix.admin}/loading-manifests`,
   operations: `${prefix.admin}/operations`,
+  sellerDispatch: `${prefix.admin}/seller-dispatch`,
   assignSeller: `${prefix.admin}/assign-seller`,
   offline: `${prefix.admin}/offline`,
   inventory: `${prefix.admin}/inventory`,
@@ -51,6 +54,7 @@ export const accounting = {
   home: prefix.accounting,
   reports: `${prefix.accounting}/reports`,
   counterparties: `${prefix.accounting}/counterparties`,
+  sellerDispatch: `${prefix.accounting}/seller-dispatch`,
   trade: `${prefix.accounting}/trade`,
 } as const;
 

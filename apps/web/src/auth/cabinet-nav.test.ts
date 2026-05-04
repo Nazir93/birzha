@@ -26,20 +26,24 @@ describe("cabinet-nav", () => {
       roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("admin", user, true);
+    expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
     expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
     expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links.find((x) => x.key === "reports")).toBeUndefined();
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
-    expect(links.find((x) => x.key === "assignSeller")).toBeUndefined();
+    expect(links.find((x) => x.key === "sellerDispatch")?.to).toBe(adminRoutes.sellerDispatch);
+    expect(links.find((x) => x.key === "assignSeller")?.to).toBe(adminRoutes.assignSeller);
+    expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 
-  it("бухгалтерия: есть ссылка на торговлю", () => {
+  it("бухгалтерия: отгрузка и продажи отдельно", () => {
     const user = {
       id: "u2",
       login: "acc",
       roles: [{ roleCode: "accountant", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("accounting", user, true);
+    expect(links.find((x) => x.key === "acc-dispatch")?.to).toBe(accounting.sellerDispatch);
     expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
   });
 

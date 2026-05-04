@@ -1,8 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
-import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { useAuth } from "../auth/auth-context.js";
+import { formatNakladLineLabel } from "../format/batch-label.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { purchaseDocumentsFullListQueryOptions } from "../query/core-list-queries.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { btnStyleInline, muted, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
@@ -69,6 +73,20 @@ export function BatchesByNakladnayaReference({
   showBulkExpandControls = false,
 }: Props) {
   const { pathname } = useLocation();
+  const { meta } = useAuth();
+  const purchaseDocsEnabled = meta?.purchaseDocumentsApi === "enabled";
+  const purchaseDocsQuery = useQuery({
+    ...purchaseDocumentsFullListQueryOptions(),
+    enabled: purchaseDocsEnabled,
+  });
+  const docDateById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of purchaseDocsQuery.data?.purchaseDocuments ?? []) {
+      m.set(d.id, d.docDate);
+    }
+    return m;
+  }, [purchaseDocsQuery.data?.purchaseDocuments]);
+
   const groups = useMemo(() => groupBatchesByPurchaseDocument(batches), [batches]);
   const gKey = useMemo(() => groups.map((x) => x.documentId).join("|"), [groups]);
   const [openByDoc, setOpenByDoc] = useState<Record<string, boolean>>({});
@@ -94,8 +112,8 @@ export function BatchesByNakladnayaReference({
     return (
       <div className="birzha-batches-nakl-ref" style={{ marginBottom: "1rem" }}>
         <p id={sectionHeadingId} style={{ ...muted, marginBottom: "0.5rem" }}>
-          <strong>Партии по накладным</strong> — нажмите на строку, чтобы раскрыть список строк (калибр). id партии для API;
-          в работе — номер накладной и калибр. Без оформленной накладной партии в список не попадают.
+          <strong>Партии по накладным</strong> — по номеру накладной, дате документа и калибру. Раскройте блок, чтобы увидеть
+          строки. Без оформленной накладной партии в список не попадают.
         </p>
         <p style={muted}>Нет партий, привязанных к оформленной накладной (или данные пусты).</p>
       </div>
@@ -112,8 +130,8 @@ export function BatchesByNakladnayaReference({
       className="birzha-batches-nakl-ref"
     >
       <p id={sectionHeadingId} style={{ ...muted, marginBottom: "0.5rem" }}>
-        <strong>Партии по накладным</strong> — нажмите на строку, чтобы раскрыть список строк (калибр). id партии для API;
-        в работе — номер накладной и калибр. Без оформленной накладной партии в список не попадают.
+        <strong>Партии по накладным</strong> — по номеру накладной, дате документа и калибру. Раскройте блок, чтобы увидеть
+        строки. Без оформленной накладной партии в список не попадают.
       </p>
       {showBulkExpandControls && groups.length > 1 && (
         <p className="no-print" style={{ margin: "0 0 0.5rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
@@ -127,6 +145,13 @@ export function BatchesByNakladnayaReference({
       )}
       {groups.map((grp) => {
         const nLines = grp.batches.length;
+        const rawDocDate = docDateById.get(grp.documentId);
+        const docDateLabel =
+          rawDocDate != null && rawDocDate !== ""
+            ? formatPurchaseDocDateRu(rawDocDate)
+            : purchaseDocsQuery.isPending
+              ? "…"
+              : null;
         return (
           <details
             key={grp.documentId}
@@ -139,7 +164,13 @@ export function BatchesByNakladnayaReference({
           >
             <summary className="birzha-nakl-details__summary" style={{ cursor: "pointer" }}>
               <span style={{ fontWeight: 600, fontSize: "0.92rem" }}>
-                Накладная № {grp.documentNumber ?? "—"}{" "}
+                Накладная № {grp.documentNumber ?? "—"}
+                {docDateLabel != null ? (
+                  <>
+                    {" "}
+                    <span style={{ fontWeight: 600 }}>· {docDateLabel}</span>
+                  </>
+                ) : null}{" "}
                 <span className="birzha-text-muted" style={{ fontWeight: 500, fontSize: "0.85rem" }}>
                   (строк: {nLines})
                 </span>
@@ -166,9 +197,6 @@ export function BatchesByNakladnayaReference({
                       Товар / калибр
                     </th>
                     <th scope="col" style={thHeadDense}>
-                      id партии
-                    </th>
-                    <th scope="col" style={thHeadDense}>
                       на складе, кг
                     </th>
                     <th scope="col" style={thHeadDense}>
@@ -184,13 +212,8 @@ export function BatchesByNakladnayaReference({
                 </thead>
                 <tbody>
                   {grp.batches.map((b) => (
-                    <tr key={b.id}>
+                    <tr key={b.id} title={`Технический id партии (поддержка): ${b.id}`}>
                       <td style={thtdDense}>{formatNakladLineLabel(b)}</td>
-                      <td style={thtdDense}>
-                        <code style={{ fontSize: "0.75rem" }} title={b.id}>
-                          {formatShortBatchId(b.id)}
-                        </code>
-                      </td>
                       <td style={thtdDense}>{b.onWarehouseKg}</td>
                       <td style={thtdDense}>{b.inTransitKg}</td>
                       <td style={thtdDense}>{b.soldKg}</td>

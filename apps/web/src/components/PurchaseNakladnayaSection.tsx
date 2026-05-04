@@ -17,6 +17,7 @@ import {
   lineTotalKopecksForNakladnayaSum,
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
@@ -614,7 +615,7 @@ export function PurchaseNakladnayaSection() {
                           {d.documentNumber}
                         </Link>
                       </td>
-                      <td style={thtdDense}>{d.docDate}</td>
+                      <td style={{ ...thtdDense, fontWeight: 600 }}>{formatPurchaseDocDateRu(d.docDate)}</td>
                       <td style={thtdDense}>
                         {wh ? (
                           <>

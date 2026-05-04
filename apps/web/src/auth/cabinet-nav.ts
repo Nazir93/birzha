@@ -1,5 +1,11 @@
 import type { AuthUser } from "./auth-context.js";
-import { hrefForPanelInCabinet, NAV_PANEL_LABELS, operationsPanelOrder, type CabinetId } from "./role-panels.js";
+import {
+  canAccessCabinet,
+  hrefForPanelInCabinet,
+  NAV_PANEL_LABELS,
+  operationsPanelOrder,
+  type CabinetId,
+} from "./role-panels.js";
 import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 export type CabinetNavEntry = { to: string; label: string; key: string };
@@ -46,17 +52,32 @@ export function buildCabinetNavEntries(
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    out.push({ to: accounting.sellerDispatch, label: NAV_PANEL_LABELS.sellerDispatch, key: "acc-dispatch" });
     out.push({ to: accounting.trade, label: NAV_PANEL_LABELS.assignSeller, key: "acc-trade" });
   }
   const panelOrder =
     cabinet === "admin"
-      ? (["loadingManifests", "nakladnaya", "operations", "offline", "inventory", "users", "service"] as const)
+      ? ([
+          "nakladnaya",
+          "distribution",
+          "loadingManifests",
+          "sellerDispatch",
+          "assignSeller",
+          "operations",
+          "offline",
+          "inventory",
+          "users",
+          "service",
+        ] as const)
       : operationsPanelOrder(user);
   for (const p of panelOrder) {
     const to = hrefForPanelInCabinet(user, p, cabinet);
     if (to) {
       out.push({ to, label: NAV_PANEL_LABELS[p], key: p });
     }
+  }
+  if (cabinet === "admin" && user && authRestricted && canAccessCabinet(user, "accounting")) {
+    out.push({ to: accounting.home, label: "Бухгалтерия", key: "jump-accounting" });
   }
   return out;
 }

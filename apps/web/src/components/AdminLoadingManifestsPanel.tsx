@@ -205,17 +205,15 @@ export function AdminLoadingManifestsPanel() {
                 <tr>
                   <th style={thHead}>Строка</th>
                   <th style={thHead}>Калибр</th>
-                  <th style={thHead}>Партия</th>
                   <th style={thHead}>Кг</th>
                   <th style={thHead}>Ящ.</th>
                 </tr>
               </thead>
               <tbody>
                 {detail.lines.map((line) => (
-                  <tr key={line.batchId}>
+                  <tr key={line.batchId} title={`Технический id партии: ${line.batchId}`}>
                     <td style={thtd}>{line.lineNo}</td>
                     <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
-                    <td style={thtd}>{line.batchId.slice(0, 8)}…</td>
                     <td style={thtd}>{line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
                     <td style={thtd}>{line.packageCount ?? "—"}</td>
                   </tr>

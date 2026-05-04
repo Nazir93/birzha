@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem } from "../api/types.js";
-import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
@@ -505,23 +505,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   {batchRows.map((row) => {
                     const batchMeta = batchById.get(row.batchId);
                     const caption = formatBatchPartyCaption(batchMeta, row.batchId);
-                    const showTechId = caption !== formatShortBatchId(row.batchId);
                     return (
                     <tr key={row.batchId}>
-                      <td style={thtd} title={`id: ${row.batchId}`}>
+                      <td style={thtd} title={`Технический id партии: ${row.batchId}`}>
                         <div style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.35 }}>{caption}</div>
-                        {showTechId ? (
-                          <code
-                            className="birzha-text-muted"
-                            style={{
-                              fontSize: "0.72rem",
-                              display: "block",
-                              marginTop: "0.2rem",
-                            }}
-                          >
-                            {formatShortBatchId(row.batchId)}
-                          </code>
-                        ) : null}
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
                       <td style={thtd}>{row.shippedPackages.toString()}</td>

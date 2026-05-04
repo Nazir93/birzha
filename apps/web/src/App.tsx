@@ -33,6 +33,9 @@ const AdminLoadingManifestsPanel = lazy(() =>
 const AssignSellerPanel = lazy(() =>
   import("./components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
 );
+const SellerDispatchPanel = lazy(() =>
+  import("./components/SellerDispatchPanel.js").then((m) => ({ default: m.SellerDispatchPanel })),
+);
 const AllocationPanel = lazy(() =>
   import("./components/AllocationPanel.js").then((m) => ({ default: m.AllocationPanel })),
 );
@@ -219,6 +222,26 @@ export function App() {
               }
             />
             <Route
+              path="seller-dispatch"
+              element={
+                <RequirePanel panel="sellerDispatch">
+                  <section className="birzha-card">
+                    <SellerDispatchPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="assign-seller"
+              element={
+                <RequirePanel panel="assignSeller">
+                  <section className="birzha-card">
+                    <AssignSellerPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
               path="offline"
               element={
                 <RequirePanel panel="offline">
@@ -270,6 +293,42 @@ export function App() {
                 <RequirePanel panel="distribution">
                   <section className="birzha-card">
                     <AllocationPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="loading-manifests"
+              element={
+                <RequirePanel panel="loadingManifests">
+                  <AdminLoadingManifestsPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="loading-manifests/:manifestId"
+              element={
+                <RequirePanel panel="loadingManifests">
+                  <AdminLoadingManifestsPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="seller-dispatch"
+              element={
+                <RequirePanel panel="sellerDispatch">
+                  <section className="birzha-card">
+                    <SellerDispatchPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="assign-seller"
+              element={
+                <RequirePanel panel="assignSeller">
+                  <section className="birzha-card">
+                    <AssignSellerPanel />
                   </section>
                 </RequirePanel>
               }
@@ -397,6 +456,16 @@ export function App() {
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
                     <CounterpartiesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="seller-dispatch"
+              element={
+                <RequirePanel panel="sellerDispatch">
+                  <section className="birzha-card">
+                    <SellerDispatchPanel />
                   </section>
                 </RequirePanel>
               }

@@ -1,27 +1,23 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiPostJson } from "../api/fetch-api.js";
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
+import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
-import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripStatusLabel } from "../format/trip-label.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
   batchesFullListQueryOptions,
-  queryRoots,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { btnStyle, fieldStyle, muted, successText, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
-import { FieldError } from "../ui/FieldError.js";
+import { btnStyle, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
-const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
 
@@ -34,14 +30,9 @@ function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; sco
 
 export function AssignSellerPanel() {
   const { meta, user } = useAuth();
-  const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const batchesQuery = useQuery(batchesFullListQueryOptions());
-  const canAssignSeller = SELLER_ASSIGN_ROLES.some((r) => hasGlobalRole(user, r));
-  const fieldSellersQuery = useQuery({
-    ...tripsFieldSellerOptionsQueryOptions(),
-    enabled: canAssignSeller,
-  });
+  const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const canManageUsers = hasGlobalRole(user, "admin") || hasGlobalRole(user, "manager");
   const showAdminUsersApi = meta?.adminUsersApi === "enabled" && user != null;
 
@@ -82,10 +73,7 @@ export function AssignSellerPanel() {
       .sort((a, b) => a.login.localeCompare(b.login, "ru"));
   }, [sellerLoginById]);
 
-  const [assignTripId, setAssignTripId] = useState("");
   const [assignSellerUserId, setAssignSellerUserId] = useState("");
-  const [newSellerLogin, setNewSellerLogin] = useState("");
-  const [newSellerPassword, setNewSellerPassword] = useState("");
   const [detailTripId, setDetailTripId] = useState("");
 
   useEffect(() => {
@@ -108,44 +96,6 @@ export function AssignSellerPanel() {
       setDetailTripId(selectedSellerTrips[0]!.id);
     }
   }, [detailTripId, selectedSellerTrips]);
-
-  const assignSellerToTrip = useMutation({
-    mutationFn: async () => {
-      const tripId = assignTripId.trim();
-      const sellerUserId = assignSellerUserId.trim();
-      if (!tripId) {
-        throw new Error("Выберите рейс");
-      }
-      if (!sellerUserId) {
-        throw new Error("Выберите продавца");
-      }
-      await apiPostJson(`/api/trips/${encodeURIComponent(tripId)}/assign-seller`, { sellerUserId });
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
-      void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
-    },
-  });
-
-  const createSellerMutation = useMutation({
-    mutationFn: async () => {
-      const login = newSellerLogin.trim();
-      const password = newSellerPassword;
-      if (!login) {
-        throw new Error("Введите логин продавца");
-      }
-      if (password.length < 10) {
-        throw new Error("Пароль должен быть не короче 10 символов");
-      }
-      await apiPostJson("/api/admin/users", { login, password, roleCode: "seller" });
-    },
-    onSuccess: () => {
-      setNewSellerLogin("");
-      setNewSellerPassword("");
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      void queryClient.invalidateQueries({ queryKey: [...queryRoots.trips, "field-seller-options"] });
-    },
-  });
 
   const reportQueries = useQueries({
     queries: selectedSellerTrips.map((trip) => ({
@@ -192,60 +142,31 @@ export function AssignSellerPanel() {
   const detailReport = detailTripId ? reportByTripId.get(detailTripId) ?? null : null;
 
   return (
-    <div role="region" aria-label="Торговля и продавцы">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Торговля</h2>
+    <div role="region" aria-label="Продажи">
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Продажи</h2>
+      <p style={{ ...muted, margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
+        Сводки по выручке, налу и долгу по продавцу и рейсам. Закрепление рейса за продавцом — в разделе «Отгрузка».
+      </p>
 
-      <section className="birzha-panel" aria-labelledby="trade-sec-sellers">
+      <section className="birzha-panel" aria-labelledby="sales-sec-seller">
         <div className="birzha-section-heading">
           <div>
-            <h3 id="trade-sec-sellers" className="birzha-section-title birzha-section-title--sm">
-              Продавцы
+            <h3 id="sales-sec-seller" className="birzha-section-title birzha-section-title--sm">
+              Продавец
             </h3>
           </div>
-          <p className="birzha-section-heading__note">Кто работает и какие рейсы закреплены</p>
+          <p className="birzha-section-heading__note">Выберите продавца для сводки</p>
         </div>
-        {canManageUsers && showAdminUsersApi ? (
-          <div className="birzha-form-grid birzha-form-grid--actions">
-            <label style={{ fontSize: "0.88rem" }}>
-              Логин нового продавца
-              <input
-                value={newSellerLogin}
-                onChange={(e) => setNewSellerLogin(e.target.value)}
-                style={{ ...fieldStyle, display: "block", marginTop: "0.2rem", minWidth: "12rem" }}
-                autoComplete="off"
-              />
-            </label>
-            <label style={{ fontSize: "0.88rem" }}>
-              Пароль (от 10 символов)
-              <input
-                type="password"
-                value={newSellerPassword}
-                onChange={(e) => setNewSellerPassword(e.target.value)}
-                style={{ ...fieldStyle, display: "block", marginTop: "0.2rem", minWidth: "12rem" }}
-                autoComplete="new-password"
-              />
-            </label>
-            <button
-              type="button"
-              style={btnStyle}
-              disabled={createSellerMutation.isPending || !newSellerLogin.trim() || newSellerPassword.length < 10}
-              onClick={() => createSellerMutation.mutate()}
-            >
-              {createSellerMutation.isPending ? "Создание…" : "Создать продавца"}
-            </button>
-          </div>
-        ) : null}
-        <FieldError error={createSellerMutation.error as Error | null} />
-        {createSellerMutation.isSuccess ? (
-          <p style={successText} role="status">
-            Продавец создан.
+        <label htmlFor="sales-seller" style={{ fontSize: "0.88rem", display: "block" }}>
+          Продавец
+        </label>
+        {tripsQuery.isPending ? (
+          <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
+            <LoadingIndicator size="sm" label="Загрузка рейсов…" />
           </p>
         ) : null}
-        <label htmlFor="trade-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.4rem" }}>
-          Выберите продавца
-        </label>
         <select
-          id="trade-seller"
+          id="sales-seller"
           value={assignSellerUserId}
           onChange={(e) => setAssignSellerUserId(e.target.value)}
           style={selectWide}
@@ -260,86 +181,10 @@ export function AssignSellerPanel() {
         </select>
       </section>
 
-      {canAssignSeller ? (
-        <section className="birzha-panel" aria-labelledby="trade-sec-assign">
-          <div className="birzha-section-heading">
-            <div>
-              <h3 id="trade-sec-assign" className="birzha-section-title birzha-section-title--sm">
-                Привязка рейса к продавцу
-              </h3>
-            </div>
-            <p className="birzha-section-heading__note">Рейс будет виден только этому продавцу</p>
-          </div>
-          <label htmlFor="trade-trip" style={{ fontSize: "0.88rem" }}>
-            Рейс *
-          </label>
-          {tripsQuery.isPending ? (
-            <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
-              <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
-            </p>
-          ) : null}
-          <select
-            id="trade-trip"
-            value={assignTripId}
-            onChange={(e) => setAssignTripId(e.target.value)}
-            style={selectWide}
-            disabled={tripsQuery.isPending}
-          >
-            <option value="">{tripsQuery.isPending ? "— загрузка рейсов —" : "— выберите рейс —"}</option>
-            {tripSelectOptions.map((t) => {
-              const assigned = t.assignedSellerUserId ? sellerLoginById.get(t.assignedSellerUserId) ?? t.assignedSellerUserId : null;
-              return (
-                <option key={t.id} value={t.id}>
-                  {formatTripSelectLabel(t)}
-                  {assigned ? ` · продавец: ${assigned}` : ""}
-                </option>
-              );
-            })}
-          </select>
-          {fieldSellersQuery.isError ? (
-            <p role="alert" style={{ ...warnText, marginTop: "0.35rem", fontSize: "0.86rem" }}>
-              Список продавцов не загрузился.
-            </p>
-          ) : null}
-          {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 ? (
-            <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.86rem" }}>
-              Активных продавцов нет.
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            style={{ ...btnStyle, marginTop: "0.5rem" }}
-            disabled={assignSellerToTrip.isPending}
-            aria-busy={assignSellerToTrip.isPending || undefined}
-            onClick={() => assignSellerToTrip.mutate()}
-          >
-            {assignSellerToTrip.isPending ? "Отгрузка…" : "Отгрузить с рейса продавцу"}
-          </button>
-          <FieldError error={assignSellerToTrip.error as Error | null} />
-          {assignSellerToTrip.isSuccess ? (
-            <p style={successText} role="status">
-              Рейс закреплён за продавцом.
-            </p>
-          ) : null}
-        </section>
-      ) : (
-        <section className="birzha-panel" aria-labelledby="trade-sec-assign-readonly">
-          <div className="birzha-section-heading">
-            <div>
-              <h3 id="trade-sec-assign-readonly" className="birzha-section-title birzha-section-title--sm">
-                Привязка рейса к продавцу
-              </h3>
-            </div>
-          </div>
-          <p style={muted}>В бухгалтерии доступен просмотр. Назначение рейса делает администратор, руководитель, закупщик или логист.</p>
-        </section>
-      )}
-
-      <section className="birzha-panel" aria-labelledby="trade-sec-sales">
+      <section className="birzha-panel" aria-labelledby="sales-sec-sales">
         <div className="birzha-section-heading">
           <div>
-            <h3 id="trade-sec-sales" className="birzha-section-title birzha-section-title--sm">
+            <h3 id="sales-sec-sales" className="birzha-section-title birzha-section-title--sm">
               Продажи по продавцу
             </h3>
           </div>
@@ -421,7 +266,7 @@ export function AssignSellerPanel() {
                   {selectedSellerTrips.length === 0 ? (
                     <tr>
                       <td colSpan={5} style={thtd}>
-                        У этого продавца пока нет закреплённых рейсов.
+                        У этого продавца пока нет закреплённых рейсов (назначение — в «Отгрузка»).
                       </td>
                     </tr>
                   ) : (
@@ -493,8 +338,8 @@ export function AssignSellerPanel() {
                           <tr key={`${detailReport.trip.id}-${row.batchId}`}>
                             <td style={thtd}>{detailReport.trip.tripNumber}</td>
                             <td style={thtd}>{b?.nakladnaya?.productGradeCode ?? "—"}</td>
-                            <td style={thtd} title={row.batchId}>
-                              {formatBatchPartyCaption(b, row.batchId)} ({formatShortBatchId(row.batchId)})
+                            <td style={thtd} title={`Технический id партии: ${row.batchId}`}>
+                              {formatBatchPartyCaption(b, row.batchId)}
                             </td>
                             <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
                             <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>

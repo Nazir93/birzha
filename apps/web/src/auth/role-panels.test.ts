@@ -33,6 +33,7 @@ describe("role-panels", () => {
     expect(canAccessCabinet(u, "admin")).toBe(false);
     expect(canAccessPanel(u, "inventory")).toBe(false);
     expect(canAccessPanel(u, "loadingManifests")).toBe(false);
+    expect(canAccessPanel(u, "sellerDispatch")).toBe(true);
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canAccessPanel(u, "service")).toBe(false);

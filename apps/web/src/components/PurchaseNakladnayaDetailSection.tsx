@@ -7,6 +7,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import {
   purchaseNakladnayaBasePathForPath,
@@ -112,23 +113,23 @@ export function PurchaseNakladnayaDetailSection() {
           ← Все закупки товара
         </Link>
       </div>
-      <h3 id="nakl-detail-heading" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
+      <h3 id="nakl-detail-heading" style={{ margin: "0 0 0.35rem", fontSize: "1rem" }}>
         Накладная <strong>{doc.documentNumber}</strong>
       </h3>
-      <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        ID документа: <code style={{ fontSize: "0.82rem" }}>{doc.id}</code>
-        {doc.createdAt && (
+      <p style={{ margin: "0 0 0.75rem", fontSize: "1.05rem", fontWeight: 600 }}>
+        Дата документа: {formatPurchaseDocDateRu(doc.docDate)}
+      </p>
+      <p style={{ ...muted, margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
+        ID в системе (поддержка): <code style={{ fontSize: "0.82rem" }}>{doc.id}</code>
+        {doc.createdAt ? (
           <>
             {" "}
-            · создана: {new Date(doc.createdAt).toLocaleString("ru-RU")}
+            · запись в системе: {new Date(doc.createdAt).toLocaleString("ru-RU")}
           </>
-        )}
+        ) : null}
       </p>
 
       <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.88rem", marginBottom: "0.75rem", width: "100%", maxWidth: "100%" }}>
-        <div>
-          <strong>Дата:</strong> {doc.docDate}
-        </div>
         <div>
           <strong>Склад:</strong>{" "}
           {warehousesQ.isPending ? (
@@ -166,21 +167,17 @@ export function PurchaseNakladnayaDetailSection() {
               <th style={thHeadDense}>Короба</th>
               <th style={thHeadDense}>₽/кг</th>
               <th style={thHeadDense}>Сумма, коп.</th>
-              <th style={thHeadDense}>Партия (batch)</th>
             </tr>
           </thead>
           <tbody>
             {doc.lines.map((line) => (
-              <tr key={`${line.lineNo}-${line.batchId}`}>
+              <tr key={`${line.lineNo}-${line.batchId}`} title={`Технический id партии: ${line.batchId}`}>
                 <td style={thtdDense}>{line.lineNo}</td>
                 <td style={thtdDense}>{line.productGradeCode}</td>
                 <td style={thtdDense}>{line.totalKg}</td>
                 <td style={thtdDense}>{line.packageCount ?? "—"}</td>
                 <td style={thtdDense}>{line.pricePerKg}</td>
                 <td style={thtdDense}>{line.lineTotalKopecks}</td>
-                <td style={thtdDense}>
-                  <code style={{ fontSize: "0.75rem" }}>{line.batchId}</code>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -220,7 +217,6 @@ export function PurchaseNakladnayaDetailSection() {
                     = {kopecksToRubLabel(totals.lineKopSum.toString())} ₽
                   </div>
                 </td>
-                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>—</td>
               </tr>
               {totals.extraKop > 0 && (
                 <tr>
@@ -231,7 +227,7 @@ export function PurchaseNakladnayaDetailSection() {
                   >
                     Доп. расходы (см. шапку)
                   </th>
-                  <td colSpan={2} style={{ ...thtdDense, background: "rgba(0,0,0,0.03)" }}>
+                  <td style={{ ...thtdDense, background: "rgba(0,0,0,0.03)" }}>
                     <span style={{ fontWeight: 600 }}>{totals.extraKop} коп.</span> = {kopecksToRubLabel(totals.extraKop.toString())} ₽
                   </td>
                 </tr>
@@ -244,7 +240,7 @@ export function PurchaseNakladnayaDetailSection() {
                 >
                   Всего по документу
                 </th>
-                <td colSpan={2} style={{ ...thtdDense, background: "rgba(0,0,0,0.05)" }}>
+                <td style={{ ...thtdDense, background: "rgba(0,0,0,0.05)" }}>
                   <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{totals.allKop} коп.</div>
                   <div style={{ fontSize: "0.9rem" }}>= {kopecksToRubLabel(totals.allKop.toString())} ₽</div>
                 </td>

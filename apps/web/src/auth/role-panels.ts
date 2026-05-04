@@ -7,6 +7,7 @@ export type PanelId =
   | "nakladnaya"
   | "distribution"
   | "loadingManifests"
+  | "sellerDispatch"
   | "operations"
   | "assignSeller"
   | "offline"
@@ -21,7 +22,8 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   loadingManifests: "Погрузка",
   reports: "Отчёты и рейсы",
   operations: "Операции",
-  assignSeller: "Торговля",
+  sellerDispatch: "Отгрузка",
+  assignSeller: "Продажи",
   offline: "Офлайн-очередь",
   service: "Диагностика",
   inventory: "Склады и калибры",
@@ -35,6 +37,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingManifests: ["admin"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
+  sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
   assignSeller: ["admin", "manager", "purchaser", "logistics", "accountant"],
   offline: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   service: ["admin"],
@@ -239,6 +242,8 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "distribution",
     "loadingManifests",
+    "sellerDispatch",
+    "assignSeller",
     "reports",
     "operations",
     "offline",
@@ -297,6 +302,12 @@ export function hrefForPanelInCabinet(
     if (panel === "loadingManifests") {
       return adminRoutes.loadingManifests;
     }
+    if (panel === "sellerDispatch") {
+      return adminRoutes.sellerDispatch;
+    }
+    if (panel === "assignSeller") {
+      return adminRoutes.assignSeller;
+    }
     if (panel === "operations") {
       return adminRoutes.operations;
     }
@@ -313,6 +324,15 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "distribution") {
       return ops.distribution;
+    }
+    if (panel === "loadingManifests") {
+      return ops.loadingManifests;
+    }
+    if (panel === "sellerDispatch") {
+      return ops.sellerDispatch;
+    }
+    if (panel === "assignSeller") {
+      return ops.assignSeller;
     }
     if (panel === "operations") {
       return ops.operations;
@@ -344,6 +364,9 @@ export function hrefForPanelInCabinet(
   if (currentCabinet === "accounting") {
     if (panel === "reports") {
       return accounting.reports;
+    }
+    if (panel === "sellerDispatch") {
+      return accounting.sellerDispatch;
     }
     if (panel === "assignSeller") {
       return accounting.trade;

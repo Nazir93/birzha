@@ -197,10 +197,7 @@ export function LoadingManifestBlock({
               <thead>
                 <tr>
                   <th scope="col" style={thHead}>
-                    Калибр
-                  </th>
-                  <th scope="col" style={thHead}>
-                    ID партии
+                    Калибр (как в накладной)
                   </th>
                   <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                     Остаток, кг
@@ -214,14 +211,9 @@ export function LoadingManifestBlock({
                 {includedBatches.map((b) => {
                   const pkgE = estimatedPackageCountOnShelf(b);
                   return (
-                    <tr key={b.id}>
+                    <tr key={b.id} title={`Технический id партии: ${b.id}`}>
                       <td style={thtd}>
                         <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{formatNakladLineLabel(b)}</span>
-                      </td>
-                      <td style={thtd}>
-                        <code className="birzha-text-subtle" style={{ fontSize: "0.8rem" }}>
-                          {formatShortBatchId(b.id)}
-                        </code>
                       </td>
                       <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>{b.onWarehouseKg}</td>
                       <td style={{ ...thtd, textAlign: "right" }}>{pkgE == null ? "—" : `≈ ${pkgE}`}</td>

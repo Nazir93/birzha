@@ -70,6 +70,9 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "assignSeller") {
     return "assignSeller";
   }
+  if (key === "sellerDispatch") {
+    return "assignSeller";
+  }
   if (key === "off" || key === "offline") {
     return "offline";
   }

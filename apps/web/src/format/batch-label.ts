@@ -21,7 +21,7 @@ export function formatNakladLineLabel(b: BatchListItem): string {
 
 /**
  * Человекочитаемая строка для отчётов: номер накладной + товар/калибр;
- * если нет данных накладной — короткий id.
+ * если нет данных накладной — короткий id (технический запасной вариант).
  */
 export function formatBatchPartyCaption(b: BatchListItem | undefined, batchId: string): string {
   if (!b) {
