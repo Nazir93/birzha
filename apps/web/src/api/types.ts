@@ -111,6 +111,33 @@ export type ShipDestinationsListResponse = { shipDestinations: ShipDestinationJs
 
 export type CreatePurchaseDocumentResponse = { documentId: string };
 
+export type CreateLoadingManifestResponse = { manifestId: string };
+
+export type LoadingManifestDetail = {
+  id: string;
+  manifestNumber: string;
+  docDate: string;
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  destinationCode: string;
+  destinationName: string;
+  tripId: string | null;
+  createdAt: string;
+  lines: {
+    lineNo: number;
+    batchId: string;
+    grams: string;
+    kg: number;
+    packageCount: string | null;
+    purchaseDocumentNumber: string | null;
+    productGradeCode: string | null;
+    productGroup: string | null;
+  }[];
+};
+
+export type LoadingManifestDetailResponse = { manifest: LoadingManifestDetail };
+
 /** Ответы `/trips` и `/trips/:id/shipment-report` (согласовано с `register-trip-routes`). */
 
 export type TripJson = {

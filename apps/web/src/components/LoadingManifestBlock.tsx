@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
+import type { LoadingManifestDetail } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import {
   aggregateBatchesByCaliberLine,
@@ -9,7 +10,7 @@ import {
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
-import { purchaseNakladnayaDocumentPath } from "../routes.js";
+import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { btnStyle, btnStyleInline, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
@@ -23,6 +24,7 @@ type Props = {
   onClearNakl: () => void;
   batchesInWh: BatchListItem[];
   warehouseName: string;
+  manifest?: LoadingManifestDetail | null;
 };
 
 /**
@@ -37,11 +39,20 @@ export function LoadingManifestBlock({
   onClearNakl,
   batchesInWh,
   warehouseName,
+  manifest = null,
 }: Props) {
-  const includedBatches = useMemo(
+  const { pathname } = useLocation();
+  const includedBatchesFromSelection = useMemo(
     () => filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, selectedDocIds),
     [batchesInWh, documentOptions.length, selectedDocIds],
   );
+  const includedBatches = useMemo(() => {
+    if (!manifest) {
+      return includedBatchesFromSelection;
+    }
+    const byId = new Map(batchesInWh.map((b) => [b.id, b]));
+    return manifest.lines.map((line) => byId.get(line.batchId)).filter((b): b is BatchListItem => Boolean(b));
+  }, [batchesInWh, includedBatchesFromSelection, manifest]);
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
 
@@ -114,14 +125,16 @@ export function LoadingManifestBlock({
   return (
     <section className="loading-manifest-print birzha-loading-manifest" aria-labelledby="loading-manifest-h">
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
-        Сбор на погрузку: какие накладные в этот отбор
+        Погрузочная накладная
       </h3>
+      {manifest ? (
+        <p style={{ margin: "0 0 0.55rem", fontSize: "0.92rem" }}>
+          <strong>№ {manifest.manifestNumber}</strong> от {manifest.docDate} · {manifest.destinationName} ·{" "}
+          {manifest.warehouseName} ({manifest.warehouseCode})
+        </p>
+      ) : null}
       <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-        На склад <strong>{warehouseName}</strong> отметьте закупочные накладные, с которых берёте{" "}
-        <strong>этот</strong> отбор в рейс; снимите накл., если погрузка только с части поставок. Ниже —{" "}
-        <strong>свод по калибру</strong> (кг и ≈ ящ. на остатке), затем строки партий. То, что{" "}
-        <strong>не</strong> отмечено и не уедет в рейс, остаётся на складе в учёте партий. Суммы по документу и
-        бухгалтерия — в исходных накладных; вес/приём правите в «Операциях» при расхождении.
+        Склад: <strong>{manifest?.warehouseName ?? warehouseName}</strong>.
       </p>
       {documentOptions.length > 0 && (
         <div className="no-print" style={{ marginBottom: "0.75rem" }}>
@@ -151,7 +164,7 @@ export function LoadingManifestBlock({
           <span style={muted}>Карточки накладных: </span>
           {uniqueDocuments.map((d) => (
             <span key={d.id} style={{ marginRight: 10 }}>
-              <Link to={purchaseNakladnayaDocumentPath(d.id)} style={{ fontSize: "0.9rem" }}>
+              <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontSize: "0.9rem" }}>
                 № {d.number} · {d.id.slice(0, 6)}…
               </Link>
             </span>

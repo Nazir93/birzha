@@ -12,6 +12,7 @@ import type {
   CreateProductGradeResponse,
   CreateWarehouseResponse,
 } from "../api/types.js";
+import { formatTripStatusLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import {
   batchesFullListQueryOptions,
@@ -23,7 +24,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { ops, prefix } from "../routes.js";
+import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { Link } from "react-router-dom";
 import { btnStyle, errorText, fieldStyle, muted, thHeadDense, thtdDense } from "../ui/styles.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
@@ -306,16 +307,13 @@ export function InventoryAdminPanel() {
           <h2 id="inv-adm-heading" className="birzha-home-hero__title">
             Склады и калибры
           </h2>
-          <p className="birzha-home-hero__lead">
-            Справочники закупки, рейсы и справочная сводка партий для контроля данных.
-          </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия справочников">
-          <Link to={ops.purchaseNakladnaya} className="birzha-home-action">
+          <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
             <span>Ввод</span>
-            <strong>Накладная</strong>
+            <strong>Закупка товара</strong>
           </Link>
-          <Link to={ops.operations} className="birzha-home-action">
+          <Link to={adminRoutes.operations} className="birzha-home-action">
             <span>Движение</span>
             <strong>Операции</strong>
           </Link>
@@ -465,11 +463,11 @@ export function InventoryAdminPanel() {
                       <tr key={t.id}>
                         <td style={thtdDense}>
                           <strong>№ {t.tripNumber}</strong>{" "}
-                          <Link to={`${prefix.operations}#trips`} style={{ fontSize: "0.8rem" }}>
+                          <Link to={adminRoutes.operations} style={{ fontSize: "0.8rem" }}>
                             к операциям
                           </Link>
                         </td>
-                        <td style={thtdDense}>{t.status}</td>
+                        <td style={thtdDense}>{formatTripStatusLabel(t.status)}</td>
                         <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
                         <td style={thtdDense}>{t.driverName ?? "—"}</td>
                         <td style={thtdDense}>
@@ -545,7 +543,7 @@ export function InventoryAdminPanel() {
                       >
                         Удалить
                       </button>{" "}
-                      <Link to={`${ops.purchaseNakladnaya}/${d.id}`} style={{ fontSize: "0.86rem" }}>
+                      <Link to={purchaseNakladnayaDocumentPath(d.id, "admin")} style={{ fontSize: "0.86rem" }}>
                         карточка
                       </Link>
                     </td>

@@ -1390,6 +1390,7 @@ main.app-shell--cabinet {
   width: 15.5rem;
   flex-shrink: 0;
   min-height: 0;
+  overflow-x: hidden;
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 72%, #172554 100%);
   color: #e2e8f0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -1426,6 +1427,7 @@ main.app-shell--cabinet {
   min-height: 0;
   padding: 0.25rem 0.5rem 1rem;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .birzha-cabinet-sidebar__link {
@@ -1516,6 +1518,7 @@ main.app-shell--cabinet {
     flex: 0 0 auto;
     flex-direction: row;
     align-items: center;
+    overflow-x: visible;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }

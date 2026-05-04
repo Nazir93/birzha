@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import {
   purchaseDocumentDetailQueryOptions,
@@ -8,7 +8,10 @@ import {
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import {
+  purchaseNakladnayaBasePathForPath,
+  purchaseNakladnayaDocumentPathForPath,
+} from "../routes.js";
 import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, thHeadDense, thtdDense } from "../ui/styles.js";
@@ -22,7 +25,9 @@ function formatRubFromKopecks(k: string): string {
 
 export function PurchaseNakladnayaDetailSection() {
   const { documentId } = useParams<{ documentId: string }>();
+  const { pathname } = useLocation();
   const { meta } = useAuth();
+  const listPath = purchaseNakladnayaBasePathForPath(pathname);
   const enabled = meta?.purchaseDocumentsApi === "enabled";
   const id = documentId ? decodeURIComponent(documentId) : "";
 
@@ -88,8 +93,8 @@ export function PurchaseNakladnayaDetailSection() {
     return (
       <div className="birzha-panel">
         <p style={errorText}>Документ не найден.</p>
-        <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.92rem" }}>
-          ← Назад к новой накладной
+        <Link to={listPath} style={{ fontSize: "0.92rem" }}>
+          ← Назад к закупке товара
         </Link>
       </div>
     );
@@ -103,8 +108,8 @@ export function PurchaseNakladnayaDetailSection() {
   return (
     <section className="birzha-panel" aria-labelledby="nakl-detail-heading" role="region">
       <div style={{ marginBottom: "0.5rem" }}>
-        <Link to={ops.purchaseNakladnaya} style={{ fontSize: "0.88rem" }}>
-          ← Все накладные и новая
+        <Link to={listPath} style={{ fontSize: "0.88rem" }}>
+          ← Все закупки товара
         </Link>
       </div>
       <h3 id="nakl-detail-heading" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
@@ -280,7 +285,7 @@ export function PurchaseNakladnayaDetailSection() {
 
       <p style={{ ...muted, marginTop: "0.75rem", fontSize: "0.82rem" }}>
         Прямая ссылка:{" "}
-        <code style={{ wordBreak: "break-all" }}>{purchaseNakladnayaDocumentPath(doc.id)}</code>
+        <code style={{ wordBreak: "break-all" }}>{purchaseNakladnayaDocumentPathForPath(pathname, doc.id)}</code>
       </p>
     </section>
   );

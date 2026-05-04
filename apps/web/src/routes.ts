@@ -25,6 +25,13 @@ export const ops = {
 export const adminRoutes = {
   /** Главная админки — сводка KPI. */
   home: prefix.admin,
+  reports: `${prefix.admin}/reports`,
+  /** Алиас на отчёты/рейсы внутри админского кабинета. */
+  trips: `${prefix.admin}/trips`,
+  purchaseNakladnaya: `${prefix.admin}/purchase-nakladnaya`,
+  distribution: `${prefix.admin}/distribution`,
+  operations: `${prefix.admin}/operations`,
+  offline: `${prefix.admin}/offline`,
   inventory: `${prefix.admin}/inventory`,
   users: `${prefix.admin}/users`,
   service: `${prefix.admin}/service`,
@@ -78,6 +85,21 @@ export const legacyPathList: readonly string[] = [
 /**
  * Карточка сохранённой накладной (логистика/склад — в кабинете /o).
  */
-export function purchaseNakladnayaDocumentPath(documentId: string): string {
-  return `${ops.purchaseNakladnaya}/${encodeURIComponent(documentId)}`;
+export function purchaseNakladnayaDocumentPath(documentId: string, cabinet: "operations" | "admin" = "operations"): string {
+  const base = cabinet === "admin" ? adminRoutes.purchaseNakladnaya : ops.purchaseNakladnaya;
+  return `${base}/${encodeURIComponent(documentId)}`;
+}
+
+export function purchaseNakladnayaBasePathForPath(pathname: string): string {
+  return pathname === prefix.admin || pathname.startsWith(`${prefix.admin}/`)
+    ? adminRoutes.purchaseNakladnaya
+    : ops.purchaseNakladnaya;
+}
+
+export function purchaseNakladnayaDocumentPathForPath(pathname: string, documentId: string): string {
+  return `${purchaseNakladnayaBasePathForPath(pathname)}/${encodeURIComponent(documentId)}`;
+}
+
+export function adminAwarePathForPath(pathname: string, adminPath: string, operationsPath: string): string {
+  return pathname === prefix.admin || pathname.startsWith(`${prefix.admin}/`) ? adminPath : operationsPath;
 }

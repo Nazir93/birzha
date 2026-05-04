@@ -216,6 +216,61 @@ export function App() {
             }
           >
             <Route
+              path="reports"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <div className="no-print">
+                      <CreateTripIfAllowed />
+                    </div>
+                    <TripReportPanel viewContext="default" />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route path="trips" element={<Navigate to="reports" replace />} />
+            <Route
+              path="purchase-nakladnaya"
+              element={
+                <RequirePanel panel="nakladnaya">
+                  <section className="birzha-card">
+                    <Outlet />
+                  </section>
+                </RequirePanel>
+              }
+            >
+              <Route index element={<PurchaseNakladnayaSection />} />
+              <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
+            </Route>
+            <Route
+              path="distribution"
+              element={
+                <RequirePanel panel="distribution">
+                  <section className="birzha-card">
+                    <AllocationPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="operations"
+              element={
+                <RequirePanel panel="operations">
+                  <section className="birzha-card">
+                    <OperationsPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="offline"
+              element={
+                <RequirePanel panel="offline">
+                  <OfflineQueuePanel />
+                </RequirePanel>
+              }
+            />
+            <Route
               path="inventory"
               element={
                 <RequirePanel panel="inventory">

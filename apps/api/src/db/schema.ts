@@ -127,6 +127,39 @@ export const trips = pgTable("trips", {
   assignedSellerUserId: text("assigned_seller_user_id").references(() => users.id, { onDelete: "set null" }),
 });
 
+/** Погрузочная накладная: сохранённый отбор товара на машину по одному направлению/городу. */
+export const loadingManifests = pgTable("loading_manifests", {
+  id: text("id").primaryKey(),
+  manifestNumber: text("manifest_number").notNull().unique(),
+  docDate: date("doc_date", { mode: "date" }).notNull(),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouses.id),
+  destinationCode: text("destination_code")
+    .notNull()
+    .references(() => shipDestinations.code),
+  tripId: text("trip_id").references(() => trips.id, { onDelete: "set null" }),
+  createdByUserId: text("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+/** Строки погрузочной накладной: снимок остатка партии на момент формирования документа. */
+export const loadingManifestLines = pgTable(
+  "loading_manifest_lines",
+  {
+    manifestId: text("manifest_id")
+      .notNull()
+      .references(() => loadingManifests.id, { onDelete: "cascade" }),
+    batchId: text("batch_id")
+      .notNull()
+      .references(() => batches.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    grams: bigint("grams", { mode: "bigint" }).notNull(),
+    packageCount: bigint("package_count", { mode: "bigint" }),
+  },
+  (t) => [primaryKey({ columns: [t.manifestId, t.batchId] })],
+);
+
 /** Строка журнала: отгрузка массы партии в рейс (сходимость отчёта по рейсу). */
 export const tripBatchShipments = pgTable("trip_batch_shipments", {
   id: text("id").primaryKey(),

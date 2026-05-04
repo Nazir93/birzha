@@ -5,6 +5,7 @@ import {
   canAccessCabinet,
   canAccessPanel,
   canCreateTrip,
+  canManageInventoryCatalog,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
   isFieldSellerOnly,
@@ -24,6 +25,15 @@ describe("role-panels", () => {
     const u = userWithRoles("admin");
     expect(canAccessPanel(u, "reports")).toBe(true);
     expect(canAccessPanel(u, "service")).toBe(true);
+  });
+
+  it("manager не видит админ-кабинет и админские панели", () => {
+    const u = userWithRoles("manager");
+    expect(canAccessCabinet(u, "admin")).toBe(false);
+    expect(canAccessPanel(u, "inventory")).toBe(false);
+    expect(canAccessPanel(u, "users")).toBe(false);
+    expect(canAccessPanel(u, "service")).toBe(false);
+    expect(canManageInventoryCatalog(u)).toBe(false);
   });
 
   it("бухгалтер — отчёты, не операции и не накладная", () => {
@@ -99,9 +109,9 @@ describe("role-panels", () => {
     expect(canAccessCabinet(userWithRoles("warehouse"), "operations")).toBe(true);
   });
 
-  it("панель users (сотрудники) — только admin и manager", () => {
+  it("панель users (сотрудники) — только admin", () => {
     expect(canAccessPanel(userWithRoles("admin"), "users")).toBe(true);
-    expect(canAccessPanel(userWithRoles("manager"), "users")).toBe(true);
+    expect(canAccessPanel(userWithRoles("manager"), "users")).toBe(false);
     expect(canAccessPanel(userWithRoles("seller"), "users")).toBe(false);
     expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
   });

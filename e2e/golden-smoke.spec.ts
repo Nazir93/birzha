@@ -512,14 +512,14 @@ test.describe("золотой smoke (UI + API)", () => {
     ).toBeVisible();
   });
 
-  test("навигация: вкладки AppNav (накладная → операции → офлайн → диагностика по URL → отчёты)", async ({ page }) => {
+  test("навигация: вкладки AppNav (закупка товара → операции → офлайн → диагностика по URL → отчёты)", async ({ page }) => {
     await page.goto("/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
 
-    await nav.getByRole("link", { name: "Накладная" }).click();
+    await nav.getByRole("link", { name: "Закупка товара" }).click();
     await expect(page).toHaveURL(/\/purchase-nakladnaya$/);
-    await expect(page.getByRole("region", { name: "Закупочная накладная" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Операции" }).click();
     await expect(page).toHaveURL(/\/operations$/);

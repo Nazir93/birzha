@@ -47,9 +47,6 @@ export function CreateTripForm() {
   return (
     <div className="birzha-panel">
       <h3 className="birzha-section-title birzha-section-title--sm">Создать рейс</h3>
-      <p style={{ ...muted, margin: "0 0 0.75rem" }}>
-        ID можно оставить пустым — система создаст его сама. ТС, водитель и время попадут в отчёт рейса.
-      </p>
       <label htmlFor="ct-trip-number" style={{ fontSize: "0.88rem" }}>
         Номер рейса *
       </label>

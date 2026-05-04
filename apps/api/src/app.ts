@@ -28,6 +28,7 @@ import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
+import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
 import { registerSyncRoutes } from "./http/register-sync-routes.js";
@@ -295,6 +296,7 @@ export async function buildApp(options: {
     domain: "ok",
     batchesApi: batchRepository ? "enabled" : "disabled",
     purchaseDocumentsApi: createPurchaseDocumentUseCase ? "enabled" : "disabled",
+    loadingManifestsApi: db ? "enabled" : "disabled",
     shipDestinationsApi: db && createPurchaseDocumentUseCase ? "enabled" : "disabled",
     warehouseWriteOffApi: db && recordWarehouseWriteOff ? "enabled" : "disabled",
     tripsApi: tripRepository ? "enabled" : "disabled",
@@ -383,6 +385,7 @@ export async function buildApp(options: {
     );
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
+      registerLoadingManifestRoutes(app, db, routeAuth);
     }
 
     const applySync = new ApplySyncActionUseCase(

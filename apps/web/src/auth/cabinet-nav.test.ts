@@ -13,7 +13,20 @@ describe("cabinet-nav", () => {
   it("аноним: админ — сводка /a + те же операции", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
+    expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links).toHaveLength(6);
+  });
+
+  it("admin: рабочие ссылки остаются внутри /a", () => {
+    const user = {
+      id: "u1",
+      login: "admin",
+      roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
+    };
+    const links = buildCabinetNavEntries("admin", user, true);
+    expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
+    expect(links.find((x) => x.key === "reports")?.to).toBe(adminRoutes.reports);
+    expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
   });
 
   it("cabinetNavLinkUsesEnd только для корней /a /s /b", () => {

@@ -20,8 +20,8 @@ const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "purchaser", "logistics"] 
 /** Создание партии (закупка) — закуп + склад + руководство. */
 const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as const;
 
-/** POST/DELETE /warehouses, /product-grades — админ-кабинет (как в `canManageInventoryCatalog` на вебе). */
-const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
+/** POST/DELETE /warehouses, /product-grades — админ-кабинет. */
+const INVENTORY_CATALOG_ROLES = ["admin"] as const;
 
 /** Оприходование на склад. */
 const RECEIVE_ROLES = ["admin", "manager", "warehouse"] as const;
@@ -63,8 +63,8 @@ export function userMayPerformSyncAction(
 
 export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => void | Promise<void>;
 
-/** Управление учётными записями (`GET/POST /admin/users`) — только admin/manager. */
-const USER_MANAGEMENT_ROLES = ["admin", "manager"] as const;
+/** Управление учётными записями (`GET/POST /admin/users`) — только admin. */
+const USER_MANAGEMENT_ROLES = ["admin"] as const;
 
 export type BusinessRouteAuth = {
   dataRead: AuthPreHandler[];
@@ -79,9 +79,9 @@ export type BusinessRouteAuth = {
   sync: AuthPreHandler[];
   catalogRead: AuthPreHandler[];
   catalogWrite: AuthPreHandler[];
-  /** POST/DELETE /warehouses, /product-grades — только admin/manager. */
+  /** POST/DELETE /warehouses, /product-grades — только admin. */
   inventoryCatalogWrite: AuthPreHandler[];
-  /** Список и создание пользователей — только admin/manager (зам не выдаёт роли admin/manager без самого admin). */
+  /** Список и создание пользователей — только admin. */
   userManagement: AuthPreHandler[];
 };
 

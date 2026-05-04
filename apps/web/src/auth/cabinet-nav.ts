@@ -12,6 +12,14 @@ const ANON_OPS: CabinetNavEntry[] = [
   { key: "off", to: ops.offline, label: NAV_PANEL_LABELS.offline },
 ];
 
+const ANON_ADMIN_OPS: CabinetNavEntry[] = [
+  { key: "nakl", to: adminRoutes.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
+  { key: "dist", to: adminRoutes.distribution, label: NAV_PANEL_LABELS.distribution },
+  { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
+  { key: "op", to: adminRoutes.operations, label: NAV_PANEL_LABELS.operations },
+  { key: "off", to: adminRoutes.offline, label: NAV_PANEL_LABELS.offline },
+];
+
 /**
  * Пункты бокового меню кабинета (как в прежнем `AppNav`, без дублирования логики).
  */
@@ -22,7 +30,7 @@ export function buildCabinetNavEntries(
 ): CabinetNavEntry[] {
   if (!user || !authRestricted) {
     if (cabinet === "admin") {
-      return [{ to: adminRoutes.home, label: "Сводка", key: "home" }, ...ANON_OPS];
+      return [{ to: adminRoutes.home, label: "Сводка", key: "home" }, ...ANON_ADMIN_OPS];
     }
     return [...ANON_OPS];
   }

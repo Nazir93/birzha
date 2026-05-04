@@ -55,7 +55,7 @@ export function AccountingStockBalances() {
     }
     const valWhKop = inventoryValueKopecks(batches, (b) => b.onWarehouseKg);
     const valTrKop = inventoryValueKopecks(batches, (b) => b.inTransitKg);
-    return { whKg, trKg, valWhKop, valTrKop, batchCount: batches.length };
+    return { whKg, trKg, valWhKop, valTrKop };
   }, [batchesQ.data?.batches]);
 
   const byWarehouse = useMemo(() => {
@@ -136,9 +136,6 @@ export function AccountingStockBalances() {
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
         </div>
       </div>
-      <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.65rem" }}>
-        Всего партий в списке API: <strong>{totals.batchCount}</strong>.
-      </p>
       <div style={{ overflowX: "auto" }}>
         <table style={{ ...tableStyle, minWidth: 560, fontSize: "0.88rem" }} aria-label="Остатки по складам">
           <thead>

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assignLoadingManifestTripBodySchema,
   assignTripSellerBodySchema,
+  createLoadingManifestBodySchema,
   createBatchBodySchema,
   createTripBodySchema,
   createProductGradeBodySchema,
@@ -309,5 +311,35 @@ describe("assignTripSellerBodySchema", () => {
 
   it("отклоняет пустой sellerUserId", () => {
     expect(() => assignTripSellerBodySchema.parse({ sellerUserId: "" })).toThrow();
+  });
+});
+
+describe("createLoadingManifestBodySchema", () => {
+  it("requires date, destination and at least one batch", () => {
+    expect(() =>
+      createLoadingManifestBodySchema.parse({
+        manifestNumber: " ПН-1 ",
+        docDate: "2026-05-04",
+        warehouseId: " wh-1 ",
+        destinationCode: " moscow ",
+        batchIds: ["b1", "b2"],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      createLoadingManifestBodySchema.parse({
+        manifestNumber: "ПН-1",
+        docDate: "04.05.2026",
+        warehouseId: "wh-1",
+        destinationCode: "moscow",
+        batchIds: [],
+      }),
+    ).toThrow();
+  });
+});
+
+describe("assignLoadingManifestTripBodySchema", () => {
+  it("requires trip id", () => {
+    expect(assignLoadingManifestTripBodySchema.parse({ tripId: " trip-1 " })).toEqual({ tripId: "trip-1" });
+    expect(() => assignLoadingManifestTripBodySchema.parse({ tripId: "" })).toThrow();
   });
 });

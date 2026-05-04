@@ -1,6 +1,6 @@
 const STORAGE_KEY = "birzha:distribution:shipBatches" as const;
 
-export type DistributionShipPayload = { v: 1; batchIds: string[] };
+export type DistributionShipPayload = { v: 1; batchIds: string[]; manifestId?: string };
 
 export function saveDistributionShipPayload(p: DistributionShipPayload): void {
   try {
@@ -24,7 +24,12 @@ export function readDistributionShipPayload(): DistributionShipPayload | null {
     if (!Array.isArray(batchIds) || !batchIds.every((x) => typeof x === "string" && x.length > 0)) {
       return null;
     }
-    return { v: 1, batchIds: [...new Set(batchIds)] };
+    const manifestId = (j as DistributionShipPayload).manifestId;
+    return {
+      v: 1,
+      batchIds: [...new Set(batchIds)],
+      manifestId: typeof manifestId === "string" && manifestId.trim() ? manifestId.trim() : undefined,
+    };
   } catch {
     return null;
   }

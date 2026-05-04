@@ -11,7 +11,8 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { ops } from "../routes.js";
+import { formatTripStatusLabel } from "../format/trip-label.js";
+import { adminRoutes } from "../routes.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
 import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -375,13 +376,13 @@ export function AdminCabinetHome() {
                         <th scope="row" style={thtd}>
                           <strong>{t.tripNumber}</strong>
                         </th>
-                        <td style={thtd}>{t.status}</td>
+                        <td style={thtd}>{formatTripStatusLabel(t.status)}</td>
                         <td style={{ ...thtd, fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
                         <td style={{ ...thtd, textAlign: "right" }}>
                           <Link
-                            to={`${ops.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}
+                            to={`${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}
                             style={{ fontWeight: 600 }}
                           >
                             Открыть

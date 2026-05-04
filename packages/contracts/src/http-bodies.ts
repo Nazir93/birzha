@@ -122,6 +122,21 @@ export const assignTripSellerBodySchema = z.object({
   sellerUserId: z.string().min(1).max(200).transform((s) => s.trim()),
 });
 
+export const createLoadingManifestBodySchema = z.object({
+  id: z.string().min(1).max(200).optional(),
+  manifestNumber: z.string().min(1).max(80).transform((s) => s.trim()),
+  docDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "docDate: YYYY-MM-DD"),
+  warehouseId: z.string().min(1).max(200).transform((s) => s.trim()),
+  destinationCode: z.string().min(1).max(120).transform((s) => s.trim()),
+  batchIds: z.array(z.string().min(1).max(200)).min(1),
+});
+
+export const assignLoadingManifestTripBodySchema = z.object({
+  tripId: z.string().min(1).max(200).transform((s) => s.trim()),
+});
+
 /** Payload `ship_to_trip` в POST /sync */
 export const shipToTripSyncPayloadSchema = shipBodySchema.extend({
   batchId: z.string().min(1),

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import type { CreatePurchaseDocumentResponse, ProductGradeJson } from "../api/types.js";
@@ -27,7 +27,7 @@ import {
   queryRoots,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminRoutes, login, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { adminAwarePathForPath, adminRoutes, login, ops, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnStyle,
@@ -71,7 +71,10 @@ function emptyLine(): LineDraft {
 }
 
 export function PurchaseNakladnayaSection() {
+  const { pathname } = useLocation();
   const { meta, user } = useAuth();
+  const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
+  const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
   const canManageCatalog = user ? canManageInventoryCatalog(user) : false;
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
@@ -251,16 +254,16 @@ export function PurchaseNakladnayaSection() {
       );
     }
     if (/\b403\b/.test(m)) {
-      return <>Доступ запрещён (403). Нужна роль с правом накладной (закупщик, кладовщик, admin и т.д.).</>;
+      return <>Доступ запрещён (403). Нужна роль с правом закупки товара (закупщик, кладовщик, admin и т.д.).</>;
     }
     return <>Не загрузились склады или калибры: {m}</>;
   }, [warehousesQ.isError, warehousesQ.error, gradesQ.isError, gradesQ.error, meta?.requireApiAuth, user]);
 
   if (!enabled) {
     return (
-      <section className="birzha-panel" aria-labelledby="nakl-disabled" role="region" aria-label="Закупочная накладная">
+      <section className="birzha-panel" aria-labelledby="nakl-disabled" role="region" aria-label="Закупка товара">
         <h3 id="nakl-disabled" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          Закупочная накладная
+          Закупка товара
         </h3>
         <p style={muted}>
           Раздел накладных временно недоступен. Проверьте подключение к серверу или обратитесь к администратору.
@@ -270,21 +273,21 @@ export function PurchaseNakladnayaSection() {
   }
 
   return (
-    <section className="birzha-panel" aria-labelledby="nakl-heading" role="region" aria-label="Закупочная накладная">
+    <section className="birzha-panel" aria-labelledby="nakl-heading" role="region" aria-label="Закупка товара">
       <div className="birzha-section-heading">
         <div>
           <p className="birzha-section-heading__eyebrow">Приёмка</p>
           <h3 id="nakl-heading" className="birzha-section-title birzha-section-title--sm">
-            Закупочная накладная
+            Закупка товара
           </h3>
         </div>
         <p className="birzha-section-heading__note">
           После сохранения партии появятся в{" "}
-          <Link to={ops.distribution} style={{ fontWeight: 600 }}>
+          <Link to={distributionPath} style={{ fontWeight: 600 }}>
             распределении
           </Link>{" "}
           и{" "}
-          <Link to={ops.operations} style={{ fontWeight: 600 }}>
+          <Link to={operationsPath} style={{ fontWeight: 600 }}>
             операциях
           </Link>
         </p>
@@ -607,7 +610,7 @@ export function PurchaseNakladnayaSection() {
                   return (
                     <tr key={d.id}>
                       <td style={thtdDense}>
-                        <Link to={purchaseNakladnayaDocumentPath(d.id)} style={{ fontWeight: 600 }}>
+                        <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
                           {d.documentNumber}
                         </Link>
                       </td>

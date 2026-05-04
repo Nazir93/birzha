@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
-import { purchaseNakladnayaDocumentPath } from "../routes.js";
+import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { btnStyleInline, muted, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 export type BatchesNaklGroup = {
@@ -68,6 +68,7 @@ export function BatchesByNakladnayaReference({
   sectionHeadingId,
   showBulkExpandControls = false,
 }: Props) {
+  const { pathname } = useLocation();
   const groups = useMemo(() => groupBatchesByPurchaseDocument(batches), [batches]);
   const gKey = useMemo(() => groups.map((x) => x.documentId).join("|"), [groups]);
   const [openByDoc, setOpenByDoc] = useState<Record<string, boolean>>({});
@@ -145,7 +146,7 @@ export function BatchesByNakladnayaReference({
               </span>{" "}
               <span style={{ fontSize: "0.88rem", fontWeight: 400 }}>
                 <Link
-                  to={purchaseNakladnayaDocumentPath(grp.documentId)}
+                  to={purchaseNakladnayaDocumentPathForPath(pathname, grp.documentId)}
                   onClick={(ev) => {
                     ev.stopPropagation();
                   }}

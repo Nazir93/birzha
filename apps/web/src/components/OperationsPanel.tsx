@@ -13,19 +13,23 @@ import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
-import { useAuth } from "../auth/auth-context.js";
 import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
-import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import {
   batchesFullListQueryOptions,
   queryRoots,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminRoutes, ops, purchaseNakladnayaDocumentPath } from "../routes.js";
-import { BatchesByNakladnayaReference, groupBatchesByPurchaseDocument } from "./BatchesByNakladnayaReference.js";
+import {
+  adminAwarePathForPath,
+  adminRoutes,
+  ops,
+  purchaseNakladnayaBasePathForPath,
+  purchaseNakladnayaDocumentPathForPath,
+} from "../routes.js";
+import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
 import { parseRecordTripShortageForm, parseShipForm } from "../validation/api-schemas.js";
 
@@ -46,11 +50,12 @@ function formatBatchShipLabel(b: BatchListItem): string {
 }
 
 export function OperationsPanel() {
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(location.pathname);
+  const distributionPath = adminAwarePathForPath(location.pathname, adminRoutes.distribution, ops.distribution);
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
@@ -93,6 +98,7 @@ export function OperationsPanel() {
   }, [batchesQuery.data?.batches]);
 
   const [distShipBatchIds, setDistShipBatchIds] = useState<string[] | null>(null);
+  const [distShipManifestId, setDistShipManifestId] = useState<string>("");
 
   const distBatchesToShip = useMemo(() => {
     if (distShipBatchIds == null || distShipBatchIds.length === 0) {
@@ -138,6 +144,7 @@ export function OperationsPanel() {
     const p = readDistributionShipPayload();
     if (p && p.batchIds.length > 0) {
       setDistShipBatchIds(p.batchIds);
+      setDistShipManifestId(p.manifestId ?? "");
     }
     void navigate({ pathname: location.pathname, search: "" }, { replace: true });
   }, [fromDistributionQ, location.pathname, navigate]);
@@ -150,11 +157,6 @@ export function OperationsPanel() {
       document.getElementById("op-sec-ship")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [distShipBatchIds]);
-
-  const batchesGroupedCount = useMemo(
-    () => groupBatchesByPurchaseDocument(batchesQuery.data?.batches).length,
-    [batchesQuery.data?.batches],
-  );
 
   const nakladOptionsForShipAll = useMemo(() => {
     const seen = new Map<string, string>();
@@ -252,10 +254,14 @@ export function OperationsPanel() {
         const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
         await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
       }
+      if (distShipManifestId) {
+        await apiPostJson(`/api/loading-manifests/${encodeURIComponent(distShipManifestId)}/assign-trip`, { tripId: tripT });
+      }
     },
     onSuccess: () => {
       invalidateDomain();
       setDistShipBatchIds(null);
+      setDistShipManifestId("");
       clearDistributionShipPayload();
     },
   });
@@ -294,15 +300,6 @@ export function OperationsPanel() {
   return (
     <div role="region" aria-label="Операции по партиям и рейсу">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Операции по партиям и рейсу</h2>
-      <p style={muted}>
-        <strong>Порядок:</strong> партии создаются только из{" "}
-        <Link to={ops.purchaseNakladnaya} style={{ fontWeight: 600 }}>
-          накладной
-        </Link>{" "}
-        (строка = калибр = партия, товар сразу на складе). Здесь — рейс: отгрузка в рейс (<strong>кг</strong> обязательно;
-        <strong>ящики</strong> при отгрузке — по желанию, дополнительно к накладной), при необходимости недостача по приёмке
-        на рынке, продажа с рейса.
-      </p>
 
       {batchesQuery.data && (
         <datalist id="batch-suggestions">
@@ -329,15 +326,6 @@ export function OperationsPanel() {
             sectionHeadingId="op-batches-heading"
             showBulkExpandControls={false}
           />
-          {batchesGroupedCount > 0 && user && canManageInventoryCatalog(user) && (
-            <p style={{ ...muted, fontSize: "0.86rem", margin: "-0.35rem 0 0.9rem" }}>
-              Подробная <strong>справочная</strong> сводка с «развернуть все» — в кабинете{" "}
-              <Link to={`${adminRoutes.inventory}#batches-nakl-ref`} style={{ fontWeight: 600 }}>
-                Склады и калибры
-              </Link>{" "}
-              (с кнопками «развернуть/свернуть все»).
-            </p>
-          )}
         </>
       )}
 
@@ -355,19 +343,11 @@ export function OperationsPanel() {
           </div>
           <p className="birzha-section-heading__note">Партия, накладная или отбор из распределения</p>
         </div>
-        <p style={{ ...muted, marginTop: 0 }}>
-          {hasDistributionSelection ? (
-            <>
-              Вы пришли из <strong>Распределения</strong>: ниже отгружается <strong>один собранный отбор</strong> (свод по
-              калибрам). Ручные блоки «Одна партия» и «Вся накладная» скрыты, чтобы не дублировать сценарий.
-            </>
-          ) : (
-            <>
-              Отгрузка снимает массу <strong>с выбранной партии</strong> (строки накладной, калибр). Сначала выберите рейс,
-              затем либо одну партию и кг, либо отгрузите все строки накладной, где есть остаток на складе.
-            </>
-          )}
-        </p>
+        {hasDistributionSelection ? (
+          <p style={{ ...muted, marginTop: 0 }}>
+            Из <strong>Распределения</strong> перенесён собранный отбор.
+          </p>
+        ) : null}
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс *
         </label>
@@ -422,14 +402,10 @@ export function OperationsPanel() {
         </select>
         {shippableBatches.length === 0 && batchesQuery.data && (
           <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.85rem" }}>
-            Нет партий с остатком на складе — нечего отгружать (сначала оформите приём по накладной на вкладке{" "}
-            <Link to={ops.purchaseNakladnaya}>Накладная</Link>).
+            Нет партий с остатком на складе — нечего отгружать (сначала оформите приём в разделе{" "}
+            <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
           </p>
         )}
-        <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
-          В выпадающем списке — только партии с остатком на складе. Ниже можно ввести или вставить идентификатор партии
-          из таблицы выше (в т.ч. если нужна партия не из списка).
-        </p>
         <label htmlFor="op-in-ship-batch-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.35rem" }}>
           Идентификатор партии (дублирует выбор выше)
         </label>
@@ -490,13 +466,10 @@ export function OperationsPanel() {
 
         <h4 style={{ margin: "1rem 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Вся накладная в рейс</h4>
         <p style={{ ...muted, fontSize: "0.85rem", marginBottom: "0.35rem" }}>
-          Отправка <strong>по накладной</strong> в выбранный рейс: по очереди фиксируется отгрузка по каждой строке (калибр),{" "}
-          <strong>кг</strong> = полный остаток на складе по строке. Можно указать <strong>всего ящиков по накладной</strong> в
-          этой отгрузке — они <strong>распределяются по строкам пропорционально кг</strong> (сумма в отчёте рейса по ящикам =
-          введённое число). Нужны ящики иначе — отгрузите строки по одной в блоке выше.
+          Кг = полный остаток по строкам накладной. Ящики опционально распределяются по кг.
         </p>
         <label htmlFor="op-sel-ship-naklad-all" style={{ fontSize: "0.88rem" }}>
-          Накладная
+          Закупка товара
         </label>
         <select
           id="op-sel-ship-naklad-all"
@@ -516,7 +489,7 @@ export function OperationsPanel() {
         </select>
         {shipAllDocumentId ? (
           <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
-            <Link to={purchaseNakladnayaDocumentPath(shipAllDocumentId)}>Открыть накладную</Link>
+            <Link to={purchaseNakladnayaDocumentPathForPath(location.pathname, shipAllDocumentId)}>Открыть накладную</Link>
           </p>
         ) : null}
         <label htmlFor="op-in-ship-naklad-pkg-total" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
@@ -562,6 +535,12 @@ export function OperationsPanel() {
             </h4>
             <p style={{ ...muted, margin: "0 0 0.4rem", fontSize: "0.86rem", lineHeight: 1.5 }}>
               Перенесён список <strong>{distShipBatchIds.length}</strong> {distShipBatchIds.length === 1 ? "партии" : "партий"}.
+              {distShipManifestId ? (
+                <>
+                  {" "}
+                  Погрузочная накладная сохранена.
+                </>
+              ) : null}{" "}
               С <strong>остатком сейчас</strong> готово к отгрузке: <strong>{distBatchesToShip.length}</strong>. Для
               каждой будет отгружен полный остаток по партии, как в одиночной отгрузке. {distBatchesMissingCount > 0 && (
                 <>
@@ -570,9 +549,6 @@ export function OperationsPanel() {
                   пошли.
                 </>
               )}
-            </p>
-            <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
-              Сначала выберите <strong>рейс</strong> (создайте выше «Создать рейс», если его ещё нет), затем нажмите кнопку.
             </p>
             {distByCaliberSummary.length > 0 && (
               <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
@@ -601,12 +577,13 @@ export function OperationsPanel() {
                 disabled={shipFromDistribution.isPending}
                 onClick={() => {
                   setDistShipBatchIds(null);
+                  setDistShipManifestId("");
                   clearDistributionShipPayload();
                 }}
               >
                 Сбросить отбор
               </button>{" "}
-              <Link to={ops.distribution} style={{ fontSize: "0.86rem" }}>
+              <Link to={distributionPath} style={{ fontSize: "0.86rem" }}>
                 к распределению
               </Link>
             </p>
@@ -625,10 +602,7 @@ export function OperationsPanel() {
           </div>
           <p className="birzha-section-heading__note">Закрепить рейс за конкретным продавцом</p>
         </div>
-        <p style={{ ...muted, marginTop: 0 }}>
-          После этого рейс появится только у выбранного продавца в кабинете продаж. Другие продавцы не увидят этот рейс и не
-          смогут провести по нему продажу.
-        </p>
+        <p style={{ ...muted, marginTop: 0 }}>Рейс будет виден только выбранному продавцу.</p>
         <label htmlFor="op-sel-assign-trip" style={{ fontSize: "0.88rem" }}>
           Рейс *
         </label>

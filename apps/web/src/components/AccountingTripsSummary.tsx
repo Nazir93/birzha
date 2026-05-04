@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
+import { formatTripStatusLabel } from "../format/trip-label.js";
 import { shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
@@ -99,8 +100,7 @@ export function AccountingTripsSummary() {
   if (sortedTrips.length === 0) {
     return (
       <p style={muted}>
-        Пока нет рейсов. После того как логист/склад введут рейс, здесь появятся итоги; продажи с рейса — в кабинете
-        «Операции».
+        Пока нет рейсов.
       </p>
     );
   }
@@ -121,8 +121,7 @@ export function AccountingTripsSummary() {
       </div>
       {moreThanTable ? (
         <p style={{ ...muted, margin: "0 0 0.5rem" }}>
-          Всего в системе {totalInDb} рейсов; в сводку попадают первые {MAX_TRIPS} (по номеру). Остальные — выберите
-          вручную в «Отчётах».
+          В сводке первые {MAX_TRIPS} из {totalInDb} рейсов.
         </p>
       ) : null}
       {revenueChartItems.length > 0 ? (
@@ -208,7 +207,7 @@ export function AccountingTripsSummary() {
                   <th scope="row" style={thtd}>
                     <strong>{r.trip.tripNumber}</strong>{" "}
                     <span style={muted} title="статус">
-                      · {r.trip.status}
+                      · {formatTripStatusLabel(r.trip.status)}
                     </span>
                   </th>
                   <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(r.sales.totalGrams)}</td>

@@ -38,7 +38,7 @@ function openDb(): Promise<IDBDatabase> {
   const dbName = getOutboxIndexedDbName();
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(dbName, DB_VERSION);
-    req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
+    req.onerror = () => reject(req.error ?? new Error("Не удалось открыть IndexedDB"));
     req.onsuccess = () => resolve(req.result);
     req.onupgradeneeded = () => {
       const db = req.result;

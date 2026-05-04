@@ -4,6 +4,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { ops, sales } from "../routes.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
+import { SellerSalesSummary } from "./SellerSalesSummary.js";
 
 /**
  * Полевой продавец: один экран — продажа с рейса (без дублирования с «Операциями»).
@@ -21,9 +22,6 @@ export function SellerCabinetHome() {
           <h2 id="seller-work-h" className="birzha-home-hero__title">
             Быстрая продажа с рейса
           </h2>
-          <p className="birzha-home-hero__lead">
-            Рейс, партия, клиент и оплата — всё в одном рабочем экране.
-          </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия продавца">
           <Link to={sales.reports} className="birzha-home-action">
@@ -42,6 +40,8 @@ export function SellerCabinetHome() {
           )}
         </nav>
       </header>
+
+      <SellerSalesSummary />
 
       <section className="birzha-home-work-card" aria-label="Форма продажи">
         <SellFromTripSection variant="seller" />

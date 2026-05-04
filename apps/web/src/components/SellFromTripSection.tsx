@@ -11,7 +11,6 @@ import {
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
-import { isFieldSellerOnly } from "../auth/role-panels.js";
 import {
   batchesByIdsQueryOptions,
   batchesSearchQueryOptions,
@@ -58,9 +57,8 @@ export type SellFromTripVariant = "seller" | "operations";
  * Используется в кабинете продавца (/s) и в общих операциях (/o/operations).
  */
 export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
-  const { meta, user } = useAuth();
+  const { meta } = useAuth();
   const queryClient = useQueryClient();
-  const fieldOnly = user ? isFieldSellerOnly(user) : false;
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -306,18 +304,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       </h3>
       {variant === "seller" ? (
         <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55, fontSize: "0.95rem" }}>
-          Рейс появится здесь после того, как админ, закупщик или логист выполнит <strong>«Отгрузить с рейса»</strong> на
-          вашу учётную запись. Выберите <strong>рейс</strong>, затем <strong>партию (накладная · калибр)</strong> — это товар в машине. Укажите{" "}
-          <strong>килограммы</strong>, <strong>цену за кг</strong> и <strong>оплату</strong>. Для печати и сверки позже — раздел «Отчёты» в
-          меню.
+          Выберите рейс, партию, кг, цену и оплату.
         </p>
       ) : (
         <>
           <p style={muted}>
-            Товар на машине привязан к <strong>накладной</strong>: в списке ниже каждая строка — это <strong>калибр</strong> (конкретная партия в
-            пути). Выберите рейс → строку → сколько <strong>килограмм</strong> продали, <strong>цену за 1 кг</strong> и{" "}
-            <strong>способ оплаты</strong> (наличные, долг или смешанно). Ящики в заявке не отправляются — при необходимости смотрите подсказку
-            по строке.
+            Выберите рейс, калибр, кг, цену и оплату.
           </p>
           {import.meta.env.DEV && (
             <details style={{ ...muted, marginBottom: "0.6rem", fontSize: "0.82rem" }}>
@@ -329,12 +321,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             </details>
           )}
         </>
-      )}
-
-      {fieldOnly && (
-        <p style={{ ...muted, fontSize: "0.86rem", marginBottom: "0.5rem", lineHeight: 1.45 }}>
-          Для вашего входа в отчёте учитываются <strong>только ваши</strong> строки продажи.
-        </p>
       )}
 
       <span style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.25rem" }}>Рейс *</span>

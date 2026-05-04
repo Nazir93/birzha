@@ -28,7 +28,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Накладная" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Закупка товара" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Операции" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Офлайн-очередь" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Диагностика" })).toHaveCount(0);
@@ -46,7 +46,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/, { timeout: 20_000 });
 
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
-    await expect(nav.getByRole("link", { name: "Накладная" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Операции" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Офлайн-очередь" })).toBeVisible();
@@ -65,7 +65,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Операции" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Накладная" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Закупка товара" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toHaveCount(0);
   });
 });

@@ -1,23 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-import { patchBatchAllocation, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
-import type { BatchListItem } from "../api/types.js";
+import { apiPostJson } from "../api/fetch-api.js";
+import type { BatchListItem, CreateLoadingManifestResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
-import { formatBatchPartyCaption, formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { formatNakladLineLabel } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   batchesFullListQueryOptions,
+  loadingManifestDetailQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { ops, purchaseNakladnayaDocumentPath } from "../routes.js";
+import {
+  adminAwarePathForPath,
+  adminRoutes,
+  ops,
+  purchaseNakladnayaBasePathForPath,
+  purchaseNakladnayaDocumentPathForPath,
+} from "../routes.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
@@ -31,17 +38,13 @@ const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
   writeoff: "Списание",
 };
 
-type RowEdit = { destination: string };
+function todayDateOnly(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
-function toSelectValue(
-  v: string | null | undefined,
-  allowed: readonly string[],
-  emptyLabel: "empty" | "not_set",
-): string {
-  if (v && allowed.includes(v)) {
-    return v;
-  }
-  return emptyLabel === "not_set" ? "_notset" : "";
+function defaultManifestNumber(): string {
+  const d = new Date();
+  return `ПН-${d.toISOString().slice(0, 10).replaceAll("-", "")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 /** Группировка: склад из строки накладной. В `stock` только партии `isFromPurchaseNakladnaya`. */
@@ -117,8 +120,10 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
 
 export function AllocationPanel() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { meta } = useAuth();
-  const showWarehouseWriteOff = meta?.warehouseWriteOffApi === "enabled";
+  const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
+  const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
   const queryClient = useQueryClient();
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
@@ -142,14 +147,12 @@ export function AllocationPanel() {
 
   const warehousesQuery = useQuery(warehousesFullListQueryOptions());
 
-  const [edits, setEdits] = useState<Record<string, RowEdit | undefined>>({});
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   /** Какие накл. вошли в «отбор под рейс» — общий список для сбора на погрузку и для строк качества. */
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
-  /** Партии для «Применить к выбранным» (направление). */
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
-  const [bulkDestination, setBulkDestination] = useState<string>("_notset");
-  const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
+  const [manifestDate, setManifestDate] = useState(todayDateOnly);
+  const [manifestNumber, setManifestNumber] = useState(defaultManifestNumber);
+  const [savedManifestId, setSavedManifestId] = useState<string>("");
 
   const warehouseName = useCallback(
     (id: string) => {
@@ -159,68 +162,25 @@ export function AllocationPanel() {
     [warehousesQuery.data?.warehouses],
   );
 
-  const getEdit = (b: BatchListItem): RowEdit => {
-    const e = edits[b.id];
-    if (e) {
-      return e;
-    }
-    const a = b.allocation;
-    return {
-      destination: toSelectValue(a?.destination ?? null, destAllowed, "not_set"),
-    };
-  };
+  const savedManifestQuery = useQuery({
+    ...loadingManifestDetailQueryOptions(savedManifestId),
+  });
 
-  const save = useMutation({
-    mutationFn: async ({ batchId, destination }: { batchId: string; destination: string }) => {
-      const body = { destination: (destination === "_notset" ? null : destination) as string | null };
-      await patchBatchAllocation(batchId, body);
+  const createManifest = useMutation({
+    mutationFn: async (payload: {
+      warehouseId: string;
+      destinationCode: string;
+      batchIds: string[];
+      docDate: string;
+      manifestNumber: string;
+    }) => {
+      return apiPostJson("/api/loading-manifests", payload) as Promise<CreateLoadingManifestResponse>;
     },
-    onSuccess: (_d, { batchId }) => {
-      setEdits((prev) => {
-        const next = { ...prev };
-        delete next[batchId];
-        return next;
-      });
+    onSuccess: (res) => {
+      setSavedManifestId(res.manifestId);
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     },
   });
-
-  const writeOff = useMutation({
-    mutationFn: async ({ batchId, kg }: { batchId: string; kg: number }) => {
-      await postBatchWarehouseWriteOffQualityReject(batchId, kg);
-    },
-    onSuccess: (_d, { batchId }) => {
-      setRejectScrapInput((prev) => {
-        const next = { ...prev };
-        delete next[batchId];
-        return next;
-      });
-      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
-    },
-  });
-
-  const bulkSave = useMutation({
-    mutationFn: async (payload: { batchIds: string[]; destination: string }) => {
-      const hasD = payload.destination !== "_notset";
-      if (!hasD) {
-        return;
-      }
-      for (const batchId of payload.batchIds) {
-        await patchBatchAllocation(batchId, {
-          destination: payload.destination === "_notset" ? null : (payload.destination as string),
-        });
-      }
-    },
-    onSuccess: () => {
-      setEdits({});
-      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
-    },
-  });
-
-  const onSaveRow = (b: BatchListItem) => {
-    const e = getEdit(b);
-    save.mutate({ batchId: b.id, destination: e.destination });
-  };
 
   const list = useMemo(
     () =>
@@ -341,21 +301,6 @@ export function AllocationPanel() {
     setLoadNaklSelection(new Set());
   }, []);
 
-  const onToggleSelectRow = useCallback((id: string) => {
-    setSelectedRowIds((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) {
-        n.delete(id);
-      } else {
-        n.add(id);
-      }
-      return n;
-    });
-  }, []);
-  const onClearRowSelection = useCallback(() => {
-    setSelectedRowIds(new Set());
-  }, []);
-
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
       return [];
@@ -369,6 +314,17 @@ export function AllocationPanel() {
     }
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
+
+  const manifestDestinationCode = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const b of tableRows) {
+      const d = b.allocation?.destination;
+      if (d && destAllowed.includes(d)) {
+        counts.set(d, (counts.get(d) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? destAllowed[0] ?? "";
+  }, [destAllowed, tableRows]);
 
   /** Партии с остатком по накладным, которые сознательно не отмечены в отборе — чтобы видеть складской хвост. */
   const batchesOutsideNaklSelection = useMemo(() => {
@@ -387,15 +343,6 @@ export function AllocationPanel() {
     });
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
-  const onSelectAllTableRows = useCallback(() => {
-    setSelectedRowIds(new Set(tableRows.map((b) => b.id)));
-  }, [tableRows]);
-
-  useEffect(() => {
-    const valid = new Set(tableRows.map((b) => b.id));
-    setSelectedRowIds((prev) => new Set([...prev].filter((id) => valid.has(id))));
-  }, [tableRows]);
-
   if (batchesQuery.isError) {
     return (
       <p role="alert" style={errorText}>
@@ -405,26 +352,9 @@ export function AllocationPanel() {
   }
 
   return (
-    <div role="region" aria-label="Распределение по направлению">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение по направлению</h2>
-      <p style={muted}>
-        <strong>Здесь только приём в учёте</strong> (сорт, направление, брак кг, печатный «лист погрузки»). <strong>Факта
-        отгрузки в фуру</strong> здесь нет — она в разделе{" "}
-        <Link to={ops.operations} style={{ fontWeight: 600 }}>
-          Операции
-        </Link>
-        , после кнопки <strong>«Погрузка в рейс»</strong> (она переносит список партий, вы выбираете рейс и
-        подтверждаете).
-      </p>
-      <p style={muted}>
-        <strong>1</strong> — склад. <strong>2</strong> — накладные, откуда везёте в этот рейс, свод по калибру/партиям.{" "}
-        <strong>3</strong> — таблица: чекбоксами отметьте партии для <strong>массового</strong> назначения направления («К выбранным»)
-        <strong> и/или</strong> чтобы ограничить, <strong>какие</strong> партии попадут в «Погрузка в рейс» (если
-        <strong>ни одной накладной</strong> не отмечено в блоке выше — показывается <strong>весь остаток</strong> склада;
-        в рейс по кнопке «Погрузка» по-прежнему уходят выбранные строки таблицы или все, если чекбоксы партий пустые).
-        Брак в кг — в колонке. См.{" "}
-        <Link to={ops.reports}>отчёты</Link>.
-      </p>
+    <div role="region" aria-label="Распределение товара">
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
+      <p style={muted}>Выберите склад, накладные и партии для направления или погрузки в рейс.</p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
       </p>
@@ -441,17 +371,17 @@ export function AllocationPanel() {
 
       {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 && (
         <p style={warnText} role="status">
-          Остатки с оформленной <strong>накладной</strong> (id документа и склад в строке) здесь не найдены — на отбор не
+          Остатки с оформленной <strong>закупкой товара</strong> (id документа и склад в строке) здесь не найдены — на отбор не
           попадут «ручные»/старые партии без накладной. Оформите приём в{" "}
-          <Link to={ops.purchaseNakladnaya}>Накладной</Link>.
+          <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
         </p>
       )}
       {!loading &&
         list.length === 0 &&
         (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length === 0 && (
         <p style={muted}>
-          Нет партий с остатком на складе — сначала оформите закупку по накладной (вкладка{" "}
-          <Link to={ops.purchaseNakladnaya}>Накладная</Link>).
+          Нет партий с остатком на складе — сначала оформите закупку товара (раздел{" "}
+          <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
         </p>
       )}
 
@@ -492,7 +422,7 @@ export function AllocationPanel() {
                   <strong>Остаток на этом складе:</strong>{" "}
                   {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг &nbsp;·&nbsp;{" "}
                   {whSummary.batches} парт. &nbsp;·&nbsp;{" "}
-                  {whSummary.docCount > 0 ? <>{whSummary.docCount} накладн.</> : "накладная в данных не указана"}
+                  {whSummary.docCount > 0 ? <>{whSummary.docCount} закуп.</> : "закупка товара в данных не указана"}
                 </p>
                 <p style={{ margin: 0 }}>
                   <strong>Ящики (оценка):</strong>{" "}
@@ -511,15 +441,89 @@ export function AllocationPanel() {
           </div>
 
           {selectedWarehouse && (
-            <LoadingManifestBlock
-              documentOptions={manifestDocumentOptions}
-              selectedDocIds={loadNaklSelection}
-              onToggleNaklDoc={onToggleNaklDoc}
-              onSelectAllNakl={onSelectAllNakl}
-              onClearNakl={onClearNakl}
-              batchesInWh={batchesInWh}
-              warehouseName={warehouseName(selectedWarehouse)}
-            />
+            <>
+              <div className="birzha-inline-panel" style={{ marginBottom: "0.9rem" }}>
+                <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.55rem" }}>Данные погрузочной накладной</h3>
+                <div className="birzha-form-grid">
+                  <label>
+                    Дата *
+                    <input
+                      type="date"
+                      value={manifestDate}
+                      onChange={(e) => setManifestDate(e.target.value)}
+                      style={fieldStyle}
+                    />
+                  </label>
+                  <label>
+                    Город / направление *
+                    <select value={manifestDestinationCode} disabled style={fieldStyle}>
+                      {destAllowed.map((d) => (
+                        <option key={d} value={d}>
+                          {labelDest[d] ?? d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Номер *
+                    <input
+                      value={manifestNumber}
+                      onChange={(e) => setManifestNumber(e.target.value)}
+                      style={fieldStyle}
+                    />
+                  </label>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.7rem" }}>
+                  <button
+                    type="button"
+                    style={btnStyle}
+                    disabled={
+                      createManifest.isPending ||
+                      tableRows.length === 0 ||
+                      !manifestDate ||
+                      !manifestNumber.trim() ||
+                      !manifestDestinationCode
+                    }
+                    onClick={() => {
+                      createManifest.mutate({
+                        warehouseId: selectedWarehouse,
+                        destinationCode: manifestDestinationCode,
+                        batchIds: tableRows.map((b) => b.id),
+                        docDate: manifestDate,
+                        manifestNumber: manifestNumber.trim(),
+                      });
+                    }}
+                  >
+                    {createManifest.isPending ? "Сохранение…" : "Сохранить погрузочную накладную"}
+                  </button>
+                  {savedManifestId && (
+                    <button type="button" style={btnStyle} onClick={() => window.print()}>
+                      Печать
+                    </button>
+                  )}
+                </div>
+                {createManifest.isError && (
+                  <p style={errorText} role="alert">
+                    Не удалось сохранить погрузочную накладную. Проверьте дату, город и выбранные партии.
+                  </p>
+                )}
+                {savedManifestId && (
+                  <p style={{ ...muted, marginBottom: 0 }} role="status">
+                    Сохранено: № {savedManifestQuery.data?.manifest.manifestNumber ?? manifestNumber}.
+                  </p>
+                )}
+              </div>
+              <LoadingManifestBlock
+                documentOptions={manifestDocumentOptions}
+                selectedDocIds={loadNaklSelection}
+                onToggleNaklDoc={onToggleNaklDoc}
+                onSelectAllNakl={onSelectAllNakl}
+                onClearNakl={onClearNakl}
+                batchesInWh={batchesInWh}
+                warehouseName={warehouseName(selectedWarehouse)}
+                manifest={savedManifestQuery.data?.manifest ?? null}
+              />
+            </>
           )}
 
           {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
@@ -557,7 +561,7 @@ export function AllocationPanel() {
                                 <>
                                   {" "}
                                   <Link
-                                    to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
+                                    to={purchaseNakladnayaDocumentPathForPath(pathname, b.nakladnaya.documentId)}
                                     style={{ fontSize: "0.82rem" }}
                                   >
                                     открыть
@@ -583,7 +587,7 @@ export function AllocationPanel() {
             <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
               На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
               складе. Оформите закупку в{" "}
-              <Link to={ops.purchaseNakladnaya}>Накладной</Link>.
+              <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
             </p>
           )}
 
@@ -596,253 +600,25 @@ export function AllocationPanel() {
 
           {selectedWarehouse && tableRows.length > 0 && (
             <div>
-              <h3 id="alloc-table" style={{ fontSize: "0.98rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
-                2. Направление и отбор в рейс (по чекбоксам)
-              </h3>
-              {tableRows.length > 0 && (
-                <div
-                  className="no-print"
-                  style={{ margin: "0 0 0.9rem", display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", alignItems: "end" }}
-                >
-                  <span style={{ fontSize: "0.86rem" }} title="Те же чекбоксы используются для кнопки «Погрузка в рейс» (если 0 — берутся все строки)">
-                    Отмечено партий: <strong>{selectedRowIds.size}</strong> / {tableRows.length}
-                  </span>
-                  <div>
-                    <span style={muted}>Направление</span>{" "}
-                    <select
-                      aria-label="Направление для выбранных"
-                      value={bulkDestination}
-                      onChange={(ev) => setBulkDestination(ev.target.value)}
-                      style={fieldStyle}
-                    >
-                      <option value="_notset">— пропуск —</option>
-                      {destAllowed.map((c) => (
-                        <option key={c} value={c}>
-                          {labelDest[c] ?? c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.4rem" }}>
-                    <button
-                      type="button"
-                      style={btnStyle}
-                      disabled={bulkSave.isPending || save.isPending || selectedRowIds.size === 0}
-                      onClick={() => {
-                        if (bulkDestination === "_notset") {
-                          return;
-                        }
-                        const batchIds = [...selectedRowIds];
-                        bulkSave.mutate({ batchIds, destination: bulkDestination });
-                      }}
-                    >
-                      {bulkSave.isPending ? "…" : "К выбранным"}
-                    </button>
-                    <button type="button" style={btnStyle} onClick={onSelectAllTableRows} disabled={tableRows.length === 0}>
-                      Все строки
-                    </button>
-                    <button type="button" style={btnStyle} onClick={onClearRowSelection}>
-                      Сброс
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, minWidth: 920 }} aria-labelledby="alloc-table">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={{ ...thHead, width: "2.5rem" }}>
-                      <input
-                        type="checkbox"
-                        title="Переключить все"
-                        checked={
-                          tableRows.length > 0 && tableRows.every((b) => selectedRowIds.has(b.id))
-                        }
-                        onChange={(ev) => (ev.target.checked ? onSelectAllTableRows() : onClearRowSelection())}
-                        aria-label="Переключить выбор всех партий"
-                      />
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Партия
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Остаток, кг
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Ящики
-                    </th>
-                    {showWarehouseWriteOff && (
-                      <th scope="col" style={thHead}>
-                        Брак (кг) со склада
-                      </th>
-                    )}
-                    <th scope="col" style={thHead}>
-                      Направление
-                    </th>
-                    <th scope="col" style={thHead} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.map((b) => {
-                    const label = formatBatchPartyCaption(b, b.id);
-                    const e = getEdit(b);
-                    const onShelfPkg = estimatedPackageCountOnShelf(b);
-                    const linePkg = b.nakladnaya?.linePackageCount;
-                    return (
-                      <tr key={b.id}>
-                        <td style={thtd}>
-                          <input
-                            type="checkbox"
-                            checked={selectedRowIds.has(b.id)}
-                            onChange={() => onToggleSelectRow(b.id)}
-                            aria-label={`Партия ${label}: сорт/направление пачкой и/или в список «Погрузка в рейс»`}
-                          />
-                        </td>
-                        <td style={thtd}>
-                          <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{label}</div>
-                          {b.nakladnaya?.documentId && (
-                            <Link
-                              to={purchaseNakladnayaDocumentPath(b.nakladnaya.documentId)}
-                              style={{ fontSize: "0.82rem" }}
-                            >
-                              накладная
-                            </Link>
-                          )}
-                          <div>
-                            <code className="birzha-text-muted" style={{ fontSize: "0.75rem" }}>
-                              {formatShortBatchId(b.id)}
-                            </code>
-                          </div>
-                        </td>
-                        <td style={thtd}>{b.onWarehouseKg}</td>
-                        <td style={thtd}>
-                          {onShelfPkg != null ? (
-                            <span style={{ fontWeight: 500 }}>≈ {onShelfPkg}</span>
-                          ) : (
-                            "—"
-                          )}
-                          {linePkg != null && linePkg > 0 && (
-                            <div className="birzha-text-subtle" style={{ fontSize: "0.78rem", marginTop: "0.2rem" }}>
-                              в накл.: {linePkg} шт. · вес партии {b.totalKg} кг
-                            </div>
-                          )}
-                        </td>
-                        {showWarehouseWriteOff && (
-                          <td style={thtd}>
-                            <div style={{ fontSize: "0.82rem", marginBottom: "0.35rem" }}>
-                              уже:{" "}
-                              <strong>
-                                {typeof b.qualityRejectWrittenOffKg === "number"
-                                  ? b.qualityRejectWrittenOffKg.toLocaleString("ru-RU", {
-                                      maximumFractionDigits: 2,
-                                    })
-                                  : "0"}{" "}
-                                кг
-                              </strong>
-                            </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="кг"
-                                value={rejectScrapInput[b.id] ?? ""}
-                                onChange={(ev) =>
-                                  setRejectScrapInput((prev) => ({ ...prev, [b.id]: ev.target.value }))
-                                }
-                                style={{ ...fieldStyle, width: "4.2rem" }}
-                                aria-label="Килограммов брака к списанию"
-                              />
-                              <button
-                                type="button"
-                                style={btnStyle}
-                                disabled={writeOff.isPending}
-                                onClick={() => {
-                                  const s = (rejectScrapInput[b.id] ?? "").replace(",", ".");
-                                  const kg = parseFloat(s);
-                                  if (!Number.isFinite(kg) || kg <= 0) {
-                                    return;
-                                  }
-                                  if (kg > b.onWarehouseKg) {
-                                    return;
-                                  }
-                                  writeOff.mutate({ batchId: b.id, kg });
-                                }}
-                              >
-                                Списать
-                              </button>
-                            </div>
-                            {b.allocation?.qualityTier === "reject" && (
-                              <p style={{ ...muted, fontSize: "0.75rem", margin: "0.3rem 0 0" }}>
-                                В БД: вся партия помечена «брак»; приведите в соответствие или снимайте
-                                в админ-данных.
-                              </p>
-                            )}
-                          </td>
-                        )}
-                        <td style={thtd}>
-                          <select
-                            aria-label="Направление"
-                            value={e.destination}
-                            onChange={(ev) => {
-                              const v = ev.target.value;
-                              setEdits((prev) => ({ ...prev, [b.id]: { ...e, destination: v } }));
-                              // Город/направление сохраняем сразу, чтобы при повторном входе не "сбрасывалось".
-                              save.mutate({ batchId: b.id, destination: v });
-                            }}
-                            style={fieldStyle}
-                          >
-                            <option value="_notset">— не выбрано —</option>
-                            {destAllowed.map((c) => (
-                              <option key={c} value={c}>
-                                {labelDest[c] ?? c}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={thtd}>
-                          <button type="button" style={btnStyle} disabled={save.isPending} onClick={() => onSaveRow(b)}>
-                            {save.isPending ? "…" : "Сохранить"}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  </tbody>
-                </table>
-              </div>
               <p className="no-print" style={{ marginTop: "0.9rem" }}>
                 <button
                   type="button"
                   style={btnStyle}
+                  disabled={!savedManifestId}
                   onClick={() => {
-                    const idsFromSelection =
-                      selectedRowIds.size > 0
-                        ? tableRows.filter((b) => selectedRowIds.has(b.id)).map((b) => b.id)
-                        : tableRows.map((b) => b.id);
+                    const idsFromSelection = tableRows.map((b) => b.id);
                     if (idsFromSelection.length === 0) {
                       return;
                     }
-                    saveDistributionShipPayload({ v: 1, batchIds: idsFromSelection });
-                    void navigate({ pathname: ops.operations, search: "?fromDistribution=1" });
+                    saveDistributionShipPayload({ v: 1, batchIds: idsFromSelection, manifestId: savedManifestId });
+                    void navigate({ pathname: operationsPath, search: "?fromDistribution=1" });
                   }}
                 >
-                  Погрузка в рейс
+                  Отправить накладную в рейс
                 </button>{" "}
                 <span style={muted}>
-                  Переход в <strong>Операции</strong> со списком:{" "}
-                  {selectedRowIds.size > 0 ? (
-                    <>только <strong>отмеченные</strong> партии ({selectedRowIds.size})</>
-                  ) : (
-                    <>
-                      <strong>все</strong> партии в таблице (ничего не отмечали)
-                    </>
-                  )}
-                  . Там — выбор <strong>рейса</strong> и одна кнопка <strong>отгрузить весь</strong> этот список. Это
-                  <strong> не</strong> повтор: здесь — учёт и печать, в Операциях — движение в рейс.
+                  Сначала сохраните погрузочную накладную. Затем выберите рейс в Операциях и отгрузите строки документа.
                 </span>
-              </p>
-              <p style={{ ...muted, fontSize: "0.82rem", marginTop: "0.35rem" }}>
-                Направление в строке сохраняется <strong>сразу при выборе</strong> (без отдельной кнопки).
               </p>
             </div>
           )}
@@ -855,21 +631,6 @@ export function AllocationPanel() {
         </>
       )}
 
-      {save.isError && (
-        <p role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
-          {(save.error as Error).message}
-        </p>
-      )}
-      {writeOff.isError && (
-        <p role="alert" style={{ ...errorText, marginTop: "0.35rem" }}>
-          {(writeOff.error as Error).message}
-        </p>
-      )}
-      {bulkSave.isError && (
-        <p role="alert" style={{ ...errorText, marginTop: "0.35rem" }}>
-          {(bulkSave.error as Error).message}
-        </p>
-      )}
     </div>
   );
 }

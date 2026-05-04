@@ -21,9 +21,6 @@ export function AccountingCabinetHome() {
           <h2 id="acc-home-h" className="birzha-home-hero__title">
             Деньги, остатки и рейсы
           </h2>
-          <p className="birzha-home-hero__lead">
-            Остатки по закупу, выручка, долг и валовая прибыль собраны в одном кабинете.
-          </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия бухгалтерии">
           <a href="#acc-stock" className="birzha-home-action">

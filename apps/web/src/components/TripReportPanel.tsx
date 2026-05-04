@@ -6,7 +6,7 @@ import { deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem } from "../api/types.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
-import { formatTripSelectLabel } from "../format/trip-label.js";
+import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
@@ -174,19 +174,15 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   }, []);
 
   const introByContext: Record<TripReportViewContext, string> = {
-    default:
-      "Сводка для контроля загрузки машины и движения товара. Используйте этот отчёт для печати, сверки отгрузок, продаж, недостачи и денег.",
-    accounting:
-      "Сверка по движению товара и денег по рейсу. Финансовая сводка находится на главной странице бухгалтерии; создание рейса выполняет логист или руководитель.",
-    sales:
-      "Сводка по вашим рейсам: остатки, продажи и долги. Продажа выполняется на главной странице кабинета продавца.",
+    default: "Отгрузки, продажи, недостачи и деньги по рейсу.",
+    accounting: "Сверка товара и денег по рейсу.",
+    sales: "Ваши рейсы, продажи и долги.",
   };
 
   const emptyTextByContext: Record<TripReportViewContext, string> = {
     default: "Рейсов пока нет — создайте первый рейс.",
-    accounting: "Рейсов в списке нет. Рейс вводит логист/руководитель; после открытия рейс появится здесь.",
-    sales:
-      "Рейсов в списке нет. Рейс появится после того, как админ, закупщик или логист выполнит «Отгрузить с рейса» на вашу учётную запись.",
+    accounting: "Рейсов в списке нет.",
+    sales: "Рейсов в списке нет.",
   };
 
   return (
@@ -199,8 +195,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       </p>
       {isFieldSellerOnly(user) && viewContext === "sales" ? (
         <p className="no-print" style={{ ...muted, marginTop: "0.35rem" }}>
-          Суммы продажи и деньги в отчёте — только по строкам, внесённым под вашим входом. Доступны только рейсы,
-          закреплённые за вами.
+          Только закреплённые за вами рейсы.
         </p>
       ) : null}
 
@@ -300,7 +295,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             }}
           >
             <span>
-              <strong>{r.trip.tripNumber}</strong> · статус: <code>{r.trip.status}</code>
+              <strong>{r.trip.tripNumber}</strong> · статус: <code>{formatTripStatusLabel(r.trip.status)}</code>
             </span>
             <button
               type="button"
@@ -405,9 +400,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               <h3 id="trip-report-clients" style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>
                 Продажи по клиентам
               </h3>
-              <p className="no-print" style={{ ...muted, margin: "0 0 0.35rem", fontSize: "0.85rem" }}>
-                Подпись указывается при продаже с рейса; строка «—» — продажи без метки.
-              </p>
               <div style={{ overflowX: "auto" }}>
                 <table style={tableStyle} aria-labelledby="trip-report-clients">
                   <thead>
@@ -468,8 +460,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             )}
           </div>
           <p className="no-print" style={{ ...muted, margin: "0 0 0.35rem" }}>
-            Отгрузка, продажи и недостача по каждой партии; «остаток в пути» = отгружено − продано − недостача (как в
-            учёте рейса). Отрицательный остаток подсвечен — перепродажа или ошибка ввода.
+            Остаток в пути = отгружено − продано − недостача.
           </p>
           {reconciliationIssues.length > 0 && (
             <p role="status" className="birzha-callout-warning">

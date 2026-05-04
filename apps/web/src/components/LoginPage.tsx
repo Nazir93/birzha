@@ -61,11 +61,7 @@ export function LoginPage() {
           Вход
         </h2>
         <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55 }}>
-          У <strong>каждого пользователя свой логин и пароль</strong> — их выдаёт администратор (отдельная учётная запись на человека,
-          без «общих» входов). Не передавайте свои данные другим.
-        </p>
-        <p style={{ ...muted, marginBottom: "1rem", fontSize: "0.88rem", lineHeight: 1.45 }}>
-          Если забыли пароль или нужен новый доступ, обратитесь к администратору.
+          Введите логин и пароль.
         </p>
         <label htmlFor="login-user" style={{ fontSize: "0.88rem" }}>
           Логин (ваш)

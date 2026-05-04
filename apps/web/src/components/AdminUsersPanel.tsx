@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
-import { adminRoutes, ops } from "../routes.js";
+import { adminRoutes } from "../routes.js";
 import { Link } from "react-router-dom";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, btnStyleInline, errorText, fieldStyle, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -263,12 +263,9 @@ export function AdminUsersPanel() {
             <h2 id="admin-users-heading" className="birzha-home-hero__title">
               Сотрудники
             </h2>
-            <p className="birzha-home-hero__lead">
-              Раздел доступен при работающей базе, JWT и обязательном входе под администратором или руководителем.
-            </p>
           </div>
           <nav className="birzha-home-actions no-print" aria-label="Действия">
-            <Link to={ops.operations} className="birzha-home-action">
+            <Link to={adminRoutes.operations} className="birzha-home-action">
               <span>Кабинет</span>
               <strong>Перейти к операциям</strong>
             </Link>
@@ -290,9 +287,6 @@ export function AdminUsersPanel() {
           <h2 id="admin-users-heading" className="birzha-home-hero__title">
             Сотрудники
           </h2>
-          <p className="birzha-home-hero__lead">
-            Логины, роли и пароли в одном защищённом разделе. Последнего администратора удалить нельзя.
-          </p>
         </div>
         <div className="birzha-home-actions no-print" aria-label="Правила доступа">
           <div className="birzha-home-action" role="note">
@@ -312,7 +306,6 @@ export function AdminUsersPanel() {
             <p className="birzha-section-heading__eyebrow">Создание</p>
             <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
           </div>
-          <p className="birzha-section-heading__note">Один человек — один логин и одна роль</p>
         </div>
         <div className="birzha-form-grid birzha-form-grid--actions">
           <label style={{ fontSize: "0.88rem" }}>

@@ -8,6 +8,7 @@ import type {
   ProductGradesListResponse,
   PurchaseDocumentDetail,
   PurchaseDocumentsListResponse,
+  LoadingManifestDetailResponse,
   ShipmentReportResponse,
   ShipDestinationsListResponse,
   TripJson,
@@ -32,6 +33,7 @@ export const queryRoots = {
   purchaseDocuments: ["purchase-documents"] as const,
   counterparties: ["counterparties"] as const,
   shipDestinations: ["ship-destinations"] as const,
+  loadingManifest: ["loading-manifest"] as const,
   /** Префикс всех `GET …/shipment-report` по рейсам */
   shipmentReport: ["shipment-report"] as const,
 } as const;
@@ -170,6 +172,15 @@ export const shipDestinationsFullListQueryOptions = () =>
   queryOptions({
     queryKey: queryRoots.shipDestinations,
     queryFn: () => apiGetJson<ShipDestinationsListResponse>("/api/ship-destinations"),
+    staleTime: QUERY_STALE_LISTS_MS,
+    retry: 1,
+  });
+
+export const loadingManifestDetailQueryOptions = (manifestId: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.loadingManifest, manifestId] as const,
+    queryFn: () => apiGetJson<LoadingManifestDetailResponse>(`/api/loading-manifests/${encodeURIComponent(manifestId)}`),
+    enabled: manifestId.trim().length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
     retry: 1,
   });

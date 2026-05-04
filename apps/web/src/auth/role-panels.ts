@@ -14,8 +14,8 @@ export type PanelId =
 
 /** Подписи вкладок навигации (шапка / сайдбар). */
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
-  nakladnaya: "Накладная",
-  distribution: "Распределение",
+  nakladnaya: "Закупка товара",
+  distribution: "Распределение товара",
   reports: "Отчёты и рейсы",
   operations: "Операции",
   offline: "Офлайн-очередь",
@@ -31,11 +31,11 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   offline: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
-  service: ["admin", "manager"],
-  /** Склады и калибры — только admin и manager (согласовано с API). */
-  inventory: ["admin", "manager"],
+  service: ["admin"],
+  /** Склады и калибры — только admin (согласовано с API). */
+  inventory: ["admin"],
   /** Учётные записи (логин/роль) — как `userManagement` на API. */
-  users: ["admin", "manager"],
+  users: ["admin"],
 };
 
 const OPERATIONS_CABINET_ROLES = new Set<string>(["purchaser", "warehouse", "logistics", "receiver", "manager"]);
@@ -85,13 +85,7 @@ export type CabinetId = "admin" | "operations" | "sales" | "accounting";
  */
 export function canManageInventoryCatalog(user: AuthUser): boolean {
   const codes = globalRoleCodes(user);
-  if (codes.has("admin")) {
-    return true;
-  }
-  if (codes.has("manager")) {
-    return true;
-  }
-  return false;
+  return codes.has("admin");
 }
 
 /** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics. */
@@ -157,7 +151,7 @@ export function canAccessCabinet(user: AuthUser, id: CabinetId): boolean {
     return true;
   }
   if (id === "admin") {
-    return canManageInventoryCatalog(user);
+    return false;
   }
   if (id === "operations") {
     if (isSellerOnly(codes)) {
@@ -285,19 +279,19 @@ export function hrefForPanelInCabinet(
       return adminRoutes.service;
     }
     if (panel === "nakladnaya") {
-      return canAccessPanel(user, "nakladnaya") ? ops.purchaseNakladnaya : null;
+      return canAccessPanel(user, "nakladnaya") ? adminRoutes.purchaseNakladnaya : null;
     }
     if (panel === "reports") {
-      return ops.reports;
+      return adminRoutes.reports;
     }
     if (panel === "distribution") {
-      return ops.distribution;
+      return adminRoutes.distribution;
     }
     if (panel === "operations") {
-      return ops.operations;
+      return adminRoutes.operations;
     }
     if (panel === "offline") {
-      return ops.offline;
+      return adminRoutes.offline;
     }
   }
   if (currentCabinet === "operations") {
