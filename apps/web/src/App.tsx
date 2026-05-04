@@ -30,6 +30,9 @@ const AdminUsersPanel = lazy(() =>
 const AdminLoadingManifestsPanel = lazy(() =>
   import("./components/AdminLoadingManifestsPanel.js").then((m) => ({ default: m.AdminLoadingManifestsPanel })),
 );
+const AssignSellerPanel = lazy(() =>
+  import("./components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
+);
 const AllocationPanel = lazy(() =>
   import("./components/AllocationPanel.js").then((m) => ({ default: m.AllocationPanel })),
 );
@@ -394,6 +397,16 @@ export function App() {
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
                     <CounterpartiesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="trade"
+              element={
+                <RequirePanel panel="assignSeller">
+                  <section className="birzha-card">
+                    <AssignSellerPanel />
                   </section>
                 </RequirePanel>
               }

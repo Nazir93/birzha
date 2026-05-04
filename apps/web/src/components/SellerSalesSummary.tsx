@@ -141,6 +141,7 @@ export function SellerSalesSummary() {
             Продано по рейсам, товару и калибру
           </h3>
         </div>
+        <p className="birzha-section-heading__note">Если рейса нет, попросите администратора закрепить его за вами.</p>
       </div>
 
       {trips.length === 0 ? (

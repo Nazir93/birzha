@@ -46,8 +46,12 @@ export function buildCabinetNavEntries(
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    out.push({ to: accounting.trade, label: NAV_PANEL_LABELS.assignSeller, key: "acc-trade" });
   }
-  const panelOrder = operationsPanelOrder(user);
+  const panelOrder =
+    cabinet === "admin"
+      ? (["loadingManifests", "nakladnaya", "operations", "offline", "inventory", "users", "service"] as const)
+      : operationsPanelOrder(user);
   for (const p of panelOrder) {
     const to = hrefForPanelInCabinet(user, p, cabinet);
     if (to) {

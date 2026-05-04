@@ -8,6 +8,7 @@ export type PanelId =
   | "distribution"
   | "loadingManifests"
   | "operations"
+  | "assignSeller"
   | "offline"
   | "service"
   | "inventory"
@@ -17,9 +18,10 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Распределение товара",
-  loadingManifests: "Погрузочные накладные",
+  loadingManifests: "Погрузка",
   reports: "Отчёты и рейсы",
   operations: "Операции",
+  assignSeller: "Торговля",
   offline: "Офлайн-очередь",
   service: "Диагностика",
   inventory: "Склады и калибры",
@@ -33,6 +35,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingManifests: ["admin"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
+  assignSeller: ["admin", "manager", "purchaser", "logistics", "accountant"],
   offline: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   service: ["admin"],
   /** Склады и калибры — только admin (согласовано с API). */
@@ -341,6 +344,9 @@ export function hrefForPanelInCabinet(
   if (currentCabinet === "accounting") {
     if (panel === "reports") {
       return accounting.reports;
+    }
+    if (panel === "assignSeller") {
+      return accounting.trade;
     }
   }
   return null;

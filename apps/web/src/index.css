@@ -470,6 +470,52 @@ main.app-shell {
   border-top: 1px solid var(--color-border);
 }
 
+.birzha-seller-guide {
+  border-color: rgba(3, 105, 161, 0.15);
+  background: linear-gradient(180deg, #fff 0%, #f8fcff 100%);
+}
+
+.birzha-seller-guide__head {
+  margin-bottom: 0.55rem;
+}
+
+.birzha-seller-guide__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.birzha-seller-guide__item {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.birzha-seller-guide__item p {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.birzha-seller-guide__num {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
 /* Длинные списки в подборщиках (рейсы, подсказки id партий) */
 .birzha-scroll-panel {
   max-height: min(42vh, 18rem);
@@ -1896,5 +1942,26 @@ main.app-shell--cabinet {
   main {
     padding: 0 !important;
     max-width: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .birzha-seller-guide__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .birzha-home-actions {
+    min-width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .birzha-home-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .birzha-home-action {
+    min-height: 3.6rem;
   }
 }

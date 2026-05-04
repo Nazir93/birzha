@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js";
-import { adminRoutes, ops, prefix } from "../routes.js";
+import { accounting, adminRoutes, ops, prefix } from "../routes.js";
 
 describe("cabinet-nav", () => {
   it("аноним: операции — только пять ссылок /o", () => {
@@ -26,9 +26,21 @@ describe("cabinet-nav", () => {
       roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("admin", user, true);
+    expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
     expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
-    expect(links.find((x) => x.key === "reports")?.to).toBe(adminRoutes.reports);
+    expect(links.find((x) => x.key === "reports")).toBeUndefined();
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
+    expect(links.find((x) => x.key === "assignSeller")).toBeUndefined();
+  });
+
+  it("бухгалтерия: есть ссылка на торговлю", () => {
+    const user = {
+      id: "u2",
+      login: "acc",
+      roles: [{ roleCode: "accountant", scopeType: "global" as const, scopeId: "" }],
+    };
+    const links = buildCabinetNavEntries("accounting", user, true);
+    expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
   });
 
   it("cabinetNavLinkUsesEnd только для корней /a /s /b", () => {

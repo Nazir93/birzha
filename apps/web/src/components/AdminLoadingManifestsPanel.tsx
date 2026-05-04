@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { apiPostJson } from "../api/fetch-api.js";
 import { loadingManifestDetailQueryOptions, loadingManifestsListQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
+import { CreateTripIfAllowed } from "./CreateTripIfAllowed.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -33,6 +35,8 @@ function caliberRows(lines: { kg: number; packageCount: string | null; productGr
 
 export function AdminLoadingManifestsPanel() {
   const { manifestId = "" } = useParams();
+  const queryClient = useQueryClient();
+  const [assignTripId, setAssignTripId] = useState("");
   const listQuery = useQuery(loadingManifestsListQueryOptions());
   const detailQuery = useQuery(loadingManifestDetailQueryOptions(manifestId));
   const tripsQuery = useQuery(tripsFullListQueryOptions());
@@ -48,11 +52,56 @@ export function AdminLoadingManifestsPanel() {
   const detail = detailQuery.data?.manifest;
   const caliberSummary = useMemo(() => (detail ? caliberRows(detail.lines) : []), [detail]);
 
+  const assignTrip = useMutation({
+    mutationFn: async () => {
+      if (!manifestId.trim() || !assignTripId.trim()) {
+        throw new Error("Выберите рейс для привязки.");
+      }
+      await apiPostJson(`/api/loading-manifests/${encodeURIComponent(manifestId)}/assign-trip`, { tripId: assignTripId.trim() });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["loading-manifest"] });
+      void queryClient.invalidateQueries({ queryKey: ["trips"] });
+    },
+  });
+
   return (
     <section className="birzha-card" aria-labelledby="admin-loading-manifests-h">
       <h2 id="admin-loading-manifests-h" style={{ margin: "0 0 0.65rem", fontSize: "1.08rem" }}>
-        Погрузочные накладные
+        Погрузка
       </h2>
+      <p style={{ ...muted, marginTop: 0, marginBottom: "0.7rem" }}>
+        Здесь рейсы и погрузочные накладные: после распределения закрепляйте накладную за рейсом.
+      </p>
+
+      <div className="birzha-home-work-card no-print" style={{ marginBottom: "0.9rem" }}>
+        <h3 style={{ margin: "0 0 0.55rem", fontSize: "0.98rem" }}>Рейсы</h3>
+        <CreateTripIfAllowed />
+        <div className="birzha-table-scroll" style={{ marginTop: "0.55rem" }}>
+          <table style={{ ...tableStyle, minWidth: 560 }}>
+            <thead>
+              <tr>
+                <th style={thHead}>Рейс</th>
+                <th style={thHead}>Статус</th>
+                <th style={thHead}>Машина</th>
+                <th style={thHead}>Отчёт</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(tripsQuery.data?.trips ?? []).map((t) => (
+                <tr key={t.id}>
+                  <td style={thtd}>{t.tripNumber}</td>
+                  <td style={thtd}>{t.status}</td>
+                  <td style={thtd}>{t.vehicleLabel ?? "—"}</td>
+                  <td style={thtd}>
+                    <Link to={`${adminRoutes.reports}?trip=${encodeURIComponent(t.id)}`}>Открыть</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {listQuery.isPending ? <LoadingBlock label="Загрузка списка накладных…" minHeight={80} /> : null}
       {listQuery.isError ? (
@@ -105,6 +154,31 @@ export function AdminLoadingManifestsPanel() {
           <p style={{ ...muted, marginTop: 0 }}>
             {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode}) · {detail.destinationName}
           </p>
+          <div className="no-print" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.7rem" }}>
+            <select
+              value={assignTripId}
+              onChange={(e) => setAssignTripId(e.target.value)}
+              style={{ minWidth: "16rem" }}
+            >
+              <option value="">— выбрать рейс —</option>
+              {(tripsQuery.data?.trips ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.tripNumber} · {t.status}
+                </option>
+              ))}
+            </select>
+            <button type="button" style={btnStyle} disabled={assignTrip.isPending || !assignTripId} onClick={() => assignTrip.mutate()}>
+              {assignTrip.isPending ? "Привязка…" : "Привязать к рейсу"}
+            </button>
+            <span style={muted}>
+              Текущий рейс: {detail.tripId ? tripNumberById.get(detail.tripId) ?? detail.tripId : "не назначен"}
+            </span>
+          </div>
+          {assignTrip.isError ? (
+            <p style={errorText} role="alert">
+              {(assignTrip.error as Error).message}
+            </p>
+          ) : null}
           <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
             <table style={{ ...tableStyle, minWidth: 540 }}>
               <thead>

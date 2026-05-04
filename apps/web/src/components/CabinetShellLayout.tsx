@@ -41,6 +41,7 @@ type SidebarNavIconName =
   | "distribution"
   | "reports"
   | "operations"
+  | "assignSeller"
   | "offline"
   | "inventory"
   | "users"
@@ -65,6 +66,9 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   }
   if (key === "op" || key === "operations") {
     return "operations";
+  }
+  if (key === "assignSeller") {
+    return "assignSeller";
   }
   if (key === "off" || key === "offline") {
     return "offline";
@@ -91,6 +95,7 @@ function SidebarNavIcon({ name }: { name: SidebarNavIconName }) {
     distribution: ["M4 7h5v5H4V7z", "M15 4h5v5h-5V4z", "M15 15h5v5h-5v-5z", "M9 9.5h3.5a3 3 0 013 3V15", "M12.5 12.5H15"],
     reports: ["M5 19V5", "M5 19h14", "M9 15v-4", "M13 15V8", "M17 15v-7"],
     operations: ["M7 7h10", "M14 4l3 3-3 3", "M17 17H7", "M10 14l-3 3 3 3"],
+    assignSeller: ["M7 7h10", "M12 12h8", "M9 18a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0"],
     offline: ["M6.5 18h10a4 4 0 00.8-7.9A6 6 0 005.6 8.3A4.5 4.5 0 006.5 18z", "M8 8l8 8"],
     inventory: ["M4 9l8-4 8 4-8 4-8-4z", "M6 11v6l6 3 6-3v-6", "M12 13v7"],
     users: ["M9 11a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0", "M17 11a2.5 2.5 0 100-5", "M15.5 15.5A4 4 0 0120 20"],

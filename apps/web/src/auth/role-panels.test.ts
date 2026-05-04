@@ -33,6 +33,7 @@ describe("role-panels", () => {
     expect(canAccessCabinet(u, "admin")).toBe(false);
     expect(canAccessPanel(u, "inventory")).toBe(false);
     expect(canAccessPanel(u, "loadingManifests")).toBe(false);
+    expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canAccessPanel(u, "service")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
@@ -41,6 +42,7 @@ describe("role-panels", () => {
   it("бухгалтер — отчёты, не операции и не накладная", () => {
     const u = userWithRoles("accountant");
     expect(canAccessPanel(u, "reports")).toBe(true);
+    expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
     expect(canAccessPanel(u, "distribution")).toBe(false);
     expect(canAccessPanel(u, "operations")).toBe(false);
@@ -52,6 +54,7 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
     expect(canAccessPanel(u, "distribution")).toBe(false);
     expect(canAccessPanel(u, "operations")).toBe(true);
+    expect(canAccessPanel(u, "assignSeller")).toBe(false);
     expect(canAccessPanel(u, "reports")).toBe(true);
     expect(canAccessPanel(u, "service")).toBe(false);
   });

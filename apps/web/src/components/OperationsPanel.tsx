@@ -1,12 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import {
-  clearDistributionShipPayload,
-  readDistributionShipPayload,
-} from "../distribution/distribution-ship-payload.js";
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
@@ -19,13 +15,9 @@ import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIn
 import {
   batchesFullListQueryOptions,
   queryRoots,
-  tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import {
-  adminAwarePathForPath,
-  adminRoutes,
-  ops,
   purchaseNakladnayaBasePathForPath,
   purchaseNakladnayaDocumentPathForPath,
 } from "../routes.js";
@@ -50,12 +42,9 @@ function formatBatchShipLabel(b: BatchListItem): string {
 }
 
 export function OperationsPanel() {
-  const [searchParams] = useSearchParams();
   const location = useLocation();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(location.pathname);
-  const distributionPath = adminAwarePathForPath(location.pathname, adminRoutes.distribution, ops.distribution);
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
@@ -64,18 +53,10 @@ export function OperationsPanel() {
   const batchesQuery = useQuery(batchesFullListQueryOptions());
 
   const tripsQuery = useQuery(tripsFullListQueryOptions());
-  const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const tripSelectOptions = useMemo(
     () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
     [tripsQuery.data?.trips],
   );
-  const fieldSellerLoginById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of fieldSellersQuery.data?.fieldSellers ?? []) {
-      m.set(s.id, s.login);
-    }
-    return m;
-  }, [fieldSellersQuery.data?.fieldSellers]);
 
   const shippableBatches = useMemo(() => {
     const list = batchesQuery.data?.batches ?? [];
@@ -96,67 +77,6 @@ export function OperationsPanel() {
       return a.id.localeCompare(b.id);
     });
   }, [batchesQuery.data?.batches]);
-
-  const [distShipBatchIds, setDistShipBatchIds] = useState<string[] | null>(null);
-  const [distShipManifestId, setDistShipManifestId] = useState<string>("");
-
-  const distBatchesToShip = useMemo(() => {
-    if (distShipBatchIds == null || distShipBatchIds.length === 0) {
-      return [] as BatchListItem[];
-    }
-    const want = new Set(distShipBatchIds);
-    return shippableBatches
-      .filter((b) => want.has(b.id))
-      .slice()
-      .sort((a, b) => {
-        const g = (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru");
-        if (g !== 0) {
-          return g;
-        }
-        return a.id.localeCompare(b.id);
-      });
-  }, [distShipBatchIds, shippableBatches]);
-
-  const distBatchesMissingCount = useMemo(
-    () =>
-      distShipBatchIds == null || distShipBatchIds.length === 0
-        ? 0
-        : distShipBatchIds.length - distBatchesToShip.length,
-    [distShipBatchIds, distBatchesToShip.length],
-  );
-  const distByCaliberSummary = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const b of distBatchesToShip) {
-      const label = formatNakladLineLabel(b);
-      m.set(label, (m.get(label) ?? 0) + b.onWarehouseKg);
-    }
-    return [...m.entries()]
-      .sort((a, c) => a[0].localeCompare(c[0], "ru"))
-      .map(([line, kg]) => ({ line, kg }));
-  }, [distBatchesToShip]);
-  const hasDistributionSelection = (distShipBatchIds?.length ?? 0) > 0;
-
-  const fromDistributionQ = searchParams.get("fromDistribution");
-  useEffect(() => {
-    if (fromDistributionQ !== "1") {
-      return;
-    }
-    const p = readDistributionShipPayload();
-    if (p && p.batchIds.length > 0) {
-      setDistShipBatchIds(p.batchIds);
-      setDistShipManifestId(p.manifestId ?? "");
-    }
-    void navigate({ pathname: location.pathname, search: "" }, { replace: true });
-  }, [fromDistributionQ, location.pathname, navigate]);
-
-  useLayoutEffect(() => {
-    if (distShipBatchIds == null || distShipBatchIds.length === 0) {
-      return;
-    }
-    requestAnimationFrame(() => {
-      document.getElementById("op-sec-ship")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, [distShipBatchIds]);
 
   const nakladOptionsForShipAll = useMemo(() => {
     const seen = new Map<string, string>();
@@ -179,8 +99,6 @@ export function OperationsPanel() {
   const [shipAllDocumentId, setShipAllDocumentId] = useState("");
   /** Всего ящиков в отгрузке «вся накладная»; распределяются по строкам пропорционально кг. */
   const [shipAllTotalPackages, setShipAllTotalPackages] = useState("");
-  const [assignTripId, setAssignTripId] = useState("");
-  const [assignSellerUserId, setAssignSellerUserId] = useState("");
 
   const ship = useMutation({
     mutationFn: async () => {
@@ -241,49 +159,6 @@ export function OperationsPanel() {
     },
   });
 
-  const shipFromDistribution = useMutation({
-    mutationFn: async () => {
-      const tripT = shipTripId.trim();
-      if (!tripT) {
-        throw new Error("Выберите рейс");
-      }
-      if (distBatchesToShip.length === 0) {
-        throw new Error("Нет партий с остатком по этому отбору");
-      }
-      for (const b of distBatchesToShip) {
-        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
-        await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
-      }
-      if (distShipManifestId) {
-        await apiPostJson(`/api/loading-manifests/${encodeURIComponent(distShipManifestId)}/assign-trip`, { tripId: tripT });
-      }
-    },
-    onSuccess: () => {
-      invalidateDomain();
-      setDistShipBatchIds(null);
-      setDistShipManifestId("");
-      clearDistributionShipPayload();
-    },
-  });
-
-  const assignSellerToTrip = useMutation({
-    mutationFn: async () => {
-      const tripId = assignTripId.trim();
-      const sellerUserId = assignSellerUserId.trim();
-      if (!tripId) {
-        throw new Error("Выберите рейс");
-      }
-      if (!sellerUserId) {
-        throw new Error("Выберите продавца");
-      }
-      await apiPostJson(`/api/trips/${encodeURIComponent(tripId)}/assign-seller`, { sellerUserId });
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
-      void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
-    },
-  });
-
   const [shortBatchId, setShortBatchId] = useState("");
   const [shortTripId, setShortTripId] = useState("");
   const [shortKg, setShortKg] = useState("");
@@ -341,13 +216,8 @@ export function OperationsPanel() {
               Отгрузить в рейс
             </h3>
           </div>
-          <p className="birzha-section-heading__note">Партия, накладная или отбор из распределения</p>
+          <p className="birzha-section-heading__note">Партия или вся накладная</p>
         </div>
-        {hasDistributionSelection ? (
-          <p style={{ ...muted, marginTop: 0 }}>
-            Из <strong>Распределения</strong> перенесён собранный отбор.
-          </p>
-        ) : null}
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс *
         </label>
@@ -372,8 +242,7 @@ export function OperationsPanel() {
           ))}
         </select>
 
-        {!hasDistributionSelection && (
-          <>
+        <>
             <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>
         <label htmlFor="op-sel-ship-batch" style={{ fontSize: "0.88rem" }}>
           Партия *
@@ -525,147 +394,7 @@ export function OperationsPanel() {
                 Все строки с остатком отгружены.
               </p>
             )}
-          </>
-        )}
-
-        {distShipBatchIds != null && distShipBatchIds.length > 0 && (
-          <div className="no-print birzha-banner-distribution" role="region" aria-labelledby="dist-ship-h">
-            <h4 id="dist-ship-h" style={{ fontSize: "0.9rem", margin: "0 0 0.4rem" }}>
-              Отбор из «Распределения» → рейс
-            </h4>
-            <p style={{ ...muted, margin: "0 0 0.4rem", fontSize: "0.86rem", lineHeight: 1.5 }}>
-              Перенесён список <strong>{distShipBatchIds.length}</strong> {distShipBatchIds.length === 1 ? "партии" : "партий"}.
-              {distShipManifestId ? (
-                <>
-                  {" "}
-                  Погрузочная накладная сохранена.
-                </>
-              ) : null}{" "}
-              С <strong>остатком сейчас</strong> готово к отгрузке: <strong>{distBatchesToShip.length}</strong>. Для
-              каждой будет отгружен полный остаток по партии, как в одиночной отгрузке. {distBatchesMissingCount > 0 && (
-                <>
-                  {" "}
-                  {distBatchesMissingCount} из списка уже <strong>без остатка</strong> (часть увезли раньше) — в отгрузку не
-                  пошли.
-                </>
-              )}
-            </p>
-            {distByCaliberSummary.length > 0 && (
-              <p style={{ ...muted, fontSize: "0.8rem", margin: "0 0 0.4rem" }}>
-                Свод по калибрам (одна сборная накладная):{" "}
-                {distByCaliberSummary
-                  .map((r) => `${r.line}: ${r.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`)
-                  .join(" · ")}
-                .
-              </p>
-            )}
-            <p style={{ margin: "0.35rem 0 0" }}>
-              <button
-                type="button"
-                style={btnStyle}
-                disabled={shipFromDistribution.isPending || !shipTripId.trim() || distBatchesToShip.length === 0}
-                aria-busy={shipFromDistribution.isPending || undefined}
-                onClick={() => shipFromDistribution.mutate()}
-              >
-                {shipFromDistribution.isPending
-                  ? "Отгрузка…"
-                  : "Отгрузить весь отбор из «Распределения» в выбранный рейс"}
-              </button>{" "}
-              <button
-                type="button"
-                style={btnStyle}
-                disabled={shipFromDistribution.isPending}
-                onClick={() => {
-                  setDistShipBatchIds(null);
-                  setDistShipManifestId("");
-                  clearDistributionShipPayload();
-                }}
-              >
-                Сбросить отбор
-              </button>{" "}
-              <Link to={distributionPath} style={{ fontSize: "0.86rem" }}>
-                к распределению
-              </Link>
-            </p>
-            <FieldError error={shipFromDistribution.error as Error | null} />
-          </div>
-        )}
-      </section>
-
-      <section className="birzha-panel" aria-labelledby="op-sec-assign-seller">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Шаг 2</p>
-            <h3 id="op-sec-assign-seller" className="birzha-section-title birzha-section-title--sm">
-              Отгрузить с рейса продавцу
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">Закрепить рейс за конкретным продавцом</p>
-        </div>
-        <p style={{ ...muted, marginTop: 0 }}>Рейс будет виден только выбранному продавцу.</p>
-        <label htmlFor="op-sel-assign-trip" style={{ fontSize: "0.88rem" }}>
-          Рейс *
-        </label>
-        <select
-          id="op-sel-assign-trip"
-          value={assignTripId}
-          onChange={(e) => setAssignTripId(e.target.value)}
-          style={selectWide}
-          disabled={tripsQuery.isPending}
-        >
-          <option value="">{tripsQuery.isPending ? "— загрузка рейсов —" : "— выберите рейс —"}</option>
-          {tripSelectOptions.map((t) => {
-            const assigned = t.assignedSellerUserId ? fieldSellerLoginById.get(t.assignedSellerUserId) ?? t.assignedSellerUserId : null;
-            return (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-                {assigned ? ` · продавец: ${assigned}` : ""}
-              </option>
-            );
-          })}
-        </select>
-        <label htmlFor="op-sel-assign-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
-          Продавец *
-        </label>
-        <select
-          id="op-sel-assign-seller"
-          value={assignSellerUserId}
-          onChange={(e) => setAssignSellerUserId(e.target.value)}
-          style={selectWide}
-          disabled={fieldSellersQuery.isPending}
-        >
-          <option value="">{fieldSellersQuery.isPending ? "— загрузка продавцов —" : "— выберите продавца —"}</option>
-          {(fieldSellersQuery.data?.fieldSellers ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.login}
-            </option>
-          ))}
-        </select>
-        {fieldSellersQuery.isError && (
-          <p role="alert" style={{ ...warnText, marginTop: "0.35rem", fontSize: "0.86rem" }}>
-            Список продавцов не загрузился. Проверьте вход и права администратора, руководителя, закупщика или логиста.
-          </p>
-        )}
-        {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 && (
-          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.86rem" }}>
-            Активных продавцов нет — создайте учётную запись с ролью продавца в разделе «Сотрудники».
-          </p>
-        )}
-        <button
-          type="button"
-          style={{ ...btnStyle, marginTop: "0.5rem" }}
-          disabled={assignSellerToTrip.isPending}
-          aria-busy={assignSellerToTrip.isPending || undefined}
-          onClick={() => assignSellerToTrip.mutate()}
-        >
-          {assignSellerToTrip.isPending ? "Отгрузка…" : "Отгрузить с рейса продавцу"}
-        </button>
-        <FieldError error={assignSellerToTrip.error as Error | null} />
-        {assignSellerToTrip.isSuccess && (
-          <p style={successText} role="status">
-            Рейс закреплён за продавцом. У него появится этот рейс в кабинете продаж.
-          </p>
-        )}
+        </>
       </section>
 
       <SellFromTripSection variant="operations" />
@@ -673,7 +402,7 @@ export function OperationsPanel() {
       <section className="birzha-panel" aria-labelledby="op-sec-short">
         <div className="birzha-section-heading">
           <div>
-            <p className="birzha-section-heading__eyebrow">Шаг 4</p>
+            <p className="birzha-section-heading__eyebrow">Шаг 3</p>
             <h3 id="op-sec-short" className="birzha-section-title birzha-section-title--sm">
               Недостача по рейсу
             </h3>
