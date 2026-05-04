@@ -9,6 +9,7 @@ import type {
   PurchaseDocumentDetail,
   PurchaseDocumentsListResponse,
   LoadingManifestDetailResponse,
+  LoadingManifestsListResponse,
   ShipmentReportResponse,
   ShipDestinationsListResponse,
   TripJson,
@@ -181,6 +182,14 @@ export const loadingManifestDetailQueryOptions = (manifestId: string) =>
     queryKey: [...queryRoots.loadingManifest, manifestId] as const,
     queryFn: () => apiGetJson<LoadingManifestDetailResponse>(`/api/loading-manifests/${encodeURIComponent(manifestId)}`),
     enabled: manifestId.trim().length > 0,
+    staleTime: QUERY_STALE_LISTS_MS,
+    retry: 1,
+  });
+
+export const loadingManifestsListQueryOptions = () =>
+  queryOptions({
+    queryKey: [...queryRoots.loadingManifest, "list"] as const,
+    queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
     staleTime: QUERY_STALE_LISTS_MS,
     retry: 1,
   });

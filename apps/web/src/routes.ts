@@ -30,6 +30,7 @@ export const adminRoutes = {
   trips: `${prefix.admin}/trips`,
   purchaseNakladnaya: `${prefix.admin}/purchase-nakladnaya`,
   distribution: `${prefix.admin}/distribution`,
+  loadingManifests: `${prefix.admin}/loading-manifests`,
   operations: `${prefix.admin}/operations`,
   offline: `${prefix.admin}/offline`,
   inventory: `${prefix.admin}/inventory`,

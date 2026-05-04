@@ -5,7 +5,6 @@ import type { BatchListItem } from "../api/types.js";
 import type { LoadingManifestDetail } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import {
-  aggregateBatchesByCaliberLine,
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
@@ -56,11 +55,6 @@ export function LoadingManifestBlock({
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
 
-  const byCaliber = useMemo(
-    () => aggregateBatchesByCaliberLine(includedBatches),
-    [includedBatches],
-  );
-
   const uniqueDocuments = useMemo(() => {
     const m = new Map<string, { id: string; number: string }>();
     for (const b of includedBatches) {
@@ -73,24 +67,15 @@ export function LoadingManifestBlock({
     return [...m.values()].sort((a, b) => a.number.localeCompare(b.number, "ru"));
   }, [includedBatches]);
 
+  const caliberCaption = useMemo(() => {
+    const labels = [...new Set(includedBatches.map((b) => formatNakladLineLabel(b)).filter((x) => x !== "—"))].sort((a, b) =>
+      a.localeCompare(b, "ru"),
+    );
+    return labels.join(" · ");
+  }, [includedBatches]);
+
   const buildCsv = useCallback(() => {
     const rows: string[] = [];
-    rows.push("===По_калибру===");
-    rows.push(["Калибр;Кг;Ящ_оценка"].join(";"));
-    for (const r of byCaliber) {
-      const ya =
-        r.linesWithPkg > 0 ? r.totalPkg.toString() : "";
-      rows.push([r.lineLabel.replace(/;/g, " "), r.totalKg.toString(), ya].join(";"));
-    }
-    if (byCaliber.length > 0) {
-      const sumK = byCaliber.reduce((a, c) => a + c.totalKg, 0);
-      const hasPkg = byCaliber.some((c) => c.linesWithPkg > 0);
-      const sumP = byCaliber.reduce((a, c) => a + c.totalPkg, 0);
-      rows.push(
-        `Итого;${sumK};${hasPkg ? sumP : ""}`,
-      );
-    }
-    rows.push("");
     rows.push("===По_строкам_партий===");
     const head = ["Номер_накл", "ID_накл", "ID_парт", "Кг_ост", "Ящ_оцен", "Калибр"];
     rows.push(head.join(";"));
@@ -110,7 +95,7 @@ export function LoadingManifestBlock({
       `Свод_кг;${totals.kg};Свод_ящ;${totals.pkg};парт;${includedBatches.length}`,
     );
     return "\uFEFF" + rows.join("\n");
-  }, [byCaliber, includedBatches, totals.kg, totals.pkg]);
+  }, [includedBatches, totals.kg, totals.pkg]);
 
   const downloadCsv = useCallback(() => {
     const blob = new Blob([buildCsv()], { type: "text/csv;charset=utf-8" });
@@ -179,6 +164,11 @@ export function LoadingManifestBlock({
           <> · ящ. ≈ {totals.pkg.toLocaleString("ru-RU")} (оценка с накл.)</>
         ) : null}
       </p>
+      {caliberCaption ? (
+        <p style={{ ...muted, marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }}>
+          <strong>Калибры в накладной:</strong> {caliberCaption}
+        </p>
+      ) : null}
 
       {includedBatches.length === 0 && (
         <p style={muted} role="status">
@@ -186,52 +176,6 @@ export function LoadingManifestBlock({
             ? "Нет строк: отметьте накладные либо на складе нет остатка (всё в рейсах — смотрите Операции)."
             : "Нет строк с остатком в данных."}
         </p>
-      )}
-
-      {byCaliber.length > 0 && (
-        <div style={{ marginBottom: "0.9rem" }}>
-          <h4
-            className="loading-print-subhead"
-            style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.4rem" }}
-            id="loading-by-caliber"
-          >
-            По калибру / товарной строке (свод)
-          </h4>
-          <div style={{ overflowX: "auto" }}>
-            <table style={tableStyle} className="loading-caliber-table" aria-labelledby="loading-by-caliber">
-              <thead>
-                <tr>
-                  <th scope="col" style={thHead}>
-                    Калибр / товар
-                  </th>
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                    Остаток, кг
-                  </th>
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                    Парт.
-                  </th>
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                    Ящ. (оц.)
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {byCaliber.map((r) => (
-                  <tr key={r.lineLabel}>
-                    <td style={thtd}>
-                      <strong style={{ fontSize: "0.92rem" }}>{r.lineLabel}</strong>
-                    </td>
-                    <td style={{ ...thtd, textAlign: "right" }}>{r.totalKg.toLocaleString("ru-RU")}</td>
-                    <td style={{ ...thtd, textAlign: "right" }}>{r.partCount}</td>
-                    <td style={{ ...thtd, textAlign: "right" }}>
-                      {r.linesWithPkg > 0 ? `≈ ${r.totalPkg.toLocaleString("ru-RU")}` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       )}
 
       {includedBatches.length > 0 && (

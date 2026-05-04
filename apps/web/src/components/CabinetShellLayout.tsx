@@ -54,6 +54,9 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "nakl" || key === "nakladnaya") {
     return "document";
   }
+  if (key === "lm" || key === "loadingManifests") {
+    return "document";
+  }
   if (key === "dist" || key === "distribution") {
     return "distribution";
   }

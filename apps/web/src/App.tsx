@@ -27,6 +27,9 @@ const AdminCabinetHome = lazy(() =>
 const AdminUsersPanel = lazy(() =>
   import("./components/AdminUsersPanel.js").then((m) => ({ default: m.AdminUsersPanel })),
 );
+const AdminLoadingManifestsPanel = lazy(() =>
+  import("./components/AdminLoadingManifestsPanel.js").then((m) => ({ default: m.AdminLoadingManifestsPanel })),
+);
 const AllocationPanel = lazy(() =>
   import("./components/AllocationPanel.js").then((m) => ({ default: m.AllocationPanel })),
 );
@@ -193,6 +196,22 @@ export function App() {
                   <section className="birzha-card">
                     <OperationsPanel />
                   </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="loading-manifests"
+              element={
+                <RequirePanel panel="loadingManifests">
+                  <AdminLoadingManifestsPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="loading-manifests/:manifestId"
+              element={
+                <RequirePanel panel="loadingManifests">
+                  <AdminLoadingManifestsPanel />
                 </RequirePanel>
               }
             />

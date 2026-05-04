@@ -24,6 +24,7 @@ describe("role-panels", () => {
   it("admin видит всё", () => {
     const u = userWithRoles("admin");
     expect(canAccessPanel(u, "reports")).toBe(true);
+    expect(canAccessPanel(u, "loadingManifests")).toBe(true);
     expect(canAccessPanel(u, "service")).toBe(true);
   });
 
@@ -31,6 +32,7 @@ describe("role-panels", () => {
     const u = userWithRoles("manager");
     expect(canAccessCabinet(u, "admin")).toBe(false);
     expect(canAccessPanel(u, "inventory")).toBe(false);
+    expect(canAccessPanel(u, "loadingManifests")).toBe(false);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canAccessPanel(u, "service")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);

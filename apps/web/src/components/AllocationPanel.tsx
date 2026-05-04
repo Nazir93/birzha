@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-import { apiPostJson } from "../api/fetch-api.js";
+import { apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { BatchListItem, CreateLoadingManifestResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
@@ -25,6 +25,7 @@ import {
   purchaseNakladnayaBasePathForPath,
   purchaseNakladnayaDocumentPathForPath,
 } from "../routes.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
@@ -152,7 +153,9 @@ export function AllocationPanel() {
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
   const [manifestDate, setManifestDate] = useState(todayDateOnly);
   const [manifestNumber, setManifestNumber] = useState(defaultManifestNumber);
+  const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
   const [savedManifestId, setSavedManifestId] = useState<string>("");
+  const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
 
   const warehouseName = useCallback(
     (id: string) => {
@@ -178,6 +181,21 @@ export function AllocationPanel() {
     },
     onSuccess: (res) => {
       setSavedManifestId(res.manifestId);
+      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    },
+  });
+
+  const writeOff = useMutation({
+    mutationFn: async ({ batchId, kg }: { batchId: string; kg: number }) => {
+      await postBatchWarehouseWriteOffQualityReject(batchId, kg);
+    },
+    onSuccess: (_d, { batchId }) => {
+      setRejectScrapInput((prev) => {
+        const next = { ...prev };
+        delete next[batchId];
+        return next;
+      });
+      setSavedManifestId("");
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     },
   });
@@ -315,7 +333,7 @@ export function AllocationPanel() {
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
-  const manifestDestinationCode = useMemo(() => {
+  const inferredDestinationCode = useMemo(() => {
     const counts = new Map<string, number>();
     for (const b of tableRows) {
       const d = b.allocation?.destination;
@@ -325,6 +343,21 @@ export function AllocationPanel() {
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? destAllowed[0] ?? "";
   }, [destAllowed, tableRows]);
+
+  useEffect(() => {
+    const fallback = inferredDestinationCode || destAllowed[0] || "";
+    if (!fallback) {
+      return;
+    }
+    if (!manifestDestinationCode || !destAllowed.includes(manifestDestinationCode)) {
+      setManifestDestinationCode(fallback);
+    }
+  }, [destAllowed, inferredDestinationCode, manifestDestinationCode]);
+
+  const rowsFingerprint = useMemo(() => tableRows.map((b) => b.id).sort().join("|"), [tableRows]);
+  useEffect(() => {
+    setSavedManifestId("");
+  }, [selectedWarehouse, manifestDate, manifestNumber, manifestDestinationCode, rowsFingerprint]);
 
   /** Партии с остатком по накладным, которые сознательно не отмечены в отборе — чтобы видеть складской хвост. */
   const batchesOutsideNaklSelection = useMemo(() => {
@@ -354,7 +387,7 @@ export function AllocationPanel() {
   return (
     <div role="region" aria-label="Распределение товара">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
-      <p style={muted}>Выберите склад, накладные и партии для направления или погрузки в рейс.</p>
+      <p style={muted}>Выберите склад, уберите лишние накладные, задайте город и сформируйте погрузочную накладную.</p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
       </p>
@@ -447,16 +480,19 @@ export function AllocationPanel() {
                 <div className="birzha-form-grid">
                   <label>
                     Дата *
-                    <input
-                      type="date"
+                    <BirzhaDateField
                       value={manifestDate}
-                      onChange={(e) => setManifestDate(e.target.value)}
+                      onChange={setManifestDate}
                       style={fieldStyle}
                     />
                   </label>
                   <label>
                     Город / направление *
-                    <select value={manifestDestinationCode} disabled style={fieldStyle}>
+                    <select
+                      value={manifestDestinationCode}
+                      onChange={(e) => setManifestDestinationCode(e.target.value)}
+                      style={fieldStyle}
+                    >
                       {destAllowed.map((d) => (
                         <option key={d} value={d}>
                           {labelDest[d] ?? d}
@@ -524,6 +560,61 @@ export function AllocationPanel() {
                 manifest={savedManifestQuery.data?.manifest ?? null}
               />
             </>
+          )}
+
+          {selectedWarehouse && tableRows.length > 0 && meta?.warehouseWriteOffApi === "enabled" && (
+            <div className="birzha-inline-panel" style={{ marginTop: "0.9rem" }}>
+              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>Списать со склада (брак)</h3>
+              <p style={{ ...muted, fontSize: "0.83rem", marginTop: 0 }}>
+                Если строка не должна ехать в рейс, можно списать нужный вес со склада.
+              </p>
+              <div className="birzha-table-scroll">
+                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 620 }}>
+                  <thead>
+                    <tr>
+                      <th style={thHead}>Калибр / строка</th>
+                      <th style={thHead}>Остаток, кг</th>
+                      <th style={thHead}>Списать, кг</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableRows.map((b) => (
+                      <tr key={`wo-${b.id}`}>
+                        <td style={thtd}>{formatNakladLineLabel(b)}</td>
+                        <td style={thtd}>{b.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                        <td style={thtd}>
+                          <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="кг"
+                              value={rejectScrapInput[b.id] ?? ""}
+                              onChange={(ev) => setRejectScrapInput((prev) => ({ ...prev, [b.id]: ev.target.value }))}
+                              style={{ ...fieldStyle, width: "5rem" }}
+                            />
+                            <button
+                              type="button"
+                              style={btnStyle}
+                              disabled={writeOff.isPending}
+                              onClick={() => {
+                                const s = (rejectScrapInput[b.id] ?? "").replace(",", ".");
+                                const kg = parseFloat(s);
+                                if (!Number.isFinite(kg) || kg <= 0 || kg > b.onWarehouseKg) {
+                                  return;
+                                }
+                                writeOff.mutate({ batchId: b.id, kg });
+                              }}
+                            >
+                              Списать
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
@@ -617,7 +708,7 @@ export function AllocationPanel() {
                   Отправить накладную в рейс
                 </button>{" "}
                 <span style={muted}>
-                  Сначала сохраните погрузочную накладную. Затем выберите рейс в Операциях и отгрузите строки документа.
+                  Сформируйте погрузочную накладную, затем выберите рейс в Операциях.
                 </span>
               </p>
             </div>
@@ -629,6 +720,12 @@ export function AllocationPanel() {
             </p>
           )}
         </>
+      )}
+
+      {writeOff.isError && (
+        <p role="alert" style={{ ...errorText, marginTop: "0.6rem" }}>
+          {(writeOff.error as Error).message}
+        </p>
       )}
 
     </div>

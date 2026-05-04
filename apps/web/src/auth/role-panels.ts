@@ -6,6 +6,7 @@ export type PanelId =
   | "reports"
   | "nakladnaya"
   | "distribution"
+  | "loadingManifests"
   | "operations"
   | "offline"
   | "service"
@@ -16,6 +17,7 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Распределение товара",
+  loadingManifests: "Погрузочные накладные",
   reports: "Отчёты и рейсы",
   operations: "Операции",
   offline: "Офлайн-очередь",
@@ -29,6 +31,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  loadingManifests: ["admin"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   offline: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   service: ["admin"],
@@ -232,6 +235,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const base: PanelId[] = [
     "nakladnaya",
     "distribution",
+    "loadingManifests",
     "reports",
     "operations",
     "offline",
@@ -286,6 +290,9 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "distribution") {
       return adminRoutes.distribution;
+    }
+    if (panel === "loadingManifests") {
+      return adminRoutes.loadingManifests;
     }
     if (panel === "operations") {
       return adminRoutes.operations;

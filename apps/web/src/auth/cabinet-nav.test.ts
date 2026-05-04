@@ -14,7 +14,9 @@ describe("cabinet-nav", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
-    expect(links).toHaveLength(6);
+    expect(links[2]?.to).toBe(adminRoutes.distribution);
+    expect(links[3]?.to).toBe(adminRoutes.loadingManifests);
+    expect(links).toHaveLength(7);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {

@@ -3,7 +3,7 @@ import {
   assignLoadingManifestTripBodySchema,
   createLoadingManifestBodySchema,
 } from "@birzha/contracts";
-import { eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
@@ -44,7 +44,7 @@ export function registerLoadingManifestRoutes(
     try {
       const body = createLoadingManifestBodySchema.parse(req.body);
       const id = body.id?.trim() || crypto.randomUUID();
-      const batchIds = [...new Set(body.batchIds.map((x) => x.trim()).filter(Boolean))];
+      const batchIds: string[] = [...new Set(body.batchIds.map((x: string) => x.trim()).filter(Boolean))];
       if (batchIds.length === 0) {
         return reply.code(400).send({ error: "empty_manifest" });
       }
@@ -105,6 +105,44 @@ export function registerLoadingManifestRoutes(
       });
 
       return reply.code(201).send({ manifestId: id });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/loading-manifests", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+    try {
+      const rows = await db
+        .select({
+          id: loadingManifests.id,
+          manifestNumber: loadingManifests.manifestNumber,
+          docDate: loadingManifests.docDate,
+          warehouseId: loadingManifests.warehouseId,
+          warehouseName: warehouses.name,
+          warehouseCode: warehouses.code,
+          destinationCode: loadingManifests.destinationCode,
+          destinationName: shipDestinations.displayName,
+          tripId: loadingManifests.tripId,
+          createdAt: loadingManifests.createdAt,
+        })
+        .from(loadingManifests)
+        .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
+        .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
+        .orderBy(desc(loadingManifests.createdAt));
+      return reply.send({
+        loadingManifests: rows.map((r) => ({
+            id: r.id,
+            manifestNumber: r.manifestNumber,
+            docDate: formatPgDate(r.docDate),
+            warehouseId: r.warehouseId,
+            warehouseName: r.warehouseName,
+            warehouseCode: r.warehouseCode,
+            destinationCode: r.destinationCode,
+            destinationName: r.destinationName,
+            tripId: r.tripId,
+            createdAt: r.createdAt.toISOString(),
+          })),
+      });
     } catch (error) {
       return sendMappedError(reply, error);
     }

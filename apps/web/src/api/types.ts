@@ -113,6 +113,21 @@ export type CreatePurchaseDocumentResponse = { documentId: string };
 
 export type CreateLoadingManifestResponse = { manifestId: string };
 
+export type LoadingManifestSummary = {
+  id: string;
+  manifestNumber: string;
+  docDate: string;
+  warehouseId: string;
+  warehouseName: string;
+  warehouseCode: string;
+  destinationCode: string;
+  destinationName: string;
+  tripId: string | null;
+  createdAt: string;
+};
+
+export type LoadingManifestsListResponse = { loadingManifests: LoadingManifestSummary[] };
+
 export type LoadingManifestDetail = {
   id: string;
   manifestNumber: string;
