@@ -30,18 +30,19 @@
   --color-muted: #71717a;
   --color-text-muted: #71717a;
   --color-border: #d4d4d8;
-  --color-border-focus: #15803d;
+  --color-border-focus: #18181b;
   --color-surface-input: #ffffff;
-  --focus-ring: 0 0 0 3px rgba(21, 128, 61, 0.2);
+  --focus-ring: 0 0 0 3px rgba(0, 0, 0, 0.12);
 
   --birzha-bg-page: #f4f4f5;
   --birzha-surface: #ffffff;
   --birzha-surface-muted: #fafafa;
-  --birzha-accent: #15803d;
-  --birzha-accent-strong: #14532d;
-  --birzha-accent-soft: #ecfdf5;
+  /* Нейтральный «акцент»: чёрный / серые подложки — без цветных кабинетов */
+  --birzha-accent: #18181b;
+  --birzha-accent-strong: #0a0a0a;
+  --birzha-accent-soft: #ebebeb;
   --birzha-danger: #b91c1c;
-  --birzha-warn: #b45309;
+  --birzha-warn: #52525b;
   --birzha-text-subtle: #52525b;
   --birzha-radius: 10px;
   --birzha-radius-sm: 8px;
@@ -156,9 +157,9 @@ main.app-shell {
 
 .birzha-nav__link--active {
   font-weight: 600;
-  color: var(--birzha-accent-strong);
+  color: var(--color-text);
   background: var(--birzha-accent-soft);
-  border-color: rgba(21, 128, 61, 0.35);
+  border-color: var(--color-border);
 }
 
 .birzha-nav__user {
@@ -251,8 +252,8 @@ main.app-shell {
 }
 
 .birzha-btn-primary:hover:not(:disabled) {
-  background: #166534;
-  border-color: #14532d;
+  background: #27272a;
+  border-color: #18181b;
 }
 
 .birzha-btn-primary:disabled {
@@ -311,6 +312,10 @@ main.app-shell {
 }
 
 .birzha-kpi-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
   padding: 0.65rem 0.75rem;
   border-radius: var(--birzha-radius-sm);
   border: 1px solid var(--color-border);
@@ -318,9 +323,11 @@ main.app-shell {
 }
 
 .birzha-kpi-tile__label {
+  display: block;
   font-size: 0.78rem;
   color: var(--color-muted);
-  margin-bottom: 0.15rem;
+  margin-bottom: 0;
+  line-height: 1.35;
 }
 
 .birzha-kpi-tile__value {
@@ -332,29 +339,29 @@ main.app-shell {
 
 .birzha-kpi-tile--accent {
   background: var(--birzha-accent-soft);
-  border-color: rgba(21, 128, 61, 0.35);
+  border-color: var(--color-border);
 }
 
 .birzha-kpi-tile--accent .birzha-kpi-tile__label {
-  color: var(--birzha-accent-strong);
+  color: var(--color-text);
 }
 
 .birzha-kpi-tile--amber {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: #f5f5f5;
+  border-color: #e4e4e7;
 }
 
 .birzha-kpi-tile--amber .birzha-kpi-tile__label {
-  color: #92400e;
+  color: var(--birzha-text-subtle);
 }
 
 .birzha-kpi-tile--blue {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: #fafafa;
+  border-color: #e4e4e7;
 }
 
 .birzha-kpi-tile--blue .birzha-kpi-tile__label {
-  color: #1e40af;
+  color: var(--birzha-text-subtle);
 }
 
 .birzha-kpi-grid--dense {
@@ -367,6 +374,36 @@ main.app-shell {
 
 .birzha-kpi-tile__value--md {
   font-size: 1.1rem;
+}
+
+/* Кабинет продавца: KPI не слипаются на узкой сетке */
+.birzha-seller-kpi-grid {
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+}
+
+.birzha-kpi-tile__cash-debt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.birzha-kpi-tile__cash-debt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.birzha-kpi-tile__cash-debt-key {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  min-width: 2.5rem;
 }
 
 .birzha-actions-row {
@@ -389,8 +426,8 @@ main.app-shell {
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--color-text);
+  background: var(--birzha-accent-soft);
   border-radius: var(--birzha-radius-sm);
 }
 
@@ -400,7 +437,7 @@ main.app-shell {
 }
 
 .birzha-seller-trip-card {
-  border-left: 4px solid #38bdf8;
+  border-left: 4px solid #a1a1aa;
 }
 
 .birzha-seller-label {
@@ -443,7 +480,7 @@ main.app-shell {
 }
 
 .birzha-seller-actions-card {
-  border-left: 4px solid #059669;
+  border-left: 4px solid #71717a;
 }
 
 .birzha-seller-overview-secondary {
@@ -471,8 +508,8 @@ main.app-shell {
 }
 
 .birzha-seller-guide {
-  border-color: rgba(3, 105, 161, 0.15);
-  background: linear-gradient(180deg, #fff 0%, #f8fcff 100%);
+  border-color: var(--color-border);
+  background: var(--birzha-surface);
 }
 
 .birzha-seller-guide__head {
@@ -512,8 +549,8 @@ main.app-shell {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #0369a1;
-  background: #e0f2fe;
+  color: var(--color-text);
+  background: var(--birzha-accent-soft);
 }
 
 /* Длинные списки в подборщиках (рейсы, подсказки id партий) */
@@ -556,21 +593,21 @@ main.app-shell {
 
 .app-shell--cabinet .birzha-card,
 .app-shell--cabinet .birzha-panel {
-  border-color: rgba(15, 23, 42, 0.07);
-  background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
-  box-shadow: 0 5px 28px -18px rgba(15, 23, 42, 0.28);
+  border-color: var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .app-shell--cabinet .birzha-panel {
   margin-bottom: 1rem;
   padding: 1rem 1.1rem;
-  border: 1px solid rgba(15, 23, 42, 0.07);
+  border: 1px solid var(--color-border);
   border-radius: var(--birzha-radius);
 }
 
 .app-shell--cabinet .birzha-panel:last-child {
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .birzha-callout-warning {
@@ -578,9 +615,9 @@ main.app-shell {
   padding: 0.5rem 0.65rem;
   font-size: 0.85rem;
   border-radius: var(--birzha-radius-sm);
-  border: 1px solid #fcd34d;
-  background: #fffbeb;
-  color: #92400e;
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
+  color: var(--color-text);
 }
 
 .birzha-banner-distribution {
@@ -588,8 +625,8 @@ main.app-shell {
   margin-bottom: 0.5rem;
   padding: 0.65rem 0.8rem;
   border-radius: var(--birzha-radius-sm);
-  border: 1px solid #bae6fd;
-  background: linear-gradient(90deg, #e0f2fe 0%, var(--birzha-accent-soft) 100%);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-accent-soft);
 }
 
 .birzha-table-subtotal-row th,
@@ -630,7 +667,7 @@ main.app-shell {
   padding: 0.9rem 1rem;
   border-radius: var(--birzha-radius-sm);
   border: 1px solid var(--color-border);
-  background: #fefce8;
+  background: var(--birzha-surface-muted);
 }
 
 .birzha-divider-top {
@@ -656,7 +693,7 @@ main.app-shell {
   width: 22px;
   height: 22px;
   border: 2.5px solid #e4e4e7;
-  border-top-color: #15803d;
+  border-top-color: #18181b;
   border-radius: 50%;
   animation: birzha-spin 0.75s linear infinite;
   flex-shrink: 0;
@@ -680,14 +717,10 @@ main.app-shell {
   align-items: center;
   gap: 0.85rem;
   padding: clamp(1.35rem, 4vw, 2rem);
-  border: 1px solid rgba(148, 163, 184, 0.26);
+  border: 1px solid var(--color-border);
   border-radius: 22px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(22, 163, 74, 0.12), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
-  box-shadow:
-    0 24px 60px rgba(15, 23, 42, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
   text-align: center;
 }
 .birzha-loader-screen__mark {
@@ -697,9 +730,9 @@ main.app-shell {
   display: grid;
   place-items: center;
   border-radius: 18px;
-  background: linear-gradient(135deg, #15803d 0%, #0f766e 100%);
+  background: #18181b;
   color: #fff;
-  box-shadow: 0 16px 35px rgba(21, 128, 61, 0.24);
+  box-shadow: none;
 }
 .birzha-loader-screen__mark::before {
   content: "";
@@ -714,7 +747,7 @@ main.app-shell {
   position: absolute;
   inset: -0.35rem;
   border-radius: 22px;
-  border: 1px solid rgba(21, 128, 61, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   animation: birzha-loader-pulse 1.6s ease-out infinite;
 }
 .birzha-loader-screen__note {
@@ -930,7 +963,7 @@ main input[type="month"] {
   line-height: 1;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #f8faf8;
+  background: var(--birzha-surface-muted);
   color: #18181b;
   cursor: pointer;
   transition: background 0.12s ease;
@@ -984,20 +1017,20 @@ main input[type="month"] {
 }
 
 .birzha-dp__day:hover {
-  background: #f0fdf4;
-  border-color: rgba(21, 128, 61, 0.3);
+  background: var(--birzha-accent-soft);
+  border-color: var(--color-border);
 }
 
 .birzha-dp__day--today {
-  border-color: #15803d;
-  color: #15803d;
+  border-color: #18181b;
+  color: #18181b;
 }
 
 .birzha-dp__day--selected,
 .birzha-dp__day--selected:hover {
-  background: #15803d;
+  background: #18181b;
   color: #fff;
-  border-color: #14532d;
+  border-color: #0a0a0a;
   font-weight: 600;
 }
 
@@ -1016,7 +1049,7 @@ main input[type="month"] {
   margin-bottom: 0.75rem;
   min-height: 2.5rem;
   color-scheme: only light;
-  accent-color: #15803d;
+  accent-color: var(--birzha-accent);
 }
 
 .birzha-dp__row {
@@ -1037,7 +1070,7 @@ main input[type="month"] {
 .birzha-dp__linkish {
   font: inherit;
   font-size: 0.85rem;
-  color: #15803d;
+  color: var(--color-text);
   text-decoration: underline;
   text-underline-offset: 0.1em;
   background: none;
@@ -1047,7 +1080,7 @@ main input[type="month"] {
 }
 
 .birzha-dp__linkish:hover {
-  color: #166534;
+  color: #000;
 }
 
 .birzha-dp__secondary,
@@ -1064,14 +1097,14 @@ main input[type="month"] {
 }
 
 .birzha-dp__primary {
-  background: #15803d;
+  background: var(--birzha-accent);
   color: #fff;
-  border-color: #14532d;
+  border-color: var(--birzha-accent-strong);
 }
 
 .birzha-dp__primary:hover:not(:disabled) {
-  background: #166534;
-  border-color: #14532d;
+  background: #27272a;
+  border-color: #18181b;
 }
 
 .birzha-dp__primary:disabled {
@@ -1182,7 +1215,7 @@ button:disabled {
 .birzha-hbar-list__fill {
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--birzha-accent) 0%, #38bdf8 100%);
+  background: #404040;
   min-width: 2px;
   transition: width 0.2s ease;
 }
@@ -1211,15 +1244,15 @@ button:disabled {
 }
 
 .birzha-mass-strip__seg--wh {
-  background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+  background: #262626;
 }
 
 .birzha-mass-strip__seg--tr {
-  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+  background: #737373;
 }
 
 .birzha-mass-strip__seg--sold {
-  background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 100%);
+  background: #a3a3a3;
 }
 
 .birzha-mass-strip__legend {
@@ -1247,15 +1280,15 @@ button:disabled {
 }
 
 .birzha-mass-strip__dot--wh {
-  background: #059669;
+  background: #262626;
 }
 
 .birzha-mass-strip__dot--tr {
-  background: #d97706;
+  background: #737373;
 }
 
 .birzha-mass-strip__dot--sold {
-  background: #3b82f6;
+  background: #a3a3a3;
 }
 
 .birzha-admin-trips-table {
@@ -1308,43 +1341,13 @@ main.app-shell--cabinet {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: linear-gradient(165deg, #f8fafc 0%, #eef2f7 45%, #f4f4f5 100%);
+  background: var(--birzha-bg-page);
 }
 
-.birzha-cabinet-layout--operations {
-  background: linear-gradient(165deg, #ecfdf5 0%, #f0fdfa 42%, #f4f4f5 100%);
-}
-
-.birzha-cabinet-layout--sales {
-  background: linear-gradient(165deg, #eff6ff 0%, #eef2ff 42%, #f8fafc 100%);
-}
-
+.birzha-cabinet-layout--operations,
+.birzha-cabinet-layout--sales,
 .birzha-cabinet-layout--accounting {
-  background: linear-gradient(165deg, #faf5ff 0%, #f5f3ff 42%, #f4f4f5 100%);
-}
-
-.birzha-cabinet-layout--operations .birzha-cabinet-sidebar {
-  background: linear-gradient(180deg, #064e3b 0%, #0d9488 52%, #115e59 100%);
-}
-
-.birzha-cabinet-layout--sales .birzha-cabinet-sidebar {
-  background: linear-gradient(180deg, #1e3a8a 0%, #2563eb 50%, #1e40af 100%);
-}
-
-.birzha-cabinet-layout--accounting .birzha-cabinet-sidebar {
-  background: linear-gradient(180deg, #4c1d95 0%, #6d28d9 48%, #5b21b6 100%);
-}
-
-.birzha-cabinet-layout--sales .birzha-cabinet-sidebar__link--active {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45) 0%, rgba(29, 78, 216, 0.35) 100%);
-  border-color: rgba(147, 197, 253, 0.45);
-  color: #eff6ff;
-}
-
-.birzha-cabinet-layout--accounting .birzha-cabinet-sidebar__link--active {
-  background: linear-gradient(135deg, rgba(109, 40, 217, 0.5) 0%, rgba(91, 33, 182, 0.38) 100%);
-  border-color: rgba(196, 181, 253, 0.45);
-  color: #faf5ff;
+  background: var(--birzha-bg-page);
 }
 
 .birzha-cabinet-topbar {
@@ -1354,10 +1357,8 @@ main.app-shell--cabinet {
   flex: 0 0 auto;
   gap: 1rem;
   padding: 0.65rem 1rem 0.65rem 1.15rem;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .birzha-cabinet-topbar__brand {
@@ -1368,7 +1369,7 @@ main.app-shell--cabinet {
   font-size: clamp(1rem, 2.2vw, 1.2rem);
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #0f172a;
+  color: #000000;
 }
 
 .birzha-cabinet-topbar__actions {
@@ -1396,19 +1397,19 @@ main.app-shell--cabinet {
   height: 2.5rem;
   padding: 0;
   border-radius: 10px;
-  border: 1px solid rgba(185, 28, 28, 0.35);
-  background: linear-gradient(180deg, #fff 0%, #fef2f2 100%);
-  color: #b91c1c;
+  border: 1px solid var(--color-border);
+  background: #f2f2f2;
+  color: #000000;
   cursor: pointer;
   transition:
     background 0.15s ease,
     transform 0.12s ease,
-    box-shadow 0.15s ease;
+    border-color 0.15s ease;
 }
 
 .birzha-cabinet-topbar__logout:hover {
-  background: #fef2f2;
-  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.12);
+  background: #ebebeb;
+  border-color: #d4d4d8;
 }
 
 .birzha-cabinet-topbar__logout:active {
@@ -1418,8 +1419,12 @@ main.app-shell--cabinet {
 .birzha-cabinet-topbar__login-link {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--birzha-accent);
+  color: #000000;
   text-decoration: none;
+}
+
+.birzha-cabinet-topbar__login-link:hover {
+  text-decoration: underline;
 }
 
 .birzha-cabinet-body {
@@ -1437,9 +1442,9 @@ main.app-shell--cabinet {
   flex-shrink: 0;
   min-height: 0;
   overflow-x: hidden;
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 72%, #172554 100%);
-  color: #e2e8f0;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: #ffffff;
+  color: #000000;
+  border-right: 1px solid var(--color-border);
   transition: width 0.22s ease;
 }
 
@@ -1452,9 +1457,9 @@ main.app-shell--cabinet {
   margin: 0.35rem 0.45rem 0.25rem;
   padding: 0.45rem;
   border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  border-radius: 10px;
+  background: #f2f2f2;
+  color: #000000;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1462,14 +1467,14 @@ main.app-shell--cabinet {
 }
 
 .birzha-cabinet-sidebar__toggle:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: #ebebeb;
+  color: #000000;
 }
 
 .birzha-cabinet-sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   min-height: 0;
   padding: 0.25rem 0.5rem 1rem;
   overflow-y: auto;
@@ -1480,11 +1485,11 @@ main.app-shell--cabinet {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
   font-size: 0.88rem;
   font-weight: 500;
-  color: #cbd5e1;
+  color: #000000;
   text-decoration: none;
   border: 1px solid transparent;
   transition:
@@ -1506,14 +1511,14 @@ main.app-shell--cabinet {
 }
 
 .birzha-cabinet-sidebar__link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #f2f2f2;
+  color: #000000;
 }
 
 .birzha-cabinet-sidebar__link--active {
-  background: linear-gradient(135deg, rgba(21, 128, 61, 0.45) 0%, rgba(22, 101, 52, 0.35) 100%);
-  color: #ecfdf5;
-  border-color: rgba(52, 211, 153, 0.35);
+  background: #ebebeb;
+  color: #000000;
+  border-color: transparent;
 }
 
 .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__link {
@@ -1566,7 +1571,7 @@ main.app-shell--cabinet {
     align-items: center;
     overflow-x: visible;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .birzha-cabinet-sidebar--collapsed {
@@ -1629,11 +1634,9 @@ main.app-shell--cabinet {
   margin-bottom: 1.5rem;
   padding: 1.25rem 1.35rem;
   border-radius: 14px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 48%, #eef2ff 100%);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 12px 40px -18px rgba(30, 64, 175, 0.25);
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-admin-dash__hero-ring {
@@ -1670,8 +1673,8 @@ main.app-shell--cabinet {
   position: absolute;
   inset: 24%;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
-  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .birzha-admin-dash__legend {
@@ -1699,15 +1702,15 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-dash__legend-dot--wh {
-  background: var(--birzha-accent);
+  background: #262626;
 }
 
 .birzha-admin-dash__legend-dot--tr {
-  background: #d97706;
+  background: #737373;
 }
 
 .birzha-admin-dash__legend-dot--sl {
-  background: #2563eb;
+  background: #a3a3a3;
 }
 
 .birzha-admin-dash__hero-stats {
@@ -1722,8 +1725,8 @@ main.app-shell--cabinet {
   min-width: 8.5rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--birzha-surface);
+  border: 1px solid var(--color-border);
 }
 
 .birzha-admin-stat--xl .birzha-admin-stat__label {
@@ -1743,11 +1746,11 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-stat--amber .birzha-admin-stat__value {
-  color: #9a3412;
+  color: #0f172a;
 }
 
 .birzha-admin-stat--blue .birzha-admin-stat__value {
-  color: #1e40af;
+  color: #0f172a;
 }
 
 .birzha-admin-dash__body {
@@ -1755,23 +1758,23 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-dash__kpi .birzha-kpi-tile--premium {
-  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
-  border-color: rgba(15, 23, 42, 0.07);
-  box-shadow: 0 2px 12px -4px rgba(15, 23, 42, 0.12);
+  background: var(--birzha-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-chart-card--premium {
-  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
-  border-color: rgba(15, 23, 42, 0.07);
-  box-shadow: 0 4px 24px -12px rgba(30, 41, 59, 0.2);
+  background: var(--birzha-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-admin-dash__trips {
   padding: 1rem 1.15rem;
   border-radius: var(--birzha-radius);
-  border: 1px solid rgba(15, 23, 42, 0.07);
-  background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
-  box-shadow: 0 2px 14px -8px rgba(15, 23, 42, 0.15);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 /* Главные экраны кабинетов */
@@ -1789,25 +1792,17 @@ main.app-shell--cabinet {
   margin-bottom: 1.25rem;
   padding: 1.25rem 1.35rem;
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.8), transparent 38%),
-    linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #eef2ff 100%);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 16px 44px -26px rgba(30, 64, 175, 0.32);
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-home-hero--sales {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.85), transparent 36%),
-    linear-gradient(135deg, #ffffff 0%, #eff6ff 52%, #dbeafe 100%);
+  background: #ffffff;
 }
 
 .birzha-home-hero--accounting {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.85), transparent 36%),
-    linear-gradient(135deg, #ffffff 0%, #faf5ff 48%, #ede9fe 100%);
+  background: #ffffff;
 }
 
 .birzha-home-hero__eyebrow,
@@ -1817,7 +1812,7 @@ main.app-shell--cabinet {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--birzha-accent);
+  color: var(--color-text-muted);
 }
 
 .birzha-home-hero__title {
@@ -1851,11 +1846,11 @@ main.app-shell--cabinet {
   min-height: 4.2rem;
   padding: 0.75rem 0.85rem;
   border-radius: 13px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--color-border);
+  background: #f2f2f2;
   color: #0f172a;
   text-decoration: none;
-  box-shadow: 0 3px 18px -14px rgba(15, 23, 42, 0.28);
+  box-shadow: none;
   transition:
     transform 0.14s ease,
     box-shadow 0.14s ease,
@@ -1864,8 +1859,8 @@ main.app-shell--cabinet {
 
 .birzha-home-action:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.38);
+  background: #ebebeb;
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-home-action span {
@@ -1886,9 +1881,9 @@ main.app-shell--cabinet {
   margin-bottom: 1rem;
   padding: 1rem 1.1rem;
   border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.07);
-  background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
-  box-shadow: 0 6px 30px -20px rgba(15, 23, 42, 0.28);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-home-work-card > .birzha-panel {

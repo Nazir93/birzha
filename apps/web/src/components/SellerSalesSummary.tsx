@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 
 import type { BatchListItem } from "../api/types.js";
+import { useAuth } from "../auth/auth-context.js";
+import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { formatBatchPartyCaption, formatShortBatchId } from "../format/batch-label.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -22,11 +24,15 @@ function caliberName(b: BatchListItem | undefined, batchId: string): string {
 }
 
 export function SellerSalesSummary() {
+  const { user } = useAuth();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
-  const trips = useMemo(
-    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []).slice(0, MAX_TRIPS),
-    [tripsQuery.data?.trips],
-  );
+  const trips = useMemo(() => {
+    const sorted = sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []).slice(0, MAX_TRIPS);
+    if (!user || !isFieldSellerOnly(user)) {
+      return sorted;
+    }
+    return sorted.filter((t) => t.assignedSellerUserId === user.id);
+  }, [tripsQuery.data?.trips, user]);
 
   const reportQueries = useQueries({
     queries: trips.map((t) => ({
@@ -141,27 +147,37 @@ export function SellerSalesSummary() {
             Продано по рейсам, товару и калибру
           </h3>
         </div>
-        <p className="birzha-section-heading__note">Если рейса нет, попросите администратора закрепить его за вами.</p>
+        <p className="birzha-section-heading__note">
+          Учитываются только ваши закреплённые рейсы (остальные в системе вам недоступны). Если рейса нет в списке —
+          попросите администратора закрепить его за вами.
+        </p>
       </div>
 
       {trips.length === 0 ? (
-        <p style={{ ...muted, marginTop: 0 }}>Пока нет закреплённых рейсов.</p>
+        <p style={{ ...muted, marginTop: 0 }}>Пока нет закреплённых за вами рейсов.</p>
       ) : (
         <>
-          <div className="birzha-kpi-grid birzha-kpi-grid--dense" style={{ marginBottom: "0.8rem" }}>
+          <div className="birzha-kpi-grid birzha-seller-kpi-grid" style={{ marginBottom: "0.8rem" }}>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium">
-              <span className="birzha-kpi-tile__label">Продано, кг</span>
-              <strong className="birzha-kpi-tile__value">{gramsToKgLabel(totals.grams.toString())}</strong>
+              <div className="birzha-kpi-tile__label">Продано, кг</div>
+              <div className="birzha-kpi-tile__value">{gramsToKgLabel(totals.grams.toString())}</div>
             </div>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium">
-              <span className="birzha-kpi-tile__label">Выручка</span>
-              <strong className="birzha-kpi-tile__value">{kopecksToRubLabel(totals.revenue.toString())} ₽</strong>
+              <div className="birzha-kpi-tile__label">Выручка</div>
+              <div className="birzha-kpi-tile__value">{kopecksToRubLabel(totals.revenue.toString())} ₽</div>
             </div>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium">
-              <span className="birzha-kpi-tile__label">Нал / долг</span>
-              <strong className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
-                {kopecksToRubLabel(totals.cash.toString())} / {kopecksToRubLabel(totals.debt.toString())} ₽
-              </strong>
+              <div className="birzha-kpi-tile__label">Оплата</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md birzha-kpi-tile__cash-debt">
+                <div className="birzha-kpi-tile__cash-debt-row">
+                  <span className="birzha-kpi-tile__cash-debt-key">Нал</span>
+                  <span>{kopecksToRubLabel(totals.cash.toString())} ₽</span>
+                </div>
+                <div className="birzha-kpi-tile__cash-debt-row">
+                  <span className="birzha-kpi-tile__cash-debt-key">Долг</span>
+                  <span>{kopecksToRubLabel(totals.debt.toString())} ₽</span>
+                </div>
+              </div>
             </div>
           </div>
 
