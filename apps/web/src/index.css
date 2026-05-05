@@ -1454,8 +1454,8 @@ main.app-shell--cabinet {
 
 .birzha-cabinet-sidebar__toggle {
   align-self: stretch;
-  margin: 0.35rem 0.45rem 0.25rem;
-  padding: 0.45rem;
+  margin: 0.28rem 0.45rem 0.18rem;
+  padding: 0.4rem;
   border: none;
   border-radius: 10px;
   background: #f2f2f2;
@@ -1474,9 +1474,9 @@ main.app-shell--cabinet {
 .birzha-cabinet-sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.06rem;
   min-height: 0;
-  padding: 0.25rem 0.5rem 1rem;
+  padding: 0.15rem 0.45rem 0.75rem;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1484,9 +1484,9 @@ main.app-shell--cabinet {
 .birzha-cabinet-sidebar__link {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 12px;
+  gap: 0.5rem;
+  padding: 0.42rem 0.65rem;
+  border-radius: 10px;
   font-size: 0.88rem;
   font-weight: 500;
   color: #000000;
@@ -1523,8 +1523,8 @@ main.app-shell--cabinet {
 
 .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__link {
   justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.15rem;
+  height: 2.15rem;
   padding: 0;
   margin-inline: auto;
 }
@@ -1581,10 +1581,11 @@ main.app-shell--cabinet {
   .birzha-cabinet-sidebar__nav {
     flex-direction: row;
     flex-wrap: nowrap;
+    gap: 0.2rem;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
-    padding: 0.35rem 0.5rem 0.65rem;
+    padding: 0.3rem 0.45rem 0.55rem;
   }
 
   .birzha-cabinet-sidebar__link {
@@ -1595,7 +1596,7 @@ main.app-shell--cabinet {
   .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__link {
     width: auto;
     height: auto;
-    padding: 0.55rem 0.7rem;
+    padding: 0.42rem 0.55rem;
     margin-inline: 0;
   }
 

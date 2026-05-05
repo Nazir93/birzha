@@ -39,9 +39,9 @@ function MassDistributionRing({
   const tr = (transitKg / total) * 360;
   const w2 = w + tr;
   const gradient = `conic-gradient(
-    var(--birzha-accent) 0deg ${w}deg,
-    #d97706 ${w}deg ${w2}deg,
-    #2563eb ${w2}deg 360deg
+    #262626 0deg ${w}deg,
+    #737373 ${w}deg ${w2}deg,
+    #a3a3a3 ${w2}deg 360deg
   )`;
   return (
     <div
