@@ -28,7 +28,7 @@ import {
   queryRoots,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminAwarePathForPath, adminRoutes, login, ops, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import { adminRoutes, login, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnStyle,
@@ -74,8 +74,6 @@ function emptyLine(): LineDraft {
 export function PurchaseNakladnayaSection() {
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
-  const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
-  const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
   const canManageCatalog = user ? canManageInventoryCatalog(user) : false;
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
@@ -282,16 +280,6 @@ export function PurchaseNakladnayaSection() {
             Закупка товара
           </h3>
         </div>
-        <p className="birzha-section-heading__note">
-          После сохранения партии появятся в{" "}
-          <Link to={distributionPath} style={{ fontWeight: 600 }}>
-            распределении
-          </Link>{" "}
-          и{" "}
-          <Link to={operationsPath} style={{ fontWeight: 600 }}>
-            операциях
-          </Link>
-        </p>
       </div>
 
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
@@ -379,19 +367,8 @@ export function PurchaseNakladnayaSection() {
           Покупатель / подпись (опц.)
           <input value={buyerLabel} onChange={(e) => setBuyerLabel(e.target.value)} style={fieldStyle} />
         </label>
-        <label style={{ fontSize: "0.88rem" }}>
-          Доп. расходы (коп. или 100,50 = руб+коп)
-          <input value={extraCostKopecks} onChange={(e) => setExtraCostKopecks(e.target.value)} style={fieldStyle} />
-        </label>
       </div>
 
-      <div style={{ margin: "0 0 0.35rem" }}>
-        <p style={{ ...muted, margin: 0 }}>Строки</p>
-        <p style={{ ...muted, margin: "0.25rem 0 0", fontSize: "0.82rem" }}>
-          <strong>Кг</strong> и <strong>₽/кг</strong> — <strong>целые</strong> или <strong>дробные</strong> (запятая или
-          точка, например 10,5). <strong>Короба</strong> — целое; можно ввести с «,5» (округлится), пробелы игнорируются.
-        </p>
-      </div>
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog && (
         <p role="status" style={warnText}>
           В справочнике нет калибров. Добавьте калибры в{" "}
@@ -406,27 +383,18 @@ export function PurchaseNakladnayaSection() {
           В справочнике нет калибров — пусть администратор добавит их в разделе «Склады и калибры».
         </p>
       )}
-      {canManageCatalog && gradeCount > 0 && (
-        <p style={{ ...muted, fontSize: "0.85rem", margin: "0 0 0.5rem" }}>
-          Нет нужного калибра в списке —{" "}
-          <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
-            добавьте в админке
-          </Link>
-          , затем обновите страницу.
-        </p>
-      )}
-      <div className="birzha-table-scroll">
-        <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", minWidth: 780, width: "100%" }}>
+      <div className="birzha-table-scroll birzha-nakl-lines-card">
+        <table className="birzha-nakl-lines-table">
           <thead>
             <tr>
-              <th style={thHeadDense}>Товар / калибр</th>
+              <th className="birzha-nakl-lines-table__grade" style={thHeadDense}>Товар / калибр</th>
               <th style={thHeadDense}>Кг</th>
               <th style={thHeadDense}>Короба</th>
-              <th style={thHeadDense}>₽/кг</th>
-              <th style={thHeadDense} title="Только цифры = коп.; запятая = «руб,коп»">
-                Сумма, коп. (или руб,коп)
+              <th style={thHeadDense}>Цена</th>
+              <th style={thHeadDense} title="Сумма строки">
+                Сумма
               </th>
-              <th style={thHeadDense} />
+              <th className="birzha-nakl-lines-table__actions" style={thHeadDense} />
             </tr>
           </thead>
           <tbody>
@@ -436,7 +404,8 @@ export function PurchaseNakladnayaSection() {
                   <select
                     value={line.productGradeId}
                     onChange={(e) => updateLine(line.key, { productGradeId: e.target.value })}
-                    style={{ ...fieldStyle, minWidth: 160, fontSize: "0.82rem" }}
+                    className="birzha-nakl-line-field"
+                    style={{ ...fieldStyle, minWidth: 180, fontSize: "0.82rem" }}
                     disabled={gradesQ.isPending}
                   >
                     <option value="">{gradesQ.isPending ? "Загрузка…" : "— выберите —"}</option>
@@ -455,7 +424,8 @@ export function PurchaseNakladnayaSection() {
                   <input
                     value={line.totalKg}
                     onChange={(e) => updateLine(line.key, { totalKg: e.target.value })}
-                    style={{ ...fieldStyle, width: 72 }}
+                    className="birzha-nakl-line-field"
+                    style={{ ...fieldStyle, width: 78 }}
                     inputMode="decimal"
                   />
                 </td>
@@ -463,7 +433,8 @@ export function PurchaseNakladnayaSection() {
                   <input
                     value={line.packageCount}
                     onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
-                    style={{ ...fieldStyle, width: 56 }}
+                    className="birzha-nakl-line-field"
+                    style={{ ...fieldStyle, width: 72 }}
                     inputMode="decimal"
                     autoComplete="off"
                     title="Короба, целое; можно 10,5 (округлит)"
@@ -473,7 +444,8 @@ export function PurchaseNakladnayaSection() {
                   <input
                     value={line.pricePerKg}
                     onChange={(e) => updateLine(line.key, { pricePerKg: e.target.value })}
-                    style={{ ...fieldStyle, width: 72 }}
+                    className="birzha-nakl-line-field"
+                    style={{ ...fieldStyle, width: 78 }}
                     inputMode="decimal"
                   />
                 </td>
@@ -481,18 +453,25 @@ export function PurchaseNakladnayaSection() {
                   <input
                     value={line.lineTotalKopecks}
                     onChange={(e) => updateLine(line.key, { lineTotalKopecks: e.target.value })}
-                    style={{ ...fieldStyle, maxWidth: 100 }}
+                    className="birzha-nakl-line-field"
+                    style={{ ...fieldStyle, maxWidth: 110 }}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="50000 = коп.; 32232,77 = 32 232,77 RUB = 3 223 277 коп."
+                    title="Сумма строки"
                   />
                 </td>
                 <td style={thtdDense}>
-                  <button type="button" style={{ ...btnStyle, fontSize: "0.78rem" }} onClick={() => fillLineKopecks(line.key)}>
-                    =кг×цена
+                  <button
+                    type="button"
+                    className="birzha-nakl-line-action"
+                    style={{ ...btnStyle, fontSize: "0.78rem" }}
+                    onClick={() => fillLineKopecks(line.key)}
+                  >
+                    Рассчитать
                   </button>
                   <button
                     type="button"
+                    className="birzha-nakl-line-action birzha-nakl-line-action--remove"
                     style={{ ...btnStyle, fontSize: "0.78rem", marginLeft: 4 }}
                     onClick={() => removeLine(line.key)}
                     disabled={lines.length <= 1}
@@ -507,13 +486,15 @@ export function PurchaseNakladnayaSection() {
             <tr>
               <th
                 scope="row"
-                style={{ ...thtdDense, textAlign: "right", background: "rgba(0,0,0,0.03)" }}
+                className="birzha-nakl-lines-table__total-label"
+                style={{ ...thtdDense, textAlign: "right" }}
                 title="Складываются все строки при вводе"
               >
                 Итого
               </th>
               <td
-                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)" }}
+                className="birzha-nakl-lines-table__total-cell"
+                style={{ ...thtdDense, fontWeight: 600 }}
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
@@ -522,7 +503,8 @@ export function PurchaseNakladnayaSection() {
                 </span>
               </td>
               <td
-                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)" }}
+                className="birzha-nakl-lines-table__total-cell"
+                style={{ ...thtdDense, fontWeight: 600 }}
                 title="Сумма коробов; пустое поле = 0"
               >
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
@@ -532,17 +514,15 @@ export function PurchaseNakladnayaSection() {
                   кор.
                 </span>
               </td>
-              <td className="birzha-text-muted" style={{ ...thtdDense, background: "rgba(0,0,0,0.04)" }}>
+              <td className="birzha-text-muted birzha-nakl-lines-table__total-cell" style={thtdDense}>
                 —
               </td>
               <td
                 colSpan={1}
-                style={{ ...thtdDense, fontWeight: 600, background: "rgba(0,0,0,0.03)", verticalAlign: "top" }}
+                className="birzha-nakl-lines-table__total-sum"
+                style={{ ...thtdDense, fontWeight: 600, verticalAlign: "middle" }}
               >
-                <div>По строкам: {nakladnayaFormTotals.totalLineKopecks} коп.</div>
-                <div className="birzha-text-subtle" style={{ fontSize: "0.82rem" }}>
-                  = {kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽
-                </div>
+                <span>{kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽</span>
                 {extraCostKopecksForTotals > 0 && (
                   <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
                     Всего (строки + доп.): {nakladnayaFormTotals.totalAllKopecks} коп. ={" "}
@@ -555,7 +535,7 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-text-subtle"
-                style={{ ...thtdDense, background: "rgba(0,0,0,0.03)", fontSize: "0.75rem" }}
+                style={{ ...thtdDense, fontSize: "0.75rem" }}
               />
             </tr>
           </tfoot>

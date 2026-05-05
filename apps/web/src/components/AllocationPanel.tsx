@@ -186,13 +186,15 @@ export function AllocationPanel() {
   });
 
   const writeOff = useMutation({
-    mutationFn: async ({ batchId, kg }: { batchId: string; kg: number }) => {
-      await postBatchWarehouseWriteOffQualityReject(batchId, kg);
+    mutationFn: async ({ items }: { inputKey: string; items: { batchId: string; kg: number }[] }) => {
+      for (const item of items) {
+        await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
+      }
     },
-    onSuccess: (_d, { batchId }) => {
+    onSuccess: (_d, { inputKey }) => {
       setRejectScrapInput((prev) => {
         const next = { ...prev };
-        delete next[batchId];
+        delete next[inputKey];
         return next;
       });
       setSavedManifestId("");
@@ -332,6 +334,43 @@ export function AllocationPanel() {
     }
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
+
+  const writeOffRows = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        lineLabel: string;
+        totalKg: number;
+        totalPkg: number;
+        linesWithPkg: number;
+        partCount: number;
+        batches: BatchListItem[];
+      }
+    >();
+    for (const batch of tableRows) {
+      const lineLabel = formatNakladLineLabel(batch);
+      if (!grouped.has(lineLabel)) {
+        grouped.set(lineLabel, {
+          lineLabel,
+          totalKg: 0,
+          totalPkg: 0,
+          linesWithPkg: 0,
+          partCount: 0,
+          batches: [],
+        });
+      }
+      const row = grouped.get(lineLabel)!;
+      row.totalKg += batch.onWarehouseKg;
+      row.partCount += 1;
+      row.batches.push(batch);
+      const pkg = estimatedPackageCountOnShelf(batch);
+      if (pkg != null) {
+        row.totalPkg += pkg;
+        row.linesWithPkg += 1;
+      }
+    }
+    return [...grouped.values()].sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
+  }, [tableRows]);
 
   const inferredDestinationCode = useMemo(() => {
     const counts = new Map<string, number>();
@@ -578,18 +617,25 @@ export function AllocationPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tableRows.map((b) => (
-                      <tr key={`wo-${b.id}`}>
-                        <td style={thtd}>{formatNakladLineLabel(b)}</td>
-                        <td style={thtd}>{b.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                    {writeOffRows.map((row) => (
+                      <tr key={`wo-${row.lineLabel}`}>
+                        <td style={thtd}>
+                          <strong>{row.lineLabel}</strong>
+                          <span className="birzha-text-muted" style={{ marginLeft: 6, fontSize: "0.78rem" }}>
+                            {row.partCount} парт.
+                          </span>
+                        </td>
+                        <td style={thtd}>{row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
                         <td style={thtd}>
                           <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                             <input
                               type="text"
                               inputMode="decimal"
                               placeholder="кг"
-                              value={rejectScrapInput[b.id] ?? ""}
-                              onChange={(ev) => setRejectScrapInput((prev) => ({ ...prev, [b.id]: ev.target.value }))}
+                              value={rejectScrapInput[row.lineLabel] ?? ""}
+                              onChange={(ev) =>
+                                setRejectScrapInput((prev) => ({ ...prev, [row.lineLabel]: ev.target.value }))
+                              }
                               style={{ ...fieldStyle, width: "5rem" }}
                             />
                             <button
@@ -597,12 +643,26 @@ export function AllocationPanel() {
                               style={btnStyle}
                               disabled={writeOff.isPending}
                               onClick={() => {
-                                const s = (rejectScrapInput[b.id] ?? "").replace(",", ".");
+                                const s = (rejectScrapInput[row.lineLabel] ?? "").replace(",", ".");
                                 const kg = parseFloat(s);
-                                if (!Number.isFinite(kg) || kg <= 0 || kg > b.onWarehouseKg) {
+                                if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
                                   return;
                                 }
-                                writeOff.mutate({ batchId: b.id, kg });
+                                let remaining = kg;
+                                const items: { batchId: string; kg: number }[] = [];
+                                for (const batch of row.batches) {
+                                  if (remaining <= 0) {
+                                    break;
+                                  }
+                                  const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
+                                  if (kgFromBatch > 0) {
+                                    items.push({ batchId: batch.id, kg: kgFromBatch });
+                                    remaining -= kgFromBatch;
+                                  }
+                                }
+                                if (items.length > 0) {
+                                  writeOff.mutate({ inputKey: row.lineLabel, items });
+                                }
                               }}
                             >
                               Списать

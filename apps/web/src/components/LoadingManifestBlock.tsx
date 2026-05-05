@@ -3,9 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
 import type { LoadingManifestDetail } from "../api/types.js";
-import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import {
-  estimatedPackageCountOnShelf,
+  aggregateBatchesByCaliberLine,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
@@ -54,6 +53,7 @@ export function LoadingManifestBlock({
   }, [batchesInWh, includedBatchesFromSelection, manifest]);
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
+  const caliberRows = useMemo(() => aggregateBatchesByCaliberLine(includedBatches), [includedBatches]);
 
   const uniqueDocuments = useMemo(() => {
     const m = new Map<string, { id: string; number: string }>();
@@ -68,26 +68,25 @@ export function LoadingManifestBlock({
   }, [includedBatches]);
 
   const caliberCaption = useMemo(() => {
-    const labels = [...new Set(includedBatches.map((b) => formatNakladLineLabel(b)).filter((x) => x !== "—"))].sort((a, b) =>
-      a.localeCompare(b, "ru"),
-    );
-    return labels.join(" · ");
-  }, [includedBatches]);
+    return caliberRows
+      .map((row) => row.lineLabel)
+      .filter((x) => x !== "—")
+      .join(", ");
+  }, [caliberRows]);
 
   const buildCsv = useCallback(() => {
     const rows: string[] = [];
-    rows.push("===По_строкам_партий===");
-    const head = ["Номер_накл", "ID_накл", "ID_парт", "Кг_ост", "Ящ_оцен", "Калибр"];
+    rows.push("===Свод_по_калибрам===");
+    const head = ["Калибр", "Кг_ост", "Ящ_оцен", "Парт"];
     rows.push(head.join(";"));
-    for (const b of includedBatches) {
-      const docN = b.nakladnaya?.documentNumber?.replace(/;/g, " ") ?? "";
-      const docId = b.nakladnaya?.documentId ?? "";
-      const pkgE = estimatedPackageCountOnShelf(b);
-      const line = formatNakladLineLabel(b).replace(/;/g, " ");
+    for (const row of caliberRows) {
       rows.push(
-        [docN, docId, formatShortBatchId(b.id), String(b.onWarehouseKg), pkgE == null ? "" : String(pkgE), line].join(
-          ";",
-        ),
+        [
+          row.lineLabel.replace(/;/g, " "),
+          String(row.totalKg),
+          row.linesWithPkg === 0 ? "" : String(row.totalPkg),
+          String(row.partCount),
+        ].join(";"),
       );
     }
     rows.push("");
@@ -95,7 +94,7 @@ export function LoadingManifestBlock({
       `Свод_кг;${totals.kg};Свод_ящ;${totals.pkg};парт;${includedBatches.length}`,
     );
     return "\uFEFF" + rows.join("\n");
-  }, [includedBatches, totals.kg, totals.pkg]);
+  }, [caliberRows, includedBatches.length, totals.kg, totals.pkg]);
 
   const downloadCsv = useCallback(() => {
     const blob = new Blob([buildCsv()], { type: "text/csv;charset=utf-8" });
@@ -178,21 +177,21 @@ export function LoadingManifestBlock({
         </p>
       )}
 
-      {includedBatches.length > 0 && (
+      {caliberRows.length > 0 && (
         <div>
           <h4
             className="loading-print-subhead"
             style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.4rem" }}
             id="loading-by-batch"
           >
-            По партиям (калибр — как в накл.)
+            По калибрам
           </h4>
           <div style={{ overflowX: "auto" }} role="table">
             <table
               style={tableStyle}
               className="loading-manifest-table"
               aria-labelledby="loading-by-batch"
-              aria-label="Детализация по партиям"
+              aria-label="Свод по калибрам"
             >
               <thead>
                 <tr>
@@ -205,21 +204,26 @@ export function LoadingManifestBlock({
                   <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                     Ящ. (оц.)
                   </th>
+                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                    Парт.
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {includedBatches.map((b) => {
-                  const pkgE = estimatedPackageCountOnShelf(b);
-                  return (
-                    <tr key={b.id} title={`Технический id партии: ${b.id}`}>
-                      <td style={thtd}>
-                        <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{formatNakladLineLabel(b)}</span>
-                      </td>
-                      <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>{b.onWarehouseKg}</td>
-                      <td style={{ ...thtd, textAlign: "right" }}>{pkgE == null ? "—" : `≈ ${pkgE}`}</td>
-                    </tr>
-                  );
-                })}
+                {caliberRows.map((row) => (
+                  <tr key={row.lineLabel}>
+                    <td style={thtd}>
+                      <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{row.lineLabel}</span>
+                    </td>
+                    <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                      {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ ...thtd, textAlign: "right" }}>
+                      {row.linesWithPkg === 0 ? "—" : `≈ ${row.totalPkg}`}
+                    </td>
+                    <td style={{ ...thtd, textAlign: "right" }}>{row.partCount}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

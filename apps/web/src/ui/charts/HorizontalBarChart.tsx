@@ -16,6 +16,15 @@ type Props = {
   valueSuffix?: string;
 };
 
+const barPalette = [
+  "linear-gradient(90deg, #2563eb 0%, #60a5fa 100%)",
+  "linear-gradient(90deg, #16a34a 0%, #4ade80 100%)",
+  "linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)",
+  "linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%)",
+  "linear-gradient(90deg, #0891b2 0%, #22d3ee 100%)",
+  "linear-gradient(90deg, #e11d48 0%, #fb7185 100%)",
+];
+
 /**
  * Горизонтальные столбики без тяжёлых зависимостей (масштаб по max среди строк).
  */
@@ -36,7 +45,7 @@ export function HorizontalBarChart({ title, items, emptyHint, valueSuffix }: Pro
     <div className="birzha-chart-card-inner" role="img" aria-label={title ?? "Горизонтальная диаграмма"}>
       {title ? <h4 className="birzha-chart-card-inner__title">{title}</h4> : null}
       <ul className="birzha-hbar-list">
-        {positive.map((it) => {
+        {positive.map((it, index) => {
           const pct = Math.round((it.value / max) * 100);
           const label =
             it.display ??
@@ -47,7 +56,10 @@ export function HorizontalBarChart({ title, items, emptyHint, valueSuffix }: Pro
                 {it.label}
               </span>
               <div className="birzha-hbar-list__track" title={`${it.label}: ${label}`}>
-                <div className="birzha-hbar-list__fill" style={{ width: `${pct}%` }} />
+                <div
+                  className="birzha-hbar-list__fill"
+                  style={{ width: `${pct}%`, background: barPalette[index % barPalette.length] }}
+                />
               </div>
               <span className="birzha-hbar-list__value">{label}</span>
             </li>
