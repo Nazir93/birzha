@@ -9,6 +9,7 @@ import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
+import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -99,6 +100,23 @@ export function OperationsPanel() {
   const [shipAllDocumentId, setShipAllDocumentId] = useState("");
   /** Всего ящиков в отгрузке «вся накладная»; распределяются по строкам пропорционально кг. */
   const [shipAllTotalPackages, setShipAllTotalPackages] = useState("");
+  const [distributionPayload, setDistributionPayload] = useState(() => readDistributionShipPayload());
+
+  const distributionRows = useMemo(() => {
+    if (!distributionPayload) {
+      return [] as BatchListItem[];
+    }
+    const ids = new Set(distributionPayload.batchIds);
+    return shippableBatches.filter((b) => ids.has(b.id));
+  }, [distributionPayload, shippableBatches]);
+
+  const distributionMissingCount = distributionPayload
+    ? Math.max(0, distributionPayload.batchIds.length - distributionRows.length)
+    : 0;
+  const distributionTotalKg = useMemo(
+    () => distributionRows.reduce((sum, b) => sum + b.onWarehouseKg, 0),
+    [distributionRows],
+  );
 
   const ship = useMutation({
     mutationFn: async () => {
@@ -156,6 +174,27 @@ export function OperationsPanel() {
       invalidateDomain();
       setShipAllDocumentId("");
       setShipAllTotalPackages("");
+    },
+  });
+
+  const shipDistributionSelection = useMutation({
+    mutationFn: async () => {
+      const tripT = shipTripId.trim();
+      if (!tripT) {
+        throw new Error("Выберите рейс");
+      }
+      if (!distributionPayload || distributionRows.length === 0) {
+        throw new Error("Нет собранных строк с остатком на складе");
+      }
+      for (const b of distributionRows) {
+        const { batchId, body } = parseShipForm(b.id, tripT, String(b.onWarehouseKg), "");
+        await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/ship-to-trip`, body);
+      }
+    },
+    onSuccess: () => {
+      clearDistributionShipPayload();
+      setDistributionPayload(null);
+      invalidateDomain();
     },
   });
 
@@ -241,6 +280,46 @@ export function OperationsPanel() {
             </option>
           ))}
         </select>
+
+        {distributionPayload ? (
+          <div className="birzha-inline-panel" style={{ margin: "0 0 0.9rem" }}>
+            <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 700 }}>
+              Погрузочная накладная из распределения
+            </h4>
+            <p style={{ ...muted, margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
+              К отправке: <strong>{distributionRows.length}</strong> парт.,{" "}
+              <strong>{distributionTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
+              {distributionMissingCount > 0 ? (
+                <> Уже не на складе или списано: {distributionMissingCount} парт.</>
+              ) : null}
+            </p>
+            <button
+              type="button"
+              style={{ ...btnStyle, marginTop: 0 }}
+              disabled={shipDistributionSelection.isPending || !shipTripId.trim() || distributionRows.length === 0}
+              aria-busy={shipDistributionSelection.isPending || undefined}
+              onClick={() => shipDistributionSelection.mutate()}
+            >
+              {shipDistributionSelection.isPending ? "Отгрузка…" : "Отгрузить собранную накладную в этот рейс"}
+            </button>{" "}
+            <button
+              type="button"
+              style={{ ...btnStyle, marginTop: 0 }}
+              onClick={() => {
+                clearDistributionShipPayload();
+                setDistributionPayload(null);
+              }}
+            >
+              Сбросить
+            </button>
+            <FieldError error={shipDistributionSelection.error as Error | null} />
+            {shipDistributionSelection.isSuccess ? (
+              <p style={successText} role="status">
+                Собранная накладная отгружена. В распределении эти партии больше не будут показываться как остаток склада.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <>
             <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>

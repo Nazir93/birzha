@@ -119,6 +119,69 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
   return { sum, linesWithBoxData };
 }
 
+/** Остаток на складе по `allocation.destination` и кг уже отгруженные в рейсы (`inTransitKg`). */
+function summarizeWarehouseAllocation(
+  batches: BatchListItem[],
+  destAllowed: readonly string[],
+  labelDest: Record<string, string>,
+): {
+  assignedRows: { code: string; label: string; kg: number; batchCount: number }[];
+  unassigned: { kg: number; batchCount: number };
+  inTransit: { kg: number; batchCount: number };
+} {
+  const assignedMap = new Map<string, { kg: number; batchCount: number }>();
+  let unKg = 0;
+  let unBc = 0;
+  let trKg = 0;
+  let trBc = 0;
+
+  for (const b of batches) {
+    const ow = b.onWarehouseKg;
+    if (ow > 0) {
+      const d = b.allocation?.destination?.trim();
+      if (!d) {
+        unKg += ow;
+        unBc += 1;
+      } else {
+        const cur = assignedMap.get(d) ?? { kg: 0, batchCount: 0 };
+        cur.kg += ow;
+        cur.batchCount += 1;
+        assignedMap.set(d, cur);
+      }
+    }
+    if (b.inTransitKg > 0) {
+      trKg += b.inTransitKg;
+      trBc += 1;
+    }
+  }
+
+  const assignedRows: { code: string; label: string; kg: number; batchCount: number }[] = [];
+  const consumed = new Set<string>();
+  for (const code of destAllowed) {
+    const v = assignedMap.get(code);
+    if (v && v.kg > 0) {
+      assignedRows.push({ code, label: labelDest[code] ?? code, kg: v.kg, batchCount: v.batchCount });
+      consumed.add(code);
+    }
+  }
+  const extras = [...assignedMap.entries()]
+    .filter(([code, v]) => !consumed.has(code) && v.kg > 0)
+    .map(([code, v]) => ({
+      code,
+      label: labelDest[code] ?? code,
+      kg: v.kg,
+      batchCount: v.batchCount,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "ru"));
+  assignedRows.push(...extras);
+
+  return {
+    assignedRows,
+    unassigned: { kg: unKg, batchCount: unBc },
+    inTransit: { kg: trKg, batchCount: trBc },
+  };
+}
+
 export function AllocationPanel() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -281,6 +344,11 @@ export function AllocationPanel() {
     [byWarehouse, selectedWarehouse],
   );
 
+  const allocationBreakdown = useMemo(
+    () => summarizeWarehouseAllocation(batchesInWh, destAllowed, labelDest),
+    [batchesInWh, destAllowed, labelDest],
+  );
+
   const documentOptions = useMemo(() => documentOptionsForAllocation(batchesInWh), [batchesInWh]);
   const docIdKey = useMemo(
     () =>
@@ -426,7 +494,10 @@ export function AllocationPanel() {
   return (
     <div role="region" aria-label="Распределение товара">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
-      <p style={muted}>Выберите склад, уберите лишние накладные, задайте город и сформируйте погрузочную накладную.</p>
+      <p style={muted}>
+        Выберите склад: видно, какой остаток уже привязан к направлениям (городам), что ещё предстоит распределить по
+        рейсам, и сколько уже уехало в рейсах.
+      </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
       </p>
@@ -511,6 +582,76 @@ export function AllocationPanel() {
               </div>
             )}
           </div>
+
+          {selectedWarehouse && whSummary && whSummary.batches > 0 && (
+            <div
+              className="birzha-inline-panel"
+              style={{ marginBottom: "0.9rem" }}
+              role="region"
+              aria-label="Свод по распределению на складе"
+            >
+              <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.45rem" }}>Уже распределено и остаток к рейсам</h3>
+              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.55rem", lineHeight: 1.45 }}>
+                На складе: кг по полю направления в партии (куда планируется везти товар). Без направления — то, что ещё
+                предстоит разнести по городам и отгрузить рейсами. Отдельно — кг уже отгруженные в рейсы (в пути), по тем же
+                партиям этого склада.
+              </p>
+              <div className="birzha-table-scroll">
+                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 440 }}>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Направление / статус
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Партий
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allocationBreakdown.assignedRows.map((row) => (
+                      <tr key={`alloc-dir-${row.code}`}>
+                        <td style={thtd}>{row.label}</td>
+                        <td style={thtd}>{row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                        <td style={thtd}>{row.batchCount}</td>
+                      </tr>
+                    ))}
+                    {allocationBreakdown.unassigned.kg > 0 && (
+                      <tr key="alloc-unassigned">
+                        <td style={thtd}>
+                          <strong>Не назначено направление</strong>
+                          <span className="birzha-text-muted" style={{ display: "block", fontSize: "0.78rem", marginTop: 2 }}>
+                            дальше — по городам и рейсам
+                          </span>
+                        </td>
+                        <td style={thtd}>
+                          {allocationBreakdown.unassigned.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={thtd}>{allocationBreakdown.unassigned.batchCount}</td>
+                      </tr>
+                    )}
+                    {allocationBreakdown.inTransit.kg > 0 && (
+                      <tr key="alloc-in-transit">
+                        <td style={thtd}>
+                          <strong>Уже в рейсе (в пути)</strong>
+                          <span className="birzha-text-muted" style={{ display: "block", fontSize: "0.78rem", marginTop: 2 }}>
+                            отгружено с этого склада, не на полке
+                          </span>
+                        </td>
+                        <td style={thtd}>
+                          {allocationBreakdown.inTransit.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={thtd}>{allocationBreakdown.inTransit.batchCount}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {selectedWarehouse && (
             <>
