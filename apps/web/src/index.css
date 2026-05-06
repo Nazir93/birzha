@@ -751,6 +751,63 @@ main.app-shell {
   background: var(--birzha-surface-muted);
 }
 
+/* Раскрывающиеся блоки «матрёшка» (напр. погрузочные накладные в админке) */
+.birzha-disclosure {
+  margin-bottom: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-disclosure > summary,
+.birzha-disclosure__summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.birzha-disclosure > summary::-webkit-details-marker,
+.birzha-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.birzha-disclosure > summary::marker,
+.birzha-disclosure__summary::marker {
+  content: "";
+}
+
+.birzha-disclosure__hint {
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.birzha-disclosure__body {
+  padding: 0.35rem 0 0.15rem;
+}
+
+.birzha-disclosure__body--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.birzha-disclosure--nested {
+  margin-left: 0.35rem;
+  margin-top: 0.45rem;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--color-border);
+  background: transparent;
+}
+
 .birzha-loading-manifest {
   margin-bottom: 1.5rem;
   padding: 0.9rem 1rem;

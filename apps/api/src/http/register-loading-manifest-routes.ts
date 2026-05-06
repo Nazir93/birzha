@@ -3,7 +3,7 @@ import {
   assignLoadingManifestTripBodySchema,
   createLoadingManifestBodySchema,
 } from "@birzha/contracts";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
@@ -129,8 +129,68 @@ export function registerLoadingManifestRoutes(
         .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
         .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
         .orderBy(desc(loadingManifests.createdAt));
+
+      const manifestIds = rows.map((r) => r.id);
+      const lineByManifest = new Map<
+        string,
+        { lineCount: number; sumGrams: bigint; sumPackages: bigint | null }
+      >();
+      const calibersByManifest = new Map<string, { label: string; kg: number; packagesApprox: number }[]>();
+
+      if (manifestIds.length > 0) {
+        const lineAgg = await db
+          .select({
+            manifestId: loadingManifestLines.manifestId,
+            lineCount: sql<number>`count(*)::int`,
+            sumGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}), 0::bigint)`,
+            sumPackages: sql<bigint | null>`sum(${loadingManifestLines.packageCount})`,
+          })
+          .from(loadingManifestLines)
+          .where(inArray(loadingManifestLines.manifestId, manifestIds))
+          .groupBy(loadingManifestLines.manifestId);
+
+        for (const la of lineAgg) {
+          lineByManifest.set(la.manifestId, {
+            lineCount: la.lineCount,
+            sumGrams: la.sumGrams,
+            sumPackages: la.sumPackages,
+          });
+        }
+
+        const caliberRaw = await db
+          .select({
+            manifestId: loadingManifestLines.manifestId,
+            productGroup: productGrades.productGroup,
+            productGradeCode: productGrades.code,
+            sumGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}), 0::bigint)`,
+            sumPackages: sql<bigint | null>`sum(${loadingManifestLines.packageCount})`,
+          })
+          .from(loadingManifestLines)
+          .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+          .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
+          .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
+          .where(inArray(loadingManifestLines.manifestId, manifestIds))
+          .groupBy(loadingManifestLines.manifestId, productGrades.productGroup, productGrades.code);
+
+        for (const c of caliberRaw) {
+          const label = `${c.productGroup?.trim() || "Товар"} · ${c.productGradeCode?.trim() || "—"}`;
+          const kg = Number(c.sumGrams) / 1000;
+          const pkg = c.sumPackages != null ? Number(c.sumPackages) : 0;
+          const arr = calibersByManifest.get(c.manifestId) ?? [];
+          arr.push({ label, kg, packagesApprox: pkg });
+          calibersByManifest.set(c.manifestId, arr);
+        }
+        for (const arr of calibersByManifest.values()) {
+          arr.sort((a, b) => a.label.localeCompare(b.label, "ru"));
+        }
+      }
+
       return reply.send({
-        loadingManifests: rows.map((r) => ({
+        loadingManifests: rows.map((r) => {
+          const la = lineByManifest.get(r.id);
+          const totalKg = la ? Number(la.sumGrams) / 1000 : 0;
+          const packagesApprox = la?.sumPackages != null ? Number(la.sumPackages) : null;
+          return {
             id: r.id,
             manifestNumber: r.manifestNumber,
             docDate: formatPgDate(r.docDate),
@@ -141,7 +201,12 @@ export function registerLoadingManifestRoutes(
             destinationName: r.destinationName,
             tripId: r.tripId,
             createdAt: r.createdAt.toISOString(),
-          })),
+            lineCount: la?.lineCount ?? 0,
+            totalKg,
+            packagesApprox,
+            calibers: calibersByManifest.get(r.id) ?? [],
+          };
+        }),
       });
     } catch (error) {
       return sendMappedError(reply, error);

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
 import { apiPostJson } from "../api/fetch-api.js";
 import { loadingManifestDetailQueryOptions, loadingManifestsListQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
@@ -9,28 +10,29 @@ import { CreateTripIfAllowed } from "./CreateTripIfAllowed.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
-type CaliberRow = { key: string; label: string; kg: number; packageCount: number };
-
-function caliberRows(lines: { kg: number; packageCount: string | null; productGroup: string | null; productGradeCode: string | null }[]): CaliberRow[] {
-  const acc = new Map<string, CaliberRow>();
-  for (const line of lines) {
-    const label = `${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`;
-    const key = label;
-    const packageCount = line.packageCount ? Number(line.packageCount) : 0;
-    const prev = acc.get(key);
-    if (prev) {
-      prev.kg += line.kg;
-      prev.packageCount += Number.isFinite(packageCount) ? packageCount : 0;
-      continue;
+function mergeGrandCalibers(manifests: LoadingManifestSummary[]): { label: string; kg: number; packagesApprox: number }[] {
+  const acc = new Map<string, { kg: number; packagesApprox: number }>();
+  for (const m of manifests) {
+    for (const c of m.calibers ?? []) {
+      const prev = acc.get(c.label) ?? { kg: 0, packagesApprox: 0 };
+      prev.kg += c.kg;
+      prev.packagesApprox += c.packagesApprox;
+      acc.set(c.label, prev);
     }
-    acc.set(key, {
-      key,
-      label,
-      kg: line.kg,
-      packageCount: Number.isFinite(packageCount) ? packageCount : 0,
-    });
   }
-  return [...acc.values()].sort((a, b) => a.label.localeCompare(b.label, "ru"));
+  return [...acc.entries()]
+    .map(([label, v]) => ({ label, kg: v.kg, packagesApprox: v.packagesApprox }))
+    .sort((a, b) => a.label.localeCompare(b.label, "ru"));
+}
+
+function formatPkg(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) {
+    return "—";
+  }
+  if (n <= 0) {
+    return "—";
+  }
+  return n.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
 }
 
 export function AdminLoadingManifestsPanel() {
@@ -49,8 +51,45 @@ export function AdminLoadingManifestsPanel() {
     return m;
   }, [tripsQuery.data?.trips]);
 
+  const manifests = listQuery.data?.loadingManifests ?? [];
+
+  const grandSummary = useMemo(() => {
+    let totalKg = 0;
+    let packagesSum = 0;
+    let packagesKnown = 0;
+    const byWarehouse = new Map<string, { kg: number; manifests: number }>();
+    const byDestination = new Map<string, { kg: number; manifests: number }>();
+
+    for (const m of manifests) {
+      totalKg += m.totalKg ?? 0;
+      const pkg = m.packagesApprox;
+      if (pkg != null && pkg > 0) {
+        packagesSum += pkg;
+        packagesKnown += 1;
+      }
+      const whKey = `${m.warehouseName} (${m.warehouseCode})`;
+      const wh = byWarehouse.get(whKey) ?? { kg: 0, manifests: 0 };
+      wh.kg += m.totalKg ?? 0;
+      wh.manifests += 1;
+      byWarehouse.set(whKey, wh);
+
+      const dest = byDestination.get(m.destinationName) ?? { kg: 0, manifests: 0 };
+      dest.kg += m.totalKg ?? 0;
+      dest.manifests += 1;
+      byDestination.set(m.destinationName, dest);
+    }
+
+    return {
+      count: manifests.length,
+      totalKg,
+      packagesSum: packagesKnown > 0 ? packagesSum : null,
+      grandCalibers: mergeGrandCalibers(manifests),
+      byWarehouse: [...byWarehouse.entries()].sort((a, b) => a[0].localeCompare(b[0], "ru")),
+      byDestination: [...byDestination.entries()].sort((a, b) => a[0].localeCompare(b[0], "ru")),
+    };
+  }, [manifests]);
+
   const detail = detailQuery.data?.manifest;
-  const caliberSummary = useMemo(() => (detail ? caliberRows(detail.lines) : []), [detail]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -70,38 +109,10 @@ export function AdminLoadingManifestsPanel() {
       <h2 id="admin-loading-manifests-h" style={{ margin: "0 0 0.65rem", fontSize: "1.08rem" }}>
         Погрузка
       </h2>
-      <p style={{ ...muted, marginTop: 0, marginBottom: "0.7rem" }}>
-        Здесь рейсы и погрузочные накладные: после распределения закрепляйте накладную за рейсом.
+      <p style={{ ...muted, marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
+        Свод по документам и рейсам: сверху общая картина по складам, направлениям и калибрам; ниже рейсы и каждая накладная в
+        отдельном раскрывающемся блоке — как матрёшка. Откройте нужный уровень по очереди.
       </p>
-
-      <div className="birzha-home-work-card no-print" style={{ marginBottom: "0.9rem" }}>
-        <h3 style={{ margin: "0 0 0.55rem", fontSize: "0.98rem" }}>Рейсы</h3>
-        <CreateTripIfAllowed />
-        <div className="birzha-table-scroll" style={{ marginTop: "0.55rem" }}>
-          <table style={{ ...tableStyle, minWidth: 560 }}>
-            <thead>
-              <tr>
-                <th style={thHead}>Рейс</th>
-                <th style={thHead}>Статус</th>
-                <th style={thHead}>Машина</th>
-                <th style={thHead}>Отчёт</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(tripsQuery.data?.trips ?? []).map((t) => (
-                <tr key={t.id}>
-                  <td style={thtd}>{t.tripNumber}</td>
-                  <td style={thtd}>{t.status}</td>
-                  <td style={thtd}>{t.vehicleLabel ?? "—"}</td>
-                  <td style={thtd}>
-                    <Link to={`${adminRoutes.reports}?trip=${encodeURIComponent(t.id)}`}>Открыть</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {listQuery.isPending ? <LoadingBlock label="Загрузка списка накладных…" minHeight={80} /> : null}
       {listQuery.isError ? (
@@ -111,125 +122,327 @@ export function AdminLoadingManifestsPanel() {
       ) : null}
 
       {listQuery.data && (
-        <div className="birzha-table-scroll" style={{ marginBottom: "0.9rem" }}>
-          <table style={{ ...tableStyle, minWidth: 760 }}>
+        <details className="birzha-disclosure" open>
+          <summary className="birzha-disclosure__summary">
+            Общая сводка по всем погрузочным накладным
+            <span className="birzha-disclosure__hint">
+              {grandSummary.count === 0 ? "нет документов" : `${grandSummary.count} док. · ${grandSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`}
+            </span>
+          </summary>
+          <div className="birzha-disclosure__body">
+            {grandSummary.count === 0 ? (
+              <p style={{ ...muted, marginTop: 0 }}>Пока нет сохранённых накладных.</p>
+            ) : (
+              <>
+                <p style={{ margin: "0 0 0.55rem", fontSize: "0.9rem" }}>
+                  <strong>Всего:</strong> {grandSummary.count} накладных ·{" "}
+                  <strong>{grandSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</strong>
+                  {grandSummary.packagesSum != null ? (
+                    <>
+                      {" "}
+                      · ящ. ≈ <strong>{grandSummary.packagesSum.toLocaleString("ru-RU")}</strong> (по строкам с оценкой)
+                    </>
+                  ) : null}
+                </p>
+                <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
+                  <table style={{ ...tableStyle, minWidth: 360, fontSize: "0.88rem" }}>
+                    <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
+                      По складам
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th style={thHead}>Склад</th>
+                        <th style={thHead}>Накладных</th>
+                        <th style={thHead}>Кг</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grandSummary.byWarehouse.map(([name, v]) => (
+                        <tr key={name}>
+                          <td style={thtd}>{name}</td>
+                          <td style={thtd}>{v.manifests}</td>
+                          <td style={thtd}>{v.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
+                  <table style={{ ...tableStyle, minWidth: 360, fontSize: "0.88rem" }}>
+                    <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
+                      По направлениям (город / канал)
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th style={thHead}>Направление</th>
+                        <th style={thHead}>Накладных</th>
+                        <th style={thHead}>Кг</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grandSummary.byDestination.map(([name, v]) => (
+                        <tr key={name}>
+                          <td style={thtd}>{name}</td>
+                          <td style={thtd}>{v.manifests}</td>
+                          <td style={thtd}>{v.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="birzha-table-scroll">
+                  <table style={{ ...tableStyle, minWidth: 480, fontSize: "0.88rem" }}>
+                    <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
+                      По калибрам (все накладные вместе)
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th style={thHead}>Калибр</th>
+                        <th style={thHead}>Кг</th>
+                        <th style={thHead}>Ящ. (оц.)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grandSummary.grandCalibers.map((row) => (
+                        <tr key={row.label}>
+                          <td style={thtd}>{row.label}</td>
+                          <td style={thtd}>{row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                          <td style={thtd}>{formatPkg(row.packagesApprox)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        </details>
+      )}
+
+      <details className="birzha-disclosure" open>
+        <summary className="birzha-disclosure__summary">
+          Рейсы
+          <span className="birzha-disclosure__hint">создание и отчёты</span>
+        </summary>
+        <div className="birzha-disclosure__body">
+          <CreateTripIfAllowed />
+          <div className="birzha-table-scroll" style={{ marginTop: "0.55rem" }}>
+            <table style={{ ...tableStyle, minWidth: 560 }}>
+              <thead>
+                <tr>
+                  <th style={thHead}>Рейс</th>
+                  <th style={thHead}>Статус</th>
+                  <th style={thHead}>Машина</th>
+                  <th style={thHead}>Отчёт</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(tripsQuery.data?.trips ?? []).map((t) => (
+                  <tr key={t.id}>
+                    <td style={thtd}>{t.tripNumber}</td>
+                    <td style={thtd}>{t.status}</td>
+                    <td style={thtd}>{t.vehicleLabel ?? "—"}</td>
+                    <td style={thtd}>
+                      <Link to={`${adminRoutes.reports}?trip=${encodeURIComponent(t.id)}`}>Открыть</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
+      {listQuery.data && (
+        <details className="birzha-disclosure" open>
+          <summary className="birzha-disclosure__summary">
+            Погрузочные накладные
+            <span className="birzha-disclosure__hint">
+              {manifests.length === 0 ? "пусто" : `${manifests.length} шт. — раскройте строку`}
+            </span>
+          </summary>
+          <div className="birzha-disclosure__body birzha-disclosure__body--stack">
+            {manifests.length === 0 ? (
+              <p style={{ ...muted, marginTop: 0 }}>Нет сохранённых накладных.</p>
+            ) : (
+              manifests.map((m) => (
+                <ManifestAccordionBlock
+                  key={m.id}
+                  m={m}
+                  manifestId={manifestId}
+                  tripNumberById={tripNumberById}
+                  detail={detail && detail.id === m.id ? detail : null}
+                  detailLoading={Boolean(manifestId && manifestId === m.id && detailQuery.isPending)}
+                  detailError={Boolean(manifestId && manifestId === m.id && detailQuery.isError)}
+                  assignTripId={assignTripId}
+                  setAssignTripId={setAssignTripId}
+                  assignTrip={assignTrip}
+                  trips={tripsQuery.data?.trips ?? []}
+                />
+              ))
+            )}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function ManifestAccordionBlock({
+  m,
+  manifestId,
+  tripNumberById,
+  detail,
+  detailLoading,
+  detailError,
+  assignTripId,
+  setAssignTripId,
+  assignTrip,
+  trips,
+}: {
+  m: LoadingManifestSummary;
+  manifestId: string;
+  tripNumberById: Map<string, string>;
+  detail: LoadingManifestDetail | null;
+  detailLoading: boolean;
+  detailError: boolean;
+  assignTripId: string;
+  setAssignTripId: (v: string) => void;
+  assignTrip: {
+    mutate: () => void;
+    isPending: boolean;
+    isError: boolean;
+    error: unknown;
+  };
+  trips: { id: string; tripNumber: string; status: string }[];
+}) {
+  const tripLabel = m.tripId ? tripNumberById.get(m.tripId) ?? m.tripId : "—";
+  const isOpen = manifestId === m.id;
+
+  return (
+    <details className="birzha-disclosure birzha-disclosure--nested" open={isOpen}>
+      <summary className="birzha-disclosure__summary">
+        <span>
+          № <strong>{m.manifestNumber}</strong> · {m.docDate} · {m.warehouseName} ({m.warehouseCode}) · {m.destinationName} ·
+          рейс: {tripLabel}
+        </span>
+        <span className="birzha-disclosure__hint">
+          {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг · {m.lineCount} парт. · ящ. ≈{" "}
+          {formatPkg(m.packagesApprox)}
+        </span>
+      </summary>
+      <div className="birzha-disclosure__body">
+        <p style={{ ...muted, fontSize: "0.82rem", marginTop: 0 }}>
+          <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`}>Открыть карточку (URL)</Link> — полная
+          форма привязки к рейсу и строки партий ниже, если карточка загружена.
+        </p>
+
+        <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
+          <table style={{ ...tableStyle, minWidth: 420, fontSize: "0.88rem" }}>
+            <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
+              По калибрам (эта накладная)
+            </caption>
             <thead>
               <tr>
-                <th style={thHead}>Номер</th>
-                <th style={thHead}>Дата</th>
-                <th style={thHead}>Склад</th>
-                <th style={thHead}>Город</th>
-                <th style={thHead}>Рейс</th>
+                <th style={thHead}>Калибр</th>
+                <th style={thHead}>Кг</th>
+                <th style={thHead}>Ящ. (оц.)</th>
               </tr>
             </thead>
             <tbody>
-              {listQuery.data.loadingManifests.map((m) => (
-                <tr key={m.id}>
-                  <td style={thtd}>
-                    <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`}>№ {m.manifestNumber}</Link>
-                  </td>
-                  <td style={thtd}>{m.docDate}</td>
-                  <td style={thtd}>
-                    {m.warehouseName} ({m.warehouseCode})
-                  </td>
-                  <td style={thtd}>{m.destinationName}</td>
-                  <td style={thtd}>{m.tripId ? tripNumberById.get(m.tripId) ?? m.tripId : "—"}</td>
+              {(m.calibers ?? []).map((row) => (
+                <tr key={row.label}>
+                  <td style={thtd}>{row.label}</td>
+                  <td style={thtd}>{row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                  <td style={thtd}>{formatPkg(row.packagesApprox)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
 
-      {manifestId && detailQuery.isPending ? <LoadingBlock label="Загрузка накладной…" minHeight={72} /> : null}
-      {manifestId && detailQuery.isError ? (
-        <p style={errorText} role="alert">
-          Не удалось загрузить выбранную накладную.
-        </p>
-      ) : null}
+        {detailLoading ? <LoadingBlock label="Загрузка карточки…" minHeight={56} /> : null}
+        {detailError ? (
+          <p style={errorText} role="alert">
+            Не удалось загрузить карточку накладной.
+          </p>
+        ) : null}
 
-      {detail ? (
-        <div className="loading-manifest-print" style={{ marginTop: "0.7rem" }}>
-          <h3 style={{ margin: "0 0 0.35rem", fontSize: "1rem" }}>№ {detail.manifestNumber}</h3>
-          <p style={{ ...muted, marginTop: 0 }}>
-            {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode}) · {detail.destinationName}
-          </p>
-          <div className="no-print" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.7rem" }}>
-            <select
-              value={assignTripId}
-              onChange={(e) => setAssignTripId(e.target.value)}
-              style={{ minWidth: "16rem" }}
-            >
-              <option value="">— выбрать рейс —</option>
-              {(tripsQuery.data?.trips ?? []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.tripNumber} · {t.status}
-                </option>
-              ))}
-            </select>
-            <button type="button" style={btnStyle} disabled={assignTrip.isPending || !assignTripId} onClick={() => assignTrip.mutate()}>
-              {assignTrip.isPending ? "Привязка…" : "Привязать к рейсу"}
-            </button>
-            <span style={muted}>
-              Текущий рейс: {detail.tripId ? tripNumberById.get(detail.tripId) ?? detail.tripId : "не назначен"}
-            </span>
-          </div>
-          {assignTrip.isError ? (
-            <p style={errorText} role="alert">
-              {(assignTrip.error as Error).message}
-            </p>
-          ) : null}
-          <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
-            <table style={{ ...tableStyle, minWidth: 540 }}>
-              <thead>
-                <tr>
-                  <th style={thHead}>Калибр</th>
-                  <th style={thHead}>Кг</th>
-                  <th style={thHead}>Ящ.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {caliberSummary.map((row) => (
-                  <tr key={row.key}>
-                    <td style={thtd}>{row.label}</td>
-                    <td style={thtd}>{row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
-                    <td style={thtd}>{row.packageCount > 0 ? row.packageCount.toLocaleString("ru-RU") : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="birzha-table-scroll">
-            <table style={{ ...tableStyle, minWidth: 740 }}>
-              <thead>
-                <tr>
-                  <th style={thHead}>Строка</th>
-                  <th style={thHead}>Калибр</th>
-                  <th style={thHead}>Кг</th>
-                  <th style={thHead}>Ящ.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.lines.map((line) => (
-                  <tr key={line.batchId} title={`Технический id партии: ${line.batchId}`}>
-                    <td style={thtd}>{line.lineNo}</td>
-                    <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
-                    <td style={thtd}>{line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
-                    <td style={thtd}>{line.packageCount ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ marginTop: "0.8rem" }}>
-            <button type="button" style={btnStyle} onClick={() => window.print()}>
-              Печать
-            </button>
-          </p>
-        </div>
-      ) : (
-        <p style={{ ...muted, marginTop: 0 }}>Выберите накладную из списка выше.</p>
-      )}
-    </section>
+        {detail ? (
+          <>
+            <details className="birzha-disclosure birzha-disclosure--nested" open>
+              <summary className="birzha-disclosure__summary">
+                Привязка к рейсу
+                <span className="birzha-disclosure__hint">
+                  сейчас: {detail.tripId ? tripNumberById.get(detail.tripId) ?? detail.tripId : "не назначен"}
+                </span>
+              </summary>
+              <div className="birzha-disclosure__body">
+                <div className="no-print" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                  <select
+                    value={assignTripId}
+                    onChange={(e) => setAssignTripId(e.target.value)}
+                    style={{ minWidth: "16rem" }}
+                  >
+                    <option value="">— выбрать рейс —</option>
+                    {trips.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.tripNumber} · {t.status}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" style={btnStyle} disabled={assignTrip.isPending || !assignTripId} onClick={() => assignTrip.mutate()}>
+                    {assignTrip.isPending ? "Привязка…" : "Привязать к рейсу"}
+                  </button>
+                </div>
+                {assignTrip.isError ? (
+                  <p style={errorText} role="alert">
+                    {assignTrip.error instanceof Error ? assignTrip.error.message : String(assignTrip.error ?? "")}
+                  </p>
+                ) : null}
+              </div>
+            </details>
+
+            <details className="birzha-disclosure birzha-disclosure--nested" open>
+              <summary className="birzha-disclosure__summary">
+                Все строки (партии)
+                <span className="birzha-disclosure__hint">{detail.lines.length} строк</span>
+              </summary>
+              <div className="birzha-disclosure__body">
+                <div className="birzha-table-scroll">
+                  <table style={{ ...tableStyle, minWidth: 740, fontSize: "0.88rem" }}>
+                    <thead>
+                      <tr>
+                        <th style={thHead}>№</th>
+                        <th style={thHead}>Накладная закупки</th>
+                        <th style={thHead}>Калибр</th>
+                        <th style={thHead}>Кг</th>
+                        <th style={thHead}>Ящ.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.lines.map((line) => (
+                        <tr key={line.batchId} title={`Партия: ${line.batchId}`}>
+                          <td style={thtd}>{line.lineNo}</td>
+                          <td style={thtd}>{line.purchaseDocumentNumber ?? "—"}</td>
+                          <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
+                          <td style={thtd}>{line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                          <td style={thtd}>{line.packageCount ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ marginTop: "0.65rem" }} className="no-print">
+                  <button type="button" style={btnStyle} onClick={() => window.print()}>
+                    Печать
+                  </button>
+                </p>
+              </div>
+            </details>
+          </>
+        ) : null}
+      </div>
+    </details>
   );
 }

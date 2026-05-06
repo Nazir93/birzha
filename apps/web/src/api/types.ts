@@ -124,6 +124,12 @@ export type LoadingManifestSummary = {
   destinationName: string;
   tripId: string | null;
   createdAt: string;
+  /** Агрегаты из строк накладной (список GET). */
+  lineCount: number;
+  totalKg: number;
+  /** Сумма ящиков по строкам, если были посчитаны при сохранении. */
+  packagesApprox: number | null;
+  calibers: { label: string; kg: number; packagesApprox: number }[];
 };
 
 export type LoadingManifestsListResponse = { loadingManifests: LoadingManifestSummary[] };
