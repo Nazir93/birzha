@@ -15,6 +15,7 @@ import { formatTripStatusLabel } from "../format/trip-label.js";
 import { adminRoutes } from "../routes.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
 import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -235,6 +236,7 @@ export function AdminCabinetHome() {
           </header>
 
           <div className="birzha-dashboard-layout birzha-admin-dash__body">
+            <BirzhaDisclosure title="Сводные показатели" hint="рейсы, партии, склады" defaultOpen>
             <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">
               <div className="birzha-kpi-tile birzha-kpi-tile--premium">
                 <div className="birzha-kpi-tile__label">Рейсов</div>
@@ -320,7 +322,9 @@ export function AdminCabinetHome() {
                 {cpErr ? "Справочник контрагентов не подгрузился — проверьте API." : null}
               </p>
             )}
+            </BirzhaDisclosure>
 
+            <BirzhaDisclosure title="Диаграммы" hint="масса, склады, виды товара" defaultOpen={false}>
             <div className="birzha-dashboard-row">
               <div className="birzha-chart-card birzha-chart-card--premium">
                 <h3>Масса: склад · в пути · продано</h3>
@@ -347,11 +351,10 @@ export function AdminCabinetHome() {
                 />
               </div>
             </div>
+            </BirzhaDisclosure>
 
-            <div className="birzha-card birzha-admin-dash__trips">
-              <h3 className="birzha-section-title birzha-section-title--sm" style={{ marginBottom: "0.6rem" }}>
-                Рейсы
-              </h3>
+            <BirzhaDisclosure title="Рейсы" hint="последние, отчёт" defaultOpen>
+            <div className="birzha-admin-dash__trips">
               <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
                 <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Последние рейсы">
                   <thead>
@@ -394,6 +397,7 @@ export function AdminCabinetHome() {
                 </table>
               </div>
             </div>
+            </BirzhaDisclosure>
           </div>
         </>
       )}

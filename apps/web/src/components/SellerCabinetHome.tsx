@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { ops, sales } from "../routes.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
 import { SellerSalesSummary } from "./SellerSalesSummary.js";
 
@@ -44,40 +45,46 @@ export function SellerCabinetHome() {
         </nav>
       </header>
 
-      <section className="birzha-home-work-card birzha-seller-guide" aria-label="Памятка по работе">
-        <div className="birzha-seller-guide__head">
-          <h3 className="birzha-section-title birzha-section-title--sm">Как работать в 3 шага</h3>
+      <BirzhaDisclosure
+        defaultOpen={false}
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Инструкция</span>
+            <span className="birzha-section-title birzha-section-title--sm">Как работать в 3 шага</span>
+          </span>
+        }
+        hint="памятка"
+      >
+        <div className="birzha-seller-guide">
+          <div className="birzha-seller-guide__grid">
+            <article className="birzha-seller-guide__item">
+              <span className="birzha-seller-guide__num">1</span>
+              <div>
+                <strong>Выберите рейс</strong>
+                <p>В форме ниже должен быть выбран ваш рейс.</p>
+              </div>
+            </article>
+            <article className="birzha-seller-guide__item">
+              <span className="birzha-seller-guide__num">2</span>
+              <div>
+                <strong>Внесите продажу</strong>
+                <p>Укажите товар, вес и оплату. Нажмите «Продать».</p>
+              </div>
+            </article>
+            <article className="birzha-seller-guide__item">
+              <span className="birzha-seller-guide__num">3</span>
+              <div>
+                <strong>Сверьте итоги</strong>
+                <p>Проверьте кг, выручку, нал и долг в сводке.</p>
+              </div>
+            </article>
+          </div>
         </div>
-        <div className="birzha-seller-guide__grid">
-          <article className="birzha-seller-guide__item">
-            <span className="birzha-seller-guide__num">1</span>
-            <div>
-              <strong>Выберите рейс</strong>
-              <p>В форме ниже должен быть выбран ваш рейс.</p>
-            </div>
-          </article>
-          <article className="birzha-seller-guide__item">
-            <span className="birzha-seller-guide__num">2</span>
-            <div>
-              <strong>Внесите продажу</strong>
-              <p>Укажите товар, вес и оплату. Нажмите «Продать».</p>
-            </div>
-          </article>
-          <article className="birzha-seller-guide__item">
-            <span className="birzha-seller-guide__num">3</span>
-            <div>
-              <strong>Сверьте итоги</strong>
-              <p>Проверьте кг, выручку, нал и долг в сводке.</p>
-            </div>
-          </article>
-        </div>
-      </section>
+      </BirzhaDisclosure>
 
       <SellerSalesSummary />
 
-      <section className="birzha-home-work-card" aria-label="Форма продажи">
-        <SellFromTripSection variant="seller" />
-      </section>
+      <SellFromTripSection variant="seller" />
     </div>
   );
 }

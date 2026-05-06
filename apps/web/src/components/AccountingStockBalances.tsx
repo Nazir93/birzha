@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { BatchListItem, WarehousesListResponse } from "../api/types.js";
 import { batchesFullListQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -104,16 +105,19 @@ export function AccountingStockBalances() {
   }
 
   return (
-    <section className="birzha-panel birzha-home-work-card" id="acc-stock" aria-labelledby="acc-stock-h">
-      <div className="birzha-section-heading">
-        <div>
-          <p className="birzha-section-heading__eyebrow">Остатки</p>
-          <h3 id="acc-stock-h" className="birzha-section-title birzha-section-title--sm">
+    <BirzhaDisclosure
+      id="acc-stock"
+      defaultOpen
+      title={
+        <span className="birzha-disclosure__title-stack">
+          <span className="birzha-section-heading__eyebrow">Остатки</span>
+          <span id="acc-stock-h" className="birzha-section-title birzha-section-title--sm">
             Товар и оценка по закупу
-          </h3>
-        </div>
-        <p className="birzha-section-heading__note">Склад, путь и закупочная стоимость</p>
-      </div>
+          </span>
+        </span>
+      }
+      hint="Склад, путь и закупочная стоимость"
+    >
       <div className="birzha-kpi-grid birzha-kpi-grid--wide">
         <div className="birzha-kpi-tile birzha-kpi-tile--premium">
           <div className="birzha-kpi-tile__label">На складе, кг</div>
@@ -183,6 +187,6 @@ export function AccountingStockBalances() {
           Справочник складов не загрузился — в первой колонке показаны id.
         </p>
       )}
-    </section>
+    </BirzhaDisclosure>
   );
 }

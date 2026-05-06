@@ -22,6 +22,7 @@ import {
   shipmentReportQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
@@ -317,9 +318,14 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             )}
           </p>
 
-          <h3 id="trip-report-masses" style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>
-            Массы, кг (из граммов)
-          </h3>
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-masses" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Массы, кг (из граммов)
+              </h3>
+            }
+          >
           <table style={tableStyle} aria-labelledby="trip-report-masses">
             <thead>
               <tr>
@@ -350,10 +356,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </tr>
             </tbody>
           </table>
+          </BirzhaDisclosure>
 
-          <h3 id="trip-report-money" style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>
-            Деньги (копейки → руб.)
-          </h3>
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-money" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Деньги (копейки → руб.)
+              </h3>
+            }
+          >
           <table style={tableStyle} aria-labelledby="trip-report-money">
             <thead>
               <tr>
@@ -394,12 +406,17 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </tr>
             </tbody>
           </table>
+          </BirzhaDisclosure>
 
           {r.sales.byClient.length > 0 && (
-            <>
-              <h3 id="trip-report-clients" style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>
-                Продажи по клиентам
-              </h3>
+            <BirzhaDisclosure
+              defaultOpen
+              title={
+                <h3 id="trip-report-clients" style={{ fontSize: "0.95rem", margin: 0 }}>
+                  Продажи по клиентам
+                </h3>
+              }
+            >
               <div style={{ overflowX: "auto" }}>
                 <table style={tableStyle} aria-labelledby="trip-report-clients">
                   <thead>
@@ -432,33 +449,30 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   </tbody>
                 </table>
               </div>
-            </>
+            </BirzhaDisclosure>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "baseline",
-              gap: "0.35rem",
-              margin: "0.75rem 0 0.25rem",
-            }}
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-batches" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Сверка по партиям
+              </h3>
+            }
           >
-            <h3 id="trip-report-batches" style={{ fontSize: "0.95rem", margin: 0 }}>
-              Сверка по партиям
-            </h3>
-            {batchRows.length > 0 && (
-              <button
-                type="button"
-                className="no-print"
-                style={btnSecondary}
-                onClick={downloadBatchCsv}
-                aria-label="Скачать таблицу сверки по партиям в CSV для Excel"
-              >
-                Скачать CSV (Excel)
-              </button>
-            )}
-          </div>
+            <div className="no-print" style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.35rem" }}>
+              {batchRows.length > 0 && (
+                <button
+                  type="button"
+                  className="no-print"
+                  style={btnSecondary}
+                  onClick={downloadBatchCsv}
+                  aria-label="Скачать таблицу сверки по партиям в CSV для Excel"
+                >
+                  Скачать CSV (Excel)
+                </button>
+              )}
+            </div>
           <p className="no-print" style={{ ...muted, margin: "0 0 0.35rem" }}>
             Остаток в пути = отгружено − продано − недостача.
           </p>
@@ -550,6 +564,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </table>
             </div>
           )}
+          </BirzhaDisclosure>
 
           <details className="no-print" style={{ marginTop: "0.75rem" }}>
             <summary className="birzha-text-subtle" style={{ cursor: "pointer" }}>

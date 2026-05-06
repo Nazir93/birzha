@@ -11,6 +11,7 @@ import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import {
@@ -233,30 +234,32 @@ export function OperationsPanel() {
       {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков…" minHeight={96} />}
 
       {!batchesQuery.isPending && batchesQuery.data && (
-        <>
+        <BirzhaDisclosure title="Партии по закупочным накладным" hint="остатки на складе" defaultOpen>
           <BatchesByNakladnayaReference
             batches={batchesQuery.data.batches}
             isLoading={false}
             sectionHeadingId="op-batches-heading"
             showBulkExpandControls={false}
           />
-        </>
+        </BirzhaDisclosure>
       )}
 
       {tripsQuery.isError && (
         <p style={warnText}>Список рейсов не загрузился — выберите рейс вручную или повторите позже.</p>
       )}
 
-      <section className="birzha-panel" aria-labelledby="op-sec-ship">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Шаг 1</p>
-            <h3 id="op-sec-ship" className="birzha-section-title birzha-section-title--sm">
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Шаг 1</span>
+            <span id="op-sec-ship" className="birzha-section-title birzha-section-title--sm">
               Отгрузить в рейс
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">Партия или вся накладная</p>
-        </div>
+            </span>
+          </span>
+        }
+        hint="Партия или вся накладная"
+      >
         <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
           Рейс *
         </label>
@@ -474,20 +477,22 @@ export function OperationsPanel() {
               </p>
             )}
         </>
-      </section>
+      </BirzhaDisclosure>
 
       <SellFromTripSection variant="operations" />
 
-      <section className="birzha-panel" aria-labelledby="op-sec-short">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Шаг 3</p>
-            <h3 id="op-sec-short" className="birzha-section-title birzha-section-title--sm">
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Шаг 3</span>
+            <span id="op-sec-short" className="birzha-section-title birzha-section-title--sm">
               Недостача по рейсу
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">Партия, рейс, кг и причина при приёмке</p>
-        </div>
+            </span>
+          </span>
+        }
+        hint="Партия, рейс, кг и причина при приёмке"
+      >
         <label htmlFor="op-in-short-batch" style={{ fontSize: "0.88rem" }}>
           Партия *
         </label>
@@ -553,7 +558,7 @@ export function OperationsPanel() {
             Готово.
           </p>
         )}
-      </section>
+      </BirzhaDisclosure>
     </div>
   );
 }

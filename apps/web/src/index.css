@@ -492,7 +492,8 @@ main.app-shell {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
-.birzha-seller-sell-panel.birzha-panel {
+.birzha-seller-sell-panel.birzha-panel,
+.birzha-disclosure.birzha-seller-sell-panel {
   border-bottom: none;
   padding-bottom: 0;
 }
@@ -806,6 +807,60 @@ main.app-shell {
   padding-left: 0.55rem;
   border-left: 2px solid var(--color-border);
   background: transparent;
+}
+
+/* В кабинетах раскрывающийся блок совпадает с карточкой birzha-panel */
+.app-shell--cabinet .birzha-disclosure {
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--birzha-radius);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.app-shell--cabinet .birzha-disclosure:last-child {
+  margin-bottom: 0;
+}
+
+.app-shell--cabinet .birzha-disclosure__body > .birzha-panel {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.app-shell--cabinet .birzha-disclosure__body > .birzha-panel:last-child {
+  padding-bottom: 0;
+}
+
+.app-shell--cabinet .birzha-disclosure__body > .birzha-home-work-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.app-shell--cabinet .birzha-disclosure__body > .birzha-admin-dash__trips {
+  margin: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.birzha-disclosure__title-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  text-align: left;
+}
+
+.birzha-disclosure__title-stack .birzha-section-title {
+  margin: 0;
 }
 
 .birzha-loading-manifest {
@@ -2148,4 +2203,244 @@ main.app-shell--cabinet {
   .birzha-home-action {
     min-height: 3.6rem;
   }
+}
+
+/* Страница «Продажи по продавцу» (/a/assign-seller) */
+.birzha-assign-seller {
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.birzha-assign-seller__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.birzha-assign-seller__title {
+  margin: 0;
+  font-size: clamp(1.12rem, 2.2vw, 1.28rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.birzha-assign-seller__lead {
+  margin: 0.45rem 0 0;
+  max-width: 38rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--birzha-text-subtle);
+}
+
+.birzha-assign-seller__pick {
+  flex: 0 1 min(100%, 18rem);
+  min-width: 12rem;
+}
+
+.birzha-assign-seller__pick-status {
+  margin: 0.25rem 0 0;
+}
+
+.birzha-assign-seller__seller-line {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.birzha-assign-seller__seller-meta {
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.birzha-assign-seller__alert {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.birzha-assign-seller__kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.birzha-assign-seller__kpi-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.birzha-assign-seller__kpi-card--accent {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+}
+
+.birzha-assign-seller__kpi-card--warn {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fef2f2 0%, #fafafa 100%);
+}
+
+.birzha-assign-seller__kpi-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 0.25rem;
+}
+
+.birzha-assign-seller__kpi-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.birzha-assign-seller__section-title {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.birzha-assign-seller__trips-section {
+  margin-bottom: 1.25rem;
+}
+
+.birzha-assign-seller__trip-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+}
+
+.birzha-assign-seller__trip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.birzha-assign-seller__trip-table th {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-assign-seller__trip-row--active td {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.birzha-assign-seller__trip-select {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--birzha-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.birzha-assign-seller__trip-select:hover {
+  color: var(--birzha-accent-strong);
+}
+
+.birzha-assign-seller__badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.birzha-assign-seller__badge--closed {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.birzha-assign-seller__badge--open {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.birzha-assign-seller__detail {
+  padding: 1rem 1.1rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+}
+
+.birzha-assign-seller__detail-head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.birzha-assign-seller__detail-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.birzha-assign-seller__detail-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+
+.birzha-assign-seller__detail-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 960px) {
+  .birzha-assign-seller__detail-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.birzha-assign-seller__detail-block-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
 }

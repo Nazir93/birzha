@@ -13,6 +13,7 @@ import {
 import { randomUuid } from "../lib/random-uuid.js";
 import { getOutboxScopeKey } from "../sync/outbox-scope.js";
 import { useAuth } from "../auth/auth-context.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { btnStyleInline, errorText, muted, preJson, warnText } from "../ui/styles.js";
 
 const showDeveloperTools = import.meta.env.DEV;
@@ -80,18 +81,23 @@ export function OfflineQueuePanel() {
   const syncEnabled = meta?.syncApi === "enabled";
 
   return (
-    <section className="birzha-home-work-card" aria-labelledby="offline-heading">
-      <div className="birzha-section-heading">
-        <div>
-          <p className="birzha-section-heading__eyebrow">Офлайн</p>
-          <h2 id="offline-heading" className="birzha-section-title">
+    <BirzhaDisclosure
+      defaultOpen
+      title={
+        <span className="birzha-disclosure__title-stack">
+          <span className="birzha-section-heading__eyebrow">Офлайн</span>
+          <span id="offline-heading" className="birzha-section-title">
             Неотправленные действия
-          </h2>
-        </div>
-        <p className="birzha-section-heading__note">
-          В очереди: <strong id="offline-queue-count">{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
-        </p>
-      </div>
+          </span>
+        </span>
+      }
+      hint={
+        <>
+          В очереди:{" "}
+          <strong id="offline-queue-count">{outboxQuery.data?.length ?? (outboxQuery.isLoading ? "…" : 0)}</strong>
+        </>
+      }
+    >
       <p style={{ ...muted, margin: "0.5rem 0" }}>
         Действия отправятся при появлении сети.
       </p>
@@ -150,6 +156,6 @@ export function OfflineQueuePanel() {
           Ошибка вызова синхронизации.
         </p>
       )}
-    </section>
+    </BirzhaDisclosure>
   );
 }

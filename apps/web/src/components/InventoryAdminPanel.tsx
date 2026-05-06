@@ -26,6 +26,7 @@ import {
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { Link } from "react-router-dom";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { btnStyle, errorText, fieldStyle, muted, thHeadDense, thtdDense } from "../ui/styles.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
@@ -320,11 +321,13 @@ export function InventoryAdminPanel() {
         </nav>
       </header>
 
-      <div id="batches-nakl-ref" className="birzha-home-work-card">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Партии</p>
-            <h3
+      <BirzhaDisclosure
+        id="batches-nakl-ref"
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Партии</span>
+            <span
               style={{
                 fontSize: "0.95rem",
                 margin: 0,
@@ -333,10 +336,11 @@ export function InventoryAdminPanel() {
               }}
             >
               Партии по накладным
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">Справка: id партий и кг по документам</p>
-        </div>
+            </span>
+          </span>
+        }
+        hint="id партий и кг по документам"
+      >
         <BatchesByNakladnayaReference
           batches={batchesNaklRefQ.data?.batches}
           isLoading={batchesNaklRefQ.isPending}
@@ -344,17 +348,19 @@ export function InventoryAdminPanel() {
           showBulkExpandControls
         />
         {batchesNaklRefQ.isError && <p style={errorText}>Партии не загрузились: {String(batchesNaklRefQ.error)}</p>}
-      </div>
+      </BirzhaDisclosure>
 
       {tripsApiEnabled && (
-        <div className="birzha-home-work-card">
-          <div className="birzha-section-heading">
-            <div>
-              <p className="birzha-section-heading__eyebrow">Логистика</p>
-              <h3 style={{ fontSize: "0.95rem", margin: 0 }}>Рейсы</h3>
-            </div>
-            <p className="birzha-section-heading__note">Создание и удаление пустых рейсов</p>
-          </div>
+        <BirzhaDisclosure
+          defaultOpen
+          title={
+            <span className="birzha-disclosure__title-stack">
+              <span className="birzha-section-heading__eyebrow">Логистика</span>
+              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Рейсы</span>
+            </span>
+          }
+          hint="Создание и удаление пустых рейсов"
+        >
           {tripError && <p style={errorText}>{tripError}</p>}
           <div
             style={{
@@ -499,7 +505,7 @@ export function InventoryAdminPanel() {
               </table>
             </div>
           )}
-        </div>
+        </BirzhaDisclosure>
       )}
 
       <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Закупочные накладные (удаление)</h3>

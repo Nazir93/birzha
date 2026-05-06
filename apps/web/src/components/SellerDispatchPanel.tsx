@@ -15,6 +15,7 @@ import {
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { btnStyle, fieldStyle, muted, successText, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 
@@ -84,6 +85,12 @@ export function SellerDispatchPanel() {
     [tripsQuery.data?.trips],
   );
 
+  /** Уже закреплённые за продавцом рейсы нельзя выбрать повторно — только свободные. */
+  const tripsAvailableForAssignment = useMemo(
+    () => tripSelectOptions.filter((t) => t.assignedSellerUserId == null || t.assignedSellerUserId === ""),
+    [tripSelectOptions],
+  );
+
   const sellerLoginById = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of sellerUsersQuery.data ?? []) {
@@ -108,8 +115,6 @@ export function SellerDispatchPanel() {
 
   const [assignTripId, setAssignTripId] = useState("");
   const [assignSellerUserId, setAssignSellerUserId] = useState("");
-  const [newSellerLogin, setNewSellerLogin] = useState("");
-  const [newSellerPassword, setNewSellerPassword] = useState("");
 
   const batchById = useMemo(() => {
     const m = new Map<string, BatchListItem>();
@@ -138,28 +143,9 @@ export function SellerDispatchPanel() {
       await apiPostJson(`/api/trips/${encodeURIComponent(tripId)}/assign-seller`, { sellerUserId });
     },
     onSuccess: () => {
+      setAssignTripId("");
       void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
-    },
-  });
-
-  const createSellerMutation = useMutation({
-    mutationFn: async () => {
-      const login = newSellerLogin.trim();
-      const password = newSellerPassword;
-      if (!login) {
-        throw new Error("Введите логин продавца");
-      }
-      if (password.length < 10) {
-        throw new Error("Пароль должен быть не короче 10 символов");
-      }
-      await apiPostJson("/api/admin/users", { login, password, roleCode: "seller" });
-    },
-    onSuccess: () => {
-      setNewSellerLogin("");
-      setNewSellerPassword("");
-      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      void queryClient.invalidateQueries({ queryKey: [...queryRoots.trips, "field-seller-options"] });
     },
   });
 
@@ -170,64 +156,20 @@ export function SellerDispatchPanel() {
         Какой продавец закреплён за каким рейсом и какой товар на рейсе по данным отгрузки.
       </p>
 
-      <section className="birzha-panel" aria-labelledby="dispatch-sec-sellers">
-        <div className="birzha-section-heading">
-          <div>
-            <h3 id="dispatch-sec-sellers" className="birzha-section-title birzha-section-title--sm">
-              Продавцы
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">Создание учётной записи продавца</p>
-        </div>
-        {canManageUsers && showAdminUsersApi ? (
-          <div className="birzha-form-grid birzha-form-grid--actions">
-            <label style={{ fontSize: "0.88rem" }}>
-              Логин нового продавца
-              <input
-                value={newSellerLogin}
-                onChange={(e) => setNewSellerLogin(e.target.value)}
-                style={{ ...fieldStyle, display: "block", marginTop: "0.2rem", minWidth: "12rem" }}
-                autoComplete="off"
-              />
-            </label>
-            <label style={{ fontSize: "0.88rem" }}>
-              Пароль (от 10 символов)
-              <input
-                type="password"
-                value={newSellerPassword}
-                onChange={(e) => setNewSellerPassword(e.target.value)}
-                style={{ ...fieldStyle, display: "block", marginTop: "0.2rem", minWidth: "12rem" }}
-                autoComplete="new-password"
-              />
-            </label>
-            <button
-              type="button"
-              style={btnStyle}
-              disabled={createSellerMutation.isPending || !newSellerLogin.trim() || newSellerPassword.length < 10}
-              onClick={() => createSellerMutation.mutate()}
-            >
-              {createSellerMutation.isPending ? "Создание…" : "Создать продавца"}
-            </button>
-          </div>
-        ) : null}
-        <FieldError error={createSellerMutation.error as Error | null} />
-        {createSellerMutation.isSuccess ? (
-          <p style={successText} role="status">
-            Продавец создан.
-          </p>
-        ) : null}
-      </section>
-
       {canAssignSeller ? (
-        <section className="birzha-panel" aria-labelledby="dispatch-sec-assign">
-          <div className="birzha-section-heading">
-            <div>
-              <h3 id="dispatch-sec-assign" className="birzha-section-title birzha-section-title--sm">
-                Привязка рейса к продавцу
-              </h3>
-            </div>
-            <p className="birzha-section-heading__note">Рейс будет виден только этому продавцу</p>
-          </div>
+        <BirzhaDisclosure
+          defaultOpen
+          title={
+            <h3 id="dispatch-sec-assign" className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>
+              Привязка рейса к продавцу
+            </h3>
+          }
+          hint="только свободные рейсы в списке"
+        >
+          <p style={{ ...muted, margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
+            Новых продавцов создавайте в разделе «Сотрудники». Здесь только закрепление: один рейс — один продавец;
+            уже закреплённый рейс в этом списке не показывается.
+          </p>
           <label htmlFor="dispatch-seller" style={{ fontSize: "0.88rem", display: "block" }}>
             Продавец *
           </label>
@@ -261,16 +203,18 @@ export function SellerDispatchPanel() {
             style={selectWide}
             disabled={tripsQuery.isPending}
           >
-            <option value="">{tripsQuery.isPending ? "— загрузка рейсов —" : "— выберите рейс —"}</option>
-            {tripSelectOptions.map((t) => {
-              const assigned = t.assignedSellerUserId ? sellerLoginById.get(t.assignedSellerUserId) ?? t.assignedSellerUserId : null;
-              return (
-                <option key={t.id} value={t.id}>
-                  {formatTripSelectLabel(t)}
-                  {assigned ? ` · продавец: ${assigned}` : ""}
-                </option>
-              );
-            })}
+            <option value="">
+              {tripsQuery.isPending
+                ? "— загрузка рейсов —"
+                : tripsAvailableForAssignment.length === 0
+                  ? "— нет свободных рейсов —"
+                  : "— выберите рейс —"}
+            </option>
+            {tripsAvailableForAssignment.map((t) => (
+              <option key={t.id} value={t.id}>
+                {formatTripSelectLabel(t)}
+              </option>
+            ))}
           </select>
           {fieldSellersQuery.isError ? (
             <p role="alert" style={{ ...warnText, marginTop: "0.35rem", fontSize: "0.86rem" }}>
@@ -284,7 +228,12 @@ export function SellerDispatchPanel() {
           <button
             type="button"
             style={{ ...btnStyle, marginTop: "0.5rem" }}
-            disabled={assignSellerToTrip.isPending}
+            disabled={
+              assignSellerToTrip.isPending ||
+              !assignTripId.trim() ||
+              !assignSellerUserId.trim() ||
+              tripsAvailableForAssignment.length === 0
+            }
             aria-busy={assignSellerToTrip.isPending || undefined}
             onClick={() => assignSellerToTrip.mutate()}
           >
@@ -296,31 +245,32 @@ export function SellerDispatchPanel() {
               Рейс закреплён за продавцом.
             </p>
           ) : null}
-        </section>
+        </BirzhaDisclosure>
       ) : (
-        <section className="birzha-panel" aria-labelledby="dispatch-sec-assign-readonly">
-          <div className="birzha-section-heading">
-            <div>
-              <h3 id="dispatch-sec-assign-readonly" className="birzha-section-title birzha-section-title--sm">
-                Привязка рейса к продавцу
-              </h3>
-            </div>
-          </div>
+        <BirzhaDisclosure
+          defaultOpen={false}
+          title={
+            <h3 id="dispatch-sec-assign-readonly" className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>
+              Привязка рейса к продавцу
+            </h3>
+          }
+          hint="только просмотр"
+        >
           <p style={muted}>
             В бухгалтерии доступен просмотр. Назначение рейса делает администратор, руководитель, закупщик или логист.
           </p>
-        </section>
+        </BirzhaDisclosure>
       )}
 
-      <section className="birzha-panel" aria-labelledby="dispatch-sec-matrix">
-        <div className="birzha-section-heading">
-          <div>
-            <h3 id="dispatch-sec-matrix" className="birzha-section-title birzha-section-title--sm">
-              Рейсы: продавец и товар
-            </h3>
-          </div>
-          <p className="birzha-section-heading__note">По всем рейсам; товар — калибры из партий в отгрузке по рейсу</p>
-        </div>
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <h3 id="dispatch-sec-matrix" className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>
+            Рейсы: продавец и товар
+          </h3>
+        }
+        hint="по всем рейсам; калибры из отгрузки"
+      >
         {tripsQuery.isPending ? (
           <p style={{ margin: 0 }} role="status">
             <LoadingIndicator size="sm" label="Загрузка рейсов…" />
@@ -373,7 +323,7 @@ export function SellerDispatchPanel() {
             </table>
           </div>
         )}
-      </section>
+      </BirzhaDisclosure>
     </div>
   );
 }

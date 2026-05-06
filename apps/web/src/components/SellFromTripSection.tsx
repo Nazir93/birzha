@@ -19,6 +19,7 @@ import {
   shipmentReportQueryOptions,
 } from "../query/core-list-queries.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { TripSearchPicker } from "./TripSearchPicker.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -294,14 +295,17 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   });
 
   return (
-    <section
-      className={variant === "seller" ? "birzha-panel birzha-seller-sell-panel" : "birzha-panel"}
-      aria-labelledby={headingId}
+    <BirzhaDisclosure
       id={scrollTargetId}
+      className={variant === "seller" ? "birzha-seller-sell-panel" : ""}
+      defaultOpen
+      title={
+        <h3 id={headingId} style={{ margin: 0, fontSize: variant === "seller" ? "1.05rem" : "0.98rem" }}>
+          {variant === "seller" ? "Продажа с рейса" : "3. Продажа с рейса"}
+        </h3>
+      }
+      hint={variant === "seller" ? "форма" : "шаг 3"}
     >
-      <h3 id={headingId} style={{ margin: "0 0 0.35rem", fontSize: variant === "seller" ? "1.05rem" : "0.98rem" }}>
-        {variant === "seller" ? "Продажа с рейса" : "3. Продажа с рейса"}
-      </h3>
       {variant === "seller" ? (
         <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55, fontSize: "0.95rem" }}>
           Выберите рейс, партию, кг, цену и оплату.
@@ -629,6 +633,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           Готово.
         </p>
       )}
-    </section>
+    </BirzhaDisclosure>
   );
 }

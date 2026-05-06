@@ -8,6 +8,7 @@ import { shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
 import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -109,16 +110,19 @@ export function AccountingTripsSummary() {
   const moreThanTable = totalInDb > MAX_TRIPS;
 
   return (
-    <section className="birzha-home-work-card" role="region" aria-labelledby="acc-ledger-h" id="acc-trips">
-      <div className="birzha-section-heading">
-        <div>
-          <p className="birzha-section-heading__eyebrow">Рейсы</p>
-          <h3 id="acc-ledger-h" className="birzha-section-title birzha-section-title--sm">
+    <BirzhaDisclosure
+      id="acc-trips"
+      defaultOpen
+      title={
+        <span className="birzha-disclosure__title-stack">
+          <span className="birzha-section-heading__eyebrow">Рейсы</span>
+          <span id="acc-ledger-h" className="birzha-section-title birzha-section-title--sm">
             Выручка, себестоимость и валовая прибыль
-          </h3>
-        </div>
-        <p className="birzha-section-heading__note">До {MAX_TRIPS} рейсов в сводке</p>
-      </div>
+          </span>
+        </span>
+      }
+      hint={`до ${MAX_TRIPS} рейсов в сводке`}
+    >
       {moreThanTable ? (
         <p style={{ ...muted, margin: "0 0 0.5rem" }}>
           В сводке первые {MAX_TRIPS} из {totalInDb} рейсов.
@@ -253,6 +257,6 @@ export function AccountingTripsSummary() {
       {hasError && !anyLoading ? (
         <p style={{ ...muted, marginTop: "0.5rem" }}>Часть отчётов не загрузилась — обновите страницу.</p>
       ) : null}
-    </section>
+    </BirzhaDisclosure>
   );
 }

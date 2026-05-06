@@ -10,6 +10,7 @@ import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { batchesByIdsQueryOptions, shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { sales } from "../routes.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -139,20 +140,18 @@ export function SellerSalesSummary() {
   }
 
   return (
-    <section className="birzha-home-work-card" aria-labelledby="seller-sales-summary-h">
-      <div className="birzha-section-heading">
-        <div>
-          <p className="birzha-section-heading__eyebrow">Мои продажи</p>
-          <h3 id="seller-sales-summary-h" className="birzha-section-title birzha-section-title--sm">
+    <BirzhaDisclosure
+      defaultOpen
+      title={
+        <span className="birzha-disclosure__title-stack">
+          <span className="birzha-section-heading__eyebrow">Мои продажи</span>
+          <span id="seller-sales-summary-h" className="birzha-section-title birzha-section-title--sm">
             Продано по рейсам, товару и калибру
-          </h3>
-        </div>
-        <p className="birzha-section-heading__note">
-          Учитываются только ваши закреплённые рейсы (остальные в системе вам недоступны). Если рейса нет в списке —
-          попросите администратора закрепить его за вами.
-        </p>
-      </div>
-
+          </span>
+        </span>
+      }
+      hint="закреплённые рейсы"
+    >
       {trips.length === 0 ? (
         <p style={{ ...muted, marginTop: 0 }}>Пока нет закреплённых за вами рейсов.</p>
       ) : (
@@ -230,6 +229,6 @@ export function SellerSalesSummary() {
           )}
         </>
       )}
-    </section>
+    </BirzhaDisclosure>
   );
 }
