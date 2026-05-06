@@ -6,6 +6,7 @@ import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
+  summarizeAllocationBreakdown,
 } from "./loading-manifest.js";
 
 function b(p: Partial<BatchListItem> & Pick<BatchListItem, "id" | "onWarehouseKg" | "totalKg">): BatchListItem {
@@ -128,5 +129,38 @@ describe("aggregateBatchesByCaliberLine", () => {
     expect(g[0]!.lineLabel).toContain("5");
     expect(g[0]!.totalKg).toBe(35);
     expect(g[0]!.partCount).toBe(2);
+  });
+});
+
+describe("summarizeAllocationBreakdown", () => {
+  it("делит кг на складе по destination и без направления", () => {
+    const batches = [
+      b({
+        id: "1",
+        onWarehouseKg: 10,
+        totalKg: 10,
+        allocation: { qualityTier: null, destination: "moscow" },
+      }),
+      b({ id: "2", onWarehouseKg: 5, totalKg: 5 }),
+    ];
+    const s = summarizeAllocationBreakdown(batches, ["moscow", "regions"], { moscow: "Москва", regions: "Регионы" });
+    expect(s.assignedRows.find((r) => r.code === "moscow")).toMatchObject({ kg: 10, batchCount: 1 });
+    expect(s.unassigned).toMatchObject({ kg: 5, batchCount: 1 });
+    expect(s.inTransit.kg).toBe(0);
+  });
+
+  it("учитывает inTransitKg по партиям", () => {
+    const batches = [
+      b({
+        id: "1",
+        onWarehouseKg: 10,
+        totalKg: 50,
+        inTransitKg: 25,
+        allocation: { qualityTier: null, destination: null },
+      }),
+    ];
+    const s = summarizeAllocationBreakdown(batches, ["moscow"], { moscow: "Москва" });
+    expect(s.unassigned.kg).toBe(10);
+    expect(s.inTransit).toMatchObject({ kg: 25, batchCount: 1 });
   });
 });

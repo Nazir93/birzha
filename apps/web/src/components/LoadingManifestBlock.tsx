@@ -7,6 +7,7 @@ import {
   aggregateBatchesByCaliberLine,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
+  summarizeAllocationBreakdown,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { btnStyle, btnStyleInline, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -23,6 +24,9 @@ type Props = {
   batchesInWh: BatchListItem[];
   warehouseName: string;
   manifest?: LoadingManifestDetail | null;
+  /** Коды и подписи направлений (как в распределении) — для строки «уже по городам / без / в пути». */
+  destAllowed?: readonly string[];
+  labelDest?: Record<string, string>;
 };
 
 /**
@@ -38,6 +42,8 @@ export function LoadingManifestBlock({
   batchesInWh,
   warehouseName,
   manifest = null,
+  destAllowed,
+  labelDest,
 }: Props) {
   const { pathname } = useLocation();
   const includedBatchesFromSelection = useMemo(
@@ -54,6 +60,35 @@ export function LoadingManifestBlock({
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
   const caliberRows = useMemo(() => aggregateBatchesByCaliberLine(includedBatches), [includedBatches]);
+
+  const selectionBreakdown = useMemo(() => {
+    if (destAllowed === undefined || labelDest === undefined) {
+      return null;
+    }
+    return summarizeAllocationBreakdown(includedBatches, destAllowed, labelDest);
+  }, [includedBatches, destAllowed, labelDest]);
+
+  const selectionBreakdownText = useMemo(() => {
+    if (!selectionBreakdown || includedBatches.length === 0) {
+      return null;
+    }
+    const fmt = (n: number) => n.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+    const parts: string[] = [];
+    for (const r of selectionBreakdown.assignedRows) {
+      parts.push(`${r.label}: ${fmt(r.kg)} кг (${r.batchCount} парт.)`);
+    }
+    if (selectionBreakdown.unassigned.kg > 0) {
+      parts.push(
+        `без направления: ${fmt(selectionBreakdown.unassigned.kg)} кг (${selectionBreakdown.unassigned.batchCount} парт.)`,
+      );
+    }
+    if (selectionBreakdown.inTransit.kg > 0) {
+      parts.push(
+        `в пути по этим партиям: ${fmt(selectionBreakdown.inTransit.kg)} кг (${selectionBreakdown.inTransit.batchCount} парт.)`,
+      );
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [selectionBreakdown, includedBatches.length]);
 
   const uniqueDocuments = useMemo(() => {
     const m = new Map<string, { id: string; number: string }>();
@@ -111,6 +146,10 @@ export function LoadingManifestBlock({
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
         Погрузочная накладная
       </h3>
+      <p style={{ ...muted, margin: "0 0 0.55rem", fontSize: "0.82rem", lineHeight: 1.45 }}>
+        Здесь всегда <strong>актуальный остаток на складе</strong> по отобранным накладным (после отгрузки в рейс кг в таблице
+        уменьшаются). Это не «ещё одна» накладная поверх уже сделанной — тот же склад, обновлённые фактические массы.
+      </p>
       {manifest ? (
         <p style={{ margin: "0 0 0.55rem", fontSize: "0.92rem" }}>
           <strong>№ {manifest.manifestNumber}</strong> от {manifest.docDate} · {manifest.destinationName} ·{" "}
@@ -163,6 +202,11 @@ export function LoadingManifestBlock({
           <> · ящ. ≈ {totals.pkg.toLocaleString("ru-RU")} (оценка с накл.)</>
         ) : null}
       </p>
+      {selectionBreakdownText ? (
+        <p style={{ margin: "0.25rem 0 0.45rem", fontSize: "0.86rem", lineHeight: 1.5 }} role="status">
+          <strong>По направлениям в партиях (остаток на полке в этом отборе):</strong> {selectionBreakdownText}
+        </p>
+      ) : null}
       {caliberCaption ? (
         <p style={{ ...muted, marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }}>
           <strong>Калибры в накладной:</strong> {caliberCaption}
@@ -199,7 +243,7 @@ export function LoadingManifestBlock({
                     Калибр (как в накладной)
                   </th>
                   <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                    Остаток, кг
+                    На складе, кг
                   </th>
                   <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                     Ящ. (оц.)

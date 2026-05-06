@@ -9,7 +9,11 @@ import { useAuth } from "../auth/auth-context.js";
 import { saveDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
-import { estimatedPackageCountOnShelf, filterBatchesForLoadingManifest } from "../format/loading-manifest.js";
+import {
+  estimatedPackageCountOnShelf,
+  filterBatchesForLoadingManifest,
+  summarizeAllocationBreakdown,
+} from "../format/loading-manifest.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   batchesFullListQueryOptions,
@@ -117,69 +121,6 @@ function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: numbe
     }
   }
   return { sum, linesWithBoxData };
-}
-
-/** Остаток на складе по `allocation.destination` и кг уже отгруженные в рейсы (`inTransitKg`). */
-function summarizeWarehouseAllocation(
-  batches: BatchListItem[],
-  destAllowed: readonly string[],
-  labelDest: Record<string, string>,
-): {
-  assignedRows: { code: string; label: string; kg: number; batchCount: number }[];
-  unassigned: { kg: number; batchCount: number };
-  inTransit: { kg: number; batchCount: number };
-} {
-  const assignedMap = new Map<string, { kg: number; batchCount: number }>();
-  let unKg = 0;
-  let unBc = 0;
-  let trKg = 0;
-  let trBc = 0;
-
-  for (const b of batches) {
-    const ow = b.onWarehouseKg;
-    if (ow > 0) {
-      const d = b.allocation?.destination?.trim();
-      if (!d) {
-        unKg += ow;
-        unBc += 1;
-      } else {
-        const cur = assignedMap.get(d) ?? { kg: 0, batchCount: 0 };
-        cur.kg += ow;
-        cur.batchCount += 1;
-        assignedMap.set(d, cur);
-      }
-    }
-    if (b.inTransitKg > 0) {
-      trKg += b.inTransitKg;
-      trBc += 1;
-    }
-  }
-
-  const assignedRows: { code: string; label: string; kg: number; batchCount: number }[] = [];
-  const consumed = new Set<string>();
-  for (const code of destAllowed) {
-    const v = assignedMap.get(code);
-    if (v && v.kg > 0) {
-      assignedRows.push({ code, label: labelDest[code] ?? code, kg: v.kg, batchCount: v.batchCount });
-      consumed.add(code);
-    }
-  }
-  const extras = [...assignedMap.entries()]
-    .filter(([code, v]) => !consumed.has(code) && v.kg > 0)
-    .map(([code, v]) => ({
-      code,
-      label: labelDest[code] ?? code,
-      kg: v.kg,
-      batchCount: v.batchCount,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, "ru"));
-  assignedRows.push(...extras);
-
-  return {
-    assignedRows,
-    unassigned: { kg: unKg, batchCount: unBc },
-    inTransit: { kg: trKg, batchCount: trBc },
-  };
 }
 
 export function AllocationPanel() {
@@ -345,7 +286,7 @@ export function AllocationPanel() {
   );
 
   const allocationBreakdown = useMemo(
-    () => summarizeWarehouseAllocation(batchesInWh, destAllowed, labelDest),
+    () => summarizeAllocationBreakdown(batchesInWh, destAllowed, labelDest),
     [batchesInWh, destAllowed, labelDest],
   );
 
@@ -496,7 +437,8 @@ export function AllocationPanel() {
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
       <p style={muted}>
         Выберите склад: видно, какой остаток уже привязан к направлениям (городам), что ещё предстоит распределить по
-        рейсам, и сколько уже уехало в рейсах.
+        рейсам, и сколько уже уехало в рейсах. Дальше по шагам: отбор накладных и свод → при необходимости брак → в конце
+        сохранение погрузочной накладной.
       </p>
       <p style={{ ...warnText, fontSize: "0.86rem" }}>
         Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
@@ -655,80 +597,19 @@ export function AllocationPanel() {
 
           {selectedWarehouse && (
             <>
-              <div className="birzha-inline-panel" style={{ marginBottom: "0.9rem" }}>
-                <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.55rem" }}>Данные погрузочной накладной</h3>
-                <div className="birzha-form-grid">
-                  <label>
-                    Дата *
-                    <BirzhaDateField
-                      value={manifestDate}
-                      onChange={setManifestDate}
-                      style={fieldStyle}
-                    />
-                  </label>
-                  <label>
-                    Город / направление *
-                    <select
-                      value={manifestDestinationCode}
-                      onChange={(e) => setManifestDestinationCode(e.target.value)}
-                      style={fieldStyle}
-                    >
-                      {destAllowed.map((d) => (
-                        <option key={d} value={d}>
-                          {labelDest[d] ?? d}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Номер *
-                    <input
-                      value={manifestNumber}
-                      onChange={(e) => setManifestNumber(e.target.value)}
-                      style={fieldStyle}
-                    />
-                  </label>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.7rem" }}>
-                  <button
-                    type="button"
-                    style={btnStyle}
-                    disabled={
-                      createManifest.isPending ||
-                      tableRows.length === 0 ||
-                      !manifestDate ||
-                      !manifestNumber.trim() ||
-                      !manifestDestinationCode
-                    }
-                    onClick={() => {
-                      createManifest.mutate({
-                        warehouseId: selectedWarehouse,
-                        destinationCode: manifestDestinationCode,
-                        batchIds: tableRows.map((b) => b.id),
-                        docDate: manifestDate,
-                        manifestNumber: manifestNumber.trim(),
-                      });
-                    }}
-                  >
-                    {createManifest.isPending ? "Сохранение…" : "Сохранить погрузочную накладную"}
-                  </button>
-                  {savedManifestId && (
-                    <button type="button" style={btnStyle} onClick={() => window.print()}>
-                      Печать
-                    </button>
-                  )}
-                </div>
-                {createManifest.isError && (
-                  <p style={errorText} role="alert">
-                    Не удалось сохранить погрузочную накладную. Проверьте дату, город и выбранные партии.
-                  </p>
-                )}
-                {savedManifestId && (
-                  <p style={{ ...muted, marginBottom: 0 }} role="status">
-                    Сохранено: № {savedManifestQuery.data?.manifest.manifestNumber ?? manifestNumber}.
-                  </p>
-                )}
-              </div>
+              {documentOptions.length === 0 && batchesInWh.length > 0 && (
+                <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
+                  На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
+                  складе. Оформите закупку в{" "}
+                  <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
+                </p>
+              )}
+              {documentOptions.length > 0 && loadNaklSelection.size === 0 && (
+                <p style={{ ...muted, fontSize: "0.88rem", marginBottom: "0.75rem" }} role="status">
+                  <strong>Накладные не отфильтрованы</strong> — в таблице ниже показан <strong>полный остаток</strong> на этом
+                  складе. Отметьте накладные в блоке ниже, чтобы сузить список только к выбранным документам.
+                </p>
+              )}
               <LoadingManifestBlock
                 documentOptions={manifestDocumentOptions}
                 selectedDocIds={loadNaklSelection}
@@ -738,8 +619,67 @@ export function AllocationPanel() {
                 batchesInWh={batchesInWh}
                 warehouseName={warehouseName(selectedWarehouse)}
                 manifest={savedManifestQuery.data?.manifest ?? null}
+                destAllowed={destAllowed}
+                labelDest={labelDest}
               />
             </>
+          )}
+
+          {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
+            <div className="birzha-inline-panel" role="region" aria-label="Остаток по неотмеченным накладным">
+              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
+                Не вошло в отбор накладных — остаток на складе
+              </h3>
+              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+                Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
+                числятся — видно кг и калибр.
+              </p>
+              <div className="birzha-table-scroll">
+                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 560 }}>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Накладная
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Калибр / строка
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Остаток, кг
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchesOutsideNaklSelection.map((b) => (
+                      <tr key={b.id}>
+                        <td style={thtd}>
+                          {b.nakladnaya?.documentNumber ? (
+                            <>
+                              № {b.nakladnaya.documentNumber}
+                              {b.nakladnaya.documentId && (
+                                <>
+                                  {" "}
+                                  <Link
+                                    to={purchaseNakladnayaDocumentPathForPath(pathname, b.nakladnaya.documentId)}
+                                    style={{ fontSize: "0.82rem" }}
+                                  >
+                                    открыть
+                                  </Link>
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td style={thtd}>{formatNakladLineLabel(b)}</td>
+                        <td style={thtd}>{b.onWarehouseKg}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {selectedWarehouse && tableRows.length > 0 && meta?.warehouseWriteOffApi === "enabled" && (
@@ -818,76 +758,77 @@ export function AllocationPanel() {
             </div>
           )}
 
-          {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
-            <div className="birzha-inline-panel" role="region" aria-label="Остаток по неотмеченным накладным">
-              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
-                Не вошло в отбор накладных — остаток на складе
-              </h3>
-              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.5rem", lineHeight: 1.45 }}>
-                Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
-                числятся — видно кг и калибр.
+          {selectedWarehouse && (
+            <div className="birzha-inline-panel" style={{ marginBottom: "0.9rem", marginTop: "0.9rem" }}>
+              <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.55rem" }}>Данные погрузочной накладной</h3>
+              <p style={{ ...muted, fontSize: "0.83rem", marginTop: 0, marginBottom: "0.55rem", lineHeight: 1.45 }}>
+                Сохраните документ <strong>после</strong> отбора накладных в блоке выше и списания брака — в погрузочную
+                попадут актуальные партии и массы.
               </p>
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 560 }}>
-                  <thead>
-                    <tr>
-                      <th scope="col" style={thHead}>
-                        Накладная
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Калибр / строка
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Остаток, кг
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batchesOutsideNaklSelection.map((b) => (
-                      <tr key={b.id}>
-                        <td style={thtd}>
-                          {b.nakladnaya?.documentNumber ? (
-                            <>
-                              № {b.nakladnaya.documentNumber}
-                              {b.nakladnaya.documentId && (
-                                <>
-                                  {" "}
-                                  <Link
-                                    to={purchaseNakladnayaDocumentPathForPath(pathname, b.nakladnaya.documentId)}
-                                    style={{ fontSize: "0.82rem" }}
-                                  >
-                                    открыть
-                                  </Link>
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td style={thtd}>{formatNakladLineLabel(b)}</td>
-                        <td style={thtd}>{b.onWarehouseKg}</td>
-                      </tr>
+              <div className="birzha-form-grid">
+                <label>
+                  Дата *
+                  <BirzhaDateField value={manifestDate} onChange={setManifestDate} style={fieldStyle} />
+                </label>
+                <label>
+                  Город / направление *
+                  <select
+                    value={manifestDestinationCode}
+                    onChange={(e) => setManifestDestinationCode(e.target.value)}
+                    style={fieldStyle}
+                  >
+                    {destAllowed.map((d) => (
+                      <option key={d} value={d}>
+                        {labelDest[d] ?? d}
+                      </option>
                     ))}
-                  </tbody>
-                </table>
+                  </select>
+                </label>
+                <label>
+                  Номер *
+                  <input value={manifestNumber} onChange={(e) => setManifestNumber(e.target.value)} style={fieldStyle} />
+                </label>
               </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.7rem" }}>
+                <button
+                  type="button"
+                  style={btnStyle}
+                  disabled={
+                    createManifest.isPending ||
+                    tableRows.length === 0 ||
+                    !manifestDate ||
+                    !manifestNumber.trim() ||
+                    !manifestDestinationCode
+                  }
+                  onClick={() => {
+                    createManifest.mutate({
+                      warehouseId: selectedWarehouse,
+                      destinationCode: manifestDestinationCode,
+                      batchIds: tableRows.map((b) => b.id),
+                      docDate: manifestDate,
+                      manifestNumber: manifestNumber.trim(),
+                    });
+                  }}
+                >
+                  {createManifest.isPending ? "Сохранение…" : "Сохранить погрузочную накладную"}
+                </button>
+                {savedManifestId && (
+                  <button type="button" style={btnStyle} onClick={() => window.print()}>
+                    Печать
+                  </button>
+                )}
+              </div>
+              {createManifest.isError && (
+                <p style={errorText} role="alert">
+                  Не удалось сохранить погрузочную накладную. Проверьте дату, город и выбранные партии.
+                </p>
+              )}
+              {savedManifestId && (
+                <p style={{ ...muted, marginBottom: 0 }} role="status">
+                  Сохранено: № {savedManifestQuery.data?.manifest.manifestNumber ?? manifestNumber}.
+                </p>
+              )}
             </div>
-          )}
-
-          {selectedWarehouse && documentOptions.length === 0 && batchesInWh.length > 0 && (
-            <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
-              На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
-              складе. Оформите закупку в{" "}
-              <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
-            </p>
-          )}
-
-          {selectedWarehouse && documentOptions.length > 0 && loadNaklSelection.size === 0 && (
-            <p style={{ ...muted, fontSize: "0.88rem", marginBottom: "0.75rem" }} role="status">
-              <strong>Накладные не отфильтрованы</strong> — в таблице ниже показан <strong>полный остаток</strong> на этом
-              складе. Отметьте накладные в блоке выше, чтобы сузить список только к выбранным документам.
-            </p>
           )}
 
           {selectedWarehouse && tableRows.length > 0 && (
@@ -909,7 +850,7 @@ export function AllocationPanel() {
                   Отправить накладную в рейс
                 </button>{" "}
                 <span style={muted}>
-                  Сформируйте погрузочную накладную, затем выберите рейс в Операциях.
+                  Сохраните погрузочную накладную в блоке выше, затем выберите рейс в Операциях.
                 </span>
               </p>
             </div>
