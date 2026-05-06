@@ -68,6 +68,49 @@ function userIsGlobalAdmin(user: { roles: { roleCode: string; scopeType: string;
   return user.roles.some((r) => r.roleCode === "admin" && r.scopeType === "global" && r.scopeId === "");
 }
 
+/** Маскировка по умолчанию; админ может временно показать символы, чтобы сверить новый пароль перед сохранением. */
+function PasswordFieldWithToggle({
+  id,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  autoComplete,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  autoComplete?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+      <input
+        id={id}
+        type={visible ? "text" : "password"}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ ...fieldStyle, maxWidth: "11rem", fontSize: "0.85rem" }}
+        autoComplete={autoComplete}
+      />
+      <button
+        type="button"
+        style={{ ...btnStyleInline, fontSize: "0.78rem", padding: "0.2rem 0.45rem" }}
+        aria-pressed={visible}
+        aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
+        disabled={disabled}
+        onClick={() => setVisible((x) => !x)}
+      >
+        {visible ? "Скрыть" : "Показать"}
+      </button>
+    </div>
+  );
+}
+
 function UserRowActions({
   row,
   currentUserId,
@@ -103,26 +146,30 @@ function UserRowActions({
       <td style={thtd}>{row.isActive ? "да" : "нет"}</td>
       <td style={{ ...thtd, minWidth: "14rem" }}>
         {canPwd ? (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center", marginBottom: canDel ? "0.45rem" : 0 }}>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="Новый пароль"
-              style={{ ...fieldStyle, maxWidth: "11rem", fontSize: "0.85rem" }}
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              style={btnStyleInline}
-              disabled={passwordBusy || pw.length < 10}
-              onClick={() => {
-                onPassword(row.id, pw);
-                setPw("");
-              }}
-            >
-              Сохранить пароль
-            </button>
+          <div style={{ marginBottom: canDel ? "0.45rem" : 0 }}>
+            <span className="birzha-text-muted" style={{ fontSize: "0.72rem", display: "block", marginBottom: 2 }}>
+              Новый пароль (текущий на сервере не показывается — хранится только хэш)
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+              <PasswordFieldWithToggle
+                value={pw}
+                onChange={setPw}
+                placeholder="мин. 10 символов"
+                disabled={passwordBusy}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                style={btnStyleInline}
+                disabled={passwordBusy || pw.length < 10}
+                onClick={() => {
+                  onPassword(row.id, pw);
+                  setPw("");
+                }}
+              >
+                Сохранить пароль
+              </button>
+            </div>
           </div>
         ) : (
           <span style={muted}>—</span>
@@ -160,6 +207,7 @@ export function AdminUsersPanel() {
 
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordAgain, setPasswordAgain] = useState("");
   const [roleCode, setRoleCode] = useState<string>("seller");
 
   useEffect(() => {
@@ -205,6 +253,7 @@ export function AdminUsersPanel() {
       setFormOk("Пользователь создан. Передайте логин и пароль только сотруднику.");
       setFormError(null);
       setPassword("");
+      setPasswordAgain("");
       setLogin("");
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
@@ -307,6 +356,10 @@ export function AdminUsersPanel() {
             <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
           </div>
         </div>
+        <p style={{ ...muted, fontSize: "0.82rem", marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
+          Ввод по умолчанию скрыт звёздочками; кнопка «Показать» нужна, чтобы сверить символы перед сохранением. Ранее
+          заданный пароль из базы не отображается — хранится только хэш.
+        </p>
         <div className="birzha-form-grid birzha-form-grid--actions">
           <label style={{ fontSize: "0.88rem" }}>
             Логин
@@ -318,14 +371,26 @@ export function AdminUsersPanel() {
             />
           </label>
           <label style={{ fontSize: "0.88rem" }}>
-            Пароль (не короче 10 символов)
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ ...fieldStyle, display: "block", minWidth: "12rem", marginTop: "0.25rem" }}
-              autoComplete="new-password"
-            />
+            Новый пароль (≥ 10 символов)
+            <span style={{ display: "block", marginTop: "0.25rem" }}>
+              <PasswordFieldWithToggle
+                value={password}
+                onChange={setPassword}
+                disabled={createM.isPending}
+                autoComplete="new-password"
+              />
+            </span>
+          </label>
+          <label style={{ fontSize: "0.88rem" }}>
+            Повтор нового пароля
+            <span style={{ display: "block", marginTop: "0.25rem" }}>
+              <PasswordFieldWithToggle
+                value={passwordAgain}
+                onChange={setPasswordAgain}
+                disabled={createM.isPending}
+                autoComplete="new-password"
+              />
+            </span>
           </label>
           <label style={{ fontSize: "0.88rem" }}>
             Роль
@@ -344,16 +409,30 @@ export function AdminUsersPanel() {
           <button
             type="button"
             style={btnStyle}
-            disabled={createM.isPending || !login.trim() || password.length < 10}
+            disabled={
+              createM.isPending ||
+              !login.trim() ||
+              password.length < 10 ||
+              password !== passwordAgain
+            }
             onClick={() => {
               setFormOk(null);
               setFormError(null);
+              if (password !== passwordAgain) {
+                setFormError("Новый пароль и повтор не совпадают.");
+                return;
+              }
               createM.mutate({ login: login.trim(), password, roleCode });
             }}
           >
             {createM.isPending ? "Создание…" : "Создать"}
           </button>
         </div>
+        {password.length >= 10 && passwordAgain.length > 0 && password !== passwordAgain && (
+          <p role="status" style={{ ...errorText, marginTop: "0.65rem", marginBottom: 0 }}>
+            Поля «новый пароль» и «повтор» должны совпадать.
+          </p>
+        )}
         {formError && (
           <p role="alert" style={{ ...errorText, marginTop: "0.65rem", marginBottom: 0 }}>
             {formError}
