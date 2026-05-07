@@ -29,13 +29,14 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { adminRoutes, login, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnStyle,
   dateFieldStyle,
   errorText,
   fieldStyle,
-  muted,
   successText,
   thHeadDense,
   thtdDense,
@@ -261,27 +262,39 @@ export function PurchaseNakladnayaSection() {
   if (!enabled) {
     return (
       <section className="birzha-panel" aria-labelledby="nakl-disabled" role="region" aria-label="Закупка товара">
-        <h3 id="nakl-disabled" style={{ margin: "0 0 0.35rem", fontSize: "0.98rem" }}>
-          Закупка товара
-        </h3>
-        <p style={muted}>
-          Раздел накладных временно недоступен. Проверьте подключение к серверу или обратитесь к администратору.
-        </p>
+        <BirzhaDisclosure
+          defaultOpen
+          title={
+            <h3 id="nakl-disabled" style={{ margin: 0, fontSize: "0.98rem" }}>
+              Закупка товара
+            </h3>
+          }
+          hint="недоступно"
+        >
+          <p className="birzha-callout-warning" role="status">
+            Раздел накладных временно недоступен. Проверьте подключение к серверу или обратитесь к администратору.
+          </p>
+        </BirzhaDisclosure>
       </section>
     );
   }
 
   return (
     <section className="birzha-panel" aria-labelledby="nakl-heading" role="region" aria-label="Закупка товара">
-      <div className="birzha-section-heading">
-        <div>
-          <p className="birzha-section-heading__eyebrow">Приёмка</p>
-          <h3 id="nakl-heading" className="birzha-section-title birzha-section-title--sm">
-            Закупка товара
-          </h3>
-        </div>
-      </div>
-
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <div className="birzha-section-heading">
+            <div>
+              <p className="birzha-section-heading__eyebrow">Приёмка</p>
+              <h3 id="nakl-heading" className="birzha-section-title birzha-section-title--sm">
+                Закупка товара
+              </h3>
+            </div>
+          </div>
+        }
+        hint="форма и список накладных"
+      >
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
       {catalogsEmptyOk && canManageCatalog && (
         <p role="status" style={warnText}>
@@ -296,9 +309,7 @@ export function PurchaseNakladnayaSection() {
         </p>
       )}
       {(warehousesQ.isPending || gradesQ.isPending) && (
-        <p style={muted} role="status" aria-live="polite">
-          <LoadingIndicator size="md" label="Загрузка справочников складов и калибров…" />
-        </p>
+        <LoadingBlock label="Загрузка справочников складов и калибров…" minHeight={56} skeleton skeletonRows={3} />
       )}
       {listQ.isError && (
         <p role="alert" style={errorText}>
@@ -307,7 +318,7 @@ export function PurchaseNakladnayaSection() {
       )}
 
       <div style={{ display: "grid", gap: "0.5rem", width: "100%", maxWidth: "100%", marginBottom: "0.75rem" }}>
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Номер документа *
           <input
             value={documentNumber}
@@ -317,7 +328,7 @@ export function PurchaseNakladnayaSection() {
             autoComplete="off"
           />
         </label>
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Дата *
           <BirzhaDateField
             value={docDate}
@@ -327,7 +338,7 @@ export function PurchaseNakladnayaSection() {
             aria-label="Дата документа"
           />
         </label>
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Склад *
           <select
             value={warehouseId}
@@ -347,7 +358,7 @@ export function PurchaseNakladnayaSection() {
           </select>
         </label>
         {canManageCatalog && warehouseCount > 0 && (
-          <p style={{ ...muted, fontSize: "0.85rem", margin: 0 }}>
+          <p className="birzha-callout-info" style={{ fontSize: "0.85rem", margin: 0 }}>
             Нет нужного склада — добавьте его в{" "}
             <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
               кабинете админа
@@ -355,15 +366,15 @@ export function PurchaseNakladnayaSection() {
             (склады), затем обновите список или страницу.
           </p>
         )}
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Идентификатор документа (опционально)
           <input value={documentId} onChange={(e) => setDocumentId(e.target.value)} style={fieldStyle} placeholder="" />
         </label>
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Поставщик (опц.)
           <input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} style={fieldStyle} />
         </label>
-        <label style={{ fontSize: "0.88rem" }}>
+        <label className="birzha-form-label">
           Покупатель / подпись (опц.)
           <input value={buyerLabel} onChange={(e) => setBuyerLabel(e.target.value)} style={fieldStyle} />
         </label>
@@ -383,7 +394,7 @@ export function PurchaseNakladnayaSection() {
           В справочнике нет калибров — пусть администратор добавит их в разделе «Склады и калибры».
         </p>
       )}
-      <div className="birzha-table-scroll birzha-nakl-lines-card">
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
         <table className="birzha-nakl-lines-table">
           <thead>
             <tr>
@@ -498,7 +509,7 @@ export function PurchaseNakladnayaSection() {
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
-                <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>
+                <span className="birzha-text-muted birzha-text-muted--xs">
                   кг
                 </span>
               </td>
@@ -510,7 +521,7 @@ export function PurchaseNakladnayaSection() {
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
                   nakladnayaFormTotals.totalPackages,
                 )}{" "}
-                <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>
+                <span className="birzha-text-muted birzha-text-muted--xs">
                   кор.
                 </span>
               </td>
@@ -562,7 +573,9 @@ export function PurchaseNakladnayaSection() {
       )}
       {lastOk && <p style={successText}>{lastOk}</p>}
 
-      {listQ.isPending && <LoadingBlock label="Загрузка списка накладных…" minHeight={80} />}
+      {listQ.isPending && (
+        <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
+      )}
 
       {listQ.isFetching && !listQ.isPending && (
         <p style={{ margin: "0.35rem 0" }} role="status" aria-live="polite">
@@ -570,12 +583,18 @@ export function PurchaseNakladnayaSection() {
         </p>
       )}
 
+      {listQ.data && listQ.data.purchaseDocuments.length === 0 && !listQ.isPending && (
+        <div style={{ marginTop: "0.75rem" }}>
+          <BirzhaEmptyState compact title="Сохранённых накладных пока нет" description="Создайте документ формой выше." />
+        </div>
+      )}
+
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
-          <p style={{ ...muted, marginBottom: "0.35rem" }}>
+          <p className="birzha-callout-info" style={{ marginBottom: "0.35rem" }}>
             Сохранённые накладные — нажмите на <strong>номер</strong>, чтобы открыть документ со всеми строками и партиями.
           </p>
-          <div className="birzha-table-scroll">
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
               <thead>
                 <tr>
@@ -614,6 +633,7 @@ export function PurchaseNakladnayaSection() {
           </div>
         </div>
       )}
+      </BirzhaDisclosure>
     </section>
   );
 }

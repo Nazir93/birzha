@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { canAccessPanel, defaultRouteForUser, type PanelId } from "../auth/role-panels.js";
 
 /**
@@ -13,9 +14,9 @@ export function RequirePanel({ panel, children }: { panel: PanelId; children: Re
 
   if (!ready) {
     return (
-      <p role="status" aria-live="polite">
-        Загрузка…
-      </p>
+      <div role="status" aria-live="polite" style={{ margin: "0.75rem 0" }}>
+        <LoadingBlock label="Загрузка…" minHeight={56} skeleton skeletonRows={3} />
+      </div>
     );
   }
 

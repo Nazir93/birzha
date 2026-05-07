@@ -27,7 +27,8 @@ import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
-import { btnStyle, errorText, fieldStyle, muted, thHeadDense, thtdDense } from "../ui/styles.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -293,7 +294,7 @@ export function InventoryAdminPanel() {
   if (!enabled) {
     return (
       <section className="birzha-panel">
-        <p style={muted}>
+        <p className="birzha-callout-warning" role="status">
           Накладные и справочники временно недоступны. Проверьте сервер или обратитесь к администратору.
         </p>
       </section>
@@ -450,10 +451,12 @@ export function InventoryAdminPanel() {
             </button>
           </div>
           {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
-          {tripsQ.isPending && <p style={muted}>Список рейсов…</p>}
+          {tripsQ.isPending && (
+            <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />
+          )}
           {tripsQ.isSuccess && (
-            <div className="birzha-table-scroll" style={{ marginBottom: "0.9rem" }}>
-              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 720 }}>
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.9rem" }}>
+              <table style={{ ...tableStyle, minWidth: 720 }}>
                 <thead>
                   <tr>
                     <th style={thHeadDense}>№ (борт)</th>
@@ -508,13 +511,24 @@ export function InventoryAdminPanel() {
         </BirzhaDisclosure>
       )}
 
-      <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Закупочные накладные (удаление)</h3>
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Закупки</span>
+            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Закупочные накладные (удаление)</span>
+          </span>
+        }
+        hint="удаление документов"
+      >
       {nakladError && <p style={errorText}>{nakladError}</p>}
       {purchaseDocsQ.isError && <p style={errorText}>Не загрузились накладные: {String(purchaseDocsQ.error)}</p>}
-      {purchaseDocsQ.isPending && <p style={muted}>Список накладных…</p>}
+      {purchaseDocsQ.isPending && (
+        <LoadingBlock label="Список накладных…" minHeight={48} skeleton skeletonRows={3} />
+      )}
       {purchaseDocsQ.isSuccess && (
-        <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 520 }}>
+        <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.75rem" }}>
+          <table style={{ ...tableStyle, minWidth: 520 }}>
             <thead>
               <tr>
                 <th style={thHeadDense}>№</th>
@@ -559,14 +573,28 @@ export function InventoryAdminPanel() {
           </table>
         </div>
       )}
+      </BirzhaDisclosure>
 
       {shipDestEnabled && (
         <>
-          <h3 style={{ fontSize: "0.95rem", margin: "0.9rem 0 0.35rem" }}>Направления / куда везти (для «Распределения»)</h3>
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <span className="birzha-disclosure__title-stack">
+                <span className="birzha-section-heading__eyebrow">Логистика</span>
+                <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>
+                  Направления / куда везти (для «Распределения»)
+                </span>
+              </span>
+            }
+            hint="куда везти в рейсе"
+          >
           {destFormError && <p style={errorText}>{destFormError}</p>}
           {shipDestQ.isError && <p style={errorText}>Направления: {String(shipDestQ.error)}</p>}
-          {shipDestQ.isPending && <p style={muted}>Справочник…</p>}
-          <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+          {shipDestQ.isPending && (
+            <LoadingBlock label="Справочник направлений…" minHeight={48} skeleton skeletonRows={3} />
+          )}
+          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
             Код хранится в партии. «Удалить» — снятие с выбора (is_active = false), повтор с тем же кодом —
             обновит подпись и снова включит.
           </p>
@@ -603,8 +631,8 @@ export function InventoryAdminPanel() {
             </button>
           </div>
           {shipDestQ.isSuccess && (
-            <div className="birzha-table-scroll" style={{ marginBottom: "0.75rem" }}>
-              <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 620 }}>
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.75rem" }}>
+              <table style={{ ...tableStyle, minWidth: 620 }}>
                 <thead>
                   <tr>
                     <th style={thHeadDense}>Код</th>
@@ -653,16 +681,28 @@ export function InventoryAdminPanel() {
               </table>
             </div>
           )}
+          </BirzhaDisclosure>
         </>
       )}
 
-      <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.35rem" }}>Склады</h3>
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Справочник</span>
+            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Склады</span>
+          </span>
+        }
+        hint="приёмка и удаление"
+      >
       {warehousesQ.isError && (
         <p role="alert" style={errorText}>
           {warehousesQ.error instanceof Error ? warehousesQ.error.message : String(warehousesQ.error)}
         </p>
       )}
-      {warehousesQ.isPending && <p style={muted}>Загрузка складов…</p>}
+      {warehousesQ.isPending && (
+        <LoadingBlock label="Загрузка складов…" minHeight={48} skeleton skeletonRows={3} />
+      )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
         <input
           value={newWarehouseName}
@@ -685,8 +725,8 @@ export function InventoryAdminPanel() {
         </button>
       </div>
       {warehouseFormError && <p style={errorText}>{warehouseFormError}</p>}
-      <div className="birzha-table-scroll">
-        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 420 }}>
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+        <table style={{ ...tableStyle, minWidth: 420 }}>
           <thead>
             <tr>
               <th style={thHeadDense}>Название</th>
@@ -720,14 +760,26 @@ export function InventoryAdminPanel() {
           </tbody>
         </table>
       </div>
+      </BirzhaDisclosure>
 
-      <h3 style={{ fontSize: "0.95rem", margin: "0.9rem 0 0.35rem" }}>Калибры (сорта)</h3>
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <span className="birzha-disclosure__title-stack">
+            <span className="birzha-section-heading__eyebrow">Справочник</span>
+            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Калибры (сорта)</span>
+          </span>
+        }
+        hint="калибры и группы"
+      >
       {gradesQ.isError && (
         <p role="alert" style={errorText}>
           {gradesQ.error instanceof Error ? gradesQ.error.message : String(gradesQ.error)}
         </p>
       )}
-      {gradesQ.isPending && <p style={muted}>Загрузка калибров…</p>}
+      {gradesQ.isPending && (
+        <LoadingBlock label="Загрузка калибров…" minHeight={48} skeleton skeletonRows={3} />
+      )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
         <input
           value={newGradeProductGroup}
@@ -763,8 +815,8 @@ export function InventoryAdminPanel() {
         </button>
       </div>
       {gradeFormError && <p style={errorText}>{gradeFormError}</p>}
-      <div className="birzha-table-scroll">
-        <table style={{ borderCollapse: "collapse", fontSize: "0.88rem", minWidth: 560 }}>
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+        <table style={{ ...tableStyle, minWidth: 560 }}>
           <thead>
             <tr>
               <th style={thHeadDense}>Код</th>
@@ -803,6 +855,7 @@ export function InventoryAdminPanel() {
           </tbody>
         </table>
       </div>
+      </BirzhaDisclosure>
     </section>
   );
 }

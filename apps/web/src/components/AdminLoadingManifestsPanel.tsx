@@ -7,8 +7,10 @@ import { apiPostJson } from "../api/fetch-api.js";
 import { loadingManifestDetailQueryOptions, loadingManifestsListQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { CreateTripIfAllowed } from "./CreateTripIfAllowed.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnStyle, errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function mergeGrandCalibers(manifests: LoadingManifestSummary[]): { label: string; kg: number; packagesApprox: number }[] {
   const acc = new Map<string, { kg: number; packagesApprox: number }>();
@@ -109,12 +111,14 @@ export function AdminLoadingManifestsPanel() {
       <h2 id="admin-loading-manifests-h" style={{ margin: "0 0 0.65rem", fontSize: "1.08rem" }}>
         Погрузка
       </h2>
-      <p style={{ ...muted, marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
+      <p className="birzha-callout-info" style={{ marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
         Свод по документам и рейсам: сверху общая картина по складам, направлениям и калибрам; ниже рейсы и каждая накладная в
         отдельном раскрывающемся блоке — как матрёшка. Откройте нужный уровень по очереди.
       </p>
 
-      {listQuery.isPending ? <LoadingBlock label="Загрузка списка накладных…" minHeight={80} /> : null}
+      {listQuery.isPending ? (
+        <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
+      ) : null}
       {listQuery.isError ? (
         <p style={errorText} role="alert">
           Не удалось загрузить список погрузочных накладных.
@@ -122,16 +126,17 @@ export function AdminLoadingManifestsPanel() {
       ) : null}
 
       {listQuery.data && (
-        <details className="birzha-disclosure" open>
-          <summary className="birzha-disclosure__summary">
-            Общая сводка по всем погрузочным накладным
-            <span className="birzha-disclosure__hint">
-              {grandSummary.count === 0 ? "нет документов" : `${grandSummary.count} док. · ${grandSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`}
-            </span>
-          </summary>
-          <div className="birzha-disclosure__body">
+        <BirzhaDisclosure
+          defaultOpen
+          title="Общая сводка по всем погрузочным накладным"
+          hint={
+            grandSummary.count === 0
+              ? "нет документов"
+              : `${grandSummary.count} док. · ${grandSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`
+          }
+        >
             {grandSummary.count === 0 ? (
-              <p style={{ ...muted, marginTop: 0 }}>Пока нет сохранённых накладных.</p>
+              <BirzhaEmptyState compact title="Пока нет сохранённых накладных" />
             ) : (
               <>
                 <p style={{ margin: "0 0 0.55rem", fontSize: "0.9rem" }}>
@@ -144,8 +149,8 @@ export function AdminLoadingManifestsPanel() {
                     </>
                   ) : null}
                 </p>
-                <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
-                  <table style={{ ...tableStyle, minWidth: 360, fontSize: "0.88rem" }}>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.65rem" }}>
+                  <table style={{ ...tableStyle, minWidth: 360 }}>
                     <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
                       По складам
                     </caption>
@@ -167,8 +172,8 @@ export function AdminLoadingManifestsPanel() {
                     </tbody>
                   </table>
                 </div>
-                <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
-                  <table style={{ ...tableStyle, minWidth: 360, fontSize: "0.88rem" }}>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.65rem" }}>
+                  <table style={{ ...tableStyle, minWidth: 360 }}>
                     <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
                       По направлениям (город / канал)
                     </caption>
@@ -190,8 +195,8 @@ export function AdminLoadingManifestsPanel() {
                     </tbody>
                   </table>
                 </div>
-                <div className="birzha-table-scroll">
-                  <table style={{ ...tableStyle, minWidth: 480, fontSize: "0.88rem" }}>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                  <table style={{ ...tableStyle, minWidth: 480 }}>
                     <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
                       По калибрам (все накладные вместе)
                     </caption>
@@ -215,18 +220,12 @@ export function AdminLoadingManifestsPanel() {
                 </div>
               </>
             )}
-          </div>
-        </details>
+        </BirzhaDisclosure>
       )}
 
-      <details className="birzha-disclosure" open>
-        <summary className="birzha-disclosure__summary">
-          Рейсы
-          <span className="birzha-disclosure__hint">создание и отчёты</span>
-        </summary>
-        <div className="birzha-disclosure__body">
+      <BirzhaDisclosure defaultOpen title="Рейсы" hint="создание и отчёты">
           <CreateTripIfAllowed />
-          <div className="birzha-table-scroll" style={{ marginTop: "0.55rem" }}>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginTop: "0.55rem" }}>
             <table style={{ ...tableStyle, minWidth: 560 }}>
               <thead>
                 <tr>
@@ -250,20 +249,17 @@ export function AdminLoadingManifestsPanel() {
               </tbody>
             </table>
           </div>
-        </div>
-      </details>
+      </BirzhaDisclosure>
 
       {listQuery.data && (
-        <details className="birzha-disclosure" open>
-          <summary className="birzha-disclosure__summary">
-            Погрузочные накладные
-            <span className="birzha-disclosure__hint">
-              {manifests.length === 0 ? "пусто" : `${manifests.length} шт. — раскройте строку`}
-            </span>
-          </summary>
-          <div className="birzha-disclosure__body birzha-disclosure__body--stack">
+        <BirzhaDisclosure
+          defaultOpen
+          title="Погрузочные накладные"
+          hint={manifests.length === 0 ? "пусто" : `${manifests.length} шт. — раскройте строку`}
+          bodyClassName="birzha-disclosure__body birzha-disclosure__body--stack"
+        >
             {manifests.length === 0 ? (
-              <p style={{ ...muted, marginTop: 0 }}>Нет сохранённых накладных.</p>
+              <BirzhaEmptyState compact title="Нет сохранённых накладных" />
             ) : (
               manifests.map((m) => (
                 <ManifestAccordionBlock
@@ -281,8 +277,7 @@ export function AdminLoadingManifestsPanel() {
                 />
               ))
             )}
-          </div>
-        </details>
+        </BirzhaDisclosure>
       )}
     </section>
   );
@@ -332,13 +327,13 @@ function ManifestAccordionBlock({
         </span>
       </summary>
       <div className="birzha-disclosure__body">
-        <p style={{ ...muted, fontSize: "0.82rem", marginTop: 0 }}>
+        <p className="birzha-callout-info" style={{ fontSize: "0.82rem", marginTop: 0 }}>
           <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`}>Открыть карточку (URL)</Link> — полная
           форма привязки к рейсу и строки партий ниже, если карточка загружена.
         </p>
 
-        <div className="birzha-table-scroll" style={{ marginBottom: "0.65rem" }}>
-          <table style={{ ...tableStyle, minWidth: 420, fontSize: "0.88rem" }}>
+        <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.65rem" }}>
+          <table style={{ ...tableStyle, minWidth: 420 }}>
             <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600, paddingBottom: 6 }}>
               По калибрам (эта накладная)
             </caption>
@@ -361,7 +356,9 @@ function ManifestAccordionBlock({
           </table>
         </div>
 
-        {detailLoading ? <LoadingBlock label="Загрузка карточки…" minHeight={56} /> : null}
+        {detailLoading ? (
+          <LoadingBlock label="Загрузка карточки…" minHeight={56} skeleton skeletonRows={4} />
+        ) : null}
         {detailError ? (
           <p style={errorText} role="alert">
             Не удалось загрузить карточку накладной.
@@ -409,8 +406,8 @@ function ManifestAccordionBlock({
                 <span className="birzha-disclosure__hint">{detail.lines.length} строк</span>
               </summary>
               <div className="birzha-disclosure__body">
-                <div className="birzha-table-scroll">
-                  <table style={{ ...tableStyle, minWidth: 740, fontSize: "0.88rem" }}>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                  <table style={{ ...tableStyle, minWidth: 740 }}>
                     <thead>
                       <tr>
                         <th style={thHead}>№</th>

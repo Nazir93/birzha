@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { canAccessCabinet, defaultRouteForUser, type CabinetId } from "../auth/role-panels.js";
 
 /**
@@ -12,9 +13,9 @@ export function RequireCabinet({ id, children }: { id: CabinetId; children: Reac
 
   if (!ready) {
     return (
-      <p role="status" aria-live="polite">
-        Загрузка…
-      </p>
+      <div role="status" aria-live="polite" style={{ margin: "0.75rem 0" }}>
+        <LoadingBlock label="Загрузка…" minHeight={56} skeleton skeletonRows={3} />
+      </div>
     );
   }
 

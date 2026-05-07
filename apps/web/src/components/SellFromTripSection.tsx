@@ -20,10 +20,11 @@ import {
 } from "../query/core-list-queries.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { TripSearchPicker } from "./TripSearchPicker.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
+import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
@@ -307,27 +308,33 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       hint={variant === "seller" ? "форма" : "шаг 3"}
     >
       {variant === "seller" ? (
-        <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55, fontSize: "0.95rem" }}>
+        <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem" }}>
           Выберите рейс, партию, кг, цену и оплату.
         </p>
       ) : (
         <>
-          <p style={muted}>
-            Выберите рейс, калибр, кг, цену и оплату.
-          </p>
+          <p className="birzha-callout-info">Выберите рейс, калибр, кг, цену и оплату.</p>
           {import.meta.env.DEV && (
-            <details style={{ ...muted, marginBottom: "0.6rem", fontSize: "0.82rem" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600 }}>Технические детали API</summary>
-              <p style={{ margin: "0.35rem 0 0", lineHeight: 1.45 }}>
-                <code>POST /api/batches/:batchId/sell-from-trip</code> — поле кг по умолчанию подставляется из остатка
-                «в пути» по партии.
-              </p>
-            </details>
+            <div className="birzha-callout-info" style={{ marginBottom: "0.6rem", fontSize: "0.82rem" }}>
+              <BirzhaDisclosure
+                nested
+                defaultOpen={false}
+                title={<span style={{ fontWeight: 600 }}>Технические детали API</span>}
+                hint="DEV"
+              >
+                <p style={{ margin: "0.35rem 0 0", lineHeight: 1.45 }}>
+                  <code>POST /api/batches/:batchId/sell-from-trip</code> — поле кг по умолчанию подставляется из остатка
+                  «в пути» по партии.
+                </p>
+              </BirzhaDisclosure>
+            </div>
           )}
         </>
       )}
 
-      <span style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.25rem" }}>Рейс *</span>
+      <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">
+        Рейс *
+      </span>
       <TripSearchPicker
         idPrefix={idPrefix}
         value={sellTripId}
@@ -353,18 +360,22 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         </p>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
-        <p style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
-          На этом рейсе нет массы для продажи: не было отгрузок со склада в рейс или весь товар уже продан / списан по недостаче.
-        </p>
+        <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+          <BirzhaEmptyState
+            compact
+            title="На этом рейсе нечего продавать"
+            description="Не было отгрузок со склада в рейс или весь товар уже продан / списан по недостаче."
+          />
+        </div>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
-        <p style={{ ...muted, marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
+        <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
           <LoadingIndicator size="sm" label="Загрузка накладных по строкам рейса…" />
         </p>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && (
         <>
-          <label htmlFor={`${idPrefix}-party-filter`} style={{ fontSize: "0.88rem" }}>
+          <label htmlFor={`${idPrefix}-party-filter`} className="birzha-form-label">
             Фильтр списка партий (накладная, калибр, id)
           </label>
           <input
@@ -377,7 +388,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           />
         </>
       )}
-      <label htmlFor={`${idPrefix}-sel-batch`} style={{ fontSize: "0.88rem" }}>
+      <label htmlFor={`${idPrefix}-sel-batch`} className="birzha-form-label">
         Накладная и калибр (кг в машине) *
       </label>
       <select
@@ -423,7 +434,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       </select>
       {sellSelectionSummary && (
         <p
-          style={{ ...muted, fontSize: "0.86rem", marginTop: 0, marginBottom: "0.5rem" }}
+          className="birzha-callout-info"
+          style={{ fontSize: "0.86rem", marginTop: 0, marginBottom: "0.5rem" }}
           role="status"
           aria-live="polite"
         >
@@ -442,7 +454,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
         </p>
       )}
-      <label htmlFor={`${idPrefix}-in-batch`} style={{ fontSize: "0.88rem" }}>
+      <label htmlFor={`${idPrefix}-in-batch`} className="birzha-form-label">
         ID партии вручную (если список выше не загрузился)
       </label>
       <input
@@ -453,7 +465,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         autoComplete="off"
         placeholder="совпадает с выбором выше"
       />
-      <label htmlFor={`${idPrefix}-batch-id-search`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.45rem" }}>
+      <label
+        htmlFor={`${idPrefix}-batch-id-search`}
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm"
+      >
         Подбор партии по фрагменту id (от 2 символов)
       </label>
       <input
@@ -494,7 +509,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           ))}
         </ul>
       )}
-      <label htmlFor={`${idPrefix}-in-kg`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+      <label htmlFor={`${idPrefix}-in-kg`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Сколько килограмм в этой продаже *
       </label>
       <input
@@ -505,7 +520,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         inputMode="decimal"
         autoComplete="off"
       />
-      <label htmlFor={`${idPrefix}-in-sale`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+      <label htmlFor={`${idPrefix}-in-sale`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Номер продажи (необязательно, иначе система создаст сама)
       </label>
       <input
@@ -515,7 +530,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         style={fieldStyle}
         autoComplete="off"
       />
-      <label htmlFor={`${idPrefix}-in-price`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+      <label htmlFor={`${idPrefix}-in-price`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Цена за 1 кг, руб *
       </label>
       <input
@@ -528,7 +543,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       />
       {counterpartiesCatalog && (
         <>
-          <label htmlFor={`${idPrefix}-sel-cp`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          <label
+            htmlFor={`${idPrefix}-sel-cp`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
             Контрагент (справочник)
           </label>
           <select
@@ -548,7 +566,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               </option>
             ))}
           </select>
-          <label htmlFor={`${idPrefix}-in-new-cp`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          <label
+            htmlFor={`${idPrefix}-in-new-cp`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
             Новый контрагент
           </label>
           <input
@@ -571,7 +592,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           <FieldError error={createCounterparty.error as Error | null} />
         </>
       )}
-      <label htmlFor={`${idPrefix}-in-client`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+      <label htmlFor={`${idPrefix}-in-client`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Клиент вручную (опц., если не выбран справочник)
       </label>
       <input
@@ -584,7 +605,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         autoComplete="off"
         disabled={Boolean(sellCounterpartyId)}
       />
-      <label htmlFor={`${idPrefix}-sel-pay`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+      <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Как оплатил клиент *
       </label>
       <select
@@ -599,7 +620,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       </select>
       {paymentKind === "mixed" && (
         <>
-          <label htmlFor={`${idPrefix}-in-mixed`} style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+          <label
+            htmlFor={`${idPrefix}-in-mixed`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
             Сколько наличными из сделки (копейки, только цифры) *
           </label>
           <input

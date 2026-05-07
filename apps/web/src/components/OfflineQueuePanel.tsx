@@ -14,7 +14,8 @@ import { randomUuid } from "../lib/random-uuid.js";
 import { getOutboxScopeKey } from "../sync/outbox-scope.js";
 import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
-import { btnStyleInline, errorText, muted, preJson, warnText } from "../ui/styles.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { btnStyleInline, errorText, preJson, warnText } from "../ui/styles.js";
 
 const showDeveloperTools = import.meta.env.DEV;
 
@@ -98,9 +99,16 @@ export function OfflineQueuePanel() {
         </>
       }
     >
-      <p style={{ ...muted, margin: "0.5rem 0" }}>
+      <p className="birzha-callout-info" style={{ margin: "0.5rem 0" }}>
         Действия отправятся при появлении сети.
       </p>
+      {outboxQuery.isSuccess && (outboxQuery.data?.length ?? 0) === 0 && (
+        <BirzhaEmptyState
+          compact
+          title="Очередь пуста"
+          description="Новые действия из офлайн-режима появятся здесь до отправки на сервер."
+        />
+      )}
       {!syncEnabled && meta && (
         <p style={{ ...warnText, margin: "0.5rem 0" }}>
           Синхронизация временно недоступна на сервере. Проверьте связь или обратитесь к администратору.
@@ -125,7 +133,12 @@ export function OfflineQueuePanel() {
       {lastSync && (
         <>
           {lastSync.stoppedReason === "rejected" && lastSync.lastSync?.status === "rejected" && (
-            <p role="status" aria-live="polite" style={{ ...muted, marginTop: "0.75rem", marginBottom: 0 }}>
+            <p
+              role="status"
+              aria-live="polite"
+              className="birzha-callout-warning"
+              style={{ marginTop: "0.75rem", marginBottom: 0 }}
+            >
               Сервер отклонил действие: <strong>{lastSync.lastSync.reason}</strong>. {lastSync.lastSync.resolution}
             </p>
           )}

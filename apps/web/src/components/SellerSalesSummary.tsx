@@ -11,8 +11,9 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { batchesByIdsQueryOptions, shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { sales } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const MAX_TRIPS = 50;
 
@@ -129,7 +130,7 @@ export function SellerSalesSummary() {
   const reportsError = reportQueries.some((q) => q.isError);
 
   if (tripsQuery.isPending) {
-    return <LoadingBlock label="Загрузка ваших рейсов…" minHeight={72} />;
+    return <LoadingBlock label="Загрузка ваших рейсов…" minHeight={72} skeleton skeletonRows={5} />;
   }
   if (tripsQuery.isError) {
     return (
@@ -153,7 +154,7 @@ export function SellerSalesSummary() {
       hint="закреплённые рейсы"
     >
       {trips.length === 0 ? (
-        <p style={{ ...muted, marginTop: 0 }}>Пока нет закреплённых за вами рейсов.</p>
+        <BirzhaEmptyState compact title="Нет закреплённых рейсов" description="Когда администратор закрепит за вами рейсы, сводка появится здесь." />
       ) : (
         <>
           <div className="birzha-kpi-grid birzha-seller-kpi-grid" style={{ marginBottom: "0.8rem" }}>
@@ -181,7 +182,7 @@ export function SellerSalesSummary() {
           </div>
 
           {reportsLoading || batchesQuery.isFetching ? (
-            <p style={{ ...muted, marginTop: 0 }} role="status">
+            <p style={{ marginTop: 0 }} role="status">
               <LoadingIndicator size="sm" label="Обновление сводки продаж…" />
             </p>
           ) : null}
@@ -192,9 +193,9 @@ export function SellerSalesSummary() {
           ) : null}
 
           {rows.length === 0 ? (
-            <p style={{ ...muted, marginBottom: 0 }}>Продаж по вашим рейсам пока нет.</p>
+            <BirzhaEmptyState compact title="Продаж пока нет" description="Когда появятся продажи по вашим рейсам, таблица заполнится." />
           ) : (
-            <div className="birzha-table-scroll">
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={{ ...tableStyle, minWidth: 760 }}>
                 <thead>
                   <tr>

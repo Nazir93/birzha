@@ -13,6 +13,7 @@
   list-style: none;
   padding: 0.45rem 0.65rem;
   user-select: none;
+  cursor: pointer;
 }
 .birzha-nakl-details__summary::-webkit-details-marker,
 .birzha-nakl-details__summary::marker {
@@ -76,6 +77,11 @@ body {
   background: var(--birzha-bg-page);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--birzha-accent-soft);
+  color: var(--color-text);
 }
 
 /* Корневой layout: контент на светлой подложке страницы */
@@ -710,6 +716,50 @@ main.app-shell {
   color: var(--color-text);
 }
 
+/** Пояснения к шагам (распределение, формы) — нейтральный акцент слева */
+.birzha-callout-info {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--birzha-accent);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-callout-info:last-child {
+  margin-bottom: 0;
+}
+
+.birzha-callout-info a {
+  font-weight: 600;
+}
+
+/** Карточка реквизитов на экране закупочной накладной */
+.birzha-nakl-detail-meta {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-nakl-lines-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
 .birzha-banner-distribution {
   margin-top: 0.9rem;
   margin-bottom: 0.5rem;
@@ -733,6 +783,27 @@ main.app-shell {
   color: var(--color-muted);
 }
 
+/** Модификаторы размера для приглушённого текста (таблицы, подписи к полям) */
+.birzha-text-muted--micro {
+  font-size: 0.72rem;
+}
+
+.birzha-text-muted--xs {
+  font-size: 0.78rem;
+}
+
+.birzha-text-muted--sm {
+  font-size: 0.8rem;
+}
+
+.birzha-text-muted--md {
+  font-size: 0.82rem;
+}
+
+.birzha-text-muted--lg {
+  font-size: 0.85rem;
+}
+
 .birzha-text-subtle {
   color: var(--birzha-text-subtle);
 }
@@ -742,6 +813,46 @@ main.app-shell {
   font-size: 0.78rem;
   color: var(--color-muted);
   margin-bottom: 2px;
+}
+
+/** Подпись к полю в форме (основной размер полей в кабинетах) */
+.birzha-form-label {
+  font-size: 0.88rem;
+}
+
+.birzha-form-label--block {
+  display: block;
+}
+
+/** Отступ сверху до подписи после предыдущего блока */
+.birzha-form-label--push-xs {
+  margin-top: 0.35rem;
+}
+
+.birzha-form-label--push-sm {
+  margin-top: 0.45rem;
+}
+
+.birzha-form-label--push-md {
+  margin-top: 0.5rem;
+}
+
+.birzha-form-label--push-lg {
+  margin-top: 0.65rem;
+}
+
+/** Отступ снизу под подписью перед полем */
+.birzha-form-label--mb-xs {
+  margin-bottom: 0.25rem;
+}
+
+.birzha-form-label--mb-sm {
+  margin-bottom: 0.35rem;
+}
+
+/** Вторичный размер текста (ссылки «назад», обёртки) — тот же 0.88rem */
+.birzha-ui-sm {
+  font-size: 0.88rem;
 }
 
 .birzha-inline-panel {
@@ -957,6 +1068,11 @@ main.app-shell {
   font-size: 0.84rem;
   line-height: 1.45;
   color: var(--color-muted, #71717a);
+}
+.birzha-loader-screen__skeleton {
+  width: 100%;
+  align-self: stretch;
+  margin-top: 0.25rem;
 }
 .birzha-loader--stale {
   font-size: 0.9rem;
@@ -2443,4 +2559,143 @@ main.app-shell--cabinet {
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* Меньше «шевеления» интерфейса при системной настройке доступности */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .birzha-skeleton-line {
+    animation: none !important;
+    background: #ebebeb !important;
+  }
+}
+
+/* Пустое состояние списков */
+.birzha-empty-state {
+  margin: 0.75rem auto 1rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--birzha-radius);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-shadow: var(--birzha-shadow-sm);
+  text-align: center;
+  max-width: 28rem;
+}
+
+.birzha-empty-state--compact {
+  padding: 0.85rem 1rem;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  text-align: left;
+  border-left: 3px solid var(--birzha-accent);
+  padding-left: 1.05rem;
+}
+
+.birzha-chart-card-inner .birzha-empty-state--compact {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.birzha-empty-state__icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.65rem;
+  color: var(--birzha-text-subtle);
+  opacity: 0.88;
+}
+
+.birzha-empty-state__title {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.birzha-empty-state__desc {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.birzha-empty-state__action {
+  margin-top: 0.85rem;
+}
+
+/* Скелетоны загрузки */
+@keyframes birzha-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.birzha-skeleton-line {
+  height: 0.7rem;
+  border-radius: 6px;
+  background: linear-gradient(
+    110deg,
+    var(--birzha-surface-muted) 0%,
+    #e8e8ea 45%,
+    var(--birzha-surface-muted) 90%
+  );
+  background-size: 200% 100%;
+  animation: birzha-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.birzha-skeleton-panel {
+  width: 100%;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--birzha-radius-sm);
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-skeleton-panel__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.birzha-skeleton-panel__label {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.birzha-loader-block--skeleton {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.birzha-loader-block--skeleton .birzha-skeleton-panel {
+  margin: 0;
+}
+
+/* Таблицы: hover по строке + опционально липкий thead */
+.birzha-table-scroll table tbody tr:not(.birzha-table-subtotal-row):hover td {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+.birzha-table-scroll--sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--birzha-surface);
+  box-shadow: 0 1px 0 var(--color-border);
 }

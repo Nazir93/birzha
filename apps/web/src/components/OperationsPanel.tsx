@@ -10,8 +10,9 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { distributeIntegersProRata } from "../format/distribute-integers-pro-rata.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
-import { btnStyle, fieldStyle, muted, successText, warnText } from "../ui/styles.js";
+import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import {
@@ -231,7 +232,9 @@ export function OperationsPanel() {
         show={batchesQuery.isFetching && !batchesQuery.isPending}
         label="Обновление списка партий…"
       />
-      {batchesQuery.isPending && <LoadingBlock label="Загрузка партий и остатков…" minHeight={96} />}
+      {batchesQuery.isPending && (
+        <LoadingBlock label="Загрузка партий и остатков…" minHeight={96} skeleton skeletonRows={6} />
+      )}
 
       {!batchesQuery.isPending && batchesQuery.data && (
         <BirzhaDisclosure title="Партии по закупочным накладным" hint="остатки на складе" defaultOpen>
@@ -260,7 +263,7 @@ export function OperationsPanel() {
         }
         hint="Партия или вся накладная"
       >
-        <label htmlFor="op-sel-ship-trip" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="op-sel-ship-trip" className="birzha-form-label">
           Рейс *
         </label>
         {tripsQuery.isPending && (
@@ -289,7 +292,7 @@ export function OperationsPanel() {
             <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 700 }}>
               Погрузочная накладная из распределения
             </h4>
-            <p style={{ ...muted, margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
+            <p className="birzha-callout-info">
               К отправке: <strong>{distributionRows.length}</strong> парт.,{" "}
               <strong>{distributionTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
               {distributionMissingCount > 0 ? (
@@ -326,7 +329,7 @@ export function OperationsPanel() {
 
         <>
             <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Одна партия (накладная · калибр)</h4>
-        <label htmlFor="op-sel-ship-batch" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="op-sel-ship-batch" className="birzha-form-label">
           Партия *
         </label>
         <select
@@ -352,12 +355,21 @@ export function OperationsPanel() {
           ))}
         </select>
         {shippableBatches.length === 0 && batchesQuery.data && (
-          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.85rem" }}>
-            Нет партий с остатком на складе — нечего отгружать (сначала оформите приём в разделе{" "}
-            <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
-          </p>
+          <BirzhaEmptyState
+            compact
+            title="Нечего отгружать"
+            description={
+              <>
+                Нет партий с остатком на складе — сначала оформите приём в разделе{" "}
+                <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>.
+              </>
+            }
+          />
         )}
-        <label htmlFor="op-in-ship-batch-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.35rem" }}>
+        <label
+          htmlFor="op-in-ship-batch-id"
+          className="birzha-form-label birzha-form-label--block birzha-form-label--push-xs"
+        >
           Идентификатор партии (дублирует выбор выше)
         </label>
         <input
@@ -376,7 +388,7 @@ export function OperationsPanel() {
           autoComplete="off"
           placeholder="или вставьте идентификатор партии"
         />
-        <label htmlFor="op-in-ship-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-in-ship-kg" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           kg *
         </label>
         <input
@@ -387,7 +399,7 @@ export function OperationsPanel() {
           inputMode="decimal"
           autoComplete="off"
         />
-        <label htmlFor="op-in-ship-pkg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-in-ship-pkg" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Ящики (опц., целое число)
         </label>
         <input
@@ -416,10 +428,10 @@ export function OperationsPanel() {
         )}
 
         <h4 style={{ margin: "1rem 0 0.35rem", fontSize: "0.92rem", fontWeight: 600 }}>Вся накладная в рейс</h4>
-        <p style={{ ...muted, fontSize: "0.85rem", marginBottom: "0.35rem" }}>
+        <p className="birzha-callout-info">
           Кг = полный остаток по строкам накладной. Ящики опционально распределяются по кг.
         </p>
-        <label htmlFor="op-sel-ship-naklad-all" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="op-sel-ship-naklad-all" className="birzha-form-label">
           Закупка товара
         </label>
         <select
@@ -439,11 +451,11 @@ export function OperationsPanel() {
           ))}
         </select>
         {shipAllDocumentId ? (
-          <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.82rem" }}>
+          <p className="birzha-callout-info" style={{ marginTop: "0.35rem", fontSize: "0.82rem" }}>
             <Link to={purchaseNakladnayaDocumentPathForPath(location.pathname, shipAllDocumentId)}>Открыть накладную</Link>
           </p>
         ) : null}
-        <label htmlFor="op-in-ship-naklad-pkg-total" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-in-ship-naklad-pkg-total" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Ящиков в этой отгрузке по накладной, всего (опц.)
         </label>
         <input
@@ -493,7 +505,7 @@ export function OperationsPanel() {
         }
         hint="Партия, рейс, кг и причина при приёмке"
       >
-        <label htmlFor="op-in-short-batch" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="op-in-short-batch" className="birzha-form-label">
           Партия *
         </label>
         <input
@@ -504,7 +516,7 @@ export function OperationsPanel() {
           list="batch-suggestions"
           autoComplete="off"
         />
-        <label htmlFor="op-sel-short-trip" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-sel-short-trip" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Рейс *
         </label>
         <select
@@ -522,7 +534,7 @@ export function OperationsPanel() {
             </option>
           ))}
         </select>
-        <label htmlFor="op-in-short-kg" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-in-short-kg" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           kg *
         </label>
         <input
@@ -533,7 +545,7 @@ export function OperationsPanel() {
           inputMode="decimal"
           autoComplete="off"
         />
-        <label htmlFor="op-in-short-reason" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.5rem" }}>
+        <label htmlFor="op-in-short-reason" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Причина *
         </label>
         <input

@@ -16,7 +16,7 @@ import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingBlock, LoadingScreen } from "./ui/LoadingIndicator.js";
-import { errorText, muted, preJson } from "./ui/styles.js";
+import { errorText, preJson } from "./ui/styles.js";
 
 const AccountingCabinetHome = lazy(() =>
   import("./components/AccountingCabinetHome.js").then((m) => ({ default: m.AccountingCabinetHome })),
@@ -83,7 +83,7 @@ function HomeRedirect() {
   if (!ready) {
     return (
       <div style={{ maxWidth: 400, margin: "2rem 1rem" }} role="status" aria-live="polite">
-        <LoadingBlock label="Инициализация…" minHeight={72} />
+        <LoadingBlock label="Инициализация…" minHeight={72} skeleton skeletonRows={4} />
       </div>
     );
   }
@@ -132,7 +132,7 @@ export function App() {
         <header className="birzha-app-header no-print">
           <AppHeading />
           {import.meta.env.DEV ? (
-            <p style={{ ...muted, marginBottom: "0.65rem" }}>
+            <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.82rem" }}>
               Клиент: Vite + React + TanStack Query + React Router. API: <code>pnpm dev:api</code> на порту 3000, в dev —
               прокси <code> /api/…</code>.
             </p>

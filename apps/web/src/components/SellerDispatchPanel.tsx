@@ -5,6 +5,7 @@ import { apiPostJson } from "../api/fetch-api.js";
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
 import {
@@ -14,10 +15,11 @@ import {
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { btnStyle, fieldStyle, muted, successText, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+import { btnStyle, fieldStyle, successText, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
-import { LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
@@ -87,7 +89,7 @@ export function SellerDispatchPanel() {
 
   /** Уже закреплённые за продавцом рейсы нельзя выбрать повторно — только свободные. */
   const tripsAvailableForAssignment = useMemo(
-    () => tripSelectOptions.filter((t) => t.assignedSellerUserId == null || t.assignedSellerUserId === ""),
+    () => filterTripsWithoutAssignedSeller(tripSelectOptions),
     [tripSelectOptions],
   );
 
@@ -152,7 +154,7 @@ export function SellerDispatchPanel() {
   return (
     <div role="region" aria-label="Отгрузка">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Отгрузка</h2>
-      <p style={{ ...muted, margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
+      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem" }}>
         Какой продавец закреплён за каким рейсом и какой товар на рейсе по данным отгрузки.
       </p>
 
@@ -166,11 +168,11 @@ export function SellerDispatchPanel() {
           }
           hint="только свободные рейсы в списке"
         >
-          <p style={{ ...muted, margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
+          <p className="birzha-callout-info" style={{ margin: "0 0 0.5rem" }}>
             Новых продавцов создавайте в разделе «Сотрудники». Здесь только закрепление: один рейс — один продавец;
             уже закреплённый рейс в этом списке не показывается.
           </p>
-          <label htmlFor="dispatch-seller" style={{ fontSize: "0.88rem", display: "block" }}>
+          <label htmlFor="dispatch-seller" className="birzha-form-label birzha-form-label--block">
             Продавец *
           </label>
           <select
@@ -188,7 +190,7 @@ export function SellerDispatchPanel() {
             ))}
           </select>
 
-          <label htmlFor="dispatch-trip" style={{ fontSize: "0.88rem" }}>
+          <label htmlFor="dispatch-trip" className="birzha-form-label">
             Рейс *
           </label>
           {tripsQuery.isPending ? (
@@ -222,7 +224,11 @@ export function SellerDispatchPanel() {
             </p>
           ) : null}
           {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 ? (
-            <p style={{ ...muted, marginTop: "0.35rem", fontSize: "0.86rem" }}>Активных продавцов нет.</p>
+            <BirzhaEmptyState
+              compact
+              title="Нет активных продавцов"
+              description="Создайте учётные записи с ролью продавца в разделе «Сотрудники»."
+            />
           ) : null}
 
           <button
@@ -256,7 +262,7 @@ export function SellerDispatchPanel() {
           }
           hint="только просмотр"
         >
-          <p style={muted}>
+          <p className="birzha-callout-info">
             В бухгалтерии доступен просмотр. Назначение рейса делает администратор, руководитель, закупщик или логист.
           </p>
         </BirzhaDisclosure>
@@ -272,11 +278,9 @@ export function SellerDispatchPanel() {
         hint="по всем рейсам; калибры из отгрузки"
       >
         {tripsQuery.isPending ? (
-          <p style={{ margin: 0 }} role="status">
-            <LoadingIndicator size="sm" label="Загрузка рейсов…" />
-          </p>
+          <LoadingBlock label="Загрузка рейсов…" minHeight={64} skeleton skeletonRows={5} />
         ) : (
-          <div className="birzha-table-scroll">
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Рейсы и закрепление">
               <thead>
                 <tr>

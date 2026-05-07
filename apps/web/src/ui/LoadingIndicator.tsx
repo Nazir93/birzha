@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { BirzhaSkeletonPanel } from "./BirzhaSkeleton.js";
+
 const labelStyle = (size: "sm" | "md"): CSSProperties => ({
   fontSize: size === "sm" ? "0.82rem" : "0.9rem",
   color: "var(--color-muted, #71717a)",
@@ -31,8 +33,26 @@ export function LoadingIndicator({
   );
 }
 
-/** Крупный блок-заставка, пока ещё нет данных. */
-export function LoadingBlock({ label, minHeight = 100 }: { label: string; minHeight?: number }) {
+/** Крупный блок-заставка, пока ещё нет данных. При `skeleton` — превью-полоски + подпись. */
+export function LoadingBlock({
+  label,
+  minHeight = 100,
+  skeleton = false,
+  skeletonRows = 5,
+}: {
+  label: string;
+  minHeight?: number;
+  /** Визуально «богаче», чем один спиннер — для списков и отчётов. */
+  skeleton?: boolean;
+  skeletonRows?: number;
+}) {
+  if (skeleton) {
+    return (
+      <div className="birzha-loader-block birzha-loader-block--skeleton" style={{ margin: "0.5rem 0 1rem" }}>
+        <BirzhaSkeletonPanel label={label} rows={skeletonRows} minHeight={minHeight} />
+      </div>
+    );
+  }
   return (
     <div
       className="birzha-loader-block"
@@ -65,6 +85,11 @@ export function LoadingScreen({ label }: { label: string }) {
         </div>
         <LoadingIndicator label={label} size="md" />
         <p className="birzha-loader-screen__note">Подготавливаем кабинет и актуальные данные.</p>
+        <div aria-hidden className="birzha-loader-screen__skeleton">
+          <div className="birzha-loader-block birzha-loader-block--skeleton" style={{ margin: 0 }}>
+            <BirzhaSkeletonPanel rows={4} minHeight={56} />
+          </div>
+        </div>
       </div>
     </section>
   );

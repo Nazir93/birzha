@@ -3,7 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
 import { ops } from "../routes.js";
-import { errorText, fieldStyle, muted } from "../ui/styles.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { errorText, fieldStyle } from "../ui/styles.js";
 
 export function LoginPage() {
   const { ready, meta, user, login, bootstrapError } = useAuth();
@@ -33,9 +34,9 @@ export function LoginPage() {
   if (!ready) {
     return (
       <div className="birzha-login-wrap">
-        <p role="status" aria-live="polite">
-          Загрузка…
-        </p>
+        <section className="birzha-login-card" aria-busy role="status" aria-live="polite">
+          <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={4} />
+        </section>
       </div>
     );
   }
@@ -60,10 +61,10 @@ export function LoginPage() {
         <h2 id="login-heading" className="birzha-page-title" style={{ marginTop: 0 }}>
           Вход
         </h2>
-        <p style={{ ...muted, marginBottom: "0.65rem", lineHeight: 1.55 }}>
+        <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", lineHeight: 1.55 }}>
           Введите логин и пароль.
         </p>
-        <label htmlFor="login-user" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="login-user" className="birzha-form-label">
           Логин (ваш)
         </label>
         <input
@@ -73,7 +74,7 @@ export function LoginPage() {
           onChange={(e) => setLoginField(e.target.value)}
           style={{ ...fieldStyle, display: "block", width: "100%", marginBottom: "0.75rem" }}
         />
-        <label htmlFor="login-pass" style={{ fontSize: "0.88rem" }}>
+        <label htmlFor="login-pass" className="birzha-form-label">
           Пароль (ваш)
         </label>
         <input

@@ -101,8 +101,6 @@ export const btnSecondary: CSSProperties = {
   background: "var(--birzha-surface)",
 };
 
-export const muted: CSSProperties = { color: "var(--birzha-text-subtle)", fontSize: "0.85rem", margin: "0 0 0.75rem" };
-
 export const tableStyle: CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",

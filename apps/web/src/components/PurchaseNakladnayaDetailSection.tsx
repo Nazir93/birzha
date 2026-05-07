@@ -14,8 +14,9 @@ import {
   purchaseNakladnayaDocumentPathForPath,
 } from "../routes.js";
 import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
-import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, thHeadDense, thtdDense } from "../ui/styles.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { errorText, thHeadDense, thtdDense } from "../ui/styles.js";
 
 function formatRubFromKopecks(k: string): string {
   const n = BigInt(k);
@@ -67,7 +68,7 @@ export function PurchaseNakladnayaDetailSection() {
 
   if (!enabled) {
     return (
-      <p style={muted}>
+      <p className="birzha-callout-warning" role="status">
         Раздел накладных временно недоступен. Обратитесь к администратору.
       </p>
     );
@@ -78,7 +79,7 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   if (docQ.isPending) {
-    return <LoadingBlock label="Загрузка накладной…" minHeight={100} />;
+    return <LoadingBlock label="Загрузка накладной…" minHeight={100} skeleton skeletonRows={6} />;
   }
 
   if (docQ.isError) {
@@ -108,18 +109,24 @@ export function PurchaseNakladnayaDetailSection() {
 
   return (
     <section className="birzha-panel" aria-labelledby="nakl-detail-heading" role="region">
+      <BirzhaDisclosure
+        defaultOpen
+        title={
+          <h3 id="nakl-detail-heading" style={{ margin: 0, fontSize: "1rem" }}>
+            Накладная <strong>{doc.documentNumber}</strong>
+          </h3>
+        }
+        hint={formatPurchaseDocDateRu(doc.docDate)}
+      >
       <div style={{ marginBottom: "0.5rem" }}>
-        <Link to={listPath} style={{ fontSize: "0.88rem" }}>
+        <Link to={listPath} className="birzha-ui-sm">
           ← Все закупки товара
         </Link>
       </div>
-      <h3 id="nakl-detail-heading" style={{ margin: "0 0 0.35rem", fontSize: "1rem" }}>
-        Накладная <strong>{doc.documentNumber}</strong>
-      </h3>
       <p style={{ margin: "0 0 0.75rem", fontSize: "1.05rem", fontWeight: 600 }}>
         Дата документа: {formatPurchaseDocDateRu(doc.docDate)}
       </p>
-      <p style={{ ...muted, margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
+      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
         ID в системе (поддержка): <code style={{ fontSize: "0.82rem" }}>{doc.id}</code>
         {doc.createdAt ? (
           <>
@@ -129,11 +136,11 @@ export function PurchaseNakladnayaDetailSection() {
         ) : null}
       </p>
 
-      <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.88rem", marginBottom: "0.75rem", width: "100%", maxWidth: "100%" }}>
+      <div className="birzha-nakl-detail-meta">
         <div>
           <strong>Склад:</strong>{" "}
           {warehousesQ.isPending ? (
-            <span style={muted}>…</span>
+            <LoadingIndicator size="sm" label="Загрузка склада…" />
           ) : warehousesQ.isError ? (
             <code style={{ fontSize: "0.82rem" }}>{doc.warehouseId}</code>
           ) : (
@@ -156,8 +163,8 @@ export function PurchaseNakladnayaDetailSection() {
         </div>
       </div>
 
-      <p style={{ ...muted, margin: "0 0 0.35rem" }}>Строки (каждая строка — партия)</p>
-      <div style={{ overflowX: "auto" }}>
+      <p className="birzha-nakl-lines-heading">Строки (каждая строка — партия)</p>
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
         <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>
           <thead>
             <tr>
@@ -196,7 +203,7 @@ export function PurchaseNakladnayaDetailSection() {
                   title="Сумма кг по строкам"
                 >
                   {totalKgLabel}{" "}
-                  <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+                  <span className="birzha-text-muted birzha-text-muted--sm">
                     кг
                   </span>
                 </td>
@@ -204,7 +211,7 @@ export function PurchaseNakladnayaDetailSection() {
                   {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
                     totals.totalPackages,
                   )}{" "}
-                  <span className="birzha-text-muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+                  <span className="birzha-text-muted birzha-text-muted--sm">
                     кор.
                   </span>
                 </td>
@@ -271,7 +278,7 @@ export function PurchaseNakladnayaDetailSection() {
           </p>
           <p style={{ margin: "0.2rem 0" }}>
             <strong>Доп. расходы</strong> (к документу): {totals.extraKop} коп. = {kopecksToRubLabel(totals.extraKop.toString())} ₽
-            {totals.extraKop === 0 && <span style={muted}>, не указаны</span>}
+            {totals.extraKop === 0 && <span className="birzha-text-muted">, не указаны</span>}
           </p>
           <p className="birzha-divider-top">
             <strong style={{ fontSize: "1.02rem" }}>К оплате (всего):</strong> {totals.allKop} коп. = {kopecksToRubLabel(totals.allKop.toString())} ₽
@@ -279,10 +286,11 @@ export function PurchaseNakladnayaDetailSection() {
         </div>
       )}
 
-      <p style={{ ...muted, marginTop: "0.75rem", fontSize: "0.82rem" }}>
+      <p className="birzha-callout-info" style={{ marginTop: "0.75rem", fontSize: "0.82rem" }}>
         Прямая ссылка:{" "}
         <code style={{ wordBreak: "break-all" }}>{purchaseNakladnayaDocumentPathForPath(pathname, doc.id)}</code>
       </p>
+      </BirzhaDisclosure>
     </section>
   );
 }

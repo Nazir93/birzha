@@ -5,8 +5,9 @@ import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes } from "../routes.js";
 import { Link } from "react-router-dom";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, btnStyleInline, errorText, fieldStyle, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnStyle, btnStyleInline, errorText, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Администратор",
@@ -137,7 +138,9 @@ function UserRowActions({
       <td style={thtd}>
         <strong>{row.login}</strong>
         {row.id === currentUserId ? (
-          <span style={{ ...muted, fontSize: "0.82rem", display: "block" }}>это вы</span>
+          <span className="birzha-text-muted birzha-text-muted--md" style={{ display: "block" }}>
+            это вы
+          </span>
         ) : null}
       </td>
       <td style={thtd}>
@@ -147,7 +150,7 @@ function UserRowActions({
       <td style={{ ...thtd, minWidth: "14rem" }}>
         {canPwd ? (
           <div style={{ marginBottom: canDel ? "0.45rem" : 0 }}>
-            <span className="birzha-text-muted" style={{ fontSize: "0.72rem", display: "block", marginBottom: 2 }}>
+            <span className="birzha-text-muted birzha-text-muted--micro" style={{ display: "block", marginBottom: 2 }}>
               Новый пароль (текущий на сервере не показывается — хранится только хэш)
             </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
@@ -172,7 +175,7 @@ function UserRowActions({
             </div>
           </div>
         ) : (
-          <span style={muted}>—</span>
+          <span className="birzha-text-muted">—</span>
         )}
         {canDel ? (
           <button
@@ -350,18 +353,25 @@ export function AdminUsersPanel() {
       </header>
 
       <div className="birzha-home-work-card">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Создание</p>
-            <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
-          </div>
-        </div>
-        <p style={{ ...muted, fontSize: "0.82rem", marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
+        <BirzhaDisclosure
+          nested
+          defaultOpen
+          title={
+            <div className="birzha-section-heading">
+              <div>
+                <p className="birzha-section-heading__eyebrow">Создание</p>
+                <h3 className="birzha-section-title birzha-section-title--sm">Новый пользователь</h3>
+              </div>
+            </div>
+          }
+          hint="логин и роль"
+        >
+        <p className="birzha-callout-info" style={{ fontSize: "0.82rem", marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
           Ввод по умолчанию скрыт звёздочками; кнопка «Показать» нужна, чтобы сверить символы перед сохранением. Ранее
           заданный пароль из базы не отображается — хранится только хэш.
         </p>
         <div className="birzha-form-grid birzha-form-grid--actions">
-          <label style={{ fontSize: "0.88rem" }}>
+          <label className="birzha-form-label">
             Логин
             <input
               value={login}
@@ -370,7 +380,7 @@ export function AdminUsersPanel() {
               autoComplete="off"
             />
           </label>
-          <label style={{ fontSize: "0.88rem" }}>
+          <label className="birzha-form-label">
             Новый пароль (≥ 10 символов)
             <span style={{ display: "block", marginTop: "0.25rem" }}>
               <PasswordFieldWithToggle
@@ -381,7 +391,7 @@ export function AdminUsersPanel() {
               />
             </span>
           </label>
-          <label style={{ fontSize: "0.88rem" }}>
+          <label className="birzha-form-label">
             Повтор нового пароля
             <span style={{ display: "block", marginTop: "0.25rem" }}>
               <PasswordFieldWithToggle
@@ -392,7 +402,7 @@ export function AdminUsersPanel() {
               />
             </span>
           </label>
-          <label style={{ fontSize: "0.88rem" }}>
+          <label className="birzha-form-label">
             Роль
             <select
               value={roleCode}
@@ -439,28 +449,38 @@ export function AdminUsersPanel() {
           </p>
         )}
         {formOk && (
-          <p role="status" style={{ ...muted, marginTop: "0.65rem", marginBottom: 0 }}>
+          <p role="status" className="birzha-callout-info" style={{ marginTop: "0.65rem", marginBottom: 0 }}>
             {formOk}
           </p>
         )}
+        </BirzhaDisclosure>
       </div>
 
       <div className="birzha-home-work-card">
-        <div className="birzha-section-heading">
-          <div>
-            <p className="birzha-section-heading__eyebrow">Учётные записи</p>
-            <h3 className="birzha-section-title birzha-section-title--sm">Список пользователей</h3>
-          </div>
-          <p className="birzha-section-heading__note">Пароли и удаление — в строке сотрудника</p>
-        </div>
-        {listQ.isPending && <LoadingBlock label="Загрузка списка…" minHeight={72} />}
+        <BirzhaDisclosure
+          nested
+          defaultOpen
+          title={
+            <div className="birzha-section-heading">
+              <div>
+                <p className="birzha-section-heading__eyebrow">Учётные записи</p>
+                <h3 className="birzha-section-title birzha-section-title--sm">Список пользователей</h3>
+              </div>
+              <p className="birzha-section-heading__note">Пароли и удаление — в строке сотрудника</p>
+            </div>
+          }
+          hint="таблица"
+        >
+        {listQ.isPending && (
+          <LoadingBlock label="Загрузка списка…" minHeight={72} skeleton skeletonRows={6} />
+        )}
         {listQ.isError && (
           <p role="alert" style={errorText}>
             Не удалось загрузить список. Проверьте вход и повторите.
           </p>
         )}
         {listQ.data && user && (
-          <div className="birzha-table-scroll">
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Пользователи">
               <thead>
                 <tr>
@@ -500,6 +520,7 @@ export function AdminUsersPanel() {
             )}
           </div>
         )}
+        </BirzhaDisclosure>
       </div>
     </section>
   );

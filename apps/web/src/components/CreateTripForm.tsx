@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { queryRoots, tripsFieldSellerOptionsQueryOptions } from "../query/core-list-queries.js";
-import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, muted, successText } from "../ui/styles.js";
+import { btnStyle, dateFieldStyleCompact, errorText, fieldStyleCompact, successText } from "../ui/styles.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -45,9 +47,12 @@ export function CreateTripForm() {
   }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, assignedSellerUserId, mutation]);
 
   return (
-    <div className="birzha-panel">
-      <h3 className="birzha-section-title birzha-section-title--sm">Создать рейс</h3>
-      <label htmlFor="ct-trip-number" style={{ fontSize: "0.88rem" }}>
+    <BirzhaDisclosure
+      defaultOpen
+      title={<h3 className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>Создать рейс</h3>}
+      hint="пустой рейс в списке"
+    >
+      <label htmlFor="ct-trip-number" className="birzha-form-label">
         Номер рейса *
       </label>
       <input
@@ -58,7 +63,10 @@ export function CreateTripForm() {
         style={fieldStyleCompact}
         autoComplete="off"
       />
-      <label htmlFor="ct-trip-id" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+      <label
+        htmlFor="ct-trip-id"
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+      >
         Идентификатор рейса (опционально)
       </label>
       <input
@@ -69,7 +77,10 @@ export function CreateTripForm() {
         style={fieldStyleCompact}
         autoComplete="off"
       />
-      <label htmlFor="ct-vehicle" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+      <label
+        htmlFor="ct-vehicle"
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+      >
         ТС (номер и т.п., опционально)
       </label>
       <input
@@ -80,7 +91,10 @@ export function CreateTripForm() {
         style={fieldStyleCompact}
         autoComplete="off"
       />
-      <label htmlFor="ct-driver" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+      <label
+        htmlFor="ct-driver"
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+      >
         Водитель, фамилия (опционально)
       </label>
       <input
@@ -91,7 +105,10 @@ export function CreateTripForm() {
         style={fieldStyleCompact}
         autoComplete="name"
       />
-      <label htmlFor="ct-departed" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+      <label
+        htmlFor="ct-departed"
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+      >
         План/факт отправления (локальные дата и время, опционально)
       </label>
       <BirzhaDateTimeField
@@ -102,7 +119,10 @@ export function CreateTripForm() {
         className="birzha-input-date"
         emptyLabel="— не задано —"
       />
-      <label htmlFor="ct-assigned-seller" style={{ fontSize: "0.88rem", display: "block", marginTop: "0.65rem" }}>
+      <label
+        htmlFor="ct-assigned-seller"
+        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+      >
         Продавец в поле (опционально, можно назначить позже)
       </label>
       <select
@@ -128,9 +148,11 @@ export function CreateTripForm() {
       {fieldSellersQuery.isSuccess &&
         (fieldSellersQuery.data?.fieldSellers?.length ?? 0) === 0 &&
         !fieldSellersQuery.isPending && (
-          <p style={{ ...muted, fontSize: "0.85rem", marginTop: "0.35rem" }}>
-            Нет активных продавцов для закрепления рейса — администратор должен создать отдельные учётные записи продавцов.
-          </p>
+          <BirzhaEmptyState
+            compact
+            title="Нет учётных записей продавцов"
+            description="Администратор должен создать отдельные пользователей с ролью продавца — тогда их можно будет закрепить за рейсом."
+          />
         )}
       <div>
         <button
@@ -153,6 +175,6 @@ export function CreateTripForm() {
           Рейс создан. Список обновлён.
         </p>
       )}
-    </div>
+    </BirzhaDisclosure>
   );
 }

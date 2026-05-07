@@ -9,8 +9,9 @@ import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
 import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
-import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const MAX_TRIPS = 50;
 
@@ -89,7 +90,7 @@ export function AccountingTripsSummary() {
   }, [sortedTrips, reportQueries]);
 
   if (tripsQuery.isPending) {
-    return <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} />;
+    return <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={6} />;
   }
   if (tripsQuery.isError) {
     return (
@@ -99,11 +100,7 @@ export function AccountingTripsSummary() {
     );
   }
   if (sortedTrips.length === 0) {
-    return (
-      <p style={muted}>
-        Пока нет рейсов.
-      </p>
-    );
+    return <BirzhaEmptyState compact title="Пока нет рейсов" />;
   }
 
   const totalInDb = tripsQuery.data?.trips.length ?? 0;
@@ -124,7 +121,7 @@ export function AccountingTripsSummary() {
       hint={`до ${MAX_TRIPS} рейсов в сводке`}
     >
       {moreThanTable ? (
-        <p style={{ ...muted, margin: "0 0 0.5rem" }}>
+        <p className="birzha-callout-info" style={{ margin: "0 0 0.5rem" }}>
           В сводке первые {MAX_TRIPS} из {totalInDb} рейсов.
         </p>
       ) : null}
@@ -139,12 +136,12 @@ export function AccountingTripsSummary() {
         </div>
       ) : null}
       {anyLoading && (
-        <p style={muted} role="status" aria-live="polite">
-          Загрузка отчётов…
+        <p style={{ margin: "0 0 0.5rem" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Загрузка отчётов по рейсам…" />
         </p>
       )}
-      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <table style={{ ...tableStyle, minWidth: 880, fontSize: "0.88rem" }} aria-label="Сводка по деньгам и рейсам">
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+        <table style={{ ...tableStyle, minWidth: 880 }} aria-label="Сводка по деньгам и рейсам">
           <thead>
             <tr>
               <th scope="col" style={thHead}>
@@ -196,7 +193,7 @@ export function AccountingTripsSummary() {
                     <td style={thtd}>
                       <strong>{t.tripNumber}</strong>
                     </td>
-                    <td colSpan={6} style={{ ...thtd, ...muted }}>
+                    <td colSpan={6} className="birzha-text-muted" style={thtd}>
                       …
                     </td>
                     <td style={thtd}>
@@ -210,7 +207,7 @@ export function AccountingTripsSummary() {
                 <tr key={t.id}>
                   <th scope="row" style={thtd}>
                     <strong>{r.trip.tripNumber}</strong>{" "}
-                    <span style={muted} title="статус">
+                    <span className="birzha-text-muted birzha-text-muted--lg" title="статус">
                       · {formatTripStatusLabel(r.trip.status)}
                     </span>
                   </th>
@@ -221,7 +218,7 @@ export function AccountingTripsSummary() {
                   <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
                     {kopecksToRubLabel(r.financials.grossProfitKopecks)}
                   </td>
-                  <td style={{ ...thtd, textAlign: "right", fontSize: "0.85rem" }}>
+                  <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
                     {kopecksToRubLabel(r.sales.totalCashKopecks)} / {kopecksToRubLabel(r.sales.totalDebtKopecks)}
                   </td>
                   <td style={thtd}>
@@ -245,7 +242,7 @@ export function AccountingTripsSummary() {
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costSold.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costShort.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.gross.toString())}</td>
-                <td style={{ ...thtd, textAlign: "right", fontSize: "0.85rem" }}>
+                <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
                   {kopecksToRubLabel(tripTotals.cash.toString())} / {kopecksToRubLabel(tripTotals.debt.toString())}
                 </td>
                 <td style={thtd} />
@@ -255,7 +252,9 @@ export function AccountingTripsSummary() {
         </table>
       </div>
       {hasError && !anyLoading ? (
-        <p style={{ ...muted, marginTop: "0.5rem" }}>Часть отчётов не загрузилась — обновите страницу.</p>
+        <p className="birzha-callout-warning" role="alert" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+          Часть отчётов не загрузилась — обновите страницу.
+        </p>
       ) : null}
     </BirzhaDisclosure>
   );

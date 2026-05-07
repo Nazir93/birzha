@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { tripByIdQueryOptions, tripsSearchPickerQueryOptions } from "../query/core-list-queries.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, fieldStyle, muted } from "../ui/styles.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { btnStyle, fieldStyle } from "../ui/styles.js";
 
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -56,12 +57,13 @@ export function TripSearchPicker({
     <div className="birzha-trip-search-picker">
       {value && selectedTrip ? (
         <div style={{ marginBottom: "0.45rem" }}>
-          <p style={{ ...muted, margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
+          <p className="birzha-callout-info" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
             Выбран рейс: <strong>{formatTripSelectLabel(selectedTrip)}</strong>
           </p>
           <button
             type="button"
-            style={{ ...btnStyle, fontSize: "0.88rem", padding: "0.45rem 0.75rem" }}
+            className="birzha-ui-sm"
+            style={{ ...btnStyle, padding: "0.45rem 0.75rem" }}
             disabled={disabled}
             onClick={() => {
               onChange("");
@@ -73,7 +75,10 @@ export function TripSearchPicker({
         </div>
       ) : (
         <>
-          <label htmlFor={searchInputId} style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.25rem" }}>
+          <label
+            htmlFor={searchInputId}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs"
+          >
             Поиск по номеру рейса
           </label>
           <input
@@ -88,12 +93,12 @@ export function TripSearchPicker({
             enterKeyHint="search"
           />
           {pickerQuery.isFetching && (
-            <p style={{ ...muted, margin: "0 0 0.35rem" }} role="status">
+            <p style={{ margin: "0 0 0.35rem" }} role="status">
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
             </p>
           )}
           {pickerQuery.isError && (
-            <p role="alert" style={{ color: "var(--birzha-danger)", margin: "0 0 0.35rem", fontSize: "0.88rem" }}>
+            <p role="alert" className="birzha-ui-sm birzha-text-danger" style={{ margin: "0 0 0.35rem" }}>
               Не удалось загрузить рейсы.
             </p>
           )}
@@ -129,7 +134,7 @@ export function TripSearchPicker({
             ))}
           </ul>
           {!pickerQuery.isPending && mergedTrips.length === 0 && (
-            <p style={{ ...muted, margin: 0, fontSize: "0.86rem" }}>Нет рейсов по запросу — измените поиск.</p>
+            <BirzhaEmptyState compact title="Нет рейсов" description="Измените поиск или сбросьте фильтр." />
           )}
         </>
       )}

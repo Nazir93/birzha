@@ -22,7 +22,7 @@ export function LegacyPathRedirect() {
   if (!ready) {
     return (
       <div style={{ maxWidth: 400, margin: "2rem 1rem" }} role="status" aria-live="polite">
-        <LoadingBlock label="Загрузка…" minHeight={72} />
+        <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={4} />
       </div>
     );
   }

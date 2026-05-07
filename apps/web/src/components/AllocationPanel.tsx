@@ -30,9 +30,11 @@ import {
   purchaseNakladnayaDocumentPathForPath,
 } from "../routes.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, muted, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+import { btnStyle, errorText, fieldStyle, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
 
 /** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
 
@@ -435,7 +437,7 @@ export function AllocationPanel() {
   return (
     <div role="region" aria-label="Распределение товара">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
-      <p style={muted}>
+      <p className="birzha-callout-info">
         Выберите склад: видно, какой остаток уже привязан к направлениям (городам), что ещё предстоит распределить по
         рейсам, и сколько уже уехало в рейсах. Дальше по шагам: отбор накладных и свод → при необходимости брак → в конце
         сохранение погрузочной накладной.
@@ -445,12 +447,12 @@ export function AllocationPanel() {
       </p>
 
       {warehousesQuery.isError && (
-        <p style={warnText} role="alert">
+        <p className="birzha-callout-warning" role="alert">
           Справочник складов не загрузился — подписи к складу могут быть неполны.
         </p>
       )}
 
-      {loading && <LoadingBlock label="Загрузка партий…" minHeight={100} />}
+      {loading && <LoadingBlock label="Загрузка партий…" minHeight={100} skeleton skeletonRows={6} />}
 
       <StaleDataNotice show={refetching} label="Обновление списка партий…" />
 
@@ -464,16 +466,29 @@ export function AllocationPanel() {
       {!loading &&
         list.length === 0 &&
         (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length === 0 && (
-        <p style={muted}>
-          Нет партий с остатком на складе — сначала оформите закупку товара (раздел{" "}
-          <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
-        </p>
-      )}
+          <BirzhaEmptyState
+            compact
+            title="Нет партий с остатком на складе"
+            description={
+              <>
+                Сначала оформите закупку товара (раздел <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
+              </>
+            }
+          />
+        )}
 
       {!loading && list.length > 0 && (
         <>
+          <BirzhaDisclosure
+            defaultOpen
+            title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Склад и свод по направлениям</span>}
+            hint="шаг 1"
+          >
           <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
-            <label htmlFor="alloc-sel-warehouse" style={{ fontSize: "0.88rem", display: "block", marginBottom: "0.35rem" }}>
+            <label
+              htmlFor="alloc-sel-warehouse"
+              className="birzha-form-label birzha-form-label--block birzha-form-label--mb-sm"
+            >
               1. Склад (куда сходятся остатки с приёмов по накладным) *
             </label>
             <select
@@ -499,7 +514,8 @@ export function AllocationPanel() {
             </select>
             {selectedWarehouse && whSummary && (
               <div
-                style={{ ...muted, margin: "0.5rem 0 0", fontSize: "0.88rem", lineHeight: 1.45 }}
+                className="birzha-callout-info"
+                style={{ margin: "0.5rem 0 0", lineHeight: 1.45 }}
                 role="status"
                 aria-live="polite"
               >
@@ -533,13 +549,13 @@ export function AllocationPanel() {
               aria-label="Свод по распределению на складе"
             >
               <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.45rem" }}>Уже распределено и остаток к рейсам</h3>
-              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.55rem", lineHeight: 1.45 }}>
+              <p className="birzha-callout-info">
                 На складе: кг по полю направления в партии (куда планируется везти товар). Без направления — то, что ещё
                 предстоит разнести по городам и отгрузить рейсами. Отдельно — кг уже отгруженные в рейсы (в пути), по тем же
                 партиям этого склада.
               </p>
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 440 }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 440 }}>
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>
@@ -565,7 +581,7 @@ export function AllocationPanel() {
                       <tr key="alloc-unassigned">
                         <td style={thtd}>
                           <strong>Не назначено направление</strong>
-                          <span className="birzha-text-muted" style={{ display: "block", fontSize: "0.78rem", marginTop: 2 }}>
+                          <span className="birzha-text-muted birzha-text-muted--xs" style={{ display: "block", marginTop: 2 }}>
                             дальше — по городам и рейсам
                           </span>
                         </td>
@@ -579,7 +595,7 @@ export function AllocationPanel() {
                       <tr key="alloc-in-transit">
                         <td style={thtd}>
                           <strong>Уже в рейсе (в пути)</strong>
-                          <span className="birzha-text-muted" style={{ display: "block", fontSize: "0.78rem", marginTop: 2 }}>
+                          <span className="birzha-text-muted birzha-text-muted--xs" style={{ display: "block", marginTop: 2 }}>
                             отгружено с этого склада, не на полке
                           </span>
                         </td>
@@ -594,18 +610,23 @@ export function AllocationPanel() {
               </div>
             </div>
           )}
+          </BirzhaDisclosure>
 
           {selectedWarehouse && (
-            <>
+            <BirzhaDisclosure
+              defaultOpen
+              title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Отбор накладных и таблица партий</span>}
+              hint="погрузка"
+            >
               {documentOptions.length === 0 && batchesInWh.length > 0 && (
-                <p style={{ ...muted, fontSize: "0.9rem", marginBottom: "1rem" }} role="status">
+                <p className="birzha-callout-info" role="status">
                   На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
                   складе. Оформите закупку в{" "}
                   <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
                 </p>
               )}
               {documentOptions.length > 0 && loadNaklSelection.size === 0 && (
-                <p style={{ ...muted, fontSize: "0.88rem", marginBottom: "0.75rem" }} role="status">
+                <p className="birzha-callout-info" role="status">
                   <strong>Накладные не отфильтрованы</strong> — в таблице ниже показан <strong>полный остаток</strong> на этом
                   складе. Отметьте накладные в блоке ниже, чтобы сузить список только к выбранным документам.
                 </p>
@@ -622,20 +643,27 @@ export function AllocationPanel() {
                 destAllowed={destAllowed}
                 labelDest={labelDest}
               />
-            </>
+            </BirzhaDisclosure>
           )}
 
           {selectedWarehouse && batchesOutsideNaklSelection.length > 0 && (
-            <div className="birzha-inline-panel" role="region" aria-label="Остаток по неотмеченным накладным">
-              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
-                Не вошло в отбор накладных — остаток на складе
-              </h3>
-              <p style={{ ...muted, fontSize: "0.82rem", margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+            <div role="region" aria-label="Остаток по неотмеченным накладным">
+            <BirzhaDisclosure
+              defaultOpen
+              className="birzha-inline-panel"
+              title={
+                <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>
+                  Не вошло в отбор накладных — остаток на складе
+                </span>
+              }
+              hint="хвост по другим документам"
+            >
+              <p className="birzha-callout-info">
                 Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
                 числятся — видно кг и калибр.
               </p>
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 560 }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 560 }}>
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>
@@ -661,7 +689,7 @@ export function AllocationPanel() {
                                   {" "}
                                   <Link
                                     to={purchaseNakladnayaDocumentPathForPath(pathname, b.nakladnaya.documentId)}
-                                    style={{ fontSize: "0.82rem" }}
+                                    className="birzha-text-muted birzha-text-muted--md"
                                   >
                                     открыть
                                   </Link>
@@ -679,17 +707,21 @@ export function AllocationPanel() {
                   </tbody>
                 </table>
               </div>
+            </BirzhaDisclosure>
             </div>
           )}
 
           {selectedWarehouse && tableRows.length > 0 && meta?.warehouseWriteOffApi === "enabled" && (
-            <div className="birzha-inline-panel" style={{ marginTop: "0.9rem" }}>
-              <h3 style={{ fontSize: "0.92rem", fontWeight: 600, margin: "0 0 0.4rem" }}>Списать со склада (брак)</h3>
-              <p style={{ ...muted, fontSize: "0.83rem", marginTop: 0 }}>
-                Если строка не должна ехать в рейс, можно списать нужный вес со склада.
-              </p>
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, fontSize: "0.88rem", minWidth: 620 }}>
+            <div style={{ marginTop: "0.9rem" }}>
+            <BirzhaDisclosure
+              defaultOpen
+              className="birzha-inline-panel"
+              title={<span style={{ fontSize: "0.92rem", fontWeight: 600 }}>Списать со склада (брак)</span>}
+              hint="частичное кг"
+            >
+              <p className="birzha-callout-info">Если строка не должна ехать в рейс, можно списать нужный вес со склада.</p>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 620 }}>
                   <thead>
                     <tr>
                       <th style={thHead}>Калибр / строка</th>
@@ -702,7 +734,7 @@ export function AllocationPanel() {
                       <tr key={`wo-${row.lineLabel}`}>
                         <td style={thtd}>
                           <strong>{row.lineLabel}</strong>
-                          <span className="birzha-text-muted" style={{ marginLeft: 6, fontSize: "0.78rem" }}>
+                          <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
                             {row.partCount} парт.
                           </span>
                         </td>
@@ -755,13 +787,19 @@ export function AllocationPanel() {
                   </tbody>
                 </table>
               </div>
+            </BirzhaDisclosure>
             </div>
           )}
 
           {selectedWarehouse && (
-            <div className="birzha-inline-panel" style={{ marginBottom: "0.9rem", marginTop: "0.9rem" }}>
-              <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.55rem" }}>Данные погрузочной накладной</h3>
-              <p style={{ ...muted, fontSize: "0.83rem", marginTop: 0, marginBottom: "0.55rem", lineHeight: 1.45 }}>
+            <div style={{ marginBottom: "0.9rem", marginTop: "0.9rem" }}>
+            <BirzhaDisclosure
+              defaultOpen
+              className="birzha-inline-panel"
+              title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Данные погрузочной накладной</span>}
+              hint="сохранение ПН"
+            >
+              <p className="birzha-callout-info">
                 Сохраните документ <strong>после</strong> отбора накладных в блоке выше и списания брака — в погрузочную
                 попадут актуальные партии и массы.
               </p>
@@ -824,10 +862,11 @@ export function AllocationPanel() {
                 </p>
               )}
               {savedManifestId && (
-                <p style={{ ...muted, marginBottom: 0 }} role="status">
+                <p className="birzha-callout-info" role="status">
                   Сохранено: № {savedManifestQuery.data?.manifest.manifestNumber ?? manifestNumber}.
                 </p>
               )}
+            </BirzhaDisclosure>
             </div>
           )}
 
@@ -849,7 +888,7 @@ export function AllocationPanel() {
                 >
                   Отправить накладную в рейс
                 </button>{" "}
-                <span style={muted}>
+                <span className="birzha-text-muted">
                   Сохраните погрузочную накладную в блоке выше, затем выберите рейс в Операциях.
                 </span>
               </p>
@@ -857,9 +896,11 @@ export function AllocationPanel() {
           )}
 
           {selectedWarehouse && tableRows.length === 0 && loadNaklSelection.size > 0 && (
-            <p style={muted} role="status">
-              По отмеченным накладным нет партий с остатком / всё в рейсах — смотрите в Операциях.
-            </p>
+            <BirzhaEmptyState
+              compact
+              title="Нет партий в отборе"
+              description="По отмеченным накладным нет остатка на складе или всё уже в рейсах — проверьте в Операциях."
+            />
           )}
         </>
       )}

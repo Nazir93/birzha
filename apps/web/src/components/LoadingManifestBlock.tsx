@@ -10,7 +10,8 @@ import {
   summarizeAllocationBreakdown,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
-import { btnStyle, btnStyleInline, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { btnStyle, btnStyleInline, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
 
@@ -146,7 +147,7 @@ export function LoadingManifestBlock({
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
         Погрузочная накладная
       </h3>
-      <p style={{ ...muted, margin: "0 0 0.55rem", fontSize: "0.82rem", lineHeight: 1.45 }}>
+      <p className="birzha-callout-info" style={{ margin: "0 0 0.55rem", fontSize: "0.82rem", lineHeight: 1.45 }}>
         Здесь всегда <strong>актуальный остаток на складе</strong> по отобранным накладным (после отгрузки в рейс кг в таблице
         уменьшаются). Это не «ещё одна» накладная поверх уже сделанной — тот же склад, обновлённые фактические массы.
       </p>
@@ -156,12 +157,14 @@ export function LoadingManifestBlock({
           {manifest.warehouseName} ({manifest.warehouseCode})
         </p>
       ) : null}
-      <p style={{ ...muted, margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>
         Склад: <strong>{manifest?.warehouseName ?? warehouseName}</strong>.
       </p>
       {documentOptions.length > 0 && (
         <div className="no-print" style={{ marginBottom: "0.75rem" }}>
-          <p style={{ ...muted, fontSize: "0.86rem", margin: "0 0 0.4rem" }}>Включить в отбор (один раз на документ)</p>
+          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+            Включить в отбор (один раз на документ)
+          </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem 0.75rem", alignItems: "center" }}>
             {documentOptions.map((d) => (
               <label
@@ -184,7 +187,7 @@ export function LoadingManifestBlock({
 
       {uniqueDocuments.length > 0 && (
         <p className="no-print" style={{ fontSize: "0.86rem", margin: "0 0 0.5rem" }}>
-          <span style={muted}>Карточки накладных: </span>
+          <span className="birzha-text-muted">Карточки накладных: </span>
           {uniqueDocuments.map((d) => (
             <span key={d.id} style={{ marginRight: 10 }}>
               <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontSize: "0.9rem" }}>
@@ -208,17 +211,21 @@ export function LoadingManifestBlock({
         </p>
       ) : null}
       {caliberCaption ? (
-        <p style={{ ...muted, marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }}>
+        <p className="birzha-callout-info" style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }}>
           <strong>Калибры в накладной:</strong> {caliberCaption}
         </p>
       ) : null}
 
       {includedBatches.length === 0 && (
-        <p style={muted} role="status">
-          {documentOptions.length > 0
-            ? "Нет строк: отметьте накладные либо на складе нет остатка (всё в рейсах — смотрите Операции)."
-            : "Нет строк с остатком в данных."}
-        </p>
+        <BirzhaEmptyState
+          compact
+          title="Нет строк в отборе"
+          description={
+            documentOptions.length > 0
+              ? "Отметьте накладные либо на складе нет остатка (всё в рейсах — смотрите Операции)."
+              : "Нет строк с остатком в данных."
+          }
+        />
       )}
 
       {caliberRows.length > 0 && (
@@ -230,7 +237,7 @@ export function LoadingManifestBlock({
           >
             По калибрам
           </h4>
-          <div style={{ overflowX: "auto" }} role="table">
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table
               style={tableStyle}
               className="loading-manifest-table"

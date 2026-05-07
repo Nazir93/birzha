@@ -1,4 +1,4 @@
-import { muted } from "../styles.js";
+import { BirzhaEmptyState } from "../BirzhaEmptyState.js";
 
 export type HorizontalBarItem = {
   label: string;
@@ -36,7 +36,7 @@ export function HorizontalBarChart({ title, items, emptyHint, valueSuffix }: Pro
     return (
       <div className="birzha-chart-card-inner" role="region" aria-label={title}>
         {title ? <h4 className="birzha-chart-card-inner__title">{title}</h4> : null}
-        <p style={{ ...muted, margin: 0, fontSize: "0.88rem" }}>{emptyHint ?? "Нет данных для диаграммы."}</p>
+        <BirzhaEmptyState compact title="Нет данных для диаграммы" description={emptyHint ?? "Добавьте операции или измените фильтр."} />
       </div>
     );
   }

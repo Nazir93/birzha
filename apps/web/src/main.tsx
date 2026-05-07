@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -6,31 +6,25 @@ import { registerSW } from "virtual:pwa-register";
 
 import { AuthProvider } from "./auth/auth-context.js";
 import { App } from "./App";
+import { createWebQueryClient } from "./query/create-web-query-client.js";
+import { MutationErrorBanner } from "./query/MutationErrorBanner.js";
+import { AppErrorBoundary } from "./ui/AppErrorBoundary.js";
 
 import "./index.css";
-import { QUERY_GC_MS, QUERY_STALE_LISTS_MS } from "./query/query-defaults.js";
 
 registerSW({ immediate: true });
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      /** Списки и отчёты в интерфейсе не обязаны опрашивать API каждые секунды — см. `query/query-defaults.ts`. */
-      staleTime: QUERY_STALE_LISTS_MS,
-      gcTime: QUERY_GC_MS,
-      /** Иначе при Alt+Tab каждый раз полный refetch активных запросов — ощущение «тормозов». */
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+const queryClient = createWebQueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <MutationErrorBanner />
       <AuthProvider>
         <BrowserRouter>
-          <App />
+          <AppErrorBoundary>
+            <App />
+          </AppErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

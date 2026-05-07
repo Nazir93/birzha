@@ -7,15 +7,21 @@ import { useAuth } from "../auth/auth-context.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
-import { aggregateTripBatchRows, buildTripBatchRows } from "../format/trip-report-rows.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import {
+  aggregateSellerShipmentReports,
+  clientSalePaymentLabelRu,
+  tripLedgerMetrics,
+} from "../format/seller-trip-metrics.js";
 import {
   batchesFullListQueryOptions,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { fieldStyle, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -27,19 +33,6 @@ function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; sco
     return false;
   }
   return user.roles.some((r) => r.roleCode === role && r.scopeType === "global" && r.scopeId === "");
-}
-
-function tripMetrics(r: ShipmentReportResponse) {
-  const agg = aggregateTripBatchRows(buildTripBatchRows(r));
-  return {
-    shippedKg: agg.shippedG,
-    soldKg: agg.soldG,
-    shortageKg: agg.shortageG,
-    netTransitKg: agg.netTransitG,
-    revenueK: agg.revenueK,
-    cashK: agg.cashK,
-    debtK: agg.debtK,
-  };
 }
 
 export function AssignSellerPanel() {
@@ -137,25 +130,7 @@ export function AssignSellerPanel() {
     return m;
   }, [batchesQuery.data?.batches]);
 
-  const sellerTotals = useMemo(() => {
-    let shipped = 0n;
-    let sold = 0n;
-    let shortage = 0n;
-    let netTransit = 0n;
-    let revenue = 0n;
-    let cash = 0n;
-    let debt = 0n;
-    for (const r of loadedReports) {
-      shipped += BigInt(r.shipment.totalGrams);
-      sold += BigInt(r.sales.totalGrams);
-      shortage += BigInt(r.shortage.totalGrams);
-      revenue += BigInt(r.sales.totalRevenueKopecks);
-      cash += BigInt(r.sales.totalCashKopecks);
-      debt += BigInt(r.sales.totalDebtKopecks);
-      netTransit += tripMetrics(r).netTransitKg;
-    }
-    return { shipped, sold, shortage, netTransit, revenue, cash, debt };
-  }, [loadedReports]);
+  const sellerTotals = useMemo(() => aggregateSellerShipmentReports(loadedReports), [loadedReports]);
 
   const tripRows = useMemo(() => {
     return selectedSellerTrips.map((t) => {
@@ -163,7 +138,7 @@ export function AssignSellerPanel() {
       if (!r) {
         return { trip: t, report: undefined as ShipmentReportResponse | undefined, metrics: null };
       }
-      return { trip: t, report: r, metrics: tripMetrics(r) };
+      return { trip: t, report: r, metrics: tripLedgerMetrics(r) };
     });
   }, [reportByTripId, selectedSellerTrips]);
 
@@ -209,7 +184,7 @@ export function AssignSellerPanel() {
       </header>
 
       {!assignSellerUserId ? (
-        <p style={muted}>Выберите продавца.</p>
+        <BirzhaEmptyState compact title="Выберите продавца" description="Сводка появится после выбора в поле выше." />
       ) : (
         <>
           <p className="birzha-assign-seller__seller-line">
@@ -219,7 +194,9 @@ export function AssignSellerPanel() {
             </span>
           </p>
 
-          {reportLoading ? <LoadingBlock label="Загрузка отчётов по рейсам…" minHeight={72} /> : null}
+          {reportLoading ? (
+            <LoadingBlock label="Загрузка отчётов по рейсам…" minHeight={72} skeleton skeletonRows={5} />
+          ) : null}
           {reportError ? (
             <p role="alert" className="birzha-assign-seller__alert">
               Не удалось загрузить часть отчётов. Обновите страницу.
@@ -227,7 +204,13 @@ export function AssignSellerPanel() {
           ) : null}
 
           {!reportLoading && loadedReports.length > 0 ? (
-            <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
+            <BirzhaDisclosure
+              nested
+              defaultOpen
+              title={<span style={{ fontWeight: 600 }}>Итого по продавцу</span>}
+              hint="кг · ₽"
+            >
+              <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
               <div className="birzha-assign-seller__kpi-card">
                 <span className="birzha-assign-seller__kpi-label">Отгружено</span>
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.shipped.toString())} кг</span>
@@ -256,17 +239,32 @@ export function AssignSellerPanel() {
                 <span className="birzha-assign-seller__kpi-label">В долг</span>
                 <span className="birzha-assign-seller__kpi-value">{kopecksToRubLabel(sellerTotals.debt.toString())} ₽</span>
               </div>
-            </section>
+              </section>
+            </BirzhaDisclosure>
           ) : null}
 
-          <section className="birzha-assign-seller__trips-section" aria-labelledby="assign-seller-trips-h">
-            <h3 id="assign-seller-trips-h" className="birzha-assign-seller__section-title">
-              Рейсы
-            </h3>
+          <BirzhaDisclosure
+            nested
+            defaultOpen
+            title={
+              <h3 id="assign-seller-trips-h" className="birzha-assign-seller__section-title" style={{ margin: 0 }}>
+                Рейсы
+              </h3>
+            }
+            hint={
+              selectedSellerTrips.length === 0
+                ? "нет закреплённых"
+                : `${selectedSellerTrips.length.toLocaleString("ru-RU")} шт.`
+            }
+          >
             {selectedSellerTrips.length === 0 ? (
-              <p style={{ ...muted, marginTop: 0 }}>Нет закреплённых рейсов — назначьте в «Отгрузка».</p>
+              <BirzhaEmptyState
+                compact
+                title="Нет закреплённых рейсов"
+                description="Назначьте рейс продавцу в разделе «Отгрузка»."
+              />
             ) : (
-              <div className="birzha-assign-seller__trip-table-wrap">
+              <div className="birzha-assign-seller__trip-table-wrap birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-assign-seller__trip-table" style={tableStyle}>
                   <thead>
                     <tr>
@@ -341,12 +339,15 @@ export function AssignSellerPanel() {
                 </table>
               </div>
             )}
-          </section>
+          </BirzhaDisclosure>
 
           {activeReport ? (
-            <section className="birzha-assign-seller__detail" aria-label="Детали выбранного рейса">
-              <div className="birzha-assign-seller__detail-head">
-                <h3 className="birzha-assign-seller__detail-title">
+            <BirzhaDisclosure
+              nested
+              defaultOpen
+              className="birzha-assign-seller__detail"
+              title={
+                <h3 className="birzha-assign-seller__detail-title" style={{ margin: 0 }}>
                   Рейс {activeReport.trip.tripNumber}
                   <span
                     className={
@@ -358,16 +359,18 @@ export function AssignSellerPanel() {
                     {formatTripStatusLabel(activeReport.trip.status)}
                   </span>
                 </h3>
-                <p className="birzha-assign-seller__detail-note">
-                  Наличные и долг — по данным продаж в этом рейсе. Отдельный учёт погашения долга после продажи в интерфейсе не
-                  отображается.
-                </p>
-              </div>
+              }
+              hint={formatTripSelectLabel(activeReport.trip)}
+            >
+              <p className="birzha-assign-seller__detail-note">
+                Наличные и долг — по данным продаж в этом рейсе. Отдельный учёт погашения долга после продажи в интерфейсе не
+                отображается.
+              </p>
 
               <div className="birzha-assign-seller__detail-grid">
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По партиям (накладная · калибр)</h4>
-                  <div className="birzha-table-scroll">
+                  <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                     <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Продажи по партиям">
                       <thead>
                         <tr>
@@ -433,9 +436,13 @@ export function AssignSellerPanel() {
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По клиентам (наличные / долг)</h4>
                   {activeReport.sales.byClient.length === 0 ? (
-                    <p style={{ ...muted, margin: 0 }}>Разбивки по клиентам нет — только сводные продажи.</p>
+                    <BirzhaEmptyState
+                      compact
+                      title="Разбивки по клиентам нет"
+                      description="Есть только сводные продажи по рейсу."
+                    />
                   ) : (
-                    <div className="birzha-table-scroll">
+                    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                       <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Продажи по клиентам">
                         <thead>
                           <tr>
@@ -464,14 +471,7 @@ export function AssignSellerPanel() {
                             const debtK = BigInt(row.debtKopecks || "0");
                             const cashK = BigInt(row.cashKopecks || "0");
                             const label = row.clientLabel?.trim() || "—";
-                            let payKind = "Смешанно";
-                            if (debtK === 0n && cashK > 0n) {
-                              payKind = "Наличные";
-                            } else if (cashK === 0n && debtK > 0n) {
-                              payKind = "В долг";
-                            } else if (cashK === 0n && debtK === 0n) {
-                              payKind = "—";
-                            }
+                            const payKind = clientSalePaymentLabelRu(cashK, debtK);
                             return (
                               <tr key={`${label}-${idx}`}>
                                 <td style={thtd}>{label}</td>
@@ -487,7 +487,7 @@ export function AssignSellerPanel() {
                                 >
                                   {debtK > 0n ? `${kopecksToRubLabel(row.debtKopecks)} ₽` : "—"}
                                 </td>
-                                <td style={{ ...thtd, fontSize: "0.88rem" }}>{payKind}</td>
+                                <td className="birzha-ui-sm" style={thtd}>{payKind}</td>
                               </tr>
                             );
                           })}
@@ -497,9 +497,9 @@ export function AssignSellerPanel() {
                   )}
                 </div>
               </div>
-            </section>
+            </BirzhaDisclosure>
           ) : assignSellerUserId && selectedSellerTrips.length > 0 && !reportLoading ? (
-            <p style={muted}>Нет данных отчёта для выбранного рейса.</p>
+            <BirzhaEmptyState compact title="Нет данных отчёта" description="Для выбранного рейса отчёт не загрузился или пуст." />
           ) : null}
         </>
       )}

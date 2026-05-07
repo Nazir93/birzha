@@ -6,7 +6,7 @@ import { batchesFullListQueryOptions, warehousesFullListQueryOptions } from "../
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 /** Копейки: кг × руб/кг с округлением по строке партии. */
 function inventoryValueKopecks(batches: readonly BatchListItem[], kgOf: (b: BatchListItem) => number): bigint {
@@ -94,7 +94,7 @@ export function AccountingStockBalances() {
   }, [batchesQ.data?.batches, whQ.data?.warehouses]);
 
   if (batchesQ.isPending) {
-    return <LoadingBlock label="Загрузка остатков…" minHeight={72} />;
+    return <LoadingBlock label="Загрузка остатков…" minHeight={72} skeleton skeletonRows={6} />;
   }
   if (batchesQ.isError) {
     return (
@@ -140,8 +140,8 @@ export function AccountingStockBalances() {
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
         </div>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ ...tableStyle, minWidth: 560, fontSize: "0.88rem" }} aria-label="Остатки по складам">
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+        <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Остатки по складам">
           <thead>
             <tr>
               <th scope="col" style={thHead}>
@@ -183,7 +183,7 @@ export function AccountingStockBalances() {
         </table>
       </div>
       {whQ.isError && (
-        <p style={{ ...muted, marginTop: "0.5rem", fontSize: "0.82rem" }} role="status">
+        <p className="birzha-callout-warning" role="status" style={{ marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
           Справочник складов не загрузился — в первой колонке показаны id.
         </p>
       )}

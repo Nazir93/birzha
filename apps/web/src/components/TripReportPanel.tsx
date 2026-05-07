@@ -23,13 +23,13 @@ import {
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
   btnSecondary,
   btnStyle,
   errorText,
   fieldStyleFullWidth,
-  muted,
   preJson,
   tableStyle,
   thHead,
@@ -191,18 +191,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       <h2 id="trip-report-heading" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
         {headingByContext[viewContext]}
       </h2>
-      <p className="no-print" style={muted}>
-        {introByContext[viewContext]}
-      </p>
+      <p className="no-print birzha-callout-info">{introByContext[viewContext]}</p>
       {isFieldSellerOnly(user) && viewContext === "sales" ? (
-        <p className="no-print" style={{ ...muted, marginTop: "0.35rem" }}>
+        <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
           Только закреплённые за вами рейсы.
         </p>
       ) : null}
 
       {tripsQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
-          <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} />
+          <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={5} />
         </div>
       )}
       {tripsQuery.isError && (
@@ -212,14 +210,18 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       )}
 
       {tripsQuery.data && sortedTrips.length === 0 && (
-        <p className="no-print" style={{ ...muted, marginTop: "0.5rem" }}>
-          {emptyTextByContext[viewContext]}
-        </p>
+        <div className="no-print" style={{ marginTop: "0.5rem" }}>
+          <BirzhaEmptyState compact title="Нет рейсов" description={emptyTextByContext[viewContext]} />
+        </div>
       )}
 
       {sortedTrips.length > 0 && (
         <div className="no-print" style={{ marginTop: "0.75rem" }}>
-          <label htmlFor="trip-select" style={{ ...muted, display: "block", marginBottom: "0.35rem" }}>
+          <label
+            htmlFor="trip-select"
+            className="birzha-text-muted birzha-text-muted--lg"
+            style={{ display: "block", marginBottom: "0.35rem" }}
+          >
             Выберите рейс
           </label>
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
@@ -234,7 +236,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             })}
           </select>
           {canTripWrite && (
-            <p style={{ ...muted, marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
+            <p className="birzha-callout-info" style={{ marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
               Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны
               права логиста, менеджера или администратора.
             </p>
@@ -270,7 +272,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
       {tripId && reportQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.75rem", marginBottom: 0 }} role="status" aria-live="polite">
-          <LoadingBlock label="Загрузка отчёта по рейсу (shipment-report)…" minHeight={72} />
+          <LoadingBlock label="Загрузка отчёта по рейсу (shipment-report)…" minHeight={72} skeleton skeletonRows={6} />
         </div>
       )}
       {tripId && reportQuery.isFetching && !reportQuery.isPending && (
@@ -308,7 +310,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               Печать
             </button>
             {(r.trip.vehicleLabel || r.trip.driverName || r.trip.departedAt) && (
-              <span style={{ width: "100%", fontSize: "0.88rem", lineHeight: 1.45, margin: "0.25rem 0 0" }}>
+              <span className="birzha-ui-sm" style={{ width: "100%", lineHeight: 1.45, margin: "0.25rem 0 0" }}>
                 {r.trip.vehicleLabel ? `ТС: ${r.trip.vehicleLabel}` : null}
                 {r.trip.vehicleLabel && (r.trip.driverName || r.trip.departedAt) ? " · " : null}
                 {r.trip.driverName ? `Водитель: ${r.trip.driverName}` : null}
@@ -326,36 +328,38 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </h3>
             }
           >
-          <table style={tableStyle} aria-labelledby="trip-report-masses">
-            <thead>
-              <tr>
-                <th scope="col" style={thHead}>
-                  Показатель
-                </th>
-                <th scope="col" style={thHead}>
-                  Всего
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={thtd}>Отгрузка в рейс</td>
-                <td style={thtd}>{gramsToKgLabel(r.shipment.totalGrams)} кг</td>
-              </tr>
-              <tr>
-                <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
-                <td style={thtd}>{r.shipment.totalPackageCount}</td>
-              </tr>
-              <tr>
-                <td style={thtd}>Продажи</td>
-                <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
-              </tr>
-              <tr>
-                <td style={thtd}>Недостача (фикс.)</td>
-                <td style={thtd}>{gramsToKgLabel(r.shortage.totalGrams)} кг</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+            <table style={tableStyle} aria-labelledby="trip-report-masses">
+              <thead>
+                <tr>
+                  <th scope="col" style={thHead}>
+                    Показатель
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Всего
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={thtd}>Отгрузка в рейс</td>
+                  <td style={thtd}>{gramsToKgLabel(r.shipment.totalGrams)} кг</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
+                  <td style={thtd}>{r.shipment.totalPackageCount}</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Продажи</td>
+                  <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Недостача (фикс.)</td>
+                  <td style={thtd}>{gramsToKgLabel(r.shortage.totalGrams)} кг</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           </BirzhaDisclosure>
 
           <BirzhaDisclosure
@@ -366,46 +370,48 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </h3>
             }
           >
-          <table style={tableStyle} aria-labelledby="trip-report-money">
-            <thead>
-              <tr>
-                <th scope="col" style={thHead}>
-                  Показатель
-                </th>
-                <th scope="col" style={thHead}>
-                  Сумма
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={thtd}>Выручка</td>
-                <td style={thtd}>{kopecksToRubLabel(r.financials.revenueKopecks)} ₽</td>
-              </tr>
-              <tr>
-                <td style={thtd}>Себестоимость проданного</td>
-                <td style={thtd}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)} ₽</td>
-              </tr>
-              <tr>
-                <td style={thtd}>Себестоимость недостачи</td>
-                <td style={thtd}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)} ₽</td>
-              </tr>
-              <tr>
-                <td style={thtd}>
-                  <strong>Валовая прибыль</strong>
-                </td>
-                <td style={thtd}>
-                  <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
-                </td>
-              </tr>
-              <tr>
-                <td style={thtd}>Выручка: нал / долг</td>
-                <td style={thtd}>
-                  {kopecksToRubLabel(r.sales.totalCashKopecks)} ₽ / {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+            <table style={tableStyle} aria-labelledby="trip-report-money">
+              <thead>
+                <tr>
+                  <th scope="col" style={thHead}>
+                    Показатель
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Сумма
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={thtd}>Выручка</td>
+                  <td style={thtd}>{kopecksToRubLabel(r.financials.revenueKopecks)} ₽</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Себестоимость проданного</td>
+                  <td style={thtd}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)} ₽</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Себестоимость недостачи</td>
+                  <td style={thtd}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)} ₽</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>
+                    <strong>Валовая прибыль</strong>
+                  </td>
+                  <td style={thtd}>
+                    <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Выручка: нал / долг</td>
+                  <td style={thtd}>
+                    {kopecksToRubLabel(r.sales.totalCashKopecks)} ₽ / {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           </BirzhaDisclosure>
 
           {r.sales.byClient.length > 0 && (
@@ -417,7 +423,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </h3>
               }
             >
-              <div style={{ overflowX: "auto" }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table style={tableStyle} aria-labelledby="trip-report-clients">
                   <thead>
                     <tr>
@@ -473,7 +479,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </button>
               )}
             </div>
-          <p className="no-print" style={{ ...muted, margin: "0 0 0.35rem" }}>
+          <p className="no-print birzha-callout-info" style={{ margin: "0 0 0.35rem" }}>
             Остаток в пути = отгружено − продано − недостача.
           </p>
           {reconciliationIssues.length > 0 && (
@@ -483,9 +489,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </p>
           )}
           {batchRows.length === 0 ? (
-            <p style={{ ...muted, margin: 0 }}>Нет строк в разбивке по партиям — по этому рейсу ещё нет операций.</p>
+            <BirzhaEmptyState
+              compact
+              title="Нет строк по партиям"
+              description="По этому рейсу ещё нет операций в разбивке."
+            />
           ) : (
-            <div style={{ overflowX: "auto" }}>
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={tableStyle} aria-labelledby="trip-report-batches">
                 <thead>
                   <tr>
@@ -566,18 +576,22 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           )}
           </BirzhaDisclosure>
 
-          <details className="no-print" style={{ marginTop: "0.75rem" }}>
-            <summary className="birzha-text-subtle" style={{ cursor: "pointer" }}>
-              Сырой JSON отчёта
-            </summary>
-            <pre
-              style={{ ...preJson, marginTop: "0.5rem", fontSize: "0.8rem" }}
-              tabIndex={0}
-              aria-label="Полный JSON отчёта по рейсу"
+          <div className="no-print" style={{ marginTop: "0.75rem" }}>
+            <BirzhaDisclosure
+              nested
+              defaultOpen={false}
+              title={<span className="birzha-text-subtle">Сырой JSON отчёта</span>}
+              hint="отладка"
             >
-              {JSON.stringify(r, null, 2)}
-            </pre>
-          </details>
+              <pre
+                style={{ ...preJson, marginTop: "0.5rem", fontSize: "0.8rem" }}
+                tabIndex={0}
+                aria-label="Полный JSON отчёта по рейсу"
+              >
+                {JSON.stringify(r, null, 2)}
+              </pre>
+            </BirzhaDisclosure>
+          </div>
         </div>
       )}
     </div>

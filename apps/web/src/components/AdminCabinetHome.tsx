@@ -17,7 +17,7 @@ import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/Horizon
 import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, muted, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function MassDistributionRing({
   warehouseKg,
@@ -186,7 +186,7 @@ export function AdminCabinetHome() {
     <div className="birzha-admin-dash">
       <h2 className="birzha-sr-only">Сводка</h2>
 
-      {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} />}
+      {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} skeleton skeletonRows={5} />}
       {err && (
         <p role="alert" style={errorText}>
           Часть данных не загрузилась. Проверьте API.
@@ -316,7 +316,7 @@ export function AdminCabinetHome() {
             </div>
 
             {(pdErr || cpErr) && (
-              <p role="status" style={{ ...muted, margin: 0 }}>
+              <p role="status" className="birzha-callout-warning" style={{ margin: 0 }}>
                 {pdErr ? "Список накладных закупки не подгрузился — проверьте API." : null}
                 {pdErr && cpErr ? " " : ""}
                 {cpErr ? "Справочник контрагентов не подгрузился — проверьте API." : null}
@@ -355,7 +355,7 @@ export function AdminCabinetHome() {
 
             <BirzhaDisclosure title="Рейсы" hint="последние, отчёт" defaultOpen>
             <div className="birzha-admin-dash__trips">
-              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Последние рейсы">
                   <thead>
                     <tr>
@@ -380,7 +380,7 @@ export function AdminCabinetHome() {
                           <strong>{t.tripNumber}</strong>
                         </th>
                         <td style={thtd}>{formatTripStatusLabel(t.status)}</td>
-                        <td style={{ ...thtd, fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
+                        <td className="birzha-text-muted birzha-text-muted--lg" style={thtd}>
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
                         <td style={{ ...thtd, textAlign: "right" }}>
