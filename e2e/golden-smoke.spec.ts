@@ -480,6 +480,16 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByLabel("Технический результат последней синхронизации, JSON")).toContainText('"processed": 1');
   });
 
+  test("распределение: регион загрузки и legacy /distribution → /o/distribution", async ({ page }) => {
+    await page.goto("/o/distribution");
+    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Распределение товара" })).toBeVisible();
+
+    await page.goto("/distribution");
+    await expect(page).toHaveURL(/\/o\/distribution$/);
+    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
+  });
+
   test("операции: панель и таблица партий (GET /api/batches)", async ({ page, request }) => {
     const suffix = `${Date.now()}`;
     const batchId = `e2e-ops-b-${suffix}`;
@@ -506,13 +516,11 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible();
     await expect(page.locator("#op-batches-heading")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Партии по накладным", { exact: false })).toBeVisible();
-    /** Блок «Партии по накладным» показывает только строки с документом закупки; сырой POST /batches без накладной — подсказка «нет привязанных». */
-    await expect(
-      page.getByText("Нет партий, привязанных к оформленной накладной", { exact: false }),
-    ).toBeVisible();
+    /** Блок «Партии по накладным» только для партий с оформленной накладной; сырой POST /batches без накладной — пустое состояние. */
+    await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible();
   });
 
-  test("навигация: вкладки AppNav (закупка товара → операции → офлайн → диагностика по URL → отчёты)", async ({ page }) => {
+  test("навигация: вкладки AppNav (закупка → распределение → операции → офлайн → диагностика → отчёты)", async ({ page }) => {
     await page.goto("/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -520,6 +528,10 @@ test.describe("золотой smoke (UI + API)", () => {
     await nav.getByRole("link", { name: "Закупка товара" }).click();
     await expect(page).toHaveURL(/\/purchase-nakladnaya$/);
     await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
+
+    await nav.getByRole("link", { name: "Распределение товара" }).click();
+    await expect(page).toHaveURL(/\/o\/distribution$/);
+    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Операции" }).click();
     await expect(page).toHaveURL(/\/operations$/);

@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
 import { apiFetch, apiGetJson } from "../api/fetch-api.js";
 import type {
@@ -48,6 +48,8 @@ export const tripsFullListQueryOptions = () =>
     queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
     staleTime: QUERY_STALE_LISTS_MS,
     retry: 1,
+    /** Меньше «мигания» таблиц при invalidate после мутаций (Operations, отчёт, распределение). */
+    placeholderData: keepPreviousData,
   });
 
 /** Список полевых продавцов для назначения на рейс: `GET /api/trips/field-seller-options`. */
@@ -101,6 +103,7 @@ export const batchesFullListQueryOptions = () =>
     queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
     staleTime: QUERY_STALE_LISTS_MS,
     retry: 1,
+    placeholderData: keepPreviousData,
   });
 
 /** Выборка партий по id: `GET /api/batches?ids=`. */
