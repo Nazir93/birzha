@@ -14,11 +14,18 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
-      registerType: "autoUpdate",
+      /** Баннер «Доступна новая версия» через `useRegisterSW` (`PwaUpdateBanner`). */
+      registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["pwa-icon.svg"],
+      includeAssets: [
+        "pwa-icon.svg",
+        "pwa-192.png",
+        "pwa-512.png",
+        "pwa-maskable-512.png",
+        "apple-touch-icon.png",
+      ],
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,html,ico,svg,png,woff2}"],
       },
       manifest: {
         name: "Биржа",
@@ -32,6 +39,24 @@ export default defineConfig({
         start_url: pwaStartUrl,
         scope: "/",
         icons: [
+          {
+            src: "/pwa-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
           {
             src: "/pwa-icon.svg",
             sizes: "any",

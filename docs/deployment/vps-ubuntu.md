@@ -255,6 +255,8 @@ sudo systemctl restart birzha-api
 
 ### 10.2. PWA для полевых продавцов (`/s`)
 
+Иконки PNG для манифеста и **apple-touch-icon** генерируются из **`apps/web/public/pwa-icon.svg`** при сборке (`prebuild`: `pnpm icons:pwa` в пакете `@birzha/web`). Нужен **`sharp`** (devDependency в `apps/web`).
+
 Один билд фронта; при сборке задайте стартовый URL установки PWA на кабинет продаж:
 
 ```bash
@@ -264,6 +266,8 @@ pnpm exec turbo run build --force
 ```
 
 Подробнее — комментарий в `apps/web/vite.config.ts`. После установки ярлык открывает `/s` (дашборд продаж); офлайн-очередь — раздел «Офлайн» в том же кабинете.
+
+После нового деплоя пользователям может показаться баннер **«Доступна новая версия»** — это режим **`registerType: prompt`** и компонент **`PwaUpdateBanner`** (обновление service worker по кнопке).
 
 ### 10.3. Проверка PWA на **https://24birzha.ru/**
 

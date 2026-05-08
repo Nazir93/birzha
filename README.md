@@ -29,7 +29,7 @@ TypeScript, раздельные API и клиент, **PWA**, **PostgreSQL**.
 | Тесты | **Vitest** |
 | Интеграции без native SQLite на Windows | **sql.js** (`packages/domain`) |
 | Клиент | **Vite + React** + TanStack Query + React Router; Zod на формах; стили `apps/web/src/ui/styles.ts`, `index.css` |
-| PWA / офлайн | Workbox (Vite PWA) + **IndexedDB** outbox (`apps/web/src/sync`) |
+| PWA / офлайн | Workbox (Vite PWA) + **IndexedDB** outbox (`apps/web/src/sync`); PNG-иконки из `pwa-icon.svg` при сборке (`sharp`), баннер обновления версии (**`PwaUpdateBanner`**, `registerType: prompt`) |
 | Монорепо | **pnpm** + **Turbo** — `packages/domain`, `packages/contracts`, `apps/api`, `apps/web` |
 
 Next.js по умолчанию не используем. Подробности офлайна: `docs/architecture/offline/offline-sync.md`, `.cursor/rules/02-offline-sync.mdc`.
