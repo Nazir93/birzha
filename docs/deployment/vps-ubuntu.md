@@ -269,7 +269,7 @@ pnpm exec turbo run build --force
 
 1. **Только HTTPS** (или `localhost` в dev): иначе браузер не регистрирует service worker на обычном HTTP.
 2. Статика из **`apps/web/dist`** должна отдаваться с корня сайта — там лежат **`index.html`**, **`sw.js`**, **`manifest.webmanifest`**. Убедитесь, что **`location /`** использует `try_files` как в §8 (не отдавайте SPA вместо реальных файлов из‑за неверного порядка `location`).
-3. В браузере: **Инструменты разработчика → Application** (Chrome): вкладки **Manifest** и **Service Workers** — worker в состоянии *activated*, без ошибок в консоли.
+3. В браузере: **Инструменты разработчика → Application** (Chrome): вкладки **Manifest** и **Service Workers** — worker в состоянии *activated* (активен), без ошибок в консоли.
 4. Прямые URL после сборки: **`https://24birzha.ru/manifest.webmanifest`**, **`https://24birzha.ru/sw.js`** — ответ **200** (не HTML-заглушка приложения).
 5. Установка «на экран»: меню браузера «Установить приложение» / ярлык на рабочий стол; после установки стартовая страница — **`start_url`** из манифеста (`/` по умолчанию или **`/s`** если собирали с **`VITE_PWA_START_URL=/s`**).
 
