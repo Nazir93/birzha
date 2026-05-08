@@ -13,7 +13,7 @@
 | Термины, глоссарий | `docs/architecture/business-glossary.md` |
 | Офлайн / sync | `docs/architecture/offline/offline-sync.md` |
 | Сценарии полей/форм (заказчик) | `docs/guides/dlya-zakazchika-zapolnenie.md` |
-| Деплой, VPS, nginx, пользователь | `docs/deployment/vps-ubuntu.md`, `docs/deployment/runbook.md` |
+| Деплой, VPS, nginx, домен продакшена (**24birzha.ru**) | `docs/deployment/vps-ubuntu.md`, `docs/deployment/runbook.md`, `deploy/nginx-birzha.example.conf` |
 | Эскиз ER, таблицы, единицы | `docs/architecture/data-model/` (er-model, table-catalog, units) |
 | Золотой сценарий теста | `docs/testing/golden-scenario.md` |
 | **Правила кода** | `.cursor/rules/*.mdc` (в т.ч. `00-master.mdc`, `07-…` для граничных ролей/долгов) |

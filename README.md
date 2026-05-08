@@ -113,13 +113,13 @@ pnpm e2e
 
 ### Продакшен и хостинг
 
-**Сейчас:** исходники в **GitHub**; **отдельный сервер под продукт не куплен и не развёрнут** — нет публичного прод-API и прод-базы в этом репозитории как готовой инфраструктуры.
+**Публичный сайт (продакшен):** **https://24birzha.ru/** — фронт и API за одним доменом (статика из `apps/web/dist`, запросы **`/api/...`** через nginx на процесс API на `127.0.0.1`). Исходники — в **GitHub** ([github.com/Nazir93/birzha](https://github.com/Nazir93/birzha)).
 
-**CI на GitHub** — это проверки на машинах GitHub при push/PR, не замена вашего хостинга.
+**CI на GitHub** — проверки при push/PR (не хостинг).
 
-**Локальная разработка:** `pnpm dev:api` / `pnpm dev:web`, при необходимости PostgreSQL на машине (см. раздел **API и база**).
+**Локальная разработка:** `pnpm dev:api` / `pnpm dev:web`, при необходимости PostgreSQL (см. **API и база**).
 
-**Когда появится сервер** — пошаговый чеклист для Ubuntu/VPS: **`docs/deployment/vps-ubuntu.md`**; краткий порядок шагов — **`docs/deployment/runbook.md`**; пример **nginx** без секретов — **`deploy/nginx-birzha.example.conf`**. Обновления из Git на сервере: **вручную, командами** в **`deploy/README.md`** (там же — опционально `deploy/server-update.sh` и GitHub Actions **Deploy to server**). Нужны PostgreSQL, переменные окружения (`DATABASE_URL`, `JWT_SECRET` и т.д.), процесс запуска `apps/api` (например systemd), раздача статики из `apps/web/dist` и обратный прокси для `/api`, HTTPS, резервное копирование БД.
+**Развёртывание на VPS:** пошагово **`docs/deployment/vps-ubuntu.md`** (домен **24birzha.ru**, TLS, nginx); кратко **`docs/deployment/runbook.md`**; пример **nginx** — **`deploy/nginx-birzha.example.conf`**. Обновления кода на сервере: **`deploy/README.md`** (опционально `deploy/server-update.sh`, workflow **Deploy to server**). Нужны PostgreSQL, **`apps/api/.env`** (`DATABASE_URL`, `JWT_SECRET`, …), **systemd** для API, **HTTPS** (cookie входа в prod с флагом **Secure**).
 
 ### API и база
 

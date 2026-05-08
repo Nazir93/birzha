@@ -1,5 +1,7 @@
 # Деплой: Git → сервер
 
+**Публичный URL после настройки nginx и TLS:** **https://24birzha.ru/** (см. **`docs/deployment/vps-ubuntu.md`**).
+
 ## На VPS (ручной цикл)
 
 1. Один раз: клонировать репозиторий (см. **`docs/deployment/vps-ubuntu.md`**), настроить `apps/api/.env`, PostgreSQL, **nginx**, **systemd** (`docs/deployment/runbook.md`).
@@ -53,7 +55,7 @@ curl -fsS http://127.0.0.1:3000/health
 
 | Secret | Назначение |
 |--------|------------|
-| `BIRZHA_DEPLOY_HOST` | IP или hostname VPS |
+| `BIRZHA_DEPLOY_HOST` | IP или hostname VPS (можно **`24birzha.ru`**, если SSH слушает по имени) |
 | `BIRZHA_DEPLOY_USER` | SSH-пользователь (например `deploy`) |
 | `BIRZHA_SSH_PRIVATE_KEY` | Приватный ключ (весь PEM), пароль к ключу не поддерживается в workflow |
 | `BIRZHA_DEPLOY_PATH` (опц.) | Каталог клона, по умолчанию `/opt/birzha` |

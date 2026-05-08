@@ -2,6 +2,18 @@
 
 Пошаговый чеклист без секретов в репозитории. Секреты (`JWT_SECRET`, пароль БД, пароль root) храните только на сервере и в менеджере паролей.
 
+## Домен и HTTPS (продакшен)
+
+**Канонический URL:** **https://24birzha.ru/**
+
+Клиент (Vite/PWA) не содержит абсолютного хоста в коде: запросы идут на **тот же origin**, пути **`/api/...`** — их nginx проксирует на Fastify на `127.0.0.1` (см. §8). На сервере нужно:
+
+1. **DNS:** запись **A** (и при IPv6 — **AAAA**) для `24birzha.ru` на IP VPS.
+2. **nginx:** `server_name` и `root` как в примерах ниже; API только за reverse proxy.
+3. **TLS:** например **Let's Encrypt** через certbot (§9). В production cookie **`birzha_access`** выставляется с **`Secure`** — сайт должен открываться по **HTTPS**, иначе браузер может не сохранять cookie для входа.
+
+Если используете только apex без **www**, не обязательно добавлять `www` в DNS; при необходимости настройте редирект `www` → `24birzha.ru` отдельно.
+
 ## 0. Безопасность до и после первого входа
 
 1. **Смените пароль root**, если он когда-либо попадал в чат, почту или скриншот.
@@ -165,12 +177,12 @@ sudo systemctl status birzha-api
 
 Фронт в браузере обращается к **`/api/...`**. Прокси должен **убирать префикс** `/api` и передавать на API пути вида `/trips`, `/meta` (как в dev-прокси Vite).
 
-Пример сервера (замените `your.domain`):
+Пример сервера для **24birzha.ru** (до выпуска сертификата — HTTP на порту 80; после **`certbot --nginx`** certbot обычно добавляет блок `listen 443 ssl` и редирект с 80 на HTTPS):
 
 ```nginx
 server {
     listen 80;
-    server_name your.domain;
+    server_name 24birzha.ru;
 
     root /opt/birzha/apps/web/dist;
     index index.html;
@@ -199,8 +211,10 @@ sudo nginx -t && sudo systemctl reload nginx
 ## 9. HTTPS (Let’s Encrypt)
 
 ```bash
-sudo certbot --nginx -d your.domain
+sudo certbot --nginx -d 24birzha.ru
 ```
+
+Если в DNS настроен и **`www`**, добавьте второй домен: `sudo certbot --nginx -d 24birzha.ru -d www.24birzha.ru`.
 
 ## 10. Обновление приложения
 
@@ -219,6 +233,8 @@ curl -fsS http://127.0.0.1:3000/health
 ```
 
 Проверка, что поднялся **новый** API (после релизов с новыми полями в `/meta`): `curl -sS http://127.0.0.1:3000/meta` — в JSON должны быть в том числе **`adminUsersApi`** и **`requireApiAuth`**. Если полей нет, чаще всего **не пересобрали** `apps/api` (`pnpm exec turbo run build --force --filter=@birzha/api`) или unit systemd указывает на другой каталог/старый `dist`.
+
+Проверка **через домен** (после nginx и TLS): `curl -fsS https://24birzha.ru/api/health` — должен ответить JSON как **`GET /health`** на API (префикс **`/api`** на сайте снимает nginx).
 
 Если **`git pull`** ругается на локальный **`deploy/server-update.sh`** (часто это только смена режима **`chmod +x`**): `git restore deploy/server-update.sh` и снова pull, либо один раз **`git config core.filemode false`** в клоне на сервере.
 

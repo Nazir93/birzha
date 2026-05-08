@@ -51,7 +51,7 @@ BIRZHA_CREATE_USER_PASSWORD='ВАШ_ПАРОЛЬ' pnpm create-user -- --login В
 ## 6. Доступ и HTTPS
 
 - Файрвол: SSH, HTTP/HTTPS.
-- С доменом: **`certbot --nginx -d домен`**.
+- Домен продакшена: **https://24birzha.ru/** — после DNS на VPS: **`sudo certbot --nginx -d 24birzha.ru`** (при необходимости добавьте `-d www.24birzha.ru`).
 
 ## 7. Обновление
 

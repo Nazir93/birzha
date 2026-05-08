@@ -3,6 +3,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite";
 
 const apiProxyTarget = `http://127.0.0.1:${process.env.E2E_API_PORT ?? "3000"}`;
+/** Продакшен: один origin (напр. https://24birzha.ru), запросы `/api` на том же хосте проксирует nginx — см. docs/deployment/vps-ubuntu.md. */
 /** Старт PWA из манифеста. По умолчанию `/` (дальше редирект по роли). Для продавца: `VITE_PWA_START_URL=/s` при `vite build`. */
 const pwaStartUrl = process.env.VITE_PWA_START_URL?.trim() || "/";
 
