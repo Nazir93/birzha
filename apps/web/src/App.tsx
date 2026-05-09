@@ -9,7 +9,7 @@ import {
   OperationsCabinetLayout,
   SalesCabinetLayout,
 } from "./components/CabinetShellLayout.js";
-import { AppNav } from "./components/AppNav.js";
+import { LegacyChrome } from "./components/LegacyChrome.js";
 import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
@@ -91,10 +91,6 @@ function HomeRedirect() {
   return <Navigate to={to} replace />;
 }
 
-function AppHeading() {
-  return <h1 className="birzha-page-title no-print">Биржа</h1>;
-}
-
 function RouteFallback() {
   return <LoadingScreen label="Загрузка раздела…" />;
 }
@@ -128,18 +124,7 @@ export function App() {
 
   return (
     <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
-      {showChrome && !cabinetShell ? (
-        <header className="birzha-app-header no-print">
-          <AppHeading />
-          {import.meta.env.DEV ? (
-            <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.82rem" }}>
-              Клиент: Vite + React + TanStack Query + React Router. API: <code>pnpm dev:api</code> на порту 3000, в dev —
-              прокси <code> /api/…</code>.
-            </p>
-          ) : null}
-          <AppNav />
-        </header>
-      ) : null}
+      {showChrome && !cabinetShell ? <LegacyChrome /> : null}
 
       <Suspense fallback={<RouteFallback />}>
         <Routes>

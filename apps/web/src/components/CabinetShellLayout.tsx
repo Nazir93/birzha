@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "../auth/cabinet-nav.js";
 import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
+import { useMatchMedia } from "../hooks/useMatchMedia.js";
 
 export type CabinetShellAccent = "admin" | "operations" | "sales" | "accounting";
 
@@ -31,6 +32,22 @@ function SidebarToggleIcon({ collapsed }: { collapsed: boolean }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function HamburgerMenuIcon() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DrawerCloseIcon() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -131,9 +148,37 @@ type CabinetShellLayoutProps = {
 /**
  * Общий каркас кабинета: шапка, сворачиваемый сайдбар, контент (`Outlet`).
  */
+const mqMobileDrawer = "(max-width: 47.9375rem)";
+
 export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLayoutProps) {
   const { user, meta, logout, ready } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const isMobile = useMatchMedia(mqMobileDrawer);
+  const mobile = isMobile === true;
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) {
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileDrawerOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [mobileDrawerOpen]);
 
   const authRestricted = Boolean(ready && meta?.authApi === "enabled" && user !== null);
   const entries = useMemo(
@@ -143,11 +188,48 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
 
   const showUser = ready && meta?.authApi === "enabled";
 
+  const sidebarNav = (
+    <>
+      {entries.map(({ to, label, key }) => (
+        <NavLink
+          key={`${key}-${to}`}
+          to={to}
+          end={cabinetNavLinkUsesEnd(cabinetId, to)}
+          className={({ isActive }) =>
+            `birzha-cabinet-sidebar__link${isActive ? " birzha-cabinet-sidebar__link--active" : ""}`
+          }
+          title={!mobile && sidebarCollapsed ? label : undefined}
+          aria-label={label}
+          onClick={() => mobile && setMobileDrawerOpen(false)}
+        >
+          <SidebarNavIcon name={sidebarNavIconName(key)} />
+          <span className="birzha-cabinet-sidebar__link-text">{label}</span>
+        </NavLink>
+      ))}
+    </>
+  );
+
   return (
-    <div className={`birzha-cabinet-layout birzha-cabinet-layout--${accent}`}>
+    <div
+      className={`birzha-cabinet-layout birzha-cabinet-layout--${accent}${mobile ? " birzha-cabinet-layout--mobile-nav" : ""}`}
+    >
       <header className="birzha-cabinet-topbar no-print">
-        <div className="birzha-cabinet-topbar__brand">
-          <span className="birzha-cabinet-topbar__title">{title}</span>
+        <div className="birzha-cabinet-topbar__start">
+          {mobile ? (
+            <button
+              type="button"
+              className="birzha-cabinet-topbar__menu-btn"
+              onClick={() => setMobileDrawerOpen(true)}
+              aria-expanded={mobileDrawerOpen}
+              aria-controls="birzha-cabinet-drawer"
+              aria-label="Открыть меню разделов"
+            >
+              <HamburgerMenuIcon />
+            </button>
+          ) : null}
+          <div className="birzha-cabinet-topbar__brand">
+            <span className="birzha-cabinet-topbar__title">{title}</span>
+          </div>
         </div>
         {showUser ? (
           <div className="birzha-cabinet-topbar__actions">
@@ -176,38 +258,54 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
       </header>
 
       <div className="birzha-cabinet-body">
-        <aside
-          className={`birzha-cabinet-sidebar no-print${sidebarCollapsed ? " birzha-cabinet-sidebar--collapsed" : ""}`}
-          aria-label="Разделы приложения"
-        >
-          <button
-            type="button"
-            className="birzha-cabinet-sidebar__toggle"
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            aria-expanded={!sidebarCollapsed}
-            aria-controls="birzha-cabinet-sidebar-nav"
-            title={sidebarCollapsed ? "Развернуть меню" : "Свернуть меню"}
+        {!mobile ? (
+          <aside
+            className={`birzha-cabinet-sidebar no-print${sidebarCollapsed ? " birzha-cabinet-sidebar--collapsed" : ""}`}
+            aria-label="Разделы приложения"
           >
-            <SidebarToggleIcon collapsed={sidebarCollapsed} />
-          </button>
-          <nav id="birzha-cabinet-sidebar-nav" className="birzha-cabinet-sidebar__nav" aria-label="Разделы приложения">
-            {entries.map(({ to, label, key }) => (
-              <NavLink
-                key={`${key}-${to}`}
-                to={to}
-                end={cabinetNavLinkUsesEnd(cabinetId, to)}
-                className={({ isActive }) =>
-                  `birzha-cabinet-sidebar__link${isActive ? " birzha-cabinet-sidebar__link--active" : ""}`
-                }
-                title={sidebarCollapsed ? label : undefined}
-                aria-label={label}
-              >
-                <SidebarNavIcon name={sidebarNavIconName(key)} />
-                <span className="birzha-cabinet-sidebar__link-text">{label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </aside>
+            <button
+              type="button"
+              className="birzha-cabinet-sidebar__toggle"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              aria-expanded={!sidebarCollapsed}
+              aria-controls="birzha-cabinet-sidebar-nav"
+              title={sidebarCollapsed ? "Развернуть меню" : "Свернуть меню"}
+            >
+              <SidebarToggleIcon collapsed={sidebarCollapsed} />
+            </button>
+            <nav id="birzha-cabinet-sidebar-nav" className="birzha-cabinet-sidebar__nav" aria-label="Разделы приложения">
+              {sidebarNav}
+            </nav>
+          </aside>
+        ) : null}
+
+        {mobile && mobileDrawerOpen ? (
+          <>
+            <div className="birzha-drawer-backdrop" onClick={() => setMobileDrawerOpen(false)} aria-hidden />
+            <aside
+              id="birzha-cabinet-drawer"
+              className="birzha-cabinet-drawer no-print"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Меню разделов"
+            >
+              <div className="birzha-cabinet-drawer__head">
+                <span className="birzha-cabinet-drawer__head-title">Разделы</span>
+                <button
+                  type="button"
+                  className="birzha-cabinet-drawer__close"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  aria-label="Закрыть меню"
+                >
+                  <DrawerCloseIcon />
+                </button>
+              </div>
+              <nav className="birzha-cabinet-sidebar__nav birzha-cabinet-drawer__nav" aria-label="Разделы приложения">
+                {sidebarNav}
+              </nav>
+            </aside>
+          </>
+        ) : null}
 
         <div className="birzha-cabinet-main">
           <Outlet />

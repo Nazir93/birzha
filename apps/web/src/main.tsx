@@ -7,6 +7,7 @@ import { App } from "./App";
 import { createWebQueryClient } from "./query/create-web-query-client.js";
 import { MutationErrorBanner } from "./query/MutationErrorBanner.js";
 import { AppErrorBoundary } from "./ui/AppErrorBoundary.js";
+import { PwaInstallBanner } from "./ui/PwaInstallBanner.js";
 import { PwaUpdateBanner } from "./ui/PwaUpdateBanner.js";
 
 import "./index.css";
@@ -16,6 +17,7 @@ const queryClient = createWebQueryClient();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
+      <PwaInstallBanner />
       <PwaUpdateBanner />
       <MutationErrorBanner />
       <AuthProvider>
