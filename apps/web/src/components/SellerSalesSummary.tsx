@@ -81,6 +81,7 @@ export function SellerSalesSummary() {
       revenueKopecks: string;
       cashKopecks: string;
       debtKopecks: string;
+      cardTransferKopecks: string;
     }[] = [];
 
     for (let i = 0; i < trips.length; i++) {
@@ -106,6 +107,7 @@ export function SellerSalesSummary() {
           revenueKopecks: sale.revenueKopecks,
           cashKopecks: sale.cashKopecks,
           debtKopecks: sale.debtKopecks,
+          cardTransferKopecks: sale.cardTransferKopecks || "0",
         });
       }
     }
@@ -117,13 +119,15 @@ export function SellerSalesSummary() {
     let revenue = 0n;
     let cash = 0n;
     let debt = 0n;
+    let cardTransfer = 0n;
     for (const row of rows) {
       grams += BigInt(row.grams);
       revenue += BigInt(row.revenueKopecks);
       cash += BigInt(row.cashKopecks);
       debt += BigInt(row.debtKopecks);
+      cardTransfer += BigInt(row.cardTransferKopecks);
     }
-    return { grams, revenue, cash, debt };
+    return { grams, revenue, cash, debt, cardTransfer };
   }, [rows]);
 
   const reportsLoading = reportQueries.some((q) => q.isPending) && trips.length > 0;
@@ -174,6 +178,10 @@ export function SellerSalesSummary() {
                   <span>{kopecksToRubLabel(totals.cash.toString())} ₽</span>
                 </div>
                 <div className="birzha-kpi-tile__cash-debt-row">
+                  <span className="birzha-kpi-tile__cash-debt-key">Карта</span>
+                  <span>{kopecksToRubLabel(totals.cardTransfer.toString())} ₽</span>
+                </div>
+                <div className="birzha-kpi-tile__cash-debt-row">
                   <span className="birzha-kpi-tile__cash-debt-key">Долг</span>
                   <span>{kopecksToRubLabel(totals.debt.toString())} ₽</span>
                 </div>
@@ -206,6 +214,7 @@ export function SellerSalesSummary() {
                     <th style={thHead}>Продано</th>
                     <th style={thHead}>Выручка</th>
                     <th style={thHead}>Нал</th>
+                    <th style={thHead}>Карта</th>
                     <th style={thHead}>Долг</th>
                   </tr>
                 </thead>
@@ -221,6 +230,7 @@ export function SellerSalesSummary() {
                       <td style={thtd}>{gramsToKgLabel(row.grams)} кг</td>
                       <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                       <td style={thtd}>{kopecksToRubLabel(row.cashKopecks)} ₽</td>
+                      <td style={thtd}>{kopecksToRubLabel(row.cardTransferKopecks)} ₽</td>
                       <td style={thtd}>{kopecksToRubLabel(row.debtKopecks)} ₽</td>
                     </tr>
                   ))}

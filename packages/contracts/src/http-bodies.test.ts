@@ -99,6 +99,42 @@ describe("sellFromTripBodySchema (mixed)", () => {
   });
 });
 
+describe("sellFromTripBodySchema (card_transfer)", () => {
+  const base = {
+    tripId: "t1",
+    kg: 2,
+    saleId: "s1",
+    pricePerKg: 100,
+  };
+
+  it("paymentKind=card_transfer без cardTransferKopecks — ошибка", () => {
+    expect(() =>
+      sellFromTripBodySchema.parse({
+        ...base,
+        paymentKind: "card_transfer" as const,
+      }),
+    ).toThrow();
+  });
+
+  it("paymentKind=card_transfer со строкой копеек — ок", () => {
+    const r = sellFromTripBodySchema.parse({
+      ...base,
+      paymentKind: "card_transfer" as const,
+      cardTransferKopecks: "15000",
+    });
+    expect(r.cardTransferKopecks).toBe("15000");
+  });
+
+  it("paymentKind=card_transfer с числом копеек — ок", () => {
+    const r = sellFromTripBodySchema.parse({
+      ...base,
+      paymentKind: "card_transfer" as const,
+      cardTransferKopecks: 15000,
+    });
+    expect(r.cardTransferKopecks).toBe(15000);
+  });
+});
+
 describe("sellFromTripSyncPayloadSchema", () => {
   it("требует batchId и те же правила mixed", () => {
     expect(() =>
@@ -122,6 +158,30 @@ describe("sellFromTripSyncPayloadSchema", () => {
       cashKopecksMixed: "100",
     });
     expect(ok.batchId).toBe("b1");
+  });
+
+  it("требует cardTransferKopecks при card_transfer", () => {
+    expect(() =>
+      sellFromTripSyncPayloadSchema.parse({
+        batchId: "b1",
+        tripId: "t1",
+        kg: 1,
+        saleId: "s1",
+        pricePerKg: 1,
+        paymentKind: "card_transfer",
+      }),
+    ).toThrow();
+
+    const ok = sellFromTripSyncPayloadSchema.parse({
+      batchId: "b1",
+      tripId: "t1",
+      kg: 1,
+      saleId: "s1",
+      pricePerKg: 1,
+      paymentKind: "card_transfer",
+      cardTransferKopecks: "500",
+    });
+    expect(ok.cardTransferKopecks).toBe("500");
   });
 });
 

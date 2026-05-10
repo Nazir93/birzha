@@ -19,6 +19,7 @@ import {
 } from "../validation/api-schemas.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
+import { totalsByGradeFromNakladnayaFormLines } from "../format/purchase-nakladnaya-totals-by-grade.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
@@ -225,6 +226,23 @@ export function PurchaseNakladnayaSection() {
     const totalAllKopecks = totalLineKopecks + extraCostKopecksForTotals;
     return { totalKg, totalPackages, totalLineKopecks, totalAllKopecks };
   }, [lines, extraCostKopecksForTotals]);
+
+  const gradeLabelForId = useCallback(
+    (productGradeId: string) => {
+      const id = productGradeId.trim();
+      if (!id) {
+        return "— не выбран —";
+      }
+      const g = gradesQ.data?.productGrades.find((x) => x.id === id);
+      return g ? `${g.code} — ${g.displayName}` : id;
+    },
+    [gradesQ.data?.productGrades],
+  );
+
+  const nakladnayaTotalsByGrade = useMemo(
+    () => totalsByGradeFromNakladnayaFormLines(lines, gradeLabelForId),
+    [lines, gradeLabelForId],
+  );
 
   const totalKgLabel = useMemo(
     () =>
@@ -493,6 +511,47 @@ export function PurchaseNakladnayaSection() {
               </tr>
             ))}
           </tbody>
+          {nakladnayaTotalsByGrade.length > 0 && (
+            <tbody>
+              <tr>
+                <td
+                  colSpan={6}
+                  style={{
+                    ...thtdDense,
+                    fontWeight: 600,
+                    background: "rgba(0,0,0,0.04)",
+                    borderTop: "1px solid var(--color-border, rgba(0,0,0,0.12))",
+                  }}
+                >
+                  Итого по товару (калибру)
+                </td>
+              </tr>
+              {nakladnayaTotalsByGrade.map((row) => (
+                <tr key={row.gradeKey}>
+                  <td style={{ ...thtdDense, fontWeight: 500 }}>{row.label}</td>
+                  <td style={thtdDense}>
+                    {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
+                      row.totalKg,
+                    )}{" "}
+                    <span className="birzha-text-muted birzha-text-muted--xs">кг</span>
+                  </td>
+                  <td style={thtdDense}>
+                    {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
+                      row.totalPackages,
+                    )}{" "}
+                    <span className="birzha-text-muted birzha-text-muted--xs">кор.</span>
+                  </td>
+                  <td className="birzha-text-muted" style={thtdDense}>
+                    —
+                  </td>
+                  <td style={{ ...thtdDense, fontWeight: 600 }}>
+                    {kopecksToRubLabel(row.lineKopSum.toString())} ₽
+                  </td>
+                  <td style={thtdDense} />
+                </tr>
+              ))}
+            </tbody>
+          )}
           <tfoot>
             <tr>
               <th

@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../auth/auth-context.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
+import { totalsByGradeFromPurchaseDocumentLines } from "../format/purchase-nakladnaya-totals-by-grade.js";
 import {
   purchaseNakladnayaBasePathForPath,
   purchaseNakladnayaDocumentPathForPath,
@@ -60,6 +61,11 @@ export function PurchaseNakladnayaDetailSection() {
     const allKop = lineKopSum + extraKop;
     return { totalKg, totalPackages, lineKopSum, extraKop, allKop };
   }, [docQ.data]);
+
+  const totalsByGrade = useMemo(
+    () => (docQ.data?.lines?.length ? totalsByGradeFromPurchaseDocumentLines(docQ.data.lines) : []),
+    [docQ.data],
+  );
 
   const warehouseLabel = (wid: string) => {
     const w = warehousesQ.data?.warehouses.find((x) => x.id === wid);
@@ -256,6 +262,49 @@ export function PurchaseNakladnayaDetailSection() {
           )}
         </table>
       </div>
+
+      {totalsByGrade.length > 0 && (
+        <>
+          <p className="birzha-nakl-lines-heading" style={{ marginTop: "0.75rem" }}>
+            Итого по товару (калибру)
+          </p>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+            <table style={{ borderCollapse: "collapse", fontSize: "0.85rem", width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={thHeadDense}>Калибр</th>
+                  <th style={thHeadDense}>Кг</th>
+                  <th style={thHeadDense}>Короба</th>
+                  <th style={thHeadDense}>Сумма строк, коп.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {totalsByGrade.map((row) => (
+                  <tr key={row.gradeCode}>
+                    <td style={thtdDense}>{row.gradeCode}</td>
+                    <td style={thtdDense}>
+                      {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
+                        row.totalKg,
+                      )}
+                    </td>
+                    <td style={thtdDense}>
+                      {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
+                        row.totalPackages,
+                      )}
+                    </td>
+                    <td style={thtdDense}>
+                      <span style={{ fontWeight: 600 }}>{row.lineKopSum} коп.</span>
+                      <span className="birzha-text-muted birzha-text-muted--sm" style={{ marginLeft: 6 }}>
+                        = {kopecksToRubLabel(row.lineKopSum.toString())} ₽
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {totals && (
         <div

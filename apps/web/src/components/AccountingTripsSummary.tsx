@@ -70,6 +70,7 @@ export function AccountingTripsSummary() {
     let gross = 0n;
     let cash = 0n;
     let debt = 0n;
+    let card = 0n;
     let rows = 0;
     for (let i = 0; i < sortedTrips.length; i++) {
       const q = reportQueries[i];
@@ -84,9 +85,10 @@ export function AccountingTripsSummary() {
       gross += BigInt(r.financials.grossProfitKopecks || "0");
       cash += BigInt(r.sales.totalCashKopecks || "0");
       debt += BigInt(r.sales.totalDebtKopecks || "0");
+      card += BigInt(r.sales.totalCardTransferKopecks || "0");
       rows += 1;
     }
-    return { kg, revenue, costSold, costShort, gross, cash, debt, rows };
+    return { kg, revenue, costSold, costShort, gross, cash, debt, card, rows };
   }, [sortedTrips, reportQueries]);
 
   if (tripsQuery.isPending) {
@@ -163,7 +165,7 @@ export function AccountingTripsSummary() {
                 Валовая прибыль, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Нал / долг, ₽
+                Нал / карта / долг, ₽
               </th>
               <th scope="col" style={thHead}>
                 Детали
@@ -219,7 +221,8 @@ export function AccountingTripsSummary() {
                     {kopecksToRubLabel(r.financials.grossProfitKopecks)}
                   </td>
                   <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
-                    {kopecksToRubLabel(r.sales.totalCashKopecks)} / {kopecksToRubLabel(r.sales.totalDebtKopecks)}
+                    {kopecksToRubLabel(r.sales.totalCashKopecks)} / {kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} /{" "}
+                    {kopecksToRubLabel(r.sales.totalDebtKopecks)}
                   </td>
                   <td style={thtd}>
                     <Link
@@ -243,7 +246,8 @@ export function AccountingTripsSummary() {
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costShort.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.gross.toString())}</td>
                 <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
-                  {kopecksToRubLabel(tripTotals.cash.toString())} / {kopecksToRubLabel(tripTotals.debt.toString())}
+                  {kopecksToRubLabel(tripTotals.cash.toString())} / {kopecksToRubLabel(tripTotals.card.toString())} /{" "}
+                  {kopecksToRubLabel(tripTotals.debt.toString())}
                 </td>
                 <td style={thtd} />
               </tr>

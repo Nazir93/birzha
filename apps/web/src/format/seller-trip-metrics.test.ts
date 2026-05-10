@@ -21,8 +21,16 @@ const minimalReport = (id: string, tripNumber: string): ShipmentReportResponse =
     totalRevenueKopecks: "40000",
     totalCashKopecks: "25000",
     totalDebtKopecks: "15000",
+    totalCardTransferKopecks: "0",
     byBatch: [
-      { batchId: "b1", grams: "400", revenueKopecks: "40000", cashKopecks: "25000", debtKopecks: "15000" },
+      {
+        batchId: "b1",
+        grams: "400",
+        revenueKopecks: "40000",
+        cashKopecks: "25000",
+        debtKopecks: "15000",
+        cardTransferKopecks: "0",
+      },
     ],
     byClient: [],
   },
@@ -71,8 +79,16 @@ describe("aggregateSellerShipmentReports", () => {
     b.sales.totalRevenueKopecks = "50000";
     b.sales.totalCashKopecks = "50000";
     b.sales.totalDebtKopecks = "0";
+    b.sales.totalCardTransferKopecks = "0";
     b.sales.byBatch = [
-      { batchId: "b2", grams: "500", revenueKopecks: "50000", cashKopecks: "50000", debtKopecks: "0" },
+      {
+        batchId: "b2",
+        grams: "500",
+        revenueKopecks: "50000",
+        cashKopecks: "50000",
+        debtKopecks: "0",
+        cardTransferKopecks: "0",
+      },
     ];
 
     const tot = aggregateSellerShipmentReports([a, b]);
@@ -81,6 +97,7 @@ describe("aggregateSellerShipmentReports", () => {
     expect(tot.revenue).toBe(90000n);
     expect(tot.cash).toBe(75000n);
     expect(tot.debt).toBe(15000n);
+    expect(tot.cardTransfer).toBe(0n);
     expect(tot.netTransit).toBe(tripLedgerMetrics(a).netTransitKg + tripLedgerMetrics(b).netTransitKg);
   });
 
@@ -93,6 +110,7 @@ describe("aggregateSellerShipmentReports", () => {
       revenue: 0n,
       cash: 0n,
       debt: 0n,
+      cardTransfer: 0n,
     });
   });
 });
@@ -103,5 +121,8 @@ describe("clientSalePaymentLabelRu", () => {
     expect(clientSalePaymentLabelRu(100n, 0n)).toBe("Наличные");
     expect(clientSalePaymentLabelRu(0n, 50n)).toBe("В долг");
     expect(clientSalePaymentLabelRu(30n, 70n)).toBe("Смешанно");
+    expect(clientSalePaymentLabelRu(0n, 0n, 80n)).toBe("Перевод на карту");
+    expect(clientSalePaymentLabelRu(40n, 0n, 60n)).toBe("Нал + карта");
+    expect(clientSalePaymentLabelRu(0n, 10n, 90n)).toBe("Смешанно");
   });
 });

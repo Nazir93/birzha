@@ -73,7 +73,11 @@ export function buildCabinetNavEntries(
   for (const p of panelOrder) {
     const to = hrefForPanelInCabinet(user, p, cabinet);
     if (to) {
-      out.push({ to, label: NAV_PANEL_LABELS[p], key: p });
+      const label =
+        cabinet === "sales" && p === "reports"
+          ? "Отчёты по рейсу"
+          : NAV_PANEL_LABELS[p];
+      out.push({ to, label, key: p });
     }
   }
   if (cabinet === "admin" && user && authRestricted && canAccessCabinet(user, "accounting")) {

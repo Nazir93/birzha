@@ -45,7 +45,7 @@ export type TripReportViewContext = "default" | "accounting" | "sales";
 const headingByContext: Record<TripReportViewContext, string> = {
   default: "Рейсы и отчёт по фуре",
   accounting: "Отчёт по рейсу (сверка)",
-  sales: "Рейс и отчёт",
+  sales: "Отчёт по рейсу: что продано",
 };
 
 export function TripReportPanel({ viewContext = "default" }: { viewContext?: TripReportViewContext }) {
@@ -144,7 +144,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       issues.push("сумма выручки по партиям ≠ total выручки");
     }
     if (!reconciliation.cashDebtOk) {
-      issues.push("нал / долг по партиям ≠ итогам рейса");
+      issues.push("нал / карта / долг по партиям ≠ итогам рейса");
     }
     if (!reconciliation.clientTotalsOk) {
       issues.push("суммы по клиентам ≠ итогам продаж рейса");
@@ -177,7 +177,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const introByContext: Record<TripReportViewContext, string> = {
     default: "Отгрузки, продажи, недостачи и деньги по рейсу.",
     accounting: "Сверка товара и денег по рейсу.",
-    sales: "Ваши рейсы, продажи и долги.",
+    sales: "Выберите рейс — увидите отгрузки в машину, продажи по партиям, наличные и долг.",
   };
 
   const emptyTextByContext: Record<TripReportViewContext, string> = {
@@ -404,9 +404,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   </td>
                 </tr>
                 <tr>
-                  <td style={thtd}>Выручка: нал / долг</td>
+                  <td style={thtd}>Выручка: нал / перевод на карту / долг</td>
                   <td style={thtd}>
-                    {kopecksToRubLabel(r.sales.totalCashKopecks)} ₽ / {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
+                    {kopecksToRubLabel(r.sales.totalCashKopecks)} ₽ /{" "}
+                    {kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} ₽ /{" "}
+                    {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
                   </td>
                 </tr>
               </tbody>
@@ -437,7 +439,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         Выручка
                       </th>
                       <th scope="col" style={thHead}>
-                        Нал / долг
+                        Нал / карта / долг
                       </th>
                     </tr>
                   </thead>
@@ -448,7 +450,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
                         <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                         <td style={thtd}>
-                          {kopecksToRubLabel(row.cashKopecks)} / {kopecksToRubLabel(row.debtKopecks)}
+                          {kopecksToRubLabel(row.cashKopecks)} / {kopecksToRubLabel(row.cardTransferKopecks || "0")} /{" "}
+                          {kopecksToRubLabel(row.debtKopecks)}
                         </td>
                       </tr>
                     ))}
@@ -521,7 +524,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Выручка
                     </th>
                     <th scope="col" style={thHead}>
-                      Нал / долг
+                      Нал / карта / долг
                     </th>
                   </tr>
                 </thead>
@@ -549,7 +552,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </td>
                       <td style={thtd}>{kopecksToRubLabel(row.revenueK.toString())} ₽</td>
                       <td style={thtd}>
-                        {kopecksToRubLabel(row.cashK.toString())} / {kopecksToRubLabel(row.debtK.toString())}
+                        {kopecksToRubLabel(row.cashK.toString())} / {kopecksToRubLabel(row.cardTransferK.toString())} /{" "}
+                        {kopecksToRubLabel(row.debtK.toString())}
                       </td>
                     </tr>
                     );
@@ -567,7 +571,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>
                     <td style={thtd}>{kopecksToRubLabel(batchAgg.revenueK.toString())} ₽</td>
                     <td style={thtd}>
-                      {kopecksToRubLabel(batchAgg.cashK.toString())} / {kopecksToRubLabel(batchAgg.debtK.toString())}
+                      {kopecksToRubLabel(batchAgg.cashK.toString())} / {kopecksToRubLabel(batchAgg.cardTransferK.toString())}{" "}
+                      / {kopecksToRubLabel(batchAgg.debtK.toString())}
                     </td>
                   </tr>
                 </tfoot>

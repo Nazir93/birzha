@@ -26,6 +26,7 @@ describe("tripBatchRowsToCsv", () => {
         netTransitG: 1000n,
         revenueK: 0n,
         cashK: 0n,
+        cardTransferK: 0n,
         debtK: 0n,
       },
     ];
@@ -46,6 +47,7 @@ describe("tripBatchRowsToCsv", () => {
         netTransitG: 1000n,
         revenueK: 0n,
         cashK: 0n,
+        cardTransferK: 0n,
         debtK: 0n,
       },
     ];

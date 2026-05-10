@@ -17,6 +17,7 @@ import {
   counterpartiesFullListQueryOptions,
   queryRoots,
   shipmentReportQueryOptions,
+  tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
@@ -60,6 +61,7 @@ export type SellFromTripVariant = "seller" | "operations";
  */
 export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
   const { meta } = useAuth();
+  const isSellerUx = variant === "seller";
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -87,8 +89,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [sellKg, setSellKg] = useState("");
   const [saleId, setSaleId] = useState("");
   const [sellPrice, setSellPrice] = useState("");
-  const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed">("cash");
+  const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed" | "card_transfer">("cash");
   const [cashMixed, setCashMixed] = useState("");
+  const [cardTransferKopecks, setCardTransferKopecks] = useState("");
   const [sellClientLabel, setSellClientLabel] = useState("");
   const [sellCounterpartyId, setSellCounterpartyId] = useState("");
   const [newCounterpartyName, setNewCounterpartyName] = useState("");
@@ -105,6 +108,30 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellBatchId("");
     setSellKg("");
   }, [searchParams]);
+
+  const sellerTripsListQ = useQuery({
+    ...tripsFullListQueryOptions(),
+    enabled: isSellerUx,
+  });
+
+  /** Один закреплённый рейс — сразу подставляем (меньше шагов для продавца). */
+  useEffect(() => {
+    if (!isSellerUx) {
+      return;
+    }
+    const fromUrl = searchParams.get("trip")?.trim() ?? "";
+    if (fromUrl) {
+      return;
+    }
+    if (sellTripId.trim()) {
+      return;
+    }
+    const list = sellerTripsListQ.data?.trips ?? [];
+    if (list.length !== 1) {
+      return;
+    }
+    setSellTripId(list[0]!.id);
+  }, [isSellerUx, searchParams, sellTripId, sellerTripsListQ.data?.trips]);
 
   useEffect(() => {
     setPartyFilter("");
@@ -231,6 +258,24 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
 
   const batchSuggestQuery = useQuery(batchesSearchQueryOptions(debouncedBatchIdSearch, 20));
 
+  /** Для продавца: список партий на рейсе загрузился и есть что продавать — технический fallback скрываем. */
+  const sellerBatchListReady =
+    isSellerUx &&
+    sellReportQuery.isSuccess &&
+    sellableOnTripRows.length > 0 &&
+    batchesForTripQuery.isFetched;
+
+  /** Ручной ввод id партии — не показывать пока грузится отчёт (иначе мелькает блок «не видно товар»). */
+  const showBatchManualControls =
+    !isSellerUx ||
+    (Boolean(sellTripIdTrim) && !sellReportQuery.isPending && !sellerBatchListReady);
+
+  const showBatchListFilter =
+    Boolean(sellTripIdTrim) &&
+    sellReportQuery.isSuccess &&
+    sellableOnTripRows.length > 0 &&
+    (isSellerUx ? sellableOnTripRows.length > 12 : true);
+
   const sellSelectionSummary = useMemo((): {
     line: string;
     doc: string;
@@ -286,6 +331,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         pricePerKg: sellPrice,
         paymentKind,
         cashMixed,
+        cardTransferKopecks,
         clientLabel: sellClientLabel,
         counterpartyId: sellCounterpartyId || undefined,
       });
@@ -308,8 +354,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       hint={variant === "seller" ? "форма" : "шаг 3"}
     >
       {variant === "seller" ? (
-        <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem" }}>
-          Выберите рейс, партию, кг, цену и оплату.
+        <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem", lineHeight: 1.5 }}>
+          Выберите рейс (если их несколько), затем <strong>товар и калибр</strong>, укажите вес, цену за кг и способ
+          оплаты — наличные, в долг или смешанно.
         </p>
       ) : (
         <>
@@ -333,11 +380,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       )}
 
       <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">
-        Рейс *
+        {isSellerUx ? "Рейс (ваш закреплённый) *" : "Рейс *"}
       </span>
       <TripSearchPicker
         idPrefix={idPrefix}
         value={sellTripId}
+        sellerWorkspace={isSellerUx}
         onChange={(v) => {
           setSellTripId(v);
           setSellBatchId("");
@@ -373,23 +421,23 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           <LoadingIndicator size="sm" label="Загрузка накладных по строкам рейса…" />
         </p>
       )}
-      {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && (
+      {showBatchListFilter && (
         <>
           <label htmlFor={`${idPrefix}-party-filter`} className="birzha-form-label">
-            Фильтр списка партий (накладная, калибр, id)
+            {isSellerUx ? "Поиск по списку (много позиций)" : "Фильтр списка партий (накладная, калибр, id)"}
           </label>
           <input
             id={`${idPrefix}-party-filter`}
             value={partyFilter}
             onChange={(e) => setPartyFilter(e.target.value)}
             style={{ ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
-            placeholder="Сузить длинный список…"
+            placeholder={isSellerUx ? "Начните вводить калибр или номер накладной…" : "Сузить длинный список…"}
             autoComplete="off"
           />
         </>
       )}
       <label htmlFor={`${idPrefix}-sel-batch`} className="birzha-form-label">
-        Накладная и калибр (кг в машине) *
+        {isSellerUx ? "Товар и калибр (сколько кг ещё в машине) *" : "Накладная и калибр (кг в машине) *"}
       </label>
       <select
         id={`${idPrefix}-sel-batch`}
@@ -439,8 +487,23 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           role="status"
           aria-live="polite"
         >
-          <strong>Накладная № {sellSelectionSummary.doc}</strong> — {sellSelectionSummary.line}
-          {". "}
+          {isSellerUx ? (
+            <>
+              <strong>{sellSelectionSummary.line}</strong>
+              {sellSelectionSummary.doc !== "—" && (
+                <>
+                  {" "}
+                  (накладная № {sellSelectionSummary.doc})
+                </>
+              )}
+              {". "}
+            </>
+          ) : (
+            <>
+              <strong>Накладная № {sellSelectionSummary.doc}</strong> — {sellSelectionSummary.line}
+              {". "}
+            </>
+          )}
           <strong>В пути: {sellSelectionSummary.kg} кг</strong>
           {sellSelectionSummary.hasPkgData && sellSelectionSummary.estPkg > 0n && (
             <>
@@ -454,63 +517,139 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
         </p>
       )}
-      <label htmlFor={`${idPrefix}-in-batch`} className="birzha-form-label">
-        ID партии вручную (если список выше не загрузился)
-      </label>
-      <input
-        id={`${idPrefix}-in-batch`}
-        value={sellBatchId}
-        onChange={(e) => setSellBatchId(e.target.value)}
-        style={fieldStyle}
-        autoComplete="off"
-        placeholder="совпадает с выбором выше"
-      />
-      <label
-        htmlFor={`${idPrefix}-batch-id-search`}
-        className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm"
-      >
-        Подбор партии по фрагменту id (от 2 символов)
-      </label>
-      <input
-        id={`${idPrefix}-batch-id-search`}
-        value={batchIdSearch}
-        onChange={(e) => setBatchIdSearch(e.target.value)}
-        style={fieldStyle}
-        autoComplete="off"
-        placeholder="введите часть id партии"
-      />
-      {batchSuggestQuery.data && batchSuggestQuery.data.batches.length > 0 && (
-        <ul
-          className="birzha-scroll-panel"
-          style={{ listStyle: "none", margin: "0.35rem 0 0", padding: "0.35rem 0.45rem" }}
-          aria-label="Подходящие партии"
-        >
-          {batchSuggestQuery.data.batches.map((b) => (
-            <li key={b.id} style={{ marginBottom: "0.25rem" }}>
-              <button
-                type="button"
-                style={{
-                  ...btnStyle,
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  fontSize: "0.86rem",
-                  padding: "0.4rem 0.55rem",
-                  wordBreak: "break-all",
-                }}
-                onClick={() => {
-                  setSellBatchId(b.id);
-                  setBatchIdSearch("");
-                }}
+      {showBatchManualControls && (
+        <>
+          {isSellerUx ? (
+            <BirzhaDisclosure
+              nested
+              defaultOpen={Boolean(sellTripIdTrim && sellReportQuery.isError)}
+              title="Не видно нужный товар в списке?"
+              hint="ввод по ID — для поддержки"
+              bodyStyle={{ marginBottom: "0.45rem" }}
+            >
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+                Обычно достаточно выбрать строку выше. Если список не загрузился или пустой — используйте поля ниже (
+                по указанию администратора).
+              </p>
+              <label htmlFor={`${idPrefix}-in-batch`} className="birzha-form-label">
+                ID партии вручную
+              </label>
+              <input
+                id={`${idPrefix}-in-batch`}
+                value={sellBatchId}
+                onChange={(e) => setSellBatchId(e.target.value)}
+                style={fieldStyle}
+                autoComplete="off"
+                placeholder="полный id партии"
+              />
+              <label
+                htmlFor={`${idPrefix}-batch-id-search`}
+                className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm"
               >
-                {b.id}
-              </button>
-            </li>
-          ))}
-        </ul>
+                Поиск партии по части id (от 2 символов)
+              </label>
+              <input
+                id={`${idPrefix}-batch-id-search`}
+                value={batchIdSearch}
+                onChange={(e) => setBatchIdSearch(e.target.value)}
+                style={fieldStyle}
+                autoComplete="off"
+                placeholder="фрагмент id"
+              />
+              {batchSuggestQuery.data && batchSuggestQuery.data.batches.length > 0 && (
+                <ul
+                  className="birzha-scroll-panel"
+                  style={{ listStyle: "none", margin: "0.35rem 0 0", padding: "0.35rem 0.45rem" }}
+                  aria-label="Подходящие партии"
+                >
+                  {batchSuggestQuery.data.batches.map((b) => (
+                    <li key={b.id} style={{ marginBottom: "0.25rem" }}>
+                      <button
+                        type="button"
+                        style={{
+                          ...btnStyle,
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          fontSize: "0.86rem",
+                          padding: "0.4rem 0.55rem",
+                          wordBreak: "break-all",
+                        }}
+                        onClick={() => {
+                          setSellBatchId(b.id);
+                          setBatchIdSearch("");
+                        }}
+                      >
+                        {b.id}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </BirzhaDisclosure>
+          ) : (
+            <>
+              <label htmlFor={`${idPrefix}-in-batch`} className="birzha-form-label">
+                ID партии вручную (если список выше не загрузился)
+              </label>
+              <input
+                id={`${idPrefix}-in-batch`}
+                value={sellBatchId}
+                onChange={(e) => setSellBatchId(e.target.value)}
+                style={fieldStyle}
+                autoComplete="off"
+                placeholder="совпадает с выбором выше"
+              />
+              <label
+                htmlFor={`${idPrefix}-batch-id-search`}
+                className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm"
+              >
+                Подбор партии по фрагменту id (от 2 символов)
+              </label>
+              <input
+                id={`${idPrefix}-batch-id-search`}
+                value={batchIdSearch}
+                onChange={(e) => setBatchIdSearch(e.target.value)}
+                style={fieldStyle}
+                autoComplete="off"
+                placeholder="введите часть id партии"
+              />
+              {batchSuggestQuery.data && batchSuggestQuery.data.batches.length > 0 && (
+                <ul
+                  className="birzha-scroll-panel"
+                  style={{ listStyle: "none", margin: "0.35rem 0 0", padding: "0.35rem 0.45rem" }}
+                  aria-label="Подходящие партии"
+                >
+                  {batchSuggestQuery.data.batches.map((b) => (
+                    <li key={b.id} style={{ marginBottom: "0.25rem" }}>
+                      <button
+                        type="button"
+                        style={{
+                          ...btnStyle,
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          fontSize: "0.86rem",
+                          padding: "0.4rem 0.55rem",
+                          wordBreak: "break-all",
+                        }}
+                        onClick={() => {
+                          setSellBatchId(b.id);
+                          setBatchIdSearch("");
+                        }}
+                      >
+                        {b.id}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </>
       )}
       <label htmlFor={`${idPrefix}-in-kg`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        Сколько килограмм в этой продаже *
+        {isSellerUx ? "Сколько килограмм в этой сделке *" : "Сколько килограмм в этой продаже *"}
       </label>
       <input
         id={`${idPrefix}-in-kg`}
@@ -520,16 +659,20 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         inputMode="decimal"
         autoComplete="off"
       />
-      <label htmlFor={`${idPrefix}-in-sale`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        Номер продажи (необязательно, иначе система создаст сама)
-      </label>
-      <input
-        id={`${idPrefix}-in-sale`}
-        value={saleId}
-        onChange={(e) => setSaleId(e.target.value)}
-        style={fieldStyle}
-        autoComplete="off"
-      />
+      {!isSellerUx && (
+        <>
+          <label htmlFor={`${idPrefix}-in-sale`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
+            Номер продажи (необязательно, иначе система создаст сама)
+          </label>
+          <input
+            id={`${idPrefix}-in-sale`}
+            value={saleId}
+            onChange={(e) => setSaleId(e.target.value)}
+            style={fieldStyle}
+            autoComplete="off"
+          />
+        </>
+      )}
       <label htmlFor={`${idPrefix}-in-price`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Цена за 1 кг, руб *
       </label>
@@ -606,18 +749,46 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         disabled={Boolean(sellCounterpartyId)}
       />
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        Как оплатил клиент *
+        {isSellerUx ? "Как оплачивает клиент *" : "Как оплатил клиент *"}
       </label>
+      {isSellerUx && (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
+          Наличные; долг; смешанно (нал + долг); перевод на карту — укажите сумму перевода в копейках, остаток сделки
+          считается наличными (без эквайринга).
+        </p>
+      )}
       <select
         id={`${idPrefix}-sel-pay`}
         value={paymentKind}
-        onChange={(e) => setPaymentKind(e.target.value as "cash" | "debt" | "mixed")}
+        onChange={(e) =>
+          setPaymentKind(e.target.value as "cash" | "debt" | "mixed" | "card_transfer")
+        }
         style={fieldStyle}
       >
         <option value="cash">Вся сумма наличными</option>
         <option value="debt">Вся сумма в долг (без наличных)</option>
-        <option value="mixed">Смешанно: часть наличными (укажите ниже)</option>
+        <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
+        <option value="card_transfer">Перевод на карту + наличные (укажите сумму перевода)</option>
       </select>
+      {paymentKind === "card_transfer" && (
+        <>
+          <label
+            htmlFor={`${idPrefix}-in-card-kop`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
+            Сумма перевода на карту (копейки, только цифры) *
+          </label>
+          <input
+            id={`${idPrefix}-in-card-kop`}
+            value={cardTransferKopecks}
+            onChange={(e) => setCardTransferKopecks(e.target.value)}
+            style={fieldStyle}
+            placeholder="например 75000 (= 750 ₽ переводом); остальное — наличными"
+            inputMode="numeric"
+            autoComplete="off"
+          />
+        </>
+      )}
       {paymentKind === "mixed" && (
         <>
           <label

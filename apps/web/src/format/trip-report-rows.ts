@@ -12,6 +12,7 @@ export type TripBatchTableRow = {
   revenueK: bigint;
   cashK: bigint;
   debtK: bigint;
+  cardTransferK: bigint;
 };
 
 function bi(x: string | undefined): bigint {
@@ -45,11 +46,13 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   const revenue = new Map<string, bigint>();
   const cash = new Map<string, bigint>();
   const debt = new Map<string, bigint>();
+  const card = new Map<string, bigint>();
   for (const b of r.sales.byBatch) {
     soldG.set(b.batchId, bi(b.grams));
     revenue.set(b.batchId, bi(b.revenueKopecks));
     cash.set(b.batchId, bi(b.cashKopecks));
     debt.set(b.batchId, bi(b.debtKopecks));
+    card.set(b.batchId, bi(b.cardTransferKopecks ?? "0"));
   }
 
   const short = new Map<string, bigint>();
@@ -73,6 +76,7 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
       revenueK: revenue.get(batchId) ?? 0n,
       cashK: cash.get(batchId) ?? 0n,
       debtK: debt.get(batchId) ?? 0n,
+      cardTransferK: card.get(batchId) ?? 0n,
     };
   });
 }
@@ -98,6 +102,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   revenueK: bigint;
   cashK: bigint;
   debtK: bigint;
+  cardTransferK: bigint;
 } {
   let shippedG = 0n;
   let shippedPackages = 0n;
@@ -107,6 +112,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   let revenueK = 0n;
   let cashK = 0n;
   let debtK = 0n;
+  let cardTransferK = 0n;
   for (const row of rows) {
     shippedG += row.shippedG;
     shippedPackages += row.shippedPackages;
@@ -116,8 +122,9 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
     revenueK += row.revenueK;
     cashK += row.cashK;
     debtK += row.debtK;
+    cardTransferK += row.cardTransferK;
   }
-  return { shippedG, shippedPackages, soldG, shortageG, netTransitG, revenueK, cashK, debtK };
+  return { shippedG, shippedPackages, soldG, shortageG, netTransitG, revenueK, cashK, debtK, cardTransferK };
 }
 
 export type BatchTotalsReconciliation = {
@@ -126,6 +133,8 @@ export type BatchTotalsReconciliation = {
   shortageGramsOk: boolean;
   revenueKopecksOk: boolean;
   cashDebtOk: boolean;
+  /** Нал + долг + перевод на карту по строкам совпадают с итогами отчёта. */
+  paymentSplitOk: boolean;
   /** Суммы по `sales.byClient` совпадают с итогами рейса (если есть строки клиентов). */
   clientTotalsOk: boolean;
 };
@@ -141,29 +150,37 @@ export function reconcileBatchTotalsWithReport(
   const revTotal = bi(r.sales.totalRevenueKopecks);
   const cashTotal = bi(r.sales.totalCashKopecks);
   const debtTotal = bi(r.sales.totalDebtKopecks);
+  const cardTotal = bi(r.sales.totalCardTransferKopecks);
 
   let sumClientG = 0n;
   let sumClientRev = 0n;
   let sumClientCash = 0n;
   let sumClientDebt = 0n;
+  let sumClientCard = 0n;
   for (const c of r.sales.byClient) {
     sumClientG += bi(c.grams);
     sumClientRev += bi(c.revenueKopecks);
     sumClientCash += bi(c.cashKopecks);
     sumClientDebt += bi(c.debtKopecks);
+    sumClientCard += bi(c.cardTransferKopecks);
   }
   const clientTotalsOk =
     sumClientG === salesTotal &&
     sumClientRev === revTotal &&
     sumClientCash === cashTotal &&
-    sumClientDebt === debtTotal;
+    sumClientDebt === debtTotal &&
+    sumClientCard === cardTotal;
+
+  const paymentSplitOk =
+    agg.cashK === cashTotal && agg.debtK === debtTotal && agg.cardTransferK === cardTotal;
 
   return {
     shipmentGramsOk: agg.shippedG === shipTotal,
     salesGramsOk: agg.soldG === salesTotal,
     shortageGramsOk: agg.shortageG === shortTotal,
     revenueKopecksOk: agg.revenueK === revTotal,
-    cashDebtOk: agg.cashK === cashTotal && agg.debtK === debtTotal,
+    cashDebtOk: paymentSplitOk,
+    paymentSplitOk,
     clientTotalsOk,
   };
 }

@@ -329,7 +329,7 @@ export function AssignSellerPanel() {
                           </td>
                           <td style={{ ...thtd, textAlign: "right", fontSize: "0.86rem" }}>
                             {r
-                              ? `${kopecksToRubLabel(r.sales.totalCashKopecks)} / ${kopecksToRubLabel(r.sales.totalDebtKopecks)}`
+                              ? `${kopecksToRubLabel(r.sales.totalCashKopecks)} / ${kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} / ${kopecksToRubLabel(r.sales.totalDebtKopecks)}`
                               : "—"}
                           </td>
                         </tr>
@@ -459,6 +459,9 @@ export function AssignSellerPanel() {
                               Наличные
                             </th>
                             <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                              Перевод (карта)
+                            </th>
+                            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                               Долг
                             </th>
                             <th scope="col" style={thHead}>
@@ -470,14 +473,18 @@ export function AssignSellerPanel() {
                           {activeReport.sales.byClient.map((row, idx) => {
                             const debtK = BigInt(row.debtKopecks || "0");
                             const cashK = BigInt(row.cashKopecks || "0");
+                            const cardK = BigInt(row.cardTransferKopecks || "0");
                             const label = row.clientLabel?.trim() || "—";
-                            const payKind = clientSalePaymentLabelRu(cashK, debtK);
+                            const payKind = clientSalePaymentLabelRu(cashK, debtK, cardK);
                             return (
                               <tr key={`${label}-${idx}`}>
                                 <td style={thtd}>{label}</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams)}</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cashKopecks)} ₽</td>
+                                <td style={{ ...thtd, textAlign: "right" }}>
+                                  {cardK > 0n ? `${kopecksToRubLabel(row.cardTransferKopecks)} ₽` : "—"}
+                                </td>
                                 <td
                                   style={{
                                     ...thtd,

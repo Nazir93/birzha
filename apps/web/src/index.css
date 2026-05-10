@@ -57,6 +57,14 @@ body,
   color-scheme: light;
 }
 
+/* Весь документ не шире экрана: без горизонтального «шата» и белой кромки на мобильных. */
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
 *,
 *::before,
 *::after {
@@ -66,9 +74,15 @@ body,
 #root {
   min-height: 100vh;
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
   margin: 0;
   font-family: var(--font-ui);
   font-size: 16px;
@@ -1656,6 +1670,7 @@ main.app-shell--cabinet {
 .birzha-cabinet-layout {
   display: flex;
   flex-direction: column;
+  max-width: 100%;
   min-height: 100vh;
   height: 100vh;
   height: 100dvh;

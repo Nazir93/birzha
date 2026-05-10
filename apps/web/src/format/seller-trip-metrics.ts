@@ -13,6 +13,7 @@ export function tripLedgerMetrics(r: ShipmentReportResponse) {
     revenueK: agg.revenueK,
     cashK: agg.cashK,
     debtK: agg.debtK,
+    cardTransferK: agg.cardTransferK,
   };
 }
 
@@ -25,6 +26,7 @@ export type SellerShipmentTotals = {
   revenue: bigint;
   cash: bigint;
   debt: bigint;
+  cardTransfer: bigint;
 };
 
 export function aggregateSellerShipmentReports(reports: readonly ShipmentReportResponse[]): SellerShipmentTotals {
@@ -35,6 +37,7 @@ export function aggregateSellerShipmentReports(reports: readonly ShipmentReportR
   let revenue = 0n;
   let cash = 0n;
   let debt = 0n;
+  let cardTransfer = 0n;
   for (const r of reports) {
     shipped += BigInt(r.shipment.totalGrams);
     sold += BigInt(r.sales.totalGrams);
@@ -42,9 +45,10 @@ export function aggregateSellerShipmentReports(reports: readonly ShipmentReportR
     revenue += BigInt(r.sales.totalRevenueKopecks);
     cash += BigInt(r.sales.totalCashKopecks);
     debt += BigInt(r.sales.totalDebtKopecks);
+    cardTransfer += BigInt(r.sales.totalCardTransferKopecks || "0");
     netTransit += tripLedgerMetrics(r).netTransitKg;
   }
-  return { shipped, sold, shortage, netTransit, revenue, cash, debt };
+  return { shipped, sold, shortage, netTransit, revenue, cash, debt, cardTransfer };
 }
 
 /** Рейсы без закреплённого продавца — доступны для первичной привязки (повторно выбрать нельзя). */
@@ -55,17 +59,33 @@ export function filterTripsWithoutAssignedSeller<T extends { assignedSellerUserI
 }
 
 /**
- * Классификация строки клиента по суммам нал / долг (копейки).
+ * Классификация строки клиента по суммам нал / карта / долг (копейки).
  */
-export function clientSalePaymentLabelRu(cashKopecks: bigint, debtKopecks: bigint): "Наличные" | "В долг" | "Смешанно" | "—" {
-  if (cashKopecks === 0n && debtKopecks === 0n) {
+export function clientSalePaymentLabelRu(
+  cashKopecks: bigint,
+  debtKopecks: bigint,
+  cardTransferKopecks: bigint = 0n,
+):
+  | "Наличные"
+  | "Перевод на карту"
+  | "В долг"
+  | "Смешанно"
+  | "Нал + карта"
+  | "—" {
+  if (cashKopecks === 0n && debtKopecks === 0n && cardTransferKopecks === 0n) {
     return "—";
   }
-  if (debtKopecks === 0n && cashKopecks > 0n) {
+  if (debtKopecks === 0n && cardTransferKopecks === 0n && cashKopecks > 0n) {
     return "Наличные";
   }
-  if (cashKopecks === 0n && debtKopecks > 0n) {
+  if (cashKopecks === 0n && debtKopecks === 0n && cardTransferKopecks > 0n) {
+    return "Перевод на карту";
+  }
+  if (cashKopecks === 0n && cardTransferKopecks === 0n && debtKopecks > 0n) {
     return "В долг";
+  }
+  if (debtKopecks === 0n && cashKopecks > 0n && cardTransferKopecks > 0n) {
+    return "Нал + карта";
   }
   return "Смешанно";
 }

@@ -6,6 +6,7 @@ import type { BatchListItem } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { totalsByGradeFromNakladnayaBatches } from "../format/purchase-nakladnaya-totals-by-grade.js";
 import { purchaseDocumentsFullListQueryOptions } from "../query/core-list-queries.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
@@ -156,6 +157,16 @@ export function BatchesByNakladnayaReference({
       )}
       {groups.map((grp) => {
         const nLines = grp.batches.length;
+        const gradeTotals = totalsByGradeFromNakladnayaBatches(grp.batches);
+        const grandTotals = grp.batches.reduce(
+          (a, b) => ({
+            onWarehouseKg: a.onWarehouseKg + b.onWarehouseKg,
+            inTransitKg: a.inTransitKg + b.inTransitKg,
+            soldKg: a.soldKg + b.soldKg,
+            pendingInboundKg: a.pendingInboundKg + b.pendingInboundKg,
+          }),
+          { onWarehouseKg: 0, inTransitKg: 0, soldKg: 0, pendingInboundKg: 0 },
+        );
         const rawDocDate = docDateById.get(grp.documentId);
         const docDateLabel =
           rawDocDate != null && rawDocDate !== ""
@@ -233,6 +244,30 @@ export function BatchesByNakladnayaReference({
                     <td style={thtdDense}>{b.pendingInboundKg}</td>
                   </tr>
                 ))}
+                {gradeTotals.map((row) => (
+                  <tr
+                    key={`g-${grp.documentId}-${row.gradeCode}`}
+                    style={{ background: "rgba(0,0,0,0.04)", fontWeight: 600 }}
+                  >
+                    <td style={thtdDense}>
+                      {row.gradeCode}{" "}
+                      <span className="birzha-text-muted" style={{ fontWeight: 500, fontSize: "0.78rem" }}>
+                        итого по калибру
+                      </span>
+                    </td>
+                    <td style={thtdDense}>{row.onWarehouseKg}</td>
+                    <td style={thtdDense}>{row.inTransitKg}</td>
+                    <td style={thtdDense}>{row.soldKg}</td>
+                    <td style={thtdDense}>{row.pendingInboundKg}</td>
+                  </tr>
+                ))}
+                <tr style={{ background: "rgba(0,0,0,0.06)", fontWeight: 700 }}>
+                  <td style={thtdDense}>Всего по накладной</td>
+                  <td style={thtdDense}>{grandTotals.onWarehouseKg}</td>
+                  <td style={thtdDense}>{grandTotals.inTransitKg}</td>
+                  <td style={thtdDense}>{grandTotals.soldKg}</td>
+                  <td style={thtdDense}>{grandTotals.pendingInboundKg}</td>
+                </tr>
               </tbody>
             </table>
           </BirzhaDisclosure>

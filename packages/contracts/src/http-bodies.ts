@@ -27,8 +27,10 @@ const sellFromTripBodyBase = z.object({
   kg: z.number().finite().positive(),
   saleId: z.string().min(1),
   pricePerKg: z.number().finite().nonnegative(),
-  paymentKind: z.enum(["cash", "debt", "mixed"]).optional(),
+  paymentKind: z.enum(["cash", "debt", "mixed", "card_transfer"]).optional(),
   cashKopecksMixed: z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]).optional(),
+  /** При `card_transfer`: сумма перевода на карту в копейках (остаток выручки — наличными). */
+  cardTransferKopecks: z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]).optional(),
   /** Идентификатор из GET /counterparties; если задан — имя для отчёта берётся из справочника (снимок в `client_label`). */
   counterpartyId: z.string().min(1).max(64).optional(),
   /** Подпись клиента для отчёта по рейсу; игнорируется, если задан `counterpartyId`. */
@@ -44,14 +46,29 @@ function refineMixedSalePayment(data: { paymentKind?: string; cashKopecksMixed?:
   }
 }
 
+function refineCardTransferSalePayment(
+  data: { paymentKind?: string; cardTransferKopecks?: unknown },
+  ctx: z.RefinementCtx,
+) {
+  if (data.paymentKind === "card_transfer" && data.cardTransferKopecks === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "cardTransferKopecks обязателен при paymentKind=card_transfer",
+    });
+  }
+}
+
 /** POST /batches/:id/sell-from-trip */
-export const sellFromTripBodySchema = sellFromTripBodyBase.superRefine(refineMixedSalePayment);
+export const sellFromTripBodySchema = sellFromTripBodyBase
+  .superRefine(refineMixedSalePayment)
+  .superRefine(refineCardTransferSalePayment);
 
 /** Payload `sell_from_trip` в POST /sync (batchId в теле, не в пути). */
 export const sellFromTripSyncPayloadSchema = z
   .object({ batchId: z.string().min(1) })
   .merge(sellFromTripBodyBase)
-  .superRefine(refineMixedSalePayment);
+  .superRefine(refineMixedSalePayment)
+  .superRefine(refineCardTransferSalePayment);
 
 /** POST /batches/:id/record-trip-shortage */
 export const recordTripShortageBodySchema = z.object({

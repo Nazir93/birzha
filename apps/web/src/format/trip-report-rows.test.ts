@@ -24,11 +24,26 @@ const baseReport = (): ShipmentReportResponse => ({
     totalRevenueKopecks: "50000",
     totalCashKopecks: "30000",
     totalDebtKopecks: "20000",
+    totalCardTransferKopecks: "0",
     byBatch: [
-      { batchId: "b1", grams: "1000", revenueKopecks: "50000", cashKopecks: "30000", debtKopecks: "20000" },
+      {
+        batchId: "b1",
+        grams: "1000",
+        revenueKopecks: "50000",
+        cashKopecks: "30000",
+        debtKopecks: "20000",
+        cardTransferKopecks: "0",
+      },
     ],
     byClient: [
-      { clientLabel: "", grams: "1000", revenueKopecks: "50000", cashKopecks: "30000", debtKopecks: "20000" },
+      {
+        clientLabel: "",
+        grams: "1000",
+        revenueKopecks: "50000",
+        cashKopecks: "30000",
+        debtKopecks: "20000",
+        cardTransferKopecks: "0",
+      },
     ],
   },
   shortage: {
@@ -114,7 +129,9 @@ describe("buildTripBatchRows", () => {
 
   it("reconcileBatchTotalsWithReport ловит расхождение итогов с разбивкой по клиентам", () => {
     const r = baseReport();
-    r.sales.byClient = [{ clientLabel: "А", grams: "1", revenueKopecks: "1", cashKopecks: "1", debtKopecks: "0" }];
+    r.sales.byClient = [
+      { clientLabel: "А", grams: "1", revenueKopecks: "1", cashKopecks: "1", debtKopecks: "0", cardTransferKopecks: "0" },
+    ];
     const rows = buildTripBatchRows(r);
     const agg = aggregateTripBatchRows(rows);
     expect(reconcileBatchTotalsWithReport(r, agg).clientTotalsOk).toBe(false);

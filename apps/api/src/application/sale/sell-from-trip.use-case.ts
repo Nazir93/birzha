@@ -19,9 +19,11 @@ export type SellFromTripInput = {
   /** Цена продажи за кг, рубли (например 120.5). */
   pricePerKg: number;
   /** По умолчанию вся выручка — наличные. */
-  paymentKind?: "cash" | "debt" | "mixed";
+  paymentKind?: "cash" | "debt" | "mixed" | "card_transfer";
   /** При `mixed`: сколько копеек выручки — нал (остальное в долг). */
   cashKopecksMixed?: bigint;
+  /** При `card_transfer`: сколько копеек — перевод на карту (остальное выручки — наличными). */
+  cardTransferKopecks?: bigint;
   /** Подпись клиента для отчёта по рейсу (произвольная строка). */
   clientLabel?: string | null;
   /** Справочник контрагентов; при указании подпись берётся из справочника. */
@@ -34,25 +36,46 @@ export type SellFromTripTransactionRunner = (
   fn: (batches: BatchRepository, sales: TripSaleRepository) => Promise<void>,
 ) => Promise<void>;
 
-function resolveCashDebt(
+function resolveCashDebtCard(
   revenueKopecks: bigint,
-  paymentKind: "cash" | "debt" | "mixed" | undefined,
+  paymentKind: "cash" | "debt" | "mixed" | "card_transfer" | undefined,
   cashKopecksMixed: bigint | undefined,
-): { cashKopecks: bigint; debtKopecks: bigint } {
+  cardTransferKopecksInput: bigint | undefined,
+): { cashKopecks: bigint; debtKopecks: bigint; cardTransferKopecks: bigint } {
   const kind = paymentKind ?? "cash";
   if (kind === "cash") {
-    return { cashKopecks: revenueKopecks, debtKopecks: 0n };
+    return { cashKopecks: revenueKopecks, debtKopecks: 0n, cardTransferKopecks: 0n };
   }
   if (kind === "debt") {
-    return { cashKopecks: 0n, debtKopecks: revenueKopecks };
+    return { cashKopecks: 0n, debtKopecks: revenueKopecks, cardTransferKopecks: 0n };
   }
-  if (cashKopecksMixed === undefined) {
-    throw new SalePaymentSplitError("При paymentKind=mixed укажите cashKopecksMixed");
+  if (kind === "mixed") {
+    if (cashKopecksMixed === undefined) {
+      throw new SalePaymentSplitError("При paymentKind=mixed укажите cashKopecksMixed");
+    }
+    if (cashKopecksMixed < 0n || cashKopecksMixed > revenueKopecks) {
+      throw new SalePaymentSplitError("cashKopecksMixed должно быть от 0 до выручки по строке включительно");
+    }
+    return {
+      cashKopecks: cashKopecksMixed,
+      debtKopecks: revenueKopecks - cashKopecksMixed,
+      cardTransferKopecks: 0n,
+    };
   }
-  if (cashKopecksMixed < 0n || cashKopecksMixed > revenueKopecks) {
-    throw new SalePaymentSplitError("cashKopecksMixed должно быть от 0 до выручки по строке включительно");
+  if (kind === "card_transfer") {
+    if (cardTransferKopecksInput === undefined) {
+      throw new SalePaymentSplitError("При paymentKind=card_transfer укажите cardTransferKopecks");
+    }
+    if (cardTransferKopecksInput < 0n || cardTransferKopecksInput > revenueKopecks) {
+      throw new SalePaymentSplitError("cardTransferKopecks должно быть от 0 до выручки по строке включительно");
+    }
+    return {
+      cashKopecks: revenueKopecks - cardTransferKopecksInput,
+      debtKopecks: 0n,
+      cardTransferKopecks: cardTransferKopecksInput,
+    };
   }
-  return { cashKopecks: cashKopecksMixed, debtKopecks: revenueKopecks - cashKopecksMixed };
+  return { cashKopecks: revenueKopecks, debtKopecks: 0n, cardTransferKopecks: 0n };
 }
 
 export class SellFromTripUseCase {
@@ -99,10 +122,11 @@ export class SellFromTripUseCase {
     const saleLineId = randomUUID();
     const pricePerKgKopecks = rubPerKgToKopecksPerKg(input.pricePerKg);
     const revenueKopecks = revenueKopecksFromGramsAndPricePerKg(requested, pricePerKgKopecks);
-    const { cashKopecks, debtKopecks } = resolveCashDebt(
+    const { cashKopecks, debtKopecks, cardTransferKopecks } = resolveCashDebtCard(
       revenueKopecks,
       input.paymentKind,
       input.cashKopecksMixed,
+      input.cardTransferKopecks,
     );
 
     const { clientLabel, counterpartyId } = await this.resolveClientSnapshot(input);
@@ -121,6 +145,7 @@ export class SellFromTripUseCase {
         revenueKopecks,
         cashKopecks,
         debtKopecks,
+        cardTransferKopecks,
         clientLabel,
         counterpartyId,
         recordedByUserId: input.recordedByUserId?.trim() || null,

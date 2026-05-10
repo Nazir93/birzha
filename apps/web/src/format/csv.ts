@@ -34,6 +34,7 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
     "Остаток_в_пути_г",
     "Выручка_коп",
     "Наличные_коп",
+    "Перевод_на_карту_коп",
     "Долг_коп",
   ];
   lines.push(header.join(";"));
@@ -49,6 +50,7 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
       row.netTransitG.toString(),
       row.revenueK.toString(),
       row.cashK.toString(),
+      row.cardTransferK.toString(),
       row.debtK.toString(),
     ];
     lines.push(cells.join(";"));

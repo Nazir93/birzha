@@ -107,6 +107,12 @@ export class ApplySyncActionUseCase {
               : typeof p.cashKopecksMixed === "string"
                 ? BigInt(p.cashKopecksMixed)
                 : BigInt(p.cashKopecksMixed);
+          const cardTransferKopecks =
+            p.cardTransferKopecks === undefined
+              ? undefined
+              : typeof p.cardTransferKopecks === "string"
+                ? BigInt(p.cardTransferKopecks)
+                : BigInt(p.cardTransferKopecks);
           await this.sell.execute({
             batchId: p.batchId,
             tripId: p.tripId,
@@ -115,6 +121,7 @@ export class ApplySyncActionUseCase {
             pricePerKg: p.pricePerKg,
             paymentKind: p.paymentKind,
             cashKopecksMixed,
+            cardTransferKopecks,
             clientLabel: p.clientLabel,
             counterpartyId: p.counterpartyId,
             recordedByUserId: ctx?.recordedByUserId,

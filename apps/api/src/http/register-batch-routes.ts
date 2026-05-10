@@ -199,6 +199,12 @@ export function registerBatchRoutes(
           : typeof body.cashKopecksMixed === "string"
             ? BigInt(body.cashKopecksMixed)
             : BigInt(body.cashKopecksMixed);
+      const cardTransferKopecks =
+        body.cardTransferKopecks === undefined
+          ? undefined
+          : typeof body.cardTransferKopecks === "string"
+            ? BigInt(body.cardTransferKopecks)
+            : BigInt(body.cardTransferKopecks);
       const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
       if (u && isGlobalSellerOnly(u.roles)) {
         const trip = await trips.findById(body.tripId);
@@ -217,6 +223,7 @@ export function registerBatchRoutes(
         pricePerKg: body.pricePerKg,
         paymentKind: body.paymentKind,
         cashKopecksMixed,
+        cardTransferKopecks,
         clientLabel: body.clientLabel,
         counterpartyId: body.counterpartyId,
         recordedByUserId: u?.sub,

@@ -12,6 +12,7 @@ describe("computeTripFinancials", () => {
       totalRevenueKopecks: 50_000n,
       totalCashKopecks: 50_000n,
       totalDebtKopecks: 0n,
+      totalCardTransferKopecks: 0n,
       byBatch: [
         {
           batchId: "b1",
@@ -19,6 +20,7 @@ describe("computeTripFinancials", () => {
           revenueKopecks: 50_000n,
           cashKopecks: 50_000n,
           debtKopecks: 0n,
+          cardTransferKopecks: 0n,
         },
       ],
       byClient: [
@@ -28,6 +30,7 @@ describe("computeTripFinancials", () => {
           revenueKopecks: 50_000n,
           cashKopecks: 50_000n,
           debtKopecks: 0n,
+          cardTransferKopecks: 0n,
         },
       ],
     };

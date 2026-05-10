@@ -24,11 +24,14 @@ export function TripSearchPicker({
   value,
   onChange,
   disabled,
+  /** Упрощённые подписи для кабинета продавца (закреплённые рейсы). */
+  sellerWorkspace,
 }: {
   idPrefix: string;
   value: string;
   onChange: (tripId: string) => void;
   disabled?: boolean;
+  sellerWorkspace?: boolean;
 }) {
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebouncedValue(searchText, 280);
@@ -58,7 +61,8 @@ export function TripSearchPicker({
       {value && selectedTrip ? (
         <div style={{ marginBottom: "0.45rem" }}>
           <p className="birzha-callout-info" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
-            Выбран рейс: <strong>{formatTripSelectLabel(selectedTrip)}</strong>
+            {sellerWorkspace ? "Сейчас продаём с рейса: " : "Выбран рейс: "}
+            <strong>{formatTripSelectLabel(selectedTrip)}</strong>
           </p>
           <button
             type="button"
@@ -79,14 +83,19 @@ export function TripSearchPicker({
             htmlFor={searchInputId}
             className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs"
           >
-            Поиск по номеру рейса
+            {sellerWorkspace ? "Мой рейс" : "Поиск по номеру рейса"}
           </label>
+          {sellerWorkspace && (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.35rem", lineHeight: 1.45 }}>
+              В списке только рейсы, закреплённые за вами в системе.
+            </p>
+          )}
           <input
             id={searchInputId}
             type="search"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Введите часть номера…"
+            placeholder={sellerWorkspace ? "Найти по номеру рейса…" : "Введите часть номера…"}
             style={{ ...fieldStyle, maxWidth: "100%", marginBottom: "0.35rem" }}
             disabled={disabled}
             autoComplete="off"
@@ -134,7 +143,15 @@ export function TripSearchPicker({
             ))}
           </ul>
           {!pickerQuery.isPending && mergedTrips.length === 0 && (
-            <BirzhaEmptyState compact title="Нет рейсов" description="Измените поиск или сбросьте фильтр." />
+            <BirzhaEmptyState
+              compact
+              title="Нет рейсов"
+              description={
+                sellerWorkspace
+                  ? "За вами не закреплено ни одного рейса — обратитесь к администратору или измените поиск."
+                  : "Измените поиск или сбросьте фильтр."
+              }
+            />
           )}
         </>
       )}

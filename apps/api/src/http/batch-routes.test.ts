@@ -144,6 +144,7 @@ describe("Batch HTTP", () => {
         totalRevenueKopecks: string;
         totalCashKopecks: string;
         totalDebtKopecks: string;
+        totalCardTransferKopecks: string;
       };
       shortage: { totalGrams: string };
       financials: { grossProfitKopecks: string };
@@ -157,6 +158,7 @@ describe("Batch HTTP", () => {
     expect(report.sales.totalRevenueKopecks).toBe("0");
     expect(report.sales.totalCashKopecks).toBe("0");
     expect(report.sales.totalDebtKopecks).toBe("0");
+    expect(report.sales.totalCardTransferKopecks).toBe("0");
     expect(report.shortage.totalGrams).toBe("0");
     expect(report.financials.grossProfitKopecks).toBe("0");
 
@@ -181,8 +183,16 @@ describe("Batch HTTP", () => {
     expect(reportAfter.sales.totalRevenueKopecks).toBe("60000");
     expect(reportAfter.sales.totalCashKopecks).toBe("60000");
     expect(reportAfter.sales.totalDebtKopecks).toBe("0");
+    expect(reportAfter.sales.totalCardTransferKopecks).toBe("0");
     expect(reportAfter.sales.byClient).toEqual([
-      { clientLabel: "", grams: "50000", revenueKopecks: "60000", cashKopecks: "60000", debtKopecks: "0" },
+      {
+        clientLabel: "",
+        grams: "50000",
+        revenueKopecks: "60000",
+        cashKopecks: "60000",
+        debtKopecks: "0",
+        cardTransferKopecks: "0",
+      },
     ]);
 
     const b = await batches.findById("flow-1");

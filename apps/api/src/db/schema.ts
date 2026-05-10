@@ -202,9 +202,11 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   pricePerKgKopecks: bigint("price_per_kg_kopecks", { mode: "bigint" }).notNull(),
   /** Выручка по строке в копейках (согласована с grams и ценой). */
   revenueKopecks: bigint("revenue_kopecks", { mode: "bigint" }).notNull(),
-  /** Часть выручки наличными (остальное — долг). */
+  /** Часть выручки наличными (остальное — долг или перевод на карту по другим видам оплаты). */
   cashKopecks: bigint("cash_kopecks", { mode: "bigint" }).notNull(),
   debtKopecks: bigint("debt_kopecks", { mode: "bigint" }).notNull(),
+  /** Перевод на карту (без эквайринга); вместе с cash + debt даёт выручку по строке. */
+  cardTransferKopecks: bigint("card_transfer_kopecks", { mode: "bigint" }).notNull(),
   /** Произвольная подпись клиента на строке продажи (до справочника контрагентов). */
   clientLabel: text("client_label"),
   /** Ссылка на справочник; при продаже по справочнику дублируется снимок имени в `client_label`. */

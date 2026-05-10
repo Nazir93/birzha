@@ -61,6 +61,7 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
         revenueKopecks: r.revenueKopecks,
         cashKopecks: r.cashKopecks,
         debtKopecks: r.debtKopecks,
+        cardTransferKopecks: r.cardTransferKopecks,
         clientLabel: r.clientLabel,
       })),
     );

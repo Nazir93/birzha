@@ -39,6 +39,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
       revenueKopecks: row.revenueKopecks,
       cashKopecks: row.cashKopecks,
       debtKopecks: row.debtKopecks,
+      cardTransferKopecks: row.cardTransferKopecks,
       clientLabel: row.clientLabel?.trim() || null,
       counterpartyId: row.counterpartyId?.trim() || null,
       recordedByUserId: uid || null,
@@ -72,6 +73,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
         revenueKopecks: r.revenueKopecks,
         cashKopecks: r.cashKopecks,
         debtKopecks: r.debtKopecks,
+        cardTransferKopecks: r.cardTransferKopecks,
         clientLabel: r.clientLabel,
       })),
     );

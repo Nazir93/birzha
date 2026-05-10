@@ -46,12 +46,14 @@ export type SaleLedgerAggregateJson = {
   totalRevenueKopecks: string;
   totalCashKopecks: string;
   totalDebtKopecks: string;
+  totalCardTransferKopecks: string;
   byBatch: {
     batchId: string;
     grams: string;
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
+    cardTransferKopecks: string;
   }[];
   byClient: {
     clientLabel: string;
@@ -59,6 +61,7 @@ export type SaleLedgerAggregateJson = {
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
+    cardTransferKopecks: string;
   }[];
 };
 
@@ -68,12 +71,14 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     totalRevenueKopecks: aggregate.totalRevenueKopecks.toString(),
     totalCashKopecks: aggregate.totalCashKopecks.toString(),
     totalDebtKopecks: aggregate.totalDebtKopecks.toString(),
+    totalCardTransferKopecks: aggregate.totalCardTransferKopecks.toString(),
     byBatch: aggregate.byBatch.map((l) => ({
       batchId: l.batchId,
       grams: l.grams.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
     })),
     byClient: aggregate.byClient.map((l) => ({
       clientLabel: l.clientLabel,
@@ -81,6 +86,7 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
     })),
   };
 }

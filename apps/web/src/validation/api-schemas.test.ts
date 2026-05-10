@@ -124,4 +124,34 @@ describe("parseSellFromTripForm", () => {
       }),
     ).toThrow();
   });
+
+  it("передаёт cardTransferKopecks при card_transfer", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "2",
+      saleId: "s1",
+      pricePerKg: "50",
+      paymentKind: "card_transfer",
+      cashMixed: "",
+      cardTransferKopecks: "3000",
+    });
+    expect(r.body.paymentKind).toBe("card_transfer");
+    expect(r.body.cardTransferKopecks).toBe("3000");
+  });
+
+  it("отклоняет card_transfer без суммы перевода", () => {
+    expect(() =>
+      parseSellFromTripForm({
+        batchId: "b1",
+        tripId: "t1",
+        kg: "2",
+        saleId: "s1",
+        pricePerKg: "50",
+        paymentKind: "card_transfer",
+        cashMixed: "",
+        cardTransferKopecks: "",
+      }),
+    ).toThrow();
+  });
 });

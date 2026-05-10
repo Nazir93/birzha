@@ -53,6 +53,7 @@ describe("SellFromTripUseCase", () => {
     expect(agg.totalRevenueKopecks).toBe(100_000n);
     expect(agg.totalCashKopecks).toBe(100_000n);
     expect(agg.totalDebtKopecks).toBe(0n);
+    expect(agg.totalCardTransferKopecks).toBe(0n);
   });
 
   it("при counterpartyId пишет снимок имени в отчёт по клиентам", async () => {
@@ -151,6 +152,43 @@ describe("SellFromTripUseCase", () => {
     const agg = await sales.aggregateByTripId("t-d");
     expect(agg.totalDebtKopecks).toBe(agg.totalRevenueKopecks);
     expect(agg.totalCashKopecks).toBe(0n);
+    expect(agg.totalCardTransferKopecks).toBe(0n);
+  });
+
+  it("card_transfer: сумма на карту и остаток наличными", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    await new CreateTripUseCase(trips).execute({ id: "t-card", tripNumber: "Ф-CARD" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-card",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 2,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-card",
+      kg: 10,
+      tripId: "t-card",
+    });
+    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
+      batchId: "b-card",
+      tripId: "t-card",
+      kg: 10,
+      saleId: "s-card",
+      pricePerKg: 10,
+      paymentKind: "card_transfer",
+      cardTransferKopecks: 6_000n,
+    });
+    const agg = await sales.aggregateByTripId("t-card");
+    expect(agg.totalRevenueKopecks).toBe(10_000n);
+    expect(agg.totalCardTransferKopecks).toBe(6_000n);
+    expect(agg.totalCashKopecks).toBe(4_000n);
+    expect(agg.totalDebtKopecks).toBe(0n);
   });
 
   it("mixed без cashKopecksMixed — ошибка", async () => {

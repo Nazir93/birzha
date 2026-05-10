@@ -217,12 +217,14 @@ export type SalesBlock = {
   totalRevenueKopecks: string;
   totalCashKopecks: string;
   totalDebtKopecks: string;
+  totalCardTransferKopecks: string;
   byBatch: {
     batchId: string;
     grams: string;
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
+    cardTransferKopecks: string;
   }[];
   byClient: {
     clientLabel: string;
@@ -230,6 +232,7 @@ export type SalesBlock = {
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
+    cardTransferKopecks: string;
   }[];
 };
 

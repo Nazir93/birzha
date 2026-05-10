@@ -14,8 +14,9 @@ export type OutboxItem = {
         kg: number;
         saleId: string;
         pricePerKg: number;
-        paymentKind?: "cash" | "debt" | "mixed";
+        paymentKind?: "cash" | "debt" | "mixed" | "card_transfer";
         cashKopecksMixed?: string | number;
+        cardTransferKopecks?: string | number;
       };
     }
   | {

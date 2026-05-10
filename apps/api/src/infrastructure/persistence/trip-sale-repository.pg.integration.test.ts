@@ -62,6 +62,7 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
       revenueKopecks: 2500n,
       cashKopecks: 2500n,
       debtKopecks: 0n,
+      cardTransferKopecks: 0n,
     });
 
     const agg = await sales.aggregateByTripId(tripId);
@@ -69,11 +70,26 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
     expect(agg.totalRevenueKopecks).toBe(2500n);
     expect(agg.totalCashKopecks).toBe(2500n);
     expect(agg.totalDebtKopecks).toBe(0n);
+    expect(agg.totalCardTransferKopecks).toBe(0n);
     expect(agg.byBatch).toEqual([
-      { batchId, grams: 25_000n, revenueKopecks: 2500n, cashKopecks: 2500n, debtKopecks: 0n },
+      {
+        batchId,
+        grams: 25_000n,
+        revenueKopecks: 2500n,
+        cashKopecks: 2500n,
+        debtKopecks: 0n,
+        cardTransferKopecks: 0n,
+      },
     ]);
     expect(agg.byClient).toEqual([
-      { clientLabel: "", grams: 25_000n, revenueKopecks: 2500n, cashKopecks: 2500n, debtKopecks: 0n },
+      {
+        clientLabel: "",
+        grams: 25_000n,
+        revenueKopecks: 2500n,
+        cashKopecks: 2500n,
+        debtKopecks: 0n,
+        cardTransferKopecks: 0n,
+      },
     ]);
   });
 });

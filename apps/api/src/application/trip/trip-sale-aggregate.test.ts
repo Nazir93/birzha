@@ -32,6 +32,7 @@ describe("buildTripSaleAggregateFromRows", () => {
     ]);
     expect(agg.totalGrams).toBe(180n);
     expect(agg.totalRevenueKopecks).toBe(1800n);
+    expect(agg.totalCardTransferKopecks).toBe(0n);
     expect(agg.byBatch).toHaveLength(2);
     const b1 = agg.byBatch.find((x) => x.batchId === "b1")!;
     expect(b1.grams).toBe(150n);

@@ -99,8 +99,9 @@ export function parseSellFromTripForm(input: {
   kg: string;
   saleId: string;
   pricePerKg: string;
-  paymentKind: "cash" | "debt" | "mixed";
+  paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
   cashMixed: string;
+  cardTransferKopecks?: string;
   clientLabel?: string;
   counterpartyId?: string;
 }) {
@@ -121,6 +122,10 @@ export function parseSellFromTripForm(input: {
     if (input.paymentKind === "mixed") {
       const cm = input.cashMixed.trim();
       base.cashKopecksMixed = cm || undefined;
+    }
+    if (input.paymentKind === "card_transfer") {
+      const ct = input.cardTransferKopecks?.trim() ?? "";
+      base.cardTransferKopecks = ct || undefined;
     }
     const cp = input.counterpartyId?.trim();
     if (cp) {

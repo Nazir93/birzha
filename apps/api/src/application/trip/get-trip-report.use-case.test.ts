@@ -42,6 +42,7 @@ describe("GetTripReportUseCase", () => {
       revenueKopecks: 400n,
       cashKopecks: 400n,
       debtKopecks: 0n,
+      cardTransferKopecks: 0n,
     });
 
     const { trip, shipment, sales: saleAgg, shortage, financials } = await new GetTripReportUseCase(
@@ -59,6 +60,7 @@ describe("GetTripReportUseCase", () => {
     expect(saleAgg.totalRevenueKopecks).toBe(400n);
     expect(saleAgg.totalCashKopecks).toBe(400n);
     expect(saleAgg.totalDebtKopecks).toBe(0n);
+    expect(saleAgg.totalCardTransferKopecks).toBe(0n);
     expect(saleAgg.byClient).toEqual([
       {
         clientLabel: "",
@@ -66,6 +68,7 @@ describe("GetTripReportUseCase", () => {
         revenueKopecks: 400n,
         cashKopecks: 400n,
         debtKopecks: 0n,
+        cardTransferKopecks: 0n,
       },
     ]);
     expect(shortage.totalGrams).toBe(0n);
@@ -109,6 +112,7 @@ describe("GetTripReportUseCase", () => {
         revenueKopecks: rev,
         cashKopecks: cash,
         debtKopecks: rev - cash,
+        cardTransferKopecks: 0n,
         recordedByUserId: uid,
       });
     await line("a", "s-a", 10_000n, 1_000n, 1_000n, "u-alice");

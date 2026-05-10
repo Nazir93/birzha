@@ -141,6 +141,20 @@
       "when": 1777200000000,
       "tag": "0019_purchase_created_by_trip_assigned_seller",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777300000000,
+      "tag": "0020_loading_manifests",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777400000000,
+      "tag": "0021_trip_sale_card_transfer",
+      "breakpoints": true
     }
   ]
 }

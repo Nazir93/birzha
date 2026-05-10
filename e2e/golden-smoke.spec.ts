@@ -223,17 +223,19 @@ test.describe("золотой smoke (UI + API)", () => {
     const reportRes = await request.get(`/api/trips/${tripId}/shipment-report`);
     expect(reportRes.ok()).toBeTruthy();
     const report = (await reportRes.json()) as {
-      sales: { totalCashKopecks: string; totalDebtKopecks: string };
+      sales: { totalCashKopecks: string; totalDebtKopecks: string; totalCardTransferKopecks: string };
     };
     expect(report.sales.totalCashKopecks).toBe("0");
+    expect(report.sales.totalCardTransferKopecks).toBe("0");
     const cashLabel = kopecksToRubLabel("0");
+    const cardLabel = kopecksToRubLabel(report.sales.totalCardTransferKopecks);
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
     await page.goto("/reports");
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
-    await expect(region).toContainText(`${cashLabel} ₽ / ${debtLabel} ₽`);
+    await expect(region).toContainText(`${cashLabel} ₽ / ${cardLabel} ₽ / ${debtLabel} ₽`);
   });
 
   test("отчёты: смешанная оплата — нал/долг в UI совпадают с API", async ({ page, request }) => {
@@ -282,19 +284,21 @@ test.describe("золотой smoke (UI + API)", () => {
     const reportRes = await request.get(`/api/trips/${tripId}/shipment-report`);
     expect(reportRes.ok()).toBeTruthy();
     const report = (await reportRes.json()) as {
-      sales: { totalCashKopecks: string; totalDebtKopecks: string };
+      sales: { totalCashKopecks: string; totalDebtKopecks: string; totalCardTransferKopecks: string };
     };
     expect(report.sales.totalCashKopecks).toBe("5000");
     expect(report.sales.totalDebtKopecks).toBe("5000");
+    expect(report.sales.totalCardTransferKopecks).toBe("0");
 
     const cashLabel = kopecksToRubLabel(report.sales.totalCashKopecks);
+    const cardLabel = kopecksToRubLabel(report.sales.totalCardTransferKopecks);
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
     await page.goto("/reports");
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
-    await expect(region).toContainText(`${cashLabel} ₽ / ${debtLabel} ₽`);
+    await expect(region).toContainText(`${cashLabel} ₽ / ${cardLabel} ₽ / ${debtLabel} ₽`);
     await expect(page.getByRole("heading", { name: "Продажи по клиентам" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("E2E-Mixed", { exact: true })).toBeVisible();
   });
@@ -358,6 +362,7 @@ test.describe("золотой smoke (UI + API)", () => {
         totalRevenueKopecks: string;
         totalCashKopecks: string;
         totalDebtKopecks: string;
+        totalCardTransferKopecks: string;
         byClient: { clientLabel: string; grams: string }[];
       };
       shortage: { totalGrams: string };
@@ -383,6 +388,7 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(report.sales.totalGrams).toBe(soldGrams.toString());
     expect(report.sales.totalRevenueKopecks).toBe(expectedRevenue.toString());
     expect(report.sales.totalCashKopecks).toBe("0");
+    expect(report.sales.totalCardTransferKopecks).toBe("0");
     expect(report.sales.totalDebtKopecks).toBe(expectedRevenue.toString());
     expect(report.sales.byClient).toHaveLength(1);
     expect(report.sales.byClient[0].clientLabel).toBe("ИП Иванов");
