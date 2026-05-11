@@ -223,7 +223,7 @@ sudo certbot --nginx -d 24birzha.ru
 ```bash
 cd /opt/birzha
 git fetch origin && git checkout main && git pull --ff-only origin main
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --yes
 pnpm exec turbo run build --force
 set -a && source apps/api/.env && set +a
 pg_dump "$DATABASE_URL" --format=custom --file "birzha-$(date +%F-%H%M).dump"

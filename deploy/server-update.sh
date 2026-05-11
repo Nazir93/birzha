@@ -42,8 +42,8 @@ git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
 CURRENT_COMMIT="$(git rev-parse --short HEAD)"
 
-echo ">>> pnpm install"
-pnpm install --frozen-lockfile
+echo ">>> pnpm install (--yes — без запроса на полную переустановку node_modules)"
+pnpm install --frozen-lockfile --yes
 
 echo ">>> turbo build --force (на сервере без кэша — иначе после git pull возможен устаревший билд)"
 pnpm exec turbo run build --force
@@ -72,7 +72,7 @@ if [[ "${SKIP_HEALTHCHECK:-0}" != "1" ]]; then
     if [[ "$attempt" == "5" ]]; then
       echo "Ошибка: healthcheck не прошёл: $HEALTH_URL" >&2
       echo "Предыдущий commit до обновления: $PREVIOUS_COMMIT; текущий commit: $CURRENT_COMMIT" >&2
-      echo "Откат кода: git checkout $PREVIOUS_COMMIT && pnpm install --frozen-lockfile && pnpm exec turbo run build --force && sudo systemctl restart $SERVICE" >&2
+      echo "Откат кода: git checkout $PREVIOUS_COMMIT && pnpm install --frozen-lockfile --yes && pnpm exec turbo run build --force && sudo systemctl restart $SERVICE" >&2
       exit 1
     fi
     sleep 2
