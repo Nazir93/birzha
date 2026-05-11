@@ -223,7 +223,7 @@ sudo certbot --nginx -d 24birzha.ru
 ```bash
 cd /opt/birzha
 git fetch origin && git checkout main && git pull --ff-only origin main
-pnpm install --frozen-lockfile --yes
+CI=1 pnpm install --frozen-lockfile
 pnpm exec turbo run build --force
 set -a && source apps/api/.env && set +a
 pg_dump "$DATABASE_URL" --format=custom --file "birzha-$(date +%F-%H%M).dump"
@@ -231,6 +231,8 @@ cd apps/api && pnpm db:push
 sudo systemctl restart birzha-api
 curl -fsS http://127.0.0.1:3000/health
 ```
+
+**CI=1** перед `pnpm install` нужен, чтобы не было запроса «удалить и переустановить `node_modules`» в неинтерактивной сессии. У команды **`pnpm install` нет флага `--yes`** (это не npm).
 
 Проверка, что поднялся **новый** API (после релизов с новыми полями в `/meta`): `curl -sS http://127.0.0.1:3000/meta` — в JSON должны быть в том числе **`adminUsersApi`** и **`requireApiAuth`**. Если полей нет, чаще всего **не пересобрали** `apps/api` (`pnpm exec turbo run build --force --filter=@birzha/api`) или unit systemd указывает на другой каталог/старый `dist`.
 
