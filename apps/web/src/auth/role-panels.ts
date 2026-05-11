@@ -21,7 +21,8 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   distribution: "Распределение товара",
   loadingManifests: "Погрузка",
   reports: "Отчёты и рейсы",
-  operations: "Операции",
+  /** Запись недостачи по рейсу (`OperationsPanel`); отгрузка — в «Распределении», продажа — у продавца. */
+  operations: "Недостача по рейсу",
   sellerDispatch: "Отгрузка",
   assignSeller: "Продажи",
   offline: "Офлайн-очередь",
@@ -397,6 +398,21 @@ export function defaultRouteForUser(user: AuthUser | null): string {
     return accounting.home;
   }
   return ops.reports;
+}
+
+/**
+ * Куда направить после успешного входа. Если сохранённый URL (`from`) относится к **другому** кабинету,
+ * чем «родной» для пользователя (`cabinetForUser`), ведём на домашний маршрут роли — иначе после смены
+ * учётной записи (например PWA: выход продавца → вход админа) оставался бы открыт чужой кабинет (`/s` и т.п.).
+ */
+export function postLoginRedirectPath(user: AuthUser, fromPathname: string): string {
+  const normalized = (fromPathname || "").trim() || ops.reports;
+  const fromCabinet = cabinetIdFromPathname(normalized);
+  const homeCabinet = cabinetForUser(user);
+  if (fromCabinet !== null && fromCabinet !== homeCabinet) {
+    return defaultRouteForUser(user);
+  }
+  return normalized;
 }
 
 export type LegacySegment = keyof typeof routes.legacy;

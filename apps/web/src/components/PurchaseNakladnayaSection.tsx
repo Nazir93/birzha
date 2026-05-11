@@ -31,6 +31,7 @@ import {
 } from "../query/core-list-queries.js";
 import { adminRoutes, login, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import {
@@ -44,6 +45,8 @@ import {
   warnText,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+
+const NAKLAD_LIST_PAGE_SIZE = 25;
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -93,6 +96,7 @@ export function PurchaseNakladnayaSection() {
   const [buyerLabel, setBuyerLabel] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
+  const [nakladListPage, setNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const invalidate = useCallback(() => {
@@ -133,6 +137,30 @@ export function PurchaseNakladnayaSection() {
       setFormError(e.message);
     },
   });
+
+  const sortedPurchaseDocs = useMemo(() => {
+    const docs = listQ.data?.purchaseDocuments ?? [];
+    return [...docs].sort((a, b) => {
+      const da = a.docDate ? Date.parse(a.docDate) : 0;
+      const db = b.docDate ? Date.parse(b.docDate) : 0;
+      if (db !== da) {
+        return db - da;
+      }
+      return b.documentNumber.localeCompare(a.documentNumber, "ru");
+    });
+  }, [listQ.data?.purchaseDocuments]);
+
+  const nakladPageCount = Math.max(1, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    setNakladListPage((p) => Math.min(p, maxPage));
+  }, [sortedPurchaseDocs.length]);
+
+  const nakladPageSlice = useMemo(() => {
+    const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
+    return sortedPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [sortedPurchaseDocs, nakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -652,7 +680,7 @@ export function PurchaseNakladnayaSection() {
                 </tr>
               </thead>
               <tbody>
-                {listQ.data.purchaseDocuments.slice(0, 50).map((d) => {
+                {nakladPageSlice.map((d) => {
                   const wh = warehousesQ.data?.warehouses.find((w) => w.id === d.warehouseId);
                   return (
                     <tr key={d.id}>
@@ -678,6 +706,12 @@ export function PurchaseNakladnayaSection() {
               </tbody>
             </table>
           </div>
+          <BirzhaPagination
+            pageIndex={nakladListPage}
+            pageCount={nakladPageCount}
+            itemLabel="накладных"
+            onPageChange={setNakladListPage}
+          />
         </div>
       )}
       </BirzhaDisclosure>

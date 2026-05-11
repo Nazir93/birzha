@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
+import { postLoginRedirectPath } from "../auth/role-panels.js";
 import { ops } from "../routes.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { errorText, fieldStyle } from "../ui/styles.js";
@@ -41,8 +42,11 @@ export function LoginPage() {
     );
   }
 
-  if (meta?.requireApiAuth !== "enabled" || user) {
+  if (meta?.requireApiAuth !== "enabled") {
     return <Navigate to={from} replace />;
+  }
+  if (user) {
+    return <Navigate to={postLoginRedirectPath(user, from)} replace />;
   }
 
   const submit = () => {

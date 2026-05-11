@@ -302,8 +302,8 @@ export function InventoryAdminPanel() {
   }
 
   return (
-    <section className="birzha-home-premium" aria-labelledby="inv-adm-heading">
-      <header className="birzha-home-hero">
+    <section className="birzha-home-premium birzha-inventory-admin" aria-labelledby="inv-adm-heading">
+      <header className="birzha-home-hero birzha-inventory-admin__hero">
         <div>
           <p className="birzha-home-hero__eyebrow">Справочники</p>
           <h2 id="inv-adm-heading" className="birzha-home-hero__title">
@@ -363,27 +363,20 @@ export function InventoryAdminPanel() {
           hint="Создание и удаление пустых рейсов"
         >
           {tripError && <p style={errorText}>{tripError}</p>}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "end",
-              gap: "0.35rem",
-              marginBottom: "0.5rem",
-            }}
-          >
-            <div>
+          <div className="birzha-inventory-logistics-form">
+            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--wide">
               <label className="birzha-field-label">Идентификатор</label>
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <div className="birzha-inventory-trip-id-row">
                 <input
                   value={newTripId}
                   onChange={(e) => setNewTripId(e.target.value)}
-                  style={{ ...fieldStyle, width: 250 }}
+                  style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
                   placeholder="можно оставить пустым"
                   autoComplete="off"
                 />
                 <button
                   type="button"
+                  className="birzha-inventory-trip-id-row__gen"
                   style={{ ...btnStyle, fontSize: "0.82rem" }}
                   onClick={() => {
                     if (globalThis.crypto?.randomUUID) {
@@ -395,60 +388,60 @@ export function InventoryAdminPanel() {
                 </button>
               </div>
             </div>
-            <div>
+            <div className="birzha-inventory-logistics-form__field">
               <label className="birzha-field-label">№ рейса</label>
               <input
                 value={newTripNumber}
                 onChange={(e) => setNewTripNumber(e.target.value)}
-                style={{ ...fieldStyle, width: 100 }}
+                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
                 placeholder="Ф-12"
                 autoComplete="off"
               />
             </div>
-            <div>
+            <div className="birzha-inventory-logistics-form__field">
               <label className="birzha-field-label">ТС</label>
               <input
                 value={newTripVehicle}
                 onChange={(e) => setNewTripVehicle(e.target.value)}
-                style={{ ...fieldStyle, width: 100 }}
+                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
                 placeholder="опц."
                 autoComplete="off"
               />
             </div>
-            <div>
+            <div className="birzha-inventory-logistics-form__field">
               <label className="birzha-field-label">Водитель</label>
               <input
                 value={newTripDriver}
                 onChange={(e) => setNewTripDriver(e.target.value)}
-                style={{ ...fieldStyle, width: 120 }}
+                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
                 placeholder="опц."
                 autoComplete="off"
               />
             </div>
-            <div>
-              <label
-                htmlFor="inv-adm-new-trip-departed"
-                className="birzha-field-label"
-              >
-                Отправл.
+            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--datetime">
+              <label htmlFor="inv-adm-new-trip-departed" className="birzha-field-label">
+                Отправление
               </label>
               <BirzhaDateTimeField
                 id="inv-adm-new-trip-departed"
                 value={newTripDeparted}
                 onChange={setNewTripDeparted}
-                style={{ ...fieldStyle, maxWidth: 220, marginTop: 0.35 }}
+                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0, marginTop: 0.35 }}
                 className="birzha-input-date"
                 emptyLabel="—"
               />
             </div>
-            <button
-              type="button"
-              style={btnStyle}
-              disabled={createTrip.isPending}
-              onClick={() => void createTrip.mutate()}
-            >
-              {createTrip.isPending ? "…" : "Создать рейс"}
-            </button>
+            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--submit">
+              <button
+                type="button"
+                className="birzha-inventory-logistics-form__submit-btn"
+                style={btnStyle}
+                disabled={createTrip.isPending}
+                onClick={() => void createTrip.mutate()}
+              >
+                {createTrip.isPending ? "…" : "Создать рейс"}
+              </button>
+            </div>
           </div>
           {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
           {tripsQ.isPending && (
@@ -598,31 +591,35 @@ export function InventoryAdminPanel() {
             Код хранится в партии. «Удалить» — снятие с выбора (is_active = false), повтор с тем же кодом —
             обновит подпись и снова включит.
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
+          <div className="birzha-inventory-inline-tools">
             <input
               value={newDestCode}
               onChange={(e) => setNewDestCode(e.target.value)}
-              style={{ ...fieldStyle, width: 120 }}
+              style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
               placeholder="Код (лат.)"
               autoComplete="off"
+              aria-label="Код направления"
             />
             <input
               value={newDestName}
               onChange={(e) => setNewDestName(e.target.value)}
-              style={{ ...fieldStyle, flex: "1 1 160px" }}
+              style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
               placeholder="Название (как в списке)"
               autoComplete="off"
+              aria-label="Название направления"
             />
             <input
               value={newDestOrder}
               onChange={(e) => setNewDestOrder(e.target.value)}
-              style={{ ...fieldStyle, width: 72 }}
-              placeholder="№"
+              style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
+              placeholder="Порядок"
               inputMode="numeric"
               autoComplete="off"
+              aria-label="Порядок сортировки"
             />
             <button
               type="button"
+              className="birzha-inventory-inline-tools__submit"
               style={btnStyle}
               disabled={createShipDest.isPending}
               onClick={() => void createShipDest.mutate()}
@@ -703,11 +700,11 @@ export function InventoryAdminPanel() {
       {warehousesQ.isPending && (
         <LoadingBlock label="Загрузка складов…" minHeight={48} skeleton skeletonRows={3} />
       )}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
+      <div className="birzha-inventory-inline-tools birzha-inventory-inline-tools--catalog">
         <input
           value={newWarehouseName}
           onChange={(e) => setNewWarehouseName(e.target.value)}
-          style={{ ...fieldStyle, flex: "1 1 160px", minWidth: 120 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Название нового склада"
           autoComplete="off"
           aria-label="Название нового склада"
@@ -715,12 +712,18 @@ export function InventoryAdminPanel() {
         <input
           value={newWarehouseCode}
           onChange={(e) => setNewWarehouseCode(e.target.value)}
-          style={{ ...fieldStyle, width: 120 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Код (опц.)"
           autoComplete="off"
           aria-label="Код склада латиницей"
         />
-        <button type="button" style={btnStyle} disabled={createWarehouse.isPending} onClick={() => void createWarehouse.mutate()}>
+        <button
+          type="button"
+          className="birzha-inventory-inline-tools__submit"
+          style={btnStyle}
+          disabled={createWarehouse.isPending}
+          onClick={() => void createWarehouse.mutate()}
+        >
           {createWarehouse.isPending ? "…" : "Добавить склад"}
         </button>
       </div>
@@ -780,37 +783,47 @@ export function InventoryAdminPanel() {
       {gradesQ.isPending && (
         <LoadingBlock label="Загрузка калибров…" minHeight={48} skeleton skeletonRows={3} />
       )}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.5rem" }}>
+      <div className="birzha-inventory-inline-tools birzha-inventory-inline-tools--grades">
         <input
           value={newGradeProductGroup}
           onChange={(e) => setNewGradeProductGroup(e.target.value)}
-          style={{ ...fieldStyle, flex: "1 1 120px", minWidth: 100 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Группа (опц.)"
           autoComplete="off"
+          aria-label="Группа товара"
         />
         <input
           value={newGradeCode}
           onChange={(e) => setNewGradeCode(e.target.value)}
-          style={{ ...fieldStyle, width: 88 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Код"
           autoComplete="off"
+          aria-label="Код калибра"
         />
         <input
           value={newGradeDisplayName}
           onChange={(e) => setNewGradeDisplayName(e.target.value)}
-          style={{ ...fieldStyle, flex: "1 1 140px", minWidth: 120 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Подпись"
           autoComplete="off"
+          aria-label="Подпись калибра"
         />
         <input
           value={newGradeSortOrder}
           onChange={(e) => setNewGradeSortOrder(e.target.value)}
-          style={{ ...fieldStyle, width: 72 }}
+          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
           placeholder="Порядок"
           inputMode="numeric"
           autoComplete="off"
+          aria-label="Порядок сортировки"
         />
-        <button type="button" style={btnStyle} disabled={createProductGrade.isPending} onClick={() => void createProductGrade.mutate()}>
+        <button
+          type="button"
+          className="birzha-inventory-inline-tools__submit"
+          style={btnStyle}
+          disabled={createProductGrade.isPending}
+          onClick={() => void createProductGrade.mutate()}
+        >
           {createProductGrade.isPending ? "…" : "Добавить калибр"}
         </button>
       </div>

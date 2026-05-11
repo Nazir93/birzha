@@ -358,6 +358,27 @@ main.app-shell {
   line-height: 1.2;
 }
 
+/* KPI-плитка как ссылка на раздел с детализацией */
+a.birzha-kpi-tile--link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+a.birzha-kpi-tile--link:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 10px 28px -22px rgba(15, 23, 42, 0.45);
+}
+
+a.birzha-kpi-tile--link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .birzha-kpi-tile--accent {
   background: var(--birzha-accent-soft);
   border-color: var(--color-border);
@@ -2289,6 +2310,43 @@ main.app-shell--cabinet {
   box-shadow: 0 12px 28px -24px rgba(15, 23, 42, 0.35);
 }
 
+a.birzha-admin-stat--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+a.birzha-admin-stat--link:hover {
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 14px 32px -22px rgba(15, 23, 42, 0.38);
+}
+
+a.birzha-admin-stat--link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.birzha-admin-dash__hero-ring--link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.birzha-admin-dash__hero-ring--link:hover {
+  opacity: 0.92;
+}
+
+.birzha-admin-dash__hero-ring--link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+
 .birzha-admin-stat--xl .birzha-admin-stat__label {
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -2374,6 +2432,135 @@ main.app-shell--cabinet {
 .birzha-home-premium {
   max-width: 88rem;
   margin: 0 auto;
+}
+
+/* Админка «Склады и калибры»: узкие экраны — без горизонтального переполнения форм */
+.birzha-inventory-admin {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 42rem) {
+  .birzha-inventory-admin__hero {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem 1rem;
+  }
+
+  .birzha-inventory-admin__hero .birzha-home-actions {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.birzha-inventory-logistics-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.25rem), 1fr));
+  gap: 0.55rem 0.65rem;
+  align-items: end;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.birzha-inventory-logistics-form__field--wide {
+  grid-column: 1 / -1;
+}
+
+.birzha-inventory-logistics-form__field--datetime {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 36rem) {
+  .birzha-inventory-logistics-form__field--datetime {
+    grid-column: auto;
+  }
+}
+
+.birzha-inventory-trip-id-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: stretch;
+  min-width: 0;
+  width: 100%;
+}
+
+.birzha-inventory-trip-id-row input {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.birzha-inventory-trip-id-row__gen {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 22rem) {
+  .birzha-inventory-trip-id-row__gen {
+    flex: 1 1 100%;
+  }
+}
+
+.birzha-inventory-logistics-form__field--submit {
+  grid-column: 1 / -1;
+}
+
+.birzha-inventory-logistics-form__submit-btn {
+  width: 100%;
+}
+
+@media (min-width: 32rem) {
+  .birzha-inventory-logistics-form__field--submit {
+    grid-column: auto;
+  }
+
+  .birzha-inventory-logistics-form__submit-btn {
+    width: auto;
+    min-width: 9rem;
+  }
+}
+
+.birzha-inventory-inline-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: 0.4rem 0.5rem;
+  align-items: end;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.birzha-inventory-inline-tools--catalog {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+}
+
+.birzha-inventory-inline-tools--grades {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+}
+
+.birzha-inventory-inline-tools__submit {
+  width: 100%;
+}
+
+@media (min-width: 40rem) {
+  .birzha-inventory-inline-tools__submit {
+    width: auto;
+    min-width: 8.5rem;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 36rem) {
+  .birzha-inventory-admin table tbody td:first-child {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .birzha-inventory-admin table tbody td:first-child a {
+    display: inline-block;
+    margin-top: 0.15rem;
+  }
 }
 
 .birzha-home-hero {

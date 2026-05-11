@@ -7,8 +7,8 @@ import { OperationsPanel } from "./OperationsPanel.js";
 import { RequirePanel } from "./RequirePanel.js";
 
 /**
- * У «чистого» продавца продажа только на `/s` — дублирующая вкладка «Операции» ведёт на главную с тем же query (`trip`, …).
- * У продавца+склада остаётся полный `OperationsPanel`.
+ * У «чистого» продавца продажа только на `/s` — вкладка «Недостача по рейсу» ведёт на главную с тем же query (`trip`, …).
+ * У продавца+склада показывается экран записи недостачи (`OperationsPanel`).
  */
 export function SellerSalesOperationsRedirect() {
   const { user } = useAuth();

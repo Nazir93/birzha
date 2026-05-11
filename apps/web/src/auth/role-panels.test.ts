@@ -10,6 +10,7 @@ import {
   defaultRouteForUser,
   isFieldSellerOnly,
   operationsPanelOrder,
+  postLoginRedirectPath,
 } from "./role-panels.js";
 
 function userWithRoles(...roleCodes: string[]) {
@@ -66,6 +67,13 @@ describe("role-panels", () => {
     expect(defaultRouteForUser(userWithRoles("warehouse"))).toBe(ops.purchaseNakladnaya);
     expect(defaultRouteForUser(userWithRoles("purchaser"))).toBe(ops.purchaseNakladnaya);
     expect(defaultRouteForUser(userWithRoles("admin"))).toBe(adminRoutes.home);
+  });
+
+  it("postLoginRedirectPath — не оставлять другой кабинет после смены учётки", () => {
+    expect(postLoginRedirectPath(userWithRoles("admin"), sales.reports)).toBe(adminRoutes.home);
+    expect(postLoginRedirectPath(userWithRoles("seller"), sales.reports)).toBe(sales.reports);
+    expect(postLoginRedirectPath(userWithRoles("seller"), adminRoutes.reports)).toBe(sales.home);
+    expect(postLoginRedirectPath(userWithRoles("warehouse"), ops.reports)).toBe(ops.reports);
   });
 
   it("operationsPanelOrder: у logistics отчёты первые", () => {

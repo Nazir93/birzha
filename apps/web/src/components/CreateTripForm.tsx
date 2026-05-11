@@ -9,7 +9,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
-export function CreateTripForm() {
+export function CreateTripForm({ disclosureDefaultOpen = true }: { disclosureDefaultOpen?: boolean } = {}) {
   const queryClient = useQueryClient();
   const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const [tripNumber, setTripNumber] = useState("");
@@ -48,8 +48,8 @@ export function CreateTripForm() {
 
   return (
     <BirzhaDisclosure
-      defaultOpen
-      title={<h3 className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>Создать рейс</h3>}
+      defaultOpen={disclosureDefaultOpen}
+      title={<h3 className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>Новый рейс</h3>}
       hint="пустой рейс в списке"
     >
       <label htmlFor="ct-trip-number" className="birzha-form-label">
@@ -162,7 +162,7 @@ export function CreateTripForm() {
           aria-busy={mutation.isPending ? true : undefined}
           onClick={() => mutation.mutate()}
         >
-          {mutation.isPending ? "Создание…" : "Создать рейс"}
+          {mutation.isPending ? "Создание…" : "Добавить рейс"}
         </button>
       </div>
       {mutation.isError && (

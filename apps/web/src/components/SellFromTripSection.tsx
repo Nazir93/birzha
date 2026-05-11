@@ -1,3 +1,4 @@
+import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -19,6 +20,7 @@ import {
   shipmentReportQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
+import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -177,6 +179,21 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     }
     return m;
   }, [batchesForTripQuery.data?.batches]);
+
+  /** Сумма сделки в копейках по полям кг и ₽/кг (как строка накладной). */
+  const sellDealTotalKopecks = useMemo(
+    () =>
+      purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, { kgMaxFrac: 6, priceMaxFrac: 4 }),
+    [sellKg, sellPrice],
+  );
+
+  const sellDealTotalLabel = useMemo(() => {
+    if (!Number.isFinite(sellDealTotalKopecks) || sellDealTotalKopecks < 0) {
+      return null;
+    }
+    const rounded = Math.round(sellDealTotalKopecks);
+    return kopecksToRubLabel(String(rounded));
+  }, [sellDealTotalKopecks]);
 
   const formatSellBatchOptionLabel = (row: TripBatchTableRow, opts?: { includeNakladPrefix?: boolean }): string => {
     const includeNakladPrefix = opts?.includeNakladPrefix !== false;
@@ -684,6 +701,34 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         inputMode="decimal"
         autoComplete="off"
       />
+      <p
+        className={isSellerUx ? "birzha-banner-distribution" : "birzha-callout-info"}
+        style={{
+          marginTop: "0.45rem",
+          marginBottom: 0,
+          fontSize: isSellerUx ? "1rem" : "0.88rem",
+          fontWeight: isSellerUx ? 600 : 400,
+          lineHeight: 1.45,
+        }}
+        role="status"
+        aria-live="polite"
+        aria-label={sellDealTotalLabel ? `Сумма сделки ${sellDealTotalLabel} рублей` : undefined}
+      >
+        {sellDealTotalLabel ? (
+          <>
+            Сумма сделки: <strong>{sellDealTotalLabel} ₽</strong>
+            {isSellerUx ? (
+              <span className="birzha-text-muted birzha-text-muted--sm" style={{ fontWeight: 500, marginLeft: "0.35rem" }}>
+                (кг × цена за кг)
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <span className="birzha-text-muted">
+            Укажите килограммы и цену за кг — здесь появится сумма сделки.
+          </span>
+        )}
+      </p>
       {counterpartiesCatalog && (
         <>
           <label
