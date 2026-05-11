@@ -308,7 +308,9 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
         ) : null}
 
         <div className="birzha-cabinet-main">
-          <Outlet />
+          <div className="birzha-cabinet-main__canvas">
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

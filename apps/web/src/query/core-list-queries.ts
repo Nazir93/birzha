@@ -73,7 +73,8 @@ export const tripsSearchPickerQueryOptions = (search: string) => {
       if (q) {
         p.set("search", q);
       }
-      p.set("limit", "80");
+      /** До 500 — чтобы старые/«обнулённые» по остатку рейса не пропадали из подборщика при большом потоке. */
+      p.set("limit", "500");
       p.set("order", "departedAtDesc");
       return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
     },

@@ -235,6 +235,10 @@ export function AssignSellerPanel() {
                 <span className="birzha-assign-seller__kpi-label">Наличные</span>
                 <span className="birzha-assign-seller__kpi-value">{kopecksToRubLabel(sellerTotals.cash.toString())} ₽</span>
               </div>
+              <div className="birzha-assign-seller__kpi-card">
+                <span className="birzha-assign-seller__kpi-label">Перевод (карта)</span>
+                <span className="birzha-assign-seller__kpi-value">{kopecksToRubLabel(sellerTotals.cardTransfer.toString())} ₽</span>
+              </div>
               <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--warn">
                 <span className="birzha-assign-seller__kpi-label">В долг</span>
                 <span className="birzha-assign-seller__kpi-value">{kopecksToRubLabel(sellerTotals.debt.toString())} ₽</span>
@@ -283,7 +287,7 @@ export function AssignSellerPanel() {
                         Выручка
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
-                        Нал / долг
+                        Нал / карта / долг
                       </th>
                     </tr>
                   </thead>
@@ -371,7 +375,7 @@ export function AssignSellerPanel() {
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По партиям (накладная · калибр)</h4>
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                    <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Продажи по партиям">
+                    <table style={{ ...tableStyle, minWidth: 780 }} aria-label="Продажи по партиям">
                       <thead>
                         <tr>
                           <th scope="col" style={thHead}>
@@ -390,6 +394,9 @@ export function AssignSellerPanel() {
                             Наличные
                           </th>
                           <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                            Перевод (карта)
+                          </th>
+                          <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                             Долг
                           </th>
                         </tr>
@@ -397,7 +404,7 @@ export function AssignSellerPanel() {
                       <tbody>
                         {activeReport.sales.byBatch.length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={thtd}>
+                            <td colSpan={7} style={thtd}>
                               Продаж по партиям нет.
                             </td>
                           </tr>
@@ -405,6 +412,7 @@ export function AssignSellerPanel() {
                           activeReport.sales.byBatch.map((row) => {
                             const b = batchById.get(row.batchId);
                             const debtK = BigInt(row.debtKopecks || "0");
+                            const cardK = BigInt(row.cardTransferKopecks || "0");
                             return (
                               <tr key={`${activeReport.trip.id}-${row.batchId}`}>
                                 <td style={thtd}>{b?.nakladnaya?.productGradeCode ?? "—"}</td>
@@ -414,6 +422,9 @@ export function AssignSellerPanel() {
                                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams)}</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cashKopecks)} ₽</td>
+                                <td style={{ ...thtd, textAlign: "right" }}>
+                                  {cardK > 0n ? `${kopecksToRubLabel(row.cardTransferKopecks)} ₽` : "—"}
+                                </td>
                                 <td
                                   style={{
                                     ...thtd,
@@ -434,7 +445,7 @@ export function AssignSellerPanel() {
                 </div>
 
                 <div className="birzha-assign-seller__detail-block">
-                  <h4 className="birzha-assign-seller__detail-block-title">По клиентам (наличные / долг)</h4>
+                  <h4 className="birzha-assign-seller__detail-block-title">По клиентам (нал · карта · долг)</h4>
                   {activeReport.sales.byClient.length === 0 ? (
                     <BirzhaEmptyState
                       compact
@@ -443,7 +454,7 @@ export function AssignSellerPanel() {
                     />
                   ) : (
                     <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                      <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Продажи по клиентам">
+                      <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Продажи по клиентам">
                         <thead>
                           <tr>
                             <th scope="col" style={thHead}>

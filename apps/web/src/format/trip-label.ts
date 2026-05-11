@@ -11,9 +11,21 @@ export function formatTripStatusLabel(status: string): string {
   return status;
 }
 
-/** Подпись рейса в селекторах: номер, статус, ТС/водитель при наличии, id. */
+/** Подпись рейса в селекторах: номер, статус, дата выезда (если есть), ТС/водитель, id. */
 export function formatTripSelectLabel(t: TripJson): string {
   const bits: string[] = [t.tripNumber, `(${formatTripStatusLabel(t.status)})`];
+  if (t.departedAt) {
+    const ms = Date.parse(t.departedAt);
+    if (!Number.isNaN(ms)) {
+      bits.push(
+        new Date(ms).toLocaleDateString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }),
+      );
+    }
+  }
   if (t.vehicleLabel) {
     bits.push(t.vehicleLabel);
   }

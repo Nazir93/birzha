@@ -704,21 +704,26 @@ main.app-shell {
 
 .app-shell--cabinet .birzha-card,
 .app-shell--cabinet .birzha-panel {
-  border-color: var(--color-border);
+  border-color: rgba(148, 163, 184, 0.42);
   background: var(--birzha-surface);
-  box-shadow: var(--birzha-shadow-sm);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 14px 36px -30px rgba(15, 23, 42, 0.14);
+  /* Иначе широкие таблицы внутри карточки раздувают column-flex (.birzha-cabinet-main) на мобильных */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-shell--cabinet .birzha-panel {
-  margin-bottom: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border);
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.38);
   border-radius: var(--birzha-radius);
 }
 
 .app-shell--cabinet .birzha-panel:last-child {
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.38);
 }
 
 .birzha-callout-warning {
@@ -937,12 +942,14 @@ main.app-shell {
 
 /* В кабинетах раскрывающийся блок совпадает с карточкой birzha-panel */
 .app-shell--cabinet .birzha-disclosure {
-  margin-bottom: 1rem;
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--color-border);
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.38);
   border-radius: var(--birzha-radius);
   background: var(--birzha-surface);
-  box-shadow: var(--birzha-shadow-sm);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 14px 36px -30px rgba(15, 23, 42, 0.14);
 }
 
 .app-shell--cabinet .birzha-disclosure:last-child {
@@ -1914,15 +1921,56 @@ main.app-shell--cabinet {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: stable;
-  padding: 1rem max(1.15rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom))
-    max(1.15rem, env(safe-area-inset-left));
+  /* Лёгкая глубина вместо плоского серого — контент визуально «лист», сайдбар остаётся ровным белым */
+  background: linear-gradient(165deg, #fafbfc 0%, #f3f4f6 48%, #eef0f3 100%);
+  padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) max(1.75rem, env(safe-area-inset-bottom))
+    max(0.85rem, env(safe-area-inset-left));
 }
 
 @media (min-width: 48rem) {
   .birzha-cabinet-main {
-    padding: 1.25rem max(1.75rem, env(safe-area-inset-right)) max(2.25rem, env(safe-area-inset-bottom))
-      max(1.75rem, env(safe-area-inset-left));
+    padding: 1rem max(1.25rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom))
+      max(1.25rem, env(safe-area-inset-left));
   }
+}
+
+/** Центрированная колонка контента: компактнее и аккуратнее, чем размазанный на всю ширину экрана текст */
+.birzha-cabinet-main__canvas {
+  width: 100%;
+  max-width: min(76rem, 100%);
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.birzha-cabinet-main .birzha-page-title {
+  margin-bottom: 0.55rem;
+  font-size: clamp(1.02rem, 1.8vw, 1.2rem);
+  letter-spacing: -0.025em;
+}
+
+.birzha-cabinet-main .birzha-section-title {
+  font-size: 0.98rem;
+  margin-bottom: 0.4rem;
+}
+
+.birzha-cabinet-main .birzha-callout-info {
+  padding: 0.5rem 0.72rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.84rem;
+  line-height: 1.42;
+  border-left-width: 2px;
+}
+
+.birzha-cabinet-main .birzha-callout-warning {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.birzha-cabinet-main .birzha-inline-panel {
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.85rem;
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(250, 250, 250, 0.92);
 }
 
 /* Мобильный кабинет: узкий экран — сайдбар скрыт, меню только в выезжающем drawer (см. CabinetShellLayout). */
@@ -2510,6 +2558,22 @@ main.app-shell--cabinet {
 .birzha-assign-seller {
   max-width: 96rem;
   margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Иначе широкие таблицы раздувают весь кабинет на мобильных */
+.birzha-assign-seller .birzha-disclosure__body {
+  min-width: 0;
+}
+
+.birzha-assign-seller__detail-block {
+  min-width: 0;
+}
+
+.birzha-assign-seller__detail-grid {
+  min-width: 0;
 }
 
 .birzha-assign-seller__hero {
@@ -2628,8 +2692,18 @@ main.app-shell--cabinet {
 }
 
 .birzha-assign-seller__trip-table-wrap {
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+}
+
+.birzha-assign-seller .birzha-table-scroll {
+  max-width: 100%;
+  min-width: 0;
   border-radius: var(--birzha-radius-sm);
   border: 1px solid var(--color-border);
   background: var(--birzha-surface);
@@ -2702,6 +2776,9 @@ main.app-shell--cabinet {
   border: 1px solid var(--color-border);
   background: var(--birzha-surface);
   box-shadow: var(--birzha-shadow-sm);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .birzha-assign-seller__detail-head {

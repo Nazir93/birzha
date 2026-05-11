@@ -437,14 +437,6 @@ export function AllocationPanel() {
   return (
     <div role="region" aria-label="Распределение товара">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
-      <p className="birzha-callout-info">
-        Выберите склад: видно, какой остаток уже привязан к направлениям (городам), что ещё предстоит распределить по
-        рейсам, и сколько уже уехало в рейсах. Дальше по шагам: отбор накладных и свод → при необходимости брак → в конце
-        сохранение погрузочной накладной.
-      </p>
-      <p style={{ ...warnText, fontSize: "0.86rem" }}>
-        Требуется постоянная база данных: без неё распределение на сервере не сохраняется.
-      </p>
 
       {warehousesQuery.isError && (
         <p className="birzha-callout-warning" role="alert">
@@ -719,7 +711,6 @@ export function AllocationPanel() {
               title={<span style={{ fontSize: "0.92rem", fontWeight: 600 }}>Списать со склада (брак)</span>}
               hint="частичное кг"
             >
-              <p className="birzha-callout-info">Если строка не должна ехать в рейс, можно списать нужный вес со склада.</p>
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table style={{ ...tableStyle, minWidth: 620 }}>
                   <thead>
@@ -799,10 +790,6 @@ export function AllocationPanel() {
               title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Данные погрузочной накладной</span>}
               hint="сохранение ПН"
             >
-              <p className="birzha-callout-info">
-                Сохраните документ <strong>после</strong> отбора накладных в блоке выше и списания брака — в погрузочную
-                попадут актуальные партии и массы.
-              </p>
               <div className="birzha-form-grid">
                 <label>
                   Дата *
@@ -887,10 +874,7 @@ export function AllocationPanel() {
                   }}
                 >
                   Отправить накладную в рейс
-                </button>{" "}
-                <span className="birzha-text-muted">
-                  Сохраните погрузочную накладную в блоке выше, затем выберите рейс в Операциях.
-                </span>
+                </button>
               </p>
             </div>
           )}

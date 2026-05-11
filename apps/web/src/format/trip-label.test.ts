@@ -22,4 +22,18 @@ describe("trip-label", () => {
     expect(label).toContain("(Открыт)");
     expect(label).not.toContain("open");
   });
+
+  it("добавляет дату выезда для различия рейсов одного водителя", () => {
+    const label = formatTripSelectLabel({
+      id: "trip-2",
+      tripNumber: "М-7",
+      status: "open",
+      vehicleLabel: "А111",
+      driverName: "Иванов",
+      departedAt: "2026-05-10T08:00:00.000Z",
+      assignedSellerUserId: null,
+    });
+    expect(label).toContain("10.05.2026");
+    expect(label).toContain("Иванов");
+  });
 });

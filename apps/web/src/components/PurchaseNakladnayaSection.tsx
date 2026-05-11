@@ -375,15 +375,6 @@ export function PurchaseNakladnayaSection() {
             ))}
           </select>
         </label>
-        {canManageCatalog && warehouseCount > 0 && (
-          <p className="birzha-callout-info" style={{ fontSize: "0.85rem", margin: 0 }}>
-            Нет нужного склада — добавьте его в{" "}
-            <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
-              кабинете админа
-            </Link>{" "}
-            (склады), затем обновите список или страницу.
-          </p>
-        )}
         <label className="birzha-form-label">
           Идентификатор документа (опционально)
           <input value={documentId} onChange={(e) => setDocumentId(e.target.value)} style={fieldStyle} placeholder="" />
@@ -650,9 +641,6 @@ export function PurchaseNakladnayaSection() {
 
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
-          <p className="birzha-callout-info" style={{ marginBottom: "0.35rem" }}>
-            Сохранённые накладные — нажмите на <strong>номер</strong>, чтобы открыть документ со всеми строками и партиями.
-          </p>
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
               <thead>

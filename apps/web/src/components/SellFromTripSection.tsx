@@ -348,10 +348,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       defaultOpen
       title={
         <h3 id={headingId} style={{ margin: 0, fontSize: variant === "seller" ? "1.05rem" : "0.98rem" }}>
-          {variant === "seller" ? "Продажа с рейса" : "3. Продажа с рейса"}
+          {variant === "seller" ? "Продажа с рейса" : "Шаг 2 · Продажа с рейса"}
         </h3>
       }
-      hint={variant === "seller" ? "форма" : "шаг 3"}
+      hint={variant === "seller" ? "форма" : "после отгрузки"}
     >
       {variant === "seller" ? (
         <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem", lineHeight: 1.5 }}>
