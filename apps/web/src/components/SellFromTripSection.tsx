@@ -152,15 +152,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellTripId(list[0]!.id);
   }, [isSellerUx, searchParams, sellTripId, sellerTripsListQ.data?.trips]);
 
-  /** В кабинете продавца — только нал / долг; смешанные варианты убраны по требованию поля. */
+  /** В кабинете продавца — без смешанного «нал + долг»; онлайн-перевод на карту + нал разрешён (не эквайринг). */
   useEffect(() => {
     if (!isSellerUx) {
       return;
     }
-    if (paymentKind === "mixed" || paymentKind === "card_transfer") {
+    if (paymentKind === "mixed") {
       setPaymentKind("cash");
       setCashMixed("");
-      setCardTransferKopecks("");
     }
   }, [isSellerUx, paymentKind]);
 
@@ -978,12 +977,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       >
         <option value="cash">Наличными целиком</option>
         <option value="debt">В долг целиком (без наличных)</option>
-        {!isSellerUx && (
-          <>
-            <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
-            <option value="card_transfer">Перевод на карту + наличные (укажите сумму перевода)</option>
-          </>
-        )}
+        {!isSellerUx ? (
+          <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
+        ) : null}
+        <option value="card_transfer">
+          {isSellerUx
+            ? "Онлайн-перевод на карту + наличные (остаток наличными, не терминал)"
+            : "Перевод на карту + наличные (укажите сумму перевода)"}
+        </option>
       </select>
       {paymentKind === "card_transfer" && (
         <>
@@ -991,17 +992,27 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             htmlFor={`${idPrefix}-in-card-kop`}
             className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
           >
-            Сумма перевода на карту (копейки, только цифры) *
+            Сумма онлайн-перевода на карту (копейки, только цифры) *
           </label>
           <input
             id={`${idPrefix}-in-card-kop`}
             value={cardTransferKopecks}
             onChange={(e) => setCardTransferKopecks(e.target.value)}
-            style={fieldStyle}
-            placeholder="например 75000 (= 750 ₽ переводом); остальное — наличными"
+            className={sellerFieldClass}
+            style={isSellerUx ? { ...fieldStyle, ...sellerFieldMb } : fieldStyle}
+            placeholder={
+              isSellerUx
+                ? "например 500000 (= 5000 ₽ переводом); остальное — наличными"
+                : "например 75000 (= 750 ₽ переводом); остальное — наличными"
+            }
             inputMode="numeric"
             autoComplete="off"
           />
+          {isSellerUx ? (
+            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+              Учёт: банковский перевод клиента на вашу карту (СБП / приложение банка). Не оплата картой через эквайринг.
+            </p>
+          ) : null}
         </>
       )}
       {paymentKind === "mixed" && (

@@ -23,9 +23,126 @@
       href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;1,400&display=swap"
       rel="stylesheet"
     />
+    <!-- Тема до первого paint (дублирует логику birzha-theme.ts, чтобы не мигал фон). -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("birzha-theme");
+          var mode =
+            t === "dark" || t === "light"
+              ? t
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.dataset.birzhaTheme = mode;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute("content", mode === "dark" ? "#18181b" : "#f4f4f5");
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style id="birzha-boot-splash-style">
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: #f4f4f5;
+        font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      html[data-birzha-theme="dark"] body {
+        background: #18181b;
+      }
+      #birzha-app-splash {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+          max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+        background: inherit;
+        color: #18181b;
+      }
+      html[data-birzha-theme="dark"] #birzha-app-splash {
+        color: #f4f4f5;
+      }
+      .birzha-splash-card {
+        text-align: center;
+        max-width: 300px;
+      }
+      .birzha-splash-mark {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 1rem;
+        border-radius: 14px;
+        background: linear-gradient(145deg, #3f3f46, #18181b);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+      }
+      html[data-birzha-theme="dark"] .birzha-splash-mark {
+        background: linear-gradient(145deg, #52525b, #27272a);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      }
+      .birzha-splash-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0 0 1.25rem;
+      }
+      .birzha-splash-bar {
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(24, 24, 27, 0.12);
+        overflow: hidden;
+        margin-bottom: 0.65rem;
+      }
+      html[data-birzha-theme="dark"] .birzha-splash-bar {
+        background: rgba(244, 244, 245, 0.14);
+      }
+      .birzha-splash-bar > span {
+        display: block;
+        height: 100%;
+        width: 38%;
+        border-radius: inherit;
+        background: #18181b;
+        animation: birzha-splash-slide 1.15s ease-in-out infinite;
+      }
+      html[data-birzha-theme="dark"] .birzha-splash-bar > span {
+        background: #f4f4f5;
+      }
+      @keyframes birzha-splash-slide {
+        0% {
+          transform: translateX(-120%);
+        }
+        100% {
+          transform: translateX(320%);
+        }
+      }
+      .birzha-splash-caption {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #71717a;
+      }
+      html[data-birzha-theme="dark"] .birzha-splash-caption {
+        color: #a1a1aa;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="birzha-app-splash" role="status" aria-live="polite" aria-busy="true">
+        <div class="birzha-splash-card">
+          <div class="birzha-splash-mark" aria-hidden="true"></div>
+          <div class="birzha-splash-title">Биржа</div>
+          <div class="birzha-splash-bar" aria-hidden="true"><span></span></div>
+          <p class="birzha-splash-caption">Загрузка приложения…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
