@@ -11,6 +11,7 @@ import {
   TripClosedError,
   TripNotFoundError,
   TripShortageExceedsNetError,
+  WholesalerNotFoundError,
 } from "../errors.js";
 
 export type SyncRejectionFields = {
@@ -44,6 +45,14 @@ export function mapErrorToSyncRejection(error: unknown): SyncRejectionFields {
       resolution: "Обновите справочник контрагентов с сервера или укажите продажу без привязки к справочнику.",
       errorCode: "counterparty_not_found",
       details: { counterpartyId: error.counterpartyId },
+    };
+  }
+  if (error instanceof WholesalerNotFoundError) {
+    return {
+      reason: `Оптовик не найден или отключён: ${error.wholesalerId}`,
+      resolution: "Обновите справочник оптовиков с сервера и выберите активного оптовика.",
+      errorCode: "wholesaler_not_found",
+      details: { wholesalerId: error.wholesalerId },
     };
   }
   if (error instanceof TripClosedError) {

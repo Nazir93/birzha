@@ -7,6 +7,7 @@ import {
   purchaseDocumentsFullListQueryOptions,
   tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
+  wholesalersFullListQueryOptions,
 } from "./core-list-queries.js";
 import { QUERY_STALE_LISTS_MS } from "./query-defaults.js";
 
@@ -19,6 +20,7 @@ function fireAndForget(p: Promise<unknown>): void {
 export type PrefetchCoreListsOptions = {
   prefetchPurchaseDocuments?: boolean;
   prefetchCounterparties?: boolean;
+  prefetchWholesalers?: boolean;
 };
 
 /**
@@ -41,5 +43,8 @@ export function prefetchCoreLists(queryClient: QueryClient, opts?: PrefetchCoreL
     fireAndForget(
       queryClient.prefetchQuery({ ...counterpartiesFullListQueryOptions(), staleTime: stale }),
     );
+  }
+  if (opts?.prefetchWholesalers) {
+    fireAndForget(queryClient.prefetchQuery({ ...wholesalersFullListQueryOptions(), staleTime: stale }));
   }
 }

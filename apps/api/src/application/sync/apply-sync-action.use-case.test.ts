@@ -7,6 +7,7 @@ import { InMemoryTripSaleRepository } from "../testing/in-memory-trip-sale.repos
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripShortageRepository } from "../testing/in-memory-trip-shortage.repository.js";
 import { InMemoryCounterpartyRepository } from "../../infrastructure/persistence/in-memory-counterparty.repository.js";
+import { InMemoryWholesalerRepository } from "../../infrastructure/persistence/in-memory-wholesaler.repository.js";
 import { CreatePurchaseUseCase } from "../purchase/create-purchase.use-case.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
 import { ShipToTripUseCase } from "../trip/ship-to-trip.use-case.js";
@@ -21,6 +22,7 @@ describe("ApplySyncActionUseCase", () => {
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
     const counterparties = new InMemoryCounterpartyRepository();
+    const wholesalers = new InMemoryWholesalerRepository();
     const idem = new InMemorySyncIdempotencyRepository();
 
     await new CreateTripUseCase(trips).execute({ id: "t1", tripNumber: "Ф-1" });
@@ -45,6 +47,7 @@ describe("ApplySyncActionUseCase", () => {
       sales,
       shortages,
       counterparties,
+      wholesalers,
     );
 
     const req = {
@@ -77,6 +80,7 @@ describe("ApplySyncActionUseCase", () => {
     const sales = new InMemoryTripSaleRepository();
     const shortages = new InMemoryTripShortageRepository();
     const counterparties = new InMemoryCounterpartyRepository();
+    const wholesalers = new InMemoryWholesalerRepository();
     const idem = new InMemorySyncIdempotencyRepository();
 
     await new CreateTripUseCase(trips).execute({ id: "t-unassigned", tripNumber: "Ф-U" });
@@ -93,7 +97,7 @@ describe("ApplySyncActionUseCase", () => {
       tripId: "t-unassigned",
     });
 
-    const uc = new ApplySyncActionUseCase(idem, batches, trips, shipments, sales, shortages, counterparties);
+    const uc = new ApplySyncActionUseCase(idem, batches, trips, shipments, sales, shortages, counterparties, wholesalers);
     const res = await uc.execute(
       {
         deviceId: "dev-seller",

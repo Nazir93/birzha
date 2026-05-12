@@ -22,6 +22,7 @@ import {
   TripShortageExceedsNetError,
   WarehouseCodeConflictError,
   WarehouseNotFoundError,
+  WholesalerNotFoundError,
 } from "../application/errors.js";
 
 export function sendMappedError(reply: FastifyReply, error: unknown): FastifyReply {
@@ -47,6 +48,12 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "counterparty_not_found",
       counterpartyId: error.counterpartyId,
+    });
+  }
+  if (error instanceof WholesalerNotFoundError) {
+    return reply.code(404).send({
+      error: "wholesaler_not_found",
+      wholesalerId: error.wholesalerId,
     });
   }
   if (error instanceof PurchaseDocumentNotFoundError) {

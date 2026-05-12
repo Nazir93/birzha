@@ -16,6 +16,8 @@ export type TripSaleAppend = {
   clientLabel?: string | null;
   /** Ссылка на справочник; снимок имени дублируется в `clientLabel`. */
   counterpartyId?: string | null;
+  /** При канале «опт» — выбранный оптовик из справочника. */
+  wholesaleBuyerId?: string | null;
   /** Учётная запись, внёсшая продажу; для sync и REST с JWT. */
   recordedByUserId?: string | null;
 };

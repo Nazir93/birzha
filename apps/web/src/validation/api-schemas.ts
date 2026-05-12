@@ -101,6 +101,8 @@ export function parseSellFromTripForm(input: {
   pricePerKg: string;
   /** Розница или опт; по умолчанию розница. */
   saleChannel?: "retail" | "wholesale";
+  /** При опте — id оптовика из GET /wholesalers. */
+  wholesaleBuyerId?: string;
   paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
   cashMixed: string;
   cardTransferKopecks?: string;
@@ -114,14 +116,21 @@ export function parseSellFromTripForm(input: {
     const saleId = input.saleId.trim() || randomUuid();
     const pricePerKg = parseDecimalKg(input.pricePerKg);
 
+    const saleCh = input.saleChannel ?? "retail";
     const base: z.infer<typeof sellFromTripBodySchema> = {
       tripId,
       kg,
       saleId,
       pricePerKg,
-      saleChannel: input.saleChannel ?? "retail",
+      saleChannel: saleCh,
       paymentKind: input.paymentKind,
     };
+    if (saleCh === "wholesale") {
+      const wb = input.wholesaleBuyerId?.trim();
+      if (wb) {
+        base.wholesaleBuyerId = wb;
+      }
+    }
     if (input.paymentKind === "mixed") {
       const cm = input.cashMixed.trim();
       base.cashKopecksMixed = cm || undefined;
@@ -130,13 +139,15 @@ export function parseSellFromTripForm(input: {
       const ct = input.cardTransferKopecks?.trim() ?? "";
       base.cardTransferKopecks = ct || undefined;
     }
-    const cp = input.counterpartyId?.trim();
-    if (cp) {
-      base.counterpartyId = cp;
-    } else {
-      const cl = input.clientLabel?.trim();
-      if (cl) {
-        base.clientLabel = cl;
+    if (saleCh !== "wholesale") {
+      const cp = input.counterpartyId?.trim();
+      if (cp) {
+        base.counterpartyId = cp;
+      } else {
+        const cl = input.clientLabel?.trim();
+        if (cl) {
+          base.clientLabel = cl;
+        }
       }
     }
     return { batchId, body: sellFromTripBodySchema.parse(base) };

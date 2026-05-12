@@ -207,6 +207,17 @@ export type CounterpartiesListResponse = {
   counterparties: CounterpartyJson[];
 };
 
+export type WholesalerJson = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+export type WholesalersListResponse = {
+  wholesalers: WholesalerJson[];
+};
+
 export type LedgerBlock = {
   totalGrams: string;
   byBatch: { batchId: string; grams: string }[];

@@ -1,12 +1,19 @@
 import { randomUUID } from "node:crypto";
 
-import { CounterpartyNotFoundError, InsufficientStockForTripError, SalePaymentSplitError, TripNotFoundError } from "../errors.js";
+import {
+  CounterpartyNotFoundError,
+  InsufficientStockForTripError,
+  SalePaymentSplitError,
+  TripNotFoundError,
+  WholesalerNotFoundError,
+} from "../errors.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type { CounterpartyRepository } from "../ports/counterparty-repository.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
+import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
 import { loadBatchOrThrow } from "../load-batch.js";
 import { kgToGrams } from "../units/kg-grams.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../units/rub-kopecks.js";
@@ -30,6 +37,8 @@ export type SellFromTripInput = {
   clientLabel?: string | null;
   /** Справочник контрагентов; при указании подпись берётся из справочника. */
   counterpartyId?: string | null;
+  /** При `saleChannel=wholesale` — id оптовика из справочника. */
+  wholesaleBuyerId?: string | null;
   /** Id пользователя (JWT `sub`); пишется в продажу для отчёта в разрезе «только мои» у продавца. */
   recordedByUserId?: string | null;
 };
@@ -88,21 +97,36 @@ export class SellFromTripUseCase {
     private readonly sales: TripSaleRepository,
     private readonly shortages: TripShortageRepository,
     private readonly counterparties: CounterpartyRepository,
+    private readonly wholesalers: WholesalerRepository,
     private readonly runSellInTransaction?: SellFromTripTransactionRunner,
   ) {}
 
   private async resolveClientSnapshot(
     input: SellFromTripInput,
-  ): Promise<{ clientLabel: string | null; counterpartyId: string | null }> {
+    saleChannel: "retail" | "wholesale",
+  ): Promise<{ clientLabel: string | null; counterpartyId: string | null; wholesaleBuyerId: string | null }> {
+    if (saleChannel === "wholesale") {
+      const wid = input.wholesaleBuyerId?.trim();
+      if (!wid) {
+        throw new WholesalerNotFoundError("(required)");
+      }
+      const w = await this.wholesalers.findActiveById(wid);
+      if (!w) {
+        throw new WholesalerNotFoundError(wid);
+      }
+      const name = w.name.trim() || null;
+      return { clientLabel: name, counterpartyId: null, wholesaleBuyerId: w.id };
+    }
+
     const id = input.counterpartyId?.trim();
     if (id) {
       const c = await this.counterparties.findActiveById(id);
       if (!c) {
         throw new CounterpartyNotFoundError(id);
       }
-      return { clientLabel: c.displayName.trim() || null, counterpartyId: c.id };
+      return { clientLabel: c.displayName.trim() || null, counterpartyId: c.id, wholesaleBuyerId: null };
     }
-    return { clientLabel: input.clientLabel?.trim() || null, counterpartyId: null };
+    return { clientLabel: input.clientLabel?.trim() || null, counterpartyId: null, wholesaleBuyerId: null };
   }
 
   async execute(input: SellFromTripInput): Promise<void> {
@@ -131,8 +155,8 @@ export class SellFromTripUseCase {
       input.cardTransferKopecks,
     );
 
-    const { clientLabel, counterpartyId } = await this.resolveClientSnapshot(input);
     const saleChannel: "retail" | "wholesale" = input.saleChannel === "wholesale" ? "wholesale" : "retail";
+    const { clientLabel, counterpartyId, wholesaleBuyerId } = await this.resolveClientSnapshot(input, saleChannel);
 
     const persist = async (batches: BatchRepository, saleRepo: TripSaleRepository) => {
       const batch = await loadBatchOrThrow(batches, input.batchId);
@@ -152,6 +176,7 @@ export class SellFromTripUseCase {
         saleChannel,
         clientLabel,
         counterpartyId,
+        wholesaleBuyerId,
         recordedByUserId: input.recordedByUserId?.trim() || null,
       });
     };

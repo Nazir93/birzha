@@ -23,6 +23,7 @@ import {
   queryRoots,
   shipmentReportQueryOptions,
   tripsFullListQueryOptions,
+  wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
@@ -87,9 +88,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   };
 
   const counterpartiesCatalog = meta?.counterpartyCatalogApi === "enabled";
+  const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const counterpartiesQ = useQuery({
     ...counterpartiesFullListQueryOptions(),
     enabled: counterpartiesCatalog,
+  });
+  const wholesalersQ = useQuery({
+    ...wholesalersFullListQueryOptions(),
+    enabled: wholesalersCatalog,
   });
 
   const [sellBatchId, setSellBatchId] = useState("");
@@ -98,6 +104,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [saleId, setSaleId] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [saleChannel, setSaleChannel] = useState<"retail" | "wholesale">("retail");
+  const [wholesaleBuyerId, setWholesaleBuyerId] = useState("");
+  const [wholesalerSearch, setWholesalerSearch] = useState("");
   const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed" | "card_transfer">("cash");
   const sellerFieldClass = isSellerUx ? "birzha-seller-form-control" : undefined;
   const sellerFieldMb = { marginBottom: "0.45rem" as const, maxWidth: "100%" as const };
@@ -173,6 +181,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   useEffect(() => {
     setPartyFilter("");
   }, [sellTripId]);
+
+  useEffect(() => {
+    if (saleChannel === "retail") {
+      setWholesaleBuyerId("");
+      setWholesalerSearch("");
+    }
+  }, [saleChannel]);
 
   useLayoutEffect(() => {
     if (searchParams.get("focus") !== "sell") {
@@ -313,6 +328,24 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       .filter((g) => g.rows.length > 0);
   }, [sellTripRowsByNaklad, partyFilter]);
 
+  const wholesaleRowsFiltered = useMemo(() => {
+    const all = wholesalersQ.data?.wholesalers ?? [];
+    const active = all.filter((w) => w.isActive);
+    const q = wholesalerSearch.trim().toLowerCase();
+    if (!q) {
+      return active;
+    }
+    return active.filter((w) => w.name.toLowerCase().includes(q));
+  }, [wholesalersQ.data?.wholesalers, wholesalerSearch]);
+
+  const selectedWholesalerLabel = useMemo(() => {
+    if (!wholesaleBuyerId) {
+      return "";
+    }
+    const w = (wholesalersQ.data?.wholesalers ?? []).find((x) => x.id === wholesaleBuyerId);
+    return w?.name ?? "";
+  }, [wholesaleBuyerId, wholesalersQ.data?.wholesalers]);
+
   const batchSuggestQuery = useQuery(batchesSearchQueryOptions(debouncedBatchIdSearch, 20));
 
   /** Для продавца: список партий на рейсе загрузился и есть что продавать — технический fallback скрываем. */
@@ -397,6 +430,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         cardTransferKopecks,
         clientLabel: sellClientLabel,
         counterpartyId: sellCounterpartyId || undefined,
+        wholesaleBuyerId: saleChannel === "wholesale" ? wholesaleBuyerId : undefined,
       });
       const url = `/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`;
       let queued = false;
@@ -929,7 +963,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </span>
         )}
       </p>
-      {counterpartiesCatalog ? (
+      {saleChannel === "retail" && counterpartiesCatalog ? (
         <>
           <label
             htmlFor={`${idPrefix}-sel-cp`}
@@ -1000,7 +1034,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             aria-label="Подпись клиента для отчёта, если не выбран справочник"
           />
         </>
-      ) : (
+      ) : saleChannel === "retail" ? (
         <>
           <label
             htmlFor={`${idPrefix}-in-client`}
@@ -1020,20 +1054,108 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             disabled={Boolean(sellCounterpartyId)}
           />
         </>
-      )}
+      ) : null}
       <label htmlFor={`${idPrefix}-sel-sale-ch`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Тип продажи *
       </label>
       <select
         id={`${idPrefix}-sel-sale-ch`}
         value={saleChannel}
-        onChange={(e) => setSaleChannel(e.target.value as "retail" | "wholesale")}
+        onChange={(e) => {
+          const v = e.target.value as "retail" | "wholesale";
+          setSaleChannel(v);
+          if (v === "wholesale") {
+            setSellCounterpartyId("");
+            setSellClientLabel("");
+          }
+        }}
         className={sellerFieldClass}
         style={isSellerUx ? sellerFieldMb : fieldStyle}
       >
         <option value="retail">Розница</option>
-        <option value="wholesale">Опт</option>
+        <option value="wholesale" disabled={!wholesalersCatalog}>
+          Опт {!wholesalersCatalog ? "(недоступно)" : ""}
+        </option>
       </select>
+      {saleChannel === "wholesale" && wholesalersCatalog ? (
+        <BirzhaDisclosure
+          defaultOpen={isSellerUx}
+          title={
+            <span className="birzha-form-label" style={{ margin: 0, fontWeight: 600 }}>
+              Оптовик *
+            </span>
+          }
+          hint="поиск и выбор"
+        >
+          <input
+            value={wholesalerSearch}
+            onChange={(e) => setWholesalerSearch(e.target.value)}
+            className={sellerFieldClass}
+            style={isSellerUx ? { ...sellerFieldMb, maxWidth: "100%" } : { ...fieldStyle, maxWidth: "100%" }}
+            placeholder="Найти по имени…"
+            autoComplete="off"
+            aria-label="Поиск оптовика"
+          />
+          {wholesalersQ.isPending ? (
+            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.35rem 0 0" }}>
+              Загрузка списка…
+            </p>
+          ) : wholesalersQ.isError ? (
+            <p style={warnText} role="alert">
+              {wholesalersQ.error instanceof Error ? wholesalersQ.error.message : String(wholesalersQ.error)}
+            </p>
+          ) : (
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: "0.45rem 0 0",
+                maxHeight: 220,
+                overflowY: "auto",
+                border: "1px solid var(--color-border)",
+                borderRadius: 6,
+              }}
+            >
+              {wholesaleRowsFiltered.length === 0 ? (
+                <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
+                  Нет совпадений. Добавьте оптовиков в кабинете администратора → «Склады и калибры».
+                </li>
+              ) : (
+                wholesaleRowsFiltered.map((w) => (
+                  <li key={w.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <button
+                      type="button"
+                      onClick={() => setWholesaleBuyerId(w.id)}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "0.45rem 0.65rem",
+                        border: "none",
+                        background: wholesaleBuyerId === w.id ? "rgba(0,0,0,0.06)" : "transparent",
+                        cursor: "pointer",
+                        fontWeight: wholesaleBuyerId === w.id ? 700 : 500,
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      {w.name}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+          {wholesaleBuyerId ? (
+            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.4rem 0 0" }}>
+              Выбрано: <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
+            </p>
+          ) : (
+            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.4rem 0 0" }}>
+              Выберите оптовика из списка.
+            </p>
+          )}
+        </BirzhaDisclosure>
+      ) : null}
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         {isSellerUx ? "Как оплачивает клиент *" : "Как оплатил клиент *"}
       </label>

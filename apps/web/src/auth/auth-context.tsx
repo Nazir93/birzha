@@ -29,6 +29,8 @@ export type ApiMeta = {
   purchaseDocumentsApi?: string;
   /** Таблица `ship_destinations` (направления для распределения), только при PostgreSQL. */
   shipDestinationsApi?: string;
+  /** Справочник оптовиков для продаж «оптом», только при PostgreSQL. */
+  wholesalersCatalogApi?: string;
   /** `POST /batches/…/warehouse-write-off` и `GET /warehouse-write-offs?purchaseDocumentId=` при PostgreSQL. */
   warehouseWriteOffApi?: string;
   syncApi: string;
@@ -99,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     prefetchCoreLists(queryClient, {
       prefetchPurchaseDocuments: state.meta.purchaseDocumentsApi === "enabled",
       prefetchCounterparties: state.meta.counterpartyCatalogApi === "enabled",
+      prefetchWholesalers: state.meta.wholesalersCatalogApi === "enabled",
     });
   }, [queryClient, state.ready, state.user?.id, state.meta]);
 

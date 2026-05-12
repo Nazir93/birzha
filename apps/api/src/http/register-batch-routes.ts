@@ -34,6 +34,7 @@ import type { TripSaleRepository } from "../application/ports/trip-sale-reposito
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../application/ports/trip-shortage-repository.port.js";
 import type { CounterpartyRepository } from "../application/ports/counterparty-repository.port.js";
+import type { WholesalerRepository } from "../application/ports/wholesaler-repository.port.js";
 import type { SellFromTripTransactionRunner } from "../application/sale/sell-from-trip.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "../application/trip/record-trip-shortage.use-case.js";
 import { RecordTripShortageUseCase } from "../application/trip/record-trip-shortage.use-case.js";
@@ -65,6 +66,7 @@ export function registerBatchRoutes(
   sales: TripSaleRepository,
   shortages: TripShortageRepository,
   counterparties: CounterpartyRepository,
+  wholesalers: WholesalerRepository,
   routeAuth: BusinessRouteAuth,
   runShipInTransaction?: ShipToTripTransactionRunner,
   runSellInTransaction?: SellFromTripTransactionRunner,
@@ -82,6 +84,7 @@ export function registerBatchRoutes(
     sales,
     shortages,
     counterparties,
+    wholesalers,
     runSellInTransaction,
   );
   const recordShortage = new RecordTripShortageUseCase(
@@ -227,6 +230,7 @@ export function registerBatchRoutes(
         cardTransferKopecks,
         clientLabel: body.clientLabel,
         counterpartyId: body.counterpartyId,
+        wholesaleBuyerId: body.wholesaleBuyerId,
         recordedByUserId: u?.sub,
       });
       return reply.code(200).send({ ok: true });

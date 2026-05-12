@@ -37,8 +37,25 @@ const sellFromTripBodyBase = z.object({
   counterpartyId: z.string().min(1).max(64).optional(),
   /** Подпись клиента для отчёта по рейсу; игнорируется, если задан `counterpartyId`. */
   clientLabel: z.string().max(120).optional(),
+  /** При `saleChannel=wholesale` — id из GET /wholesalers (активный оптовик). */
+  wholesaleBuyerId: z.string().min(1).max(64).optional(),
 });
 
+function refineWholesaleBuyer(
+  data: { saleChannel?: string; wholesaleBuyerId?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (data.saleChannel === "wholesale") {
+    const id = data.wholesaleBuyerId?.trim();
+    if (!id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "wholesaleBuyerId обязателен при saleChannel=wholesale",
+        path: ["wholesaleBuyerId"],
+      });
+    }
+  }
+}
 function refineMixedSalePayment(data: { paymentKind?: string; cashKopecksMixed?: unknown }, ctx: z.RefinementCtx) {
   if (data.paymentKind === "mixed" && data.cashKopecksMixed === undefined) {
     ctx.addIssue({
@@ -63,15 +80,16 @@ function refineCardTransferSalePayment(
 /** POST /batches/:id/sell-from-trip */
 export const sellFromTripBodySchema = sellFromTripBodyBase
   .superRefine(refineMixedSalePayment)
-  .superRefine(refineCardTransferSalePayment);
+  .superRefine(refineCardTransferSalePayment)
+  .superRefine(refineWholesaleBuyer);
 
 /** Payload `sell_from_trip` в POST /sync (batchId в теле, не в пути). */
 export const sellFromTripSyncPayloadSchema = z
   .object({ batchId: z.string().min(1) })
   .merge(sellFromTripBodyBase)
   .superRefine(refineMixedSalePayment)
-  .superRefine(refineCardTransferSalePayment);
-
+  .superRefine(refineCardTransferSalePayment)
+  .superRefine(refineWholesaleBuyer);
 /** POST /batches/:id/record-trip-shortage */
 export const recordTripShortageBodySchema = z.object({
   tripId: z.string().min(1),

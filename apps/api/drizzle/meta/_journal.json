@@ -162,6 +162,13 @@
       "when": 1777500000000,
       "tag": "0022_trip_sale_sale_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777600000000,
+      "tag": "0023_wholesalers",
+      "breakpoints": true
     }
   ]
 }

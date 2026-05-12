@@ -10,6 +10,7 @@ import type { TripShipmentRepository } from "./application/ports/trip-shipment-r
 import type { TripShortageRepository } from "./application/ports/trip-shortage-repository.port.js";
 import type { SyncIdempotencyRepository } from "./application/ports/sync-idempotency.port.js";
 import type { CounterpartyRepository } from "./application/ports/counterparty-repository.port.js";
+import type { WholesalerRepository } from "./application/ports/wholesaler-repository.port.js";
 import type { SellFromTripTransactionRunner } from "./application/sale/sell-from-trip.use-case.js";
 import { InMemoryTripRepository } from "./application/testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "./application/testing/in-memory-trip-sale.repository.js";
@@ -26,7 +27,7 @@ import type { DbClient } from "./db/client.js";
 import { registerAdminUserRoutes } from "./http/register-admin-user-routes.js";
 import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
-import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
+import { registerWholesalerRoutes } from "./http/register-wholesaler-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
@@ -48,9 +49,10 @@ import { DeleteWarehouseUseCase } from "./application/warehouse/delete-warehouse
 import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/drizzle-counterparty.repository.js";
 import { DrizzleProductGradeRepository } from "./infrastructure/persistence/drizzle-product-grade.repository.js";
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
-import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
+import { DrizzleWholesalerRepository } from "./infrastructure/persistence/drizzle-wholesaler.repository.js";
 import { listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
 import { InMemoryCounterpartyRepository } from "./infrastructure/persistence/in-memory-counterparty.repository.js";
+import { InMemoryWholesalerRepository } from "./infrastructure/persistence/in-memory-wholesaler.repository.js";
 import { InMemoryPurchaseDocumentRepository } from "./infrastructure/persistence/in-memory-purchase-document.repository.js";
 import { StaticProductGradeRepository } from "./infrastructure/persistence/static-product-grade.repository.js";
 import { StaticWarehouseRepository } from "./infrastructure/persistence/static-warehouse.repository.js";
@@ -157,6 +159,20 @@ export async function buildApp(options: {
     shortageRepository
   ) {
     counterpartyRepository = new InMemoryCounterpartyRepository();
+  }
+
+  let wholesalerRepository: WholesalerRepository | null = null;
+  if (db) {
+    wholesalerRepository = new DrizzleWholesalerRepository(db);
+  } else if (
+    batchRepository &&
+    tripRepository &&
+    shipmentRepository &&
+    saleRepository &&
+    shortageRepository &&
+    counterpartyRepository
+  ) {
+    wholesalerRepository = new InMemoryWholesalerRepository();
   }
 
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
@@ -304,6 +320,7 @@ export async function buildApp(options: {
     tripSaleLedger: saleRepository ? "enabled" : "disabled",
     tripShortageLedger: shortageRepository ? "enabled" : "disabled",
     counterpartyCatalogApi: counterpartyRepository ? "enabled" : "disabled",
+    wholesalersCatalogApi: wholesalerRepository ? "enabled" : "disabled",
     syncApi: syncIdempotency ? "enabled" : "disabled",
     authApi: db && env.JWT_SECRET ? "enabled" : "disabled",
     requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
@@ -336,6 +353,7 @@ export async function buildApp(options: {
     saleRepository &&
     shortageRepository &&
     counterpartyRepository &&
+    wholesalerRepository &&
     syncIdempotency &&
     warehouseRepository &&
     productGradeRepository &&
@@ -376,6 +394,7 @@ export async function buildApp(options: {
       saleRepository,
       shortageRepository,
       counterpartyRepository,
+      wholesalerRepository,
       routeAuth,
       runShipInTransaction,
       runSellInTransaction,
@@ -386,6 +405,7 @@ export async function buildApp(options: {
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
       registerLoadingManifestRoutes(app, db, routeAuth);
+      registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
     }
 
     const applySync = new ApplySyncActionUseCase(
@@ -396,6 +416,7 @@ export async function buildApp(options: {
       saleRepository,
       shortageRepository,
       counterpartyRepository,
+      wholesalerRepository,
       runShipInTransaction,
       runSellInTransaction,
       runRecordTripShortageInTransaction,

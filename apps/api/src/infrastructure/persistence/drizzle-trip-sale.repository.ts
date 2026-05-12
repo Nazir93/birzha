@@ -44,6 +44,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
       counterpartyId: row.counterpartyId?.trim() || null,
       recordedByUserId: uid || null,
       saleChannel: row.saleChannel,
+      wholesaleBuyerId: row.wholesaleBuyerId?.trim() || null,
     });
   }
 

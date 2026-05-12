@@ -20,6 +20,7 @@ export type OutboxItem = {
         cardTransferKopecks?: string | number;
         clientLabel?: string;
         counterpartyId?: string;
+        wholesaleBuyerId?: string;
       };
     }
   | {

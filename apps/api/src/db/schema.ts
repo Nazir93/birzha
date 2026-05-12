@@ -48,6 +48,15 @@ export const counterparties = pgTable("counterparties", {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+/** Оптовые покупатели (справочник из админки; при продаже «оптом» выбирается продавцом). */
+export const wholesalers = pgTable("wholesalers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
 /**
  * Направления отгрузки («Москва», «Регионы» и т.д.); `code` пишется в `batches.destination`, ведётся из админки.
  */
@@ -215,6 +224,8 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
   /** Розница или опт (для отчётности; старые строки — `retail`). */
   saleChannel: text("sale_channel").notNull().default("retail"),
+  /** При канале «опт» — выбранный оптовик из справочника (снимок имени в `client_label`). */
+  wholesaleBuyerId: text("wholesale_buyer_id").references(() => wholesalers.id, { onDelete: "set null" }),
 });
 
 /** Успешно обработанные офлайн-действия (идемпотентность по устройству). */

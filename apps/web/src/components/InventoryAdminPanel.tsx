@@ -23,6 +23,7 @@ import {
   shipDestinationsFullListQueryOptions,
   tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
+  wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
@@ -65,6 +66,9 @@ export function InventoryAdminPanel() {
   const [newDestName, setNewDestName] = useState("");
   const [newDestOrder, setNewDestOrder] = useState("");
   const [destFormError, setDestFormError] = useState<string | null>(null);
+  const [wholesalerFormError, setWholesalerFormError] = useState<string | null>(null);
+  const [newWholesalerName, setNewWholesalerName] = useState("");
+  const [newWholesalerOrder, setNewWholesalerOrder] = useState("");
   const [nakladError, setNakladError] = useState<string | null>(null);
   const [newTripId, setNewTripId] = useState("");
   const [newTripNumber, setNewTripNumber] = useState("");
@@ -78,6 +82,7 @@ export function InventoryAdminPanel() {
     void queryClient.invalidateQueries({ queryKey: queryRoots.productGrades });
     void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipDestinations });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.wholesalers });
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   }, [queryClient]);
@@ -85,6 +90,7 @@ export function InventoryAdminPanel() {
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
 
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
+  const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const tripsQ = useQuery({
@@ -99,6 +105,10 @@ export function InventoryAdminPanel() {
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
     enabled: enabled && shipDestEnabled,
+  });
+  const wholesalersQ = useQuery({
+    ...wholesalersFullListQueryOptions(),
+    enabled: enabled && wholesalersEnabled,
   });
 
   const deletePurchaseDocument = useMutation({
@@ -160,6 +170,50 @@ export function InventoryAdminPanel() {
     },
     onError: (e: Error) => {
       setDestFormError(e.message);
+    },
+  });
+
+  const createWholesaler = useMutation({
+    mutationFn: async () => {
+      setWholesalerFormError(null);
+      const name = newWholesalerName.trim();
+      if (!name) {
+        throw new Error("Введите название оптовика");
+      }
+      const body: { name: string; sortOrder?: number } = { name };
+      const so = newWholesalerOrder.trim();
+      if (so) {
+        const n = Number.parseInt(so, 10);
+        if (!Number.isInteger(n) || n < 0 || n > 9999) {
+          throw new Error("Порядок — целое 0…9999 или пусто");
+        }
+        body.sortOrder = n;
+      }
+      await apiPostJsonOr403("/api/wholesalers", body, "Нет прав: только admin");
+    },
+    onSuccess: () => {
+      setNewWholesalerName("");
+      setNewWholesalerOrder("");
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setWholesalerFormError(e.message);
+    },
+  });
+
+  const deleteWholesaler = useMutation({
+    mutationFn: async (id: string) => {
+      setWholesalerFormError(null);
+      await apiDeleteOr403(
+        `/api/wholesalers/${encodeURIComponent(id)}`,
+        "Нет прав: только admin",
+      );
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setWholesalerFormError(e.message);
     },
   });
 
@@ -738,6 +792,102 @@ export function InventoryAdminPanel() {
               </table>
             </div>
           )}
+          </BirzhaDisclosure>
+        </>
+      )}
+
+      {wholesalersEnabled && (
+        <>
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <span className="birzha-disclosure__title-stack">
+                <span className="birzha-section-heading__eyebrow">Продажи</span>
+                <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Оптовики (для «Опт» у продавца)</span>
+              </span>
+            }
+            hint="справочник имён"
+          >
+            {wholesalerFormError && <p style={errorText}>{wholesalerFormError}</p>}
+            {wholesalersQ.isError && <p style={errorText}>Оптовики: {String(wholesalersQ.error)}</p>}
+            {wholesalersQ.isPending && (
+              <LoadingBlock label="Справочник оптовиков…" minHeight={48} skeleton skeletonRows={3} />
+            )}
+            <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+              «Удалить» — снятие с выбора (неактивен); продажи сохраняют подпись в отчёте.
+            </p>
+            <div className="birzha-inventory-inline-tools">
+              <input
+                value={newWholesalerName}
+                onChange={(e) => setNewWholesalerName(e.target.value)}
+                style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
+                placeholder="Название оптовика"
+                autoComplete="off"
+                aria-label="Название оптовика"
+              />
+              <input
+                value={newWholesalerOrder}
+                onChange={(e) => setNewWholesalerOrder(e.target.value)}
+                style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
+                placeholder="Порядок"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-label="Порядок сортировки оптовика"
+              />
+              <button
+                type="button"
+                className="birzha-inventory-inline-tools__submit"
+                style={btnStyle}
+                disabled={createWholesaler.isPending}
+                onClick={() => void createWholesaler.mutate()}
+              >
+                {createWholesaler.isPending ? "…" : "Добавить"}
+              </button>
+            </div>
+            {wholesalersQ.isSuccess && (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.75rem" }}>
+                <table style={{ ...tableStyle, minWidth: 520 }}>
+                  <thead>
+                    <tr>
+                      <th style={thHeadDense}>Название</th>
+                      <th style={thHeadDense}>Порядок</th>
+                      <th style={thHeadDense}>Активн.</th>
+                      <th style={thHeadDense} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(wholesalersQ.data.wholesalers ?? [])
+                      .slice()
+                      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ru"))
+                      .map((r) => (
+                        <tr key={r.id}>
+                          <td style={thtdDense}>{r.name}</td>
+                          <td style={thtdDense}>{r.sortOrder}</td>
+                          <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
+                          <td style={thtdDense}>
+                            {r.isActive ? (
+                              <button
+                                type="button"
+                                style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                                disabled={deleteWholesaler.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Снять оптовика «${r.name}»?`)) {
+                                    void deleteWholesaler.mutate(r.id);
+                                  }
+                                }}
+                              >
+                                Удалить
+                              </button>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </BirzhaDisclosure>
         </>
       )}

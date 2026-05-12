@@ -68,9 +68,18 @@ describe("sellFromTripBodySchema (mixed)", () => {
     expect(r.saleChannel).toBe("retail");
   });
 
-  it("saleChannel wholesale допустим", () => {
-    const r = sellFromTripBodySchema.parse({ ...base, saleChannel: "wholesale" });
+  it("saleChannel wholesale без wholesaleBuyerId — ошибка", () => {
+    expect(() => sellFromTripBodySchema.parse({ ...base, saleChannel: "wholesale" })).toThrow();
+  });
+
+  it("saleChannel wholesale с wholesaleBuyerId — ок", () => {
+    const r = sellFromTripBodySchema.parse({
+      ...base,
+      saleChannel: "wholesale",
+      wholesaleBuyerId: "550e8400-e29b-41d4-a716-446655440000",
+    });
     expect(r.saleChannel).toBe("wholesale");
+    expect(r.wholesaleBuyerId).toBe("550e8400-e29b-41d4-a716-446655440000");
   });
 
   it("paymentKind=mixed без cashKopecksMixed — ошибка", () => {

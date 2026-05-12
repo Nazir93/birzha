@@ -15,6 +15,7 @@ import type {
   TripJson,
   TripsListResponse,
   WarehousesListResponse,
+  WholesalersListResponse,
 } from "../api/types.js";
 import {
   QUERY_STALE_LISTS_MS,
@@ -33,6 +34,7 @@ export const queryRoots = {
   productGrades: ["product-grades"] as const,
   purchaseDocuments: ["purchase-documents"] as const,
   counterparties: ["counterparties"] as const,
+  wholesalers: ["wholesalers"] as const,
   shipDestinations: ["ship-destinations"] as const,
   loadingManifest: ["loading-manifest"] as const,
   /** Префикс всех `GET …/shipment-report` по рейсам */
@@ -159,6 +161,13 @@ export const counterpartiesFullListQueryOptions = () =>
   queryOptions({
     queryKey: queryRoots.counterparties,
     queryFn: () => apiGetJson<CounterpartiesListResponse>("/api/counterparties"),
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+export const wholesalersFullListQueryOptions = () =>
+  queryOptions({
+    queryKey: queryRoots.wholesalers,
+    queryFn: () => apiGetJson<WholesalersListResponse>("/api/wholesalers"),
     staleTime: QUERY_STALE_LISTS_MS,
   });
 

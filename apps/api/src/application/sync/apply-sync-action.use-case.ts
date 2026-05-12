@@ -5,6 +5,7 @@ import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import type { CounterpartyRepository } from "../ports/counterparty-repository.port.js";
+import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
 import { RecordTripShortageUseCase } from "../trip/record-trip-shortage.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "../trip/record-trip-shortage.use-case.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
@@ -46,6 +47,7 @@ export class ApplySyncActionUseCase {
     sales: TripSaleRepository,
     shortages: TripShortageRepository,
     counterparties: CounterpartyRepository,
+    wholesalers: WholesalerRepository,
     runShipInTransaction?: ShipToTripTransactionRunner,
     runSellInTransaction?: SellFromTripTransactionRunner,
     runRecordTripShortageInTransaction?: RecordTripShortageTransactionRunner,
@@ -57,6 +59,7 @@ export class ApplySyncActionUseCase {
       sales,
       shortages,
       counterparties,
+      wholesalers,
       runSellInTransaction,
     );
     this.shipToTrip = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction);
@@ -125,6 +128,7 @@ export class ApplySyncActionUseCase {
             cardTransferKopecks,
             clientLabel: p.clientLabel,
             counterpartyId: p.counterpartyId,
+            wholesaleBuyerId: p.wholesaleBuyerId,
             recordedByUserId: ctx?.recordedByUserId,
           });
           break;

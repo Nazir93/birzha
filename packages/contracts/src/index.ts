@@ -1,5 +1,7 @@
 export { createShipDestinationBodySchema } from "./ship-destination.js";
 export type { CreateShipDestinationBody } from "./ship-destination.js";
+export { createWholesalerBodySchema } from "./wholesaler.js";
+export type { CreateWholesalerBody } from "./wholesaler.js";
 export {
   createPurchaseDocumentBodySchema,
   purchaseDocumentLineInputSchema,

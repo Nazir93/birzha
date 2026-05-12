@@ -86,6 +86,17 @@ export class CounterpartyNotFoundError extends Error {
   }
 }
 
+export class WholesalerNotFoundError extends Error {
+  readonly wholesalerId: string;
+
+  constructor(wholesalerId: string) {
+    super(`Оптовик не найден или отключён: ${wholesalerId}`);
+    this.name = "WholesalerNotFoundError";
+    this.wholesalerId = wholesalerId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class WarehouseNotFoundError extends Error {
   readonly warehouseId: string;
 
