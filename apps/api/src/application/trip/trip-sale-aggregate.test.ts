@@ -33,6 +33,10 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(agg.totalGrams).toBe(180n);
     expect(agg.totalRevenueKopecks).toBe(1800n);
     expect(agg.totalCardTransferKopecks).toBe(0n);
+    expect(agg.retailGrams).toBe(180n);
+    expect(agg.wholesaleGrams).toBe(0n);
+    expect(agg.retailRevenueKopecks).toBe(1800n);
+    expect(agg.wholesaleRevenueKopecks).toBe(0n);
     expect(agg.byBatch).toHaveLength(2);
     const b1 = agg.byBatch.find((x) => x.batchId === "b1")!;
     expect(b1.grams).toBe(150n);
@@ -41,5 +45,33 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(a.grams).toBe(100n);
     const empty = agg.byClient.find((c) => c.clientLabel === "")!;
     expect(empty.grams).toBe(30n);
+  });
+
+  it("разделяет розницу и опт по каналу продажи", () => {
+    const agg = buildTripSaleAggregateFromRows([
+      {
+        batchId: "b1",
+        grams: 100n,
+        revenueKopecks: 1000n,
+        cashKopecks: 1000n,
+        debtKopecks: 0n,
+        clientLabel: "Розн",
+        saleChannel: "retail",
+      },
+      {
+        batchId: "b1",
+        grams: 50n,
+        revenueKopecks: 400n,
+        cashKopecks: 400n,
+        debtKopecks: 0n,
+        clientLabel: "Опт",
+        saleChannel: "wholesale",
+      },
+    ]);
+    expect(agg.retailGrams).toBe(100n);
+    expect(agg.wholesaleGrams).toBe(50n);
+    expect(agg.retailRevenueKopecks).toBe(1000n);
+    expect(agg.wholesaleRevenueKopecks).toBe(400n);
+    expect(agg.totalGrams).toBe(150n);
   });
 });

@@ -69,6 +69,10 @@ describe("Trip HTTP", () => {
     expect(rep.shipment.totalGrams).toBe("0");
     expect(rep.sales.totalGrams).toBe("0");
     expect(rep.sales.totalRevenueKopecks).toBe("0");
+    expect(rep.sales.retailGrams).toBe("0");
+    expect(rep.sales.wholesaleGrams).toBe("0");
+    expect(rep.sales.retailRevenueKopecks).toBe("0");
+    expect(rep.sales.wholesaleRevenueKopecks).toBe("0");
     expect(rep.sales.totalCashKopecks).toBe("0");
     expect(rep.sales.totalDebtKopecks).toBe("0");
     expect(rep.sales.totalCardTransferKopecks).toBe("0");

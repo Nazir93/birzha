@@ -63,6 +63,16 @@ describe("sellFromTripBodySchema (mixed)", () => {
     expect(() => sellFromTripBodySchema.parse(base)).not.toThrow();
   });
 
+  it("saleChannel по умолчанию retail", () => {
+    const r = sellFromTripBodySchema.parse(base);
+    expect(r.saleChannel).toBe("retail");
+  });
+
+  it("saleChannel wholesale допустим", () => {
+    const r = sellFromTripBodySchema.parse({ ...base, saleChannel: "wholesale" });
+    expect(r.saleChannel).toBe("wholesale");
+  });
+
   it("paymentKind=mixed без cashKopecksMixed — ошибка", () => {
     expect(() =>
       sellFromTripBodySchema.parse({

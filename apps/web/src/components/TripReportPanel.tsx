@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { deleteTripById } from "../api/fetch-api.js";
-import type { BatchListItem } from "../api/types.js";
+import { closeTripById, deleteTripById } from "../api/fetch-api.js";
+import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
-import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
@@ -121,6 +121,30 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     },
     onSuccess: async () => {
       setTripId("");
+      await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+    },
+  });
+
+  const closeTripMutation = useMutation({
+    mutationFn: async (tripId: string) => {
+      const rep = queryClient.getQueryData(
+        shipmentReportQueryOptions(tripId).queryKey,
+      ) as ShipmentReportResponse | undefined;
+      if (!rep) {
+        throw new Error("Сначала дождитесь загрузки отчёта по рейсу.");
+      }
+      if (!tripReportShowsSoldOut(rep)) {
+        const ok = window.confirm(
+          "В рейсе по отчёту ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+        );
+        if (!ok) {
+          return;
+        }
+      }
+      await closeTripById(tripId, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
+    },
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     },
@@ -267,6 +291,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               {(deleteTripMutation.error as Error).message}
             </p>
           )}
+          {closeTripMutation.isError && (
+            <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.5rem", marginBottom: 0 }}>
+              {(closeTripMutation.error as Error).message}
+            </p>
+          )}
         </div>
       )}
 
@@ -298,7 +327,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             }}
           >
             <span>
-              <strong>{r.trip.tripNumber}</strong> · статус: <code>{formatTripStatusLabel(r.trip.status)}</code>
+              <strong>{r.trip.tripNumber}</strong> · статус: <code>{formatTripReportStatusLabel(r)}</code>
             </span>
             <button
               type="button"
@@ -309,6 +338,17 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             >
               Печать
             </button>
+            {canTripWrite && r.trip.status === "open" ? (
+              <button
+                type="button"
+                className="no-print"
+                style={btnStyle}
+                disabled={closeTripMutation.isPending}
+                onClick={() => closeTripMutation.mutate(r.trip.id)}
+              >
+                {closeTripMutation.isPending ? "Закрытие…" : "Закрыть рейс"}
+              </button>
+            ) : null}
             {(r.trip.vehicleLabel || r.trip.driverName || r.trip.departedAt) && (
               <span className="birzha-ui-sm" style={{ width: "100%", lineHeight: 1.45, margin: "0.25rem 0 0" }}>
                 {r.trip.vehicleLabel ? `ТС: ${r.trip.vehicleLabel}` : null}
@@ -352,6 +392,20 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 <tr>
                   <td style={thtd}>Продажи</td>
                   <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>в т.ч. розница</td>
+                  <td style={thtd}>
+                    {gramsToKgLabel(r.sales.retailGrams)} кг · выручка{" "}
+                    {kopecksToRubLabel(r.sales.retailRevenueKopecks)} ₽
+                  </td>
+                </tr>
+                <tr>
+                  <td style={thtd}>в т.ч. опт</td>
+                  <td style={thtd}>
+                    {gramsToKgLabel(r.sales.wholesaleGrams)} кг · выручка{" "}
+                    {kopecksToRubLabel(r.sales.wholesaleRevenueKopecks)} ₽
+                  </td>
                 </tr>
                 <tr>
                   <td style={thtd}>Недостача (фикс.)</td>

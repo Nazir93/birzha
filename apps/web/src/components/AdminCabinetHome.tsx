@@ -1,26 +1,39 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { closeTripById } from "../api/fetch-api.js";
 import {
   batchesFullListQueryOptions,
   counterpartiesFullListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
+  queryRoots,
   tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
 import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnStyleInline, errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
+
+const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
+
+function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
+  if (!user) {
+    return false;
+  }
+  return TRIP_WRITE_ROLES.some((r) =>
+    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
+  );
+}
 
 function MassDistributionRing({
   warehouseKg,
@@ -63,7 +76,9 @@ function MassDistributionRing({
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
 export function AdminCabinetHome() {
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
+  const queryClient = useQueryClient();
+  const showCloseTrip = canTripWrite(user ?? null);
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const batchesQ = useQuery(batchesFullListQueryOptions());
@@ -194,6 +209,27 @@ export function AdminCabinetHome() {
 
   const loading = tripsQ.isPending || batchesQ.isPending || whQ.isPending;
   const err = tripsQ.isError || batchesQ.isError || whQ.isError;
+
+  const closeTripMut = useMutation({
+    mutationFn: async (tripId: string) => {
+      const t = (tripsQ.data?.trips ?? []).find((x) => x.id === tripId);
+      if (!t) {
+        throw new Error("Рейс не найден в списке");
+      }
+      if (!tripListShowsSoldOut(t)) {
+        const ok = window.confirm(
+          "В рейсе по данным системы ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+        );
+        if (!ok) {
+          return;
+        }
+      }
+      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+    },
+  });
 
   const pdErr = purchaseDocsQ.isError && meta?.purchaseDocumentsApi === "enabled";
   const cpErr = counterpartiesQ.isError && meta?.counterpartyCatalogApi === "enabled";
@@ -461,6 +497,11 @@ export function AdminCabinetHome() {
                       <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                         Отчёт
                       </th>
+                      {showCloseTrip ? (
+                        <th scope="col" style={thHead}>
+                          Закрытие
+                        </th>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -469,7 +510,17 @@ export function AdminCabinetHome() {
                         <th scope="row" style={thtd}>
                           <strong>{t.tripNumber}</strong>
                         </th>
-                        <td style={thtd}>{formatTripStatusLabel(t.status)}</td>
+                        <td style={thtd}>
+                          <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
+                          {tripListShowsSoldOut(t) ? (
+                            <span
+                              className="birzha-text-muted birzha-ui-sm"
+                              style={{ display: "block", marginTop: "0.2rem", fontWeight: 400 }}
+                            >
+                              Остаток в пути 0 — можно закрыть рейс.
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="birzha-text-muted birzha-text-muted--lg" style={thtd}>
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
@@ -481,11 +532,33 @@ export function AdminCabinetHome() {
                             Открыть
                           </Link>
                         </td>
+                        {showCloseTrip ? (
+                          <td style={thtd}>
+                            {t.status === "open" ? (
+                              <button
+                                type="button"
+                                className="birzha-ui-sm"
+                                style={btnStyleInline}
+                                disabled={closeTripMut.isPending}
+                                onClick={() => closeTripMut.mutate(t.id)}
+                              >
+                                {closeTripMut.isPending ? "…" : "Закрыть рейс"}
+                              </button>
+                            ) : (
+                              <span className="birzha-text-muted birzha-ui-sm">—</span>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {closeTripMut.isError ? (
+                <p className="birzha-text-danger birzha-ui-sm" style={{ marginTop: "0.35rem" }} role="alert">
+                  {(closeTripMut.error as Error).message}
+                </p>
+              ) : null}
               <BirzhaPagination
                 pageIndex={tripsPage}
                 pageCount={tripsPageCount}

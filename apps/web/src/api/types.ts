@@ -173,6 +173,13 @@ export type TripJson = {
   departedAt: string | null;
   /** Полевой продавец; null — рейс ещё не показывается продавцам. */
   assignedSellerUserId: string | null;
+  /**
+   * Полный список `GET /trips` без query: остаток «в пути» по отчёту (граммы, строка).
+   * У подборщика (`?search=` / `limit`) полей нет.
+   */
+  transitRemainingGrams?: string;
+  /** Полный список: был ли товар отгружен в рейс. */
+  hasShipmentToTrip?: boolean;
 };
 
 /** Мета для ответа `GET /api/trips?search=&limit=` (подбор без полной выборки). */
@@ -218,6 +225,10 @@ export type SalesBlock = {
   totalCashKopecks: string;
   totalDebtKopecks: string;
   totalCardTransferKopecks: string;
+  retailGrams: string;
+  wholesaleGrams: string;
+  retailRevenueKopecks: string;
+  wholesaleRevenueKopecks: string;
   byBatch: {
     batchId: string;
     grams: string;

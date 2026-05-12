@@ -181,6 +181,22 @@ export async function postBatchWarehouseWriteOffQualityReject(batchId: string, k
 }
 
 /**
+ * `POST /api/trips/:id/close` — закрыть рейс (admin, manager, logistics).
+ */
+export async function closeTripById(tripId: string, messageOn403: string): Promise<void> {
+  const url = `/api/trips/${encodeURIComponent(tripId)}/close`;
+  const res = await apiFetch(url, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: "{}",
+  });
+  if (res.status === 403) {
+    throw new Error(messageOn403);
+  }
+  await assertOkResponse(res, url);
+}
+
+/**
  * `DELETE /api/trips/:id` — права и конфликт 409 (рейс с движениями).
  */
 export async function deleteTripById(tripId: string, messageOn403: string): Promise<void> {

@@ -156,6 +156,10 @@ describe("Batch HTTP", () => {
     ]);
     expect(report.sales.totalGrams).toBe("0");
     expect(report.sales.totalRevenueKopecks).toBe("0");
+    expect(report.sales.retailGrams).toBe("0");
+    expect(report.sales.wholesaleGrams).toBe("0");
+    expect(report.sales.retailRevenueKopecks).toBe("0");
+    expect(report.sales.wholesaleRevenueKopecks).toBe("0");
     expect(report.sales.totalCashKopecks).toBe("0");
     expect(report.sales.totalDebtKopecks).toBe("0");
     expect(report.sales.totalCardTransferKopecks).toBe("0");
@@ -181,6 +185,10 @@ describe("Batch HTTP", () => {
     };
     expect(reportAfter.sales.totalGrams).toBe("50000");
     expect(reportAfter.sales.totalRevenueKopecks).toBe("60000");
+    expect(reportAfter.sales.retailGrams).toBe("50000");
+    expect(reportAfter.sales.wholesaleGrams).toBe("0");
+    expect(reportAfter.sales.retailRevenueKopecks).toBe("60000");
+    expect(reportAfter.sales.wholesaleRevenueKopecks).toBe("0");
     expect(reportAfter.sales.totalCashKopecks).toBe("60000");
     expect(reportAfter.sales.totalDebtKopecks).toBe("0");
     expect(reportAfter.sales.totalCardTransferKopecks).toBe("0");

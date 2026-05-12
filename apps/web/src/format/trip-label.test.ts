@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { formatTripSelectLabel, formatTripStatusLabel } from "./trip-label.js";
+import { formatTripListStatusLabel, formatTripSelectLabel, formatTripStatusLabel } from "./trip-label.js";
+
+const baseTrip = {
+  id: "trip-1",
+  tripNumber: "Р-1",
+  status: "open",
+  vehicleLabel: null,
+  driverName: null,
+  departedAt: null,
+  assignedSellerUserId: null,
+} as const;
 
 describe("trip-label", () => {
   it("показывает статусы рейса по-русски", () => {
@@ -8,30 +18,45 @@ describe("trip-label", () => {
     expect(formatTripStatusLabel("closed")).toBe("Закрыт");
   });
 
+  it("в списке: открыт + вся масса продана → «Продан»", () => {
+    expect(
+      formatTripListStatusLabel({
+        ...baseTrip,
+        hasShipmentToTrip: true,
+        transitRemainingGrams: "0",
+      }),
+    ).toBe("Продан");
+  });
+
+  it("в списке: открыт без полей сводки → «Открыт»", () => {
+    expect(formatTripListStatusLabel({ ...baseTrip })).toBe("Открыт");
+  });
+
   it("не показывает open в подписи рейса", () => {
     const label = formatTripSelectLabel({
-      id: "trip-1",
-      tripNumber: "Р-1",
-      status: "open",
-      vehicleLabel: null,
-      driverName: null,
-      departedAt: null,
-      assignedSellerUserId: null,
+      ...baseTrip,
     });
 
     expect(label).toContain("(Открыт)");
     expect(label).not.toContain("open");
   });
 
+  it("подпись рейса — «Продан» если сводка полного списка такая", () => {
+    const label = formatTripSelectLabel({
+      ...baseTrip,
+      hasShipmentToTrip: true,
+      transitRemainingGrams: "0",
+    });
+    expect(label).toContain("(Продан)");
+  });
+
   it("добавляет дату выезда для различия рейсов одного водителя", () => {
     const label = formatTripSelectLabel({
-      id: "trip-2",
+      ...baseTrip,
       tripNumber: "М-7",
-      status: "open",
       vehicleLabel: "А111",
       driverName: "Иванов",
       departedAt: "2026-05-10T08:00:00.000Z",
-      assignedSellerUserId: null,
     });
     expect(label).toContain("10.05.2026");
     expect(label).toContain("Иванов");

@@ -6,13 +6,14 @@ import {
   apiDeleteOr403,
   apiPostJson,
   apiPostJsonOr403,
+  closeTripById,
   deleteTripById,
 } from "../api/fetch-api.js";
 import type {
   CreateProductGradeResponse,
   CreateWarehouseResponse,
 } from "../api/types.js";
-import { formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
 import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import {
   batchesFullListQueryOptions,
@@ -32,13 +33,25 @@ import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } f
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
+const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
+
+function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
+  if (!user) {
+    return false;
+  }
+  return TRIP_WRITE_ROLES.some((r) =>
+    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
+  );
+}
+
 /**
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
  */
 export function InventoryAdminPanel() {
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
+  const showCloseTrip = canTripWrite(user);
 
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseCode, setNewWarehouseCode] = useState("");
@@ -291,6 +304,31 @@ export function InventoryAdminPanel() {
     },
   });
 
+  const closeTrip = useMutation({
+    mutationFn: async (tripId: string) => {
+      setTripError(null);
+      const t = (tripsQ.data?.trips ?? []).find((x) => x.id === tripId);
+      if (!t) {
+        throw new Error("Рейс не найден");
+      }
+      if (!tripListShowsSoldOut(t)) {
+        const ok = window.confirm(
+          "В рейсе по данным системы ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+        );
+        if (!ok) {
+          return;
+        }
+      }
+      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setTripError(e.message);
+    },
+  });
+
   if (!enabled) {
     return (
       <section className="birzha-panel">
@@ -457,7 +495,7 @@ export function InventoryAdminPanel() {
                     <th style={thHeadDense}>ТС</th>
                     <th style={thHeadDense}>Водитель</th>
                     <th style={thHeadDense}>id</th>
-                    <th style={thHeadDense} />
+                    <th style={thHeadDense}>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -469,7 +507,17 @@ export function InventoryAdminPanel() {
                             к операциям
                           </Link>
                         </td>
-                        <td style={thtdDense}>{formatTripStatusLabel(t.status)}</td>
+                        <td style={thtdDense}>
+                          <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
+                          {tripListShowsSoldOut(t) ? (
+                            <span
+                              className="birzha-text-muted"
+                              style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}
+                            >
+                              Остаток в пути 0
+                            </span>
+                          ) : null}
+                        </td>
                         <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
                         <td style={thtdDense}>{t.driverName ?? "—"}</td>
                         <td style={thtdDense}>
@@ -478,22 +526,34 @@ export function InventoryAdminPanel() {
                           </code>
                         </td>
                         <td style={thtdDense}>
-                          <button
-                            type="button"
-                            style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
-                            disabled={deleteTrip.isPending}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
-                                )
-                              ) {
-                                void deleteTrip.mutate(t.id);
-                              }
-                            }}
-                          >
-                            Удалить
-                          </button>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
+                            {showCloseTrip && t.status === "open" ? (
+                              <button
+                                type="button"
+                                style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                                disabled={closeTrip.isPending}
+                                onClick={() => void closeTrip.mutate(t.id)}
+                              >
+                                {closeTrip.isPending ? "…" : "Закрыть рейс"}
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                              disabled={deleteTrip.isPending}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
+                                  )
+                                ) {
+                                  void deleteTrip.mutate(t.id);
+                                }
+                              }}
+                            >
+                              Удалить
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

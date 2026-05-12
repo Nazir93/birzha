@@ -4,8 +4,10 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import type { BatchListItem } from "../api/types.js";
+import type { BatchListItem, TripJson } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
+import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import {
   buildTripBatchRows,
   estimateNetTransitPackageCount,
@@ -91,7 +93,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [sellKg, setSellKg] = useState("");
   const [saleId, setSaleId] = useState("");
   const [sellPrice, setSellPrice] = useState("");
+  const [saleChannel, setSaleChannel] = useState<"retail" | "wholesale">("retail");
   const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed" | "card_transfer">("cash");
+  const sellerFieldClass = isSellerUx ? "birzha-seller-form-control" : undefined;
+  const sellerFieldMb = { marginBottom: "0.45rem" as const, maxWidth: "100%" as const };
   const [cashMixed, setCashMixed] = useState("");
   const [cardTransferKopecks, setCardTransferKopecks] = useState("");
   const [sellClientLabel, setSellClientLabel] = useState("");
@@ -100,6 +105,18 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [partyFilter, setPartyFilter] = useState("");
   const [batchIdSearch, setBatchIdSearch] = useState("");
   const debouncedBatchIdSearch = useDebouncedValue(batchIdSearch, 300);
+
+  const sellerFlashDomId = `${idPrefix}-sale-flash`;
+  const [sellerSaleFlash, setSellerSaleFlash] = useState<{
+    saleId: string;
+    kg: string;
+    sumRub: string;
+    productLine: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setSellerSaleFlash(null);
+  }, [sellTripId, sellBatchId]);
 
   useEffect(() => {
     const p = searchParams.get("trip")?.trim() ?? "";
@@ -135,6 +152,18 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellTripId(list[0]!.id);
   }, [isSellerUx, searchParams, sellTripId, sellerTripsListQ.data?.trips]);
 
+  /** В кабинете продавца — только нал / долг; смешанные варианты убраны по требованию поля. */
+  useEffect(() => {
+    if (!isSellerUx) {
+      return;
+    }
+    if (paymentKind === "mixed" || paymentKind === "card_transfer") {
+      setPaymentKind("cash");
+      setCashMixed("");
+      setCardTransferKopecks("");
+    }
+  }, [isSellerUx, paymentKind]);
+
   useEffect(() => {
     setPartyFilter("");
   }, [sellTripId]);
@@ -151,6 +180,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     const qs = next.toString();
     void navigate({ pathname: location.pathname, search: qs ? `?${qs}` : "" }, { replace: true });
   }, [searchParams, navigate, location.pathname, scrollTargetId]);
+
+  const sellerTripOptions = useMemo(
+    () => sortTripsByTripNumberAsc(sellerTripsListQ.data?.trips ?? []),
+    [sellerTripsListQ.data?.trips],
+  );
 
   const sellTripIdTrim = sellTripId.trim();
   const sellReportQuery = useQuery({
@@ -346,6 +380,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         kg: sellKg,
         saleId,
         pricePerKg: sellPrice,
+        saleChannel,
         paymentKind,
         cashMixed,
         cardTransferKopecks,
@@ -353,9 +388,38 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         counterpartyId: sellCounterpartyId || undefined,
       });
       await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`, body);
-      return { saleId: body.saleId };
+      const totalKopecks = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, {
+        kgMaxFrac: 6,
+        priceMaxFrac: 4,
+      });
+      const sumRub =
+        Number.isFinite(totalKopecks) && totalKopecks >= 0
+          ? kopecksToRubLabel(String(Math.round(totalKopecks)))
+          : "—";
+      const productLine =
+        sellSelectionSummary?.line?.trim() ||
+        (sellBatchId.trim() ? `Партия ${formatShortBatchId(sellBatchId)}` : "Товар");
+      return {
+        saleId: body.saleId,
+        kg: sellKg.trim(),
+        sumRub,
+        productLine,
+      };
     },
-    onSuccess: () => invalidateDomain(),
+    onMutate: () => {
+      if (isSellerUx) {
+        setSellerSaleFlash(null);
+      }
+    },
+    onSuccess: (data) => {
+      invalidateDomain();
+      if (isSellerUx) {
+        setSellerSaleFlash(data);
+        requestAnimationFrame(() => {
+          document.getElementById(sellerFlashDomId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+    },
   });
 
   return (
@@ -370,14 +434,41 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       }
       hint={variant === "seller" ? "форма" : "после отгрузки"}
     >
+      {isSellerUx && sellerSaleFlash ? (
+        <div
+          id={sellerFlashDomId}
+          className="birzha-seller-sale-flash"
+          role="status"
+          aria-live="assertive"
+        >
+          <div className="birzha-seller-sale-flash__title">Продажа записана</div>
+          <p className="birzha-seller-sale-flash__lead">
+            <strong>{sellerSaleFlash.productLine}</strong>
+            <span className="birzha-seller-sale-flash__sep"> · </span>
+            <span>{sellerSaleFlash.kg} кг</span>
+            <span className="birzha-seller-sale-flash__sep"> · </span>
+            <span>
+              сумма <strong>{sellerSaleFlash.sumRub} ₽</strong>
+            </span>
+          </p>
+          <p className="birzha-seller-sale-flash__meta">Номер в системе: {sellerSaleFlash.saleId}</p>
+          <button
+            type="button"
+            className="birzha-seller-sale-flash__dismiss"
+            style={{ ...btnStyle, marginTop: "0.55rem", marginBottom: 0 }}
+            onClick={() => setSellerSaleFlash(null)}
+          >
+            Понятно
+          </button>
+        </div>
+      ) : null}
       {variant === "seller" ? (
         <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem", lineHeight: 1.5 }}>
-          Выберите рейс (если их несколько), затем <strong>товар и калибр</strong>, укажите вес, цену за кг и способ
-          оплаты — наличные, в долг или смешанно.
+          <strong>Выберите рейс</strong> в списке ниже, затем товар и калибр, килограммы, цену за кг и способ оплаты.
         </p>
       ) : (
         <>
-          <p className="birzha-callout-info">Выберите рейс, калибр, кг, цену и оплату.</p>
+          <p className="birzha-callout-info">Выберите рейс, калибр, тип продажи (розница/опт), кг, цену и оплату.</p>
           {import.meta.env.DEV && (
             <div className="birzha-callout-info" style={{ marginBottom: "0.6rem", fontSize: "0.82rem" }}>
               <BirzhaDisclosure
@@ -396,19 +487,73 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         </>
       )}
 
-      <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">
-        {isSellerUx ? "Рейс (ваш закреплённый) *" : "Рейс *"}
-      </span>
-      <TripSearchPicker
-        idPrefix={idPrefix}
-        value={sellTripId}
-        sellerWorkspace={isSellerUx}
-        onChange={(v) => {
-          setSellTripId(v);
-          setSellBatchId("");
-          setSellKg("");
-        }}
-      />
+      <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">Рейс *</span>
+      {isSellerUx ? (
+        <>
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
+            В списке только рейсы, закреплённые за вами. Пока товар в машине — он учитывается как «в пути»; продажа здесь
+            — отгрузка покупателю.
+          </p>
+          {sellerTripsListQ.isPending && (
+            <p style={{ margin: "0 0 0.5rem" }} role="status">
+              <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
+            </p>
+          )}
+          {sellerTripsListQ.isError && (
+            <p role="alert" className="birzha-ui-sm birzha-text-danger" style={{ margin: "0 0 0.5rem" }}>
+              Не удалось загрузить рейсы. Проверьте связь и повторите.
+            </p>
+          )}
+          {sellerTripsListQ.isSuccess && sellerTripOptions.length === 0 && (
+            <div style={{ marginBottom: "0.5rem" }}>
+              <BirzhaEmptyState
+                compact
+                title="Нет закреплённых рейсов"
+                description="Обратитесь к администратору — вам нужно назначить рейс в системе."
+              />
+            </div>
+          )}
+          {sellerTripsListQ.isSuccess && sellerTripOptions.length > 0 && (
+            <select
+              id={`${idPrefix}-sel-trip`}
+              className={sellerFieldClass}
+              value={sellTripId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSellTripId(v);
+                setSellBatchId("");
+                setSellKg("");
+              }}
+              aria-busy={sellerTripsListQ.isFetching || undefined}
+              style={sellerFieldMb}
+            >
+              <option value="">— Выберите рейс —</option>
+              {sellerTripOptions.map((t: TripJson) => (
+                <option key={t.id} value={t.id}>
+                  {formatTripSelectLabel(t)}
+                </option>
+              ))}
+              {sellTripIdTrim &&
+              !sellerTripOptions.some((t) => t.id === sellTripIdTrim) ? (
+                <option value={sellTripIdTrim}>
+                  Рейс (ссылка) {sellTripIdTrim.slice(0, 10)}
+                  {sellTripIdTrim.length > 10 ? "…" : ""}
+                </option>
+              ) : null}
+            </select>
+          )}
+        </>
+      ) : (
+        <TripSearchPicker
+          idPrefix={idPrefix}
+          value={sellTripId}
+          onChange={(v) => {
+            setSellTripId(v);
+            setSellBatchId("");
+            setSellKg("");
+          }}
+        />
+      )}
       {sellTripIdTrim && sellReportQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
           <LoadingIndicator
@@ -447,7 +592,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             id={`${idPrefix}-party-filter`}
             value={partyFilter}
             onChange={(e) => setPartyFilter(e.target.value)}
-            style={{ ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
+            className={sellerFieldClass}
+            style={isSellerUx ? sellerFieldMb : { ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
             placeholder={isSellerUx ? "Начните вводить калибр или номер накладной…" : "Сузить длинный список…"}
             autoComplete="off"
           />
@@ -467,7 +613,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
           }
         }}
-        style={{ ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }}
+        className={sellerFieldClass}
+        style={
+          isSellerUx
+            ? { ...sellerFieldMb, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }
+            : { ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }
+        }
         disabled={
           !sellTripIdTrim ||
           (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
@@ -555,7 +706,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 id={`${idPrefix}-in-batch`}
                 value={sellBatchId}
                 onChange={(e) => setSellBatchId(e.target.value)}
-                style={fieldStyle}
+                className={sellerFieldClass}
+                style={isSellerUx ? sellerFieldMb : fieldStyle}
                 autoComplete="off"
                 placeholder="полный id партии"
               />
@@ -569,7 +721,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 id={`${idPrefix}-batch-id-search`}
                 value={batchIdSearch}
                 onChange={(e) => setBatchIdSearch(e.target.value)}
-                style={fieldStyle}
+                className={sellerFieldClass}
+                style={isSellerUx ? sellerFieldMb : fieldStyle}
                 autoComplete="off"
                 placeholder="фрагмент id"
               />
@@ -672,7 +825,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         id={`${idPrefix}-in-kg`}
         value={sellKg}
         onChange={(e) => setSellKg(e.target.value)}
-        style={fieldStyle}
+        className={sellerFieldClass}
+        style={isSellerUx ? sellerFieldMb : fieldStyle}
         inputMode="decimal"
         autoComplete="off"
       />
@@ -697,7 +851,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         id={`${idPrefix}-in-price`}
         value={sellPrice}
         onChange={(e) => setSellPrice(e.target.value)}
-        style={fieldStyle}
+        className={sellerFieldClass}
+        style={isSellerUx ? sellerFieldMb : fieldStyle}
         inputMode="decimal"
         autoComplete="off"
       />
@@ -741,7 +896,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             id={`${idPrefix}-sel-cp`}
             value={sellCounterpartyId}
             onChange={(e) => setSellCounterpartyId(e.target.value)}
-            style={selectWide}
+            className={sellerFieldClass}
+            style={isSellerUx ? { ...selectWide, ...sellerFieldMb } : selectWide}
             disabled={counterpartiesQ.isPending}
             aria-busy={counterpartiesQ.isPending || undefined}
           >
@@ -764,7 +920,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             id={`${idPrefix}-in-new-cp`}
             value={newCounterpartyName}
             onChange={(e) => setNewCounterpartyName(e.target.value)}
-            style={fieldStyle}
+            className={sellerFieldClass}
+            style={isSellerUx ? sellerFieldMb : fieldStyle}
             placeholder="название"
             maxLength={200}
             autoComplete="off"
@@ -780,6 +937,19 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           <FieldError error={createCounterparty.error as Error | null} />
         </>
       )}
+      <label htmlFor={`${idPrefix}-sel-sale-ch`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
+        Тип продажи *
+      </label>
+      <select
+        id={`${idPrefix}-sel-sale-ch`}
+        value={saleChannel}
+        onChange={(e) => setSaleChannel(e.target.value as "retail" | "wholesale")}
+        className={sellerFieldClass}
+        style={isSellerUx ? sellerFieldMb : fieldStyle}
+      >
+        <option value="retail">Розница</option>
+        <option value="wholesale">Опт</option>
+      </select>
       <label htmlFor={`${idPrefix}-in-client`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Клиент вручную (опц., если не выбран справочник)
       </label>
@@ -787,7 +957,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         id={`${idPrefix}-in-client`}
         value={sellClientLabel}
         onChange={(e) => setSellClientLabel(e.target.value)}
-        style={fieldStyle}
+        className={sellerFieldClass}
+        style={isSellerUx ? sellerFieldMb : fieldStyle}
         placeholder="например ИП Иванов"
         maxLength={120}
         autoComplete="off"
@@ -796,24 +967,23 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         {isSellerUx ? "Как оплачивает клиент *" : "Как оплатил клиент *"}
       </label>
-      {isSellerUx && (
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
-          Наличные; долг; смешанно (нал + долг); перевод на карту — укажите сумму перевода в копейках, остаток сделки
-          считается наличными (без эквайринга).
-        </p>
-      )}
       <select
         id={`${idPrefix}-sel-pay`}
         value={paymentKind}
         onChange={(e) =>
           setPaymentKind(e.target.value as "cash" | "debt" | "mixed" | "card_transfer")
         }
-        style={fieldStyle}
+        className={sellerFieldClass}
+        style={isSellerUx ? sellerFieldMb : fieldStyle}
       >
-        <option value="cash">Вся сумма наличными</option>
-        <option value="debt">Вся сумма в долг (без наличных)</option>
-        <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
-        <option value="card_transfer">Перевод на карту + наличные (укажите сумму перевода)</option>
+        <option value="cash">Наличными целиком</option>
+        <option value="debt">В долг целиком (без наличных)</option>
+        {!isSellerUx && (
+          <>
+            <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
+            <option value="card_transfer">Перевод на карту + наличные (укажите сумму перевода)</option>
+          </>
+        )}
       </select>
       {paymentKind === "card_transfer" && (
         <>
@@ -868,7 +1038,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         {sell.isPending ? "Сохранение…" : "Зафиксировать продажу"}
       </button>
       <FieldError error={sell.error as Error | null} />
-      {sell.isSuccess && (
+      {sell.isSuccess && !isSellerUx && (
         <p style={successText} role="status">
           Готово.
         </p>

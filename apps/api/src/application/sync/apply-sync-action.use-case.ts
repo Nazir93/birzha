@@ -119,6 +119,7 @@ export class ApplySyncActionUseCase {
             kg: p.kg,
             saleId: p.saleId,
             pricePerKg: p.pricePerKg,
+            saleChannel: p.saleChannel,
             paymentKind: p.paymentKind,
             cashKopecksMixed,
             cardTransferKopecks,

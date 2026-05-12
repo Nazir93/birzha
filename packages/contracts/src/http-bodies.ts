@@ -27,6 +27,8 @@ const sellFromTripBodyBase = z.object({
   kg: z.number().finite().positive(),
   saleId: z.string().min(1),
   pricePerKg: z.number().finite().nonnegative(),
+  /** Розница или опт (агрегируется в отчёте по рейсу). По умолчанию розница. */
+  saleChannel: z.enum(["retail", "wholesale"]).optional().default("retail"),
   paymentKind: z.enum(["cash", "debt", "mixed", "card_transfer"]).optional(),
   cashKopecksMixed: z.union([z.string().regex(/^\d+$/), z.number().int().nonnegative()]).optional(),
   /** При `card_transfer`: сумма перевода на карту в копейках (остаток выручки — наличными). */

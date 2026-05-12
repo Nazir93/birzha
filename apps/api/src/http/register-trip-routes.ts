@@ -15,6 +15,7 @@ import { CloseTripUseCase } from "../application/trip/close-trip.use-case.js";
 import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
 import { DeleteTripUseCase } from "../application/trip/delete-trip.use-case.js";
 import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-case.js";
+import { computeTripTransitDigest } from "../application/trip/trip-transit-digest.js";
 
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
@@ -85,10 +86,29 @@ export function registerTripRoutes(
       if (u && isGlobalSellerOnly(u.roles)) {
         list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
       }
+      const toJson = async (trip: (typeof list)[number]) => {
+        if (isPicker || trip.getStatus() === "closed") {
+          return tripToJson(trip);
+        }
+        const tripId = trip.getId();
+        const [shipment, saleAgg, shortageAgg] = await Promise.all([
+          shipments.aggregateByTripId(tripId),
+          sales.aggregateByTripId(tripId),
+          shortages.aggregateByTripId(tripId),
+        ]);
+        const d = computeTripTransitDigest(shipment, saleAgg, shortageAgg);
+        return tripToJson(trip, {
+          transitRemainingGrams: d.remainingNetTransitGrams.toString(),
+          hasShipmentToTrip: d.hasShipmentToTrip,
+        });
+      };
+
+      const tripsPayload = await Promise.all(list.map(toJson));
+
       if (listMeta) {
-        return reply.send({ trips: list.map(tripToJson), listMeta });
+        return reply.send({ trips: tripsPayload, listMeta });
       }
-      return reply.send({ trips: list.map(tripToJson) });
+      return reply.send({ trips: tripsPayload });
     } catch (error) {
       return sendMappedError(reply, error);
     }

@@ -99,6 +99,8 @@ export function parseSellFromTripForm(input: {
   kg: string;
   saleId: string;
   pricePerKg: string;
+  /** Розница или опт; по умолчанию розница. */
+  saleChannel?: "retail" | "wholesale";
   paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
   cashMixed: string;
   cardTransferKopecks?: string;
@@ -117,6 +119,7 @@ export function parseSellFromTripForm(input: {
       kg,
       saleId,
       pricePerKg,
+      saleChannel: input.saleChannel ?? "retail",
       paymentKind: input.paymentKind,
     };
     if (input.paymentKind === "mixed") {

@@ -47,6 +47,10 @@ export type SaleLedgerAggregateJson = {
   totalCashKopecks: string;
   totalDebtKopecks: string;
   totalCardTransferKopecks: string;
+  retailGrams: string;
+  wholesaleGrams: string;
+  retailRevenueKopecks: string;
+  wholesaleRevenueKopecks: string;
   byBatch: {
     batchId: string;
     grams: string;
@@ -72,6 +76,10 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     totalCashKopecks: aggregate.totalCashKopecks.toString(),
     totalDebtKopecks: aggregate.totalDebtKopecks.toString(),
     totalCardTransferKopecks: aggregate.totalCardTransferKopecks.toString(),
+    retailGrams: aggregate.retailGrams.toString(),
+    wholesaleGrams: aggregate.wholesaleGrams.toString(),
+    retailRevenueKopecks: aggregate.retailRevenueKopecks.toString(),
+    wholesaleRevenueKopecks: aggregate.wholesaleRevenueKopecks.toString(),
     byBatch: aggregate.byBatch.map((l) => ({
       batchId: l.batchId,
       grams: l.grams.toString(),

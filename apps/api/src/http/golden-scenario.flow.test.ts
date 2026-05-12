@@ -81,6 +81,10 @@ describe("golden scenario (HTTP flow)", () => {
         totalCashKopecks: string;
         totalDebtKopecks: string;
         totalCardTransferKopecks: string;
+        retailGrams: string;
+        wholesaleGrams: string;
+        retailRevenueKopecks: string;
+        wholesaleRevenueKopecks: string;
         byClient: { clientLabel: string; grams: string; revenueKopecks: string }[];
       };
       shortage: { totalGrams: string };
@@ -106,6 +110,10 @@ describe("golden scenario (HTTP flow)", () => {
 
     expect(report.sales.totalGrams).toBe(soldGrams.toString());
     expect(report.sales.totalRevenueKopecks).toBe(expectedRevenue.toString());
+    expect(report.sales.retailGrams).toBe(soldGrams.toString());
+    expect(report.sales.wholesaleGrams).toBe("0");
+    expect(report.sales.retailRevenueKopecks).toBe(expectedRevenue.toString());
+    expect(report.sales.wholesaleRevenueKopecks).toBe("0");
     expect(report.sales.totalCashKopecks).toBe("0");
     expect(report.sales.totalCardTransferKopecks).toBe("0");
     expect(report.sales.totalDebtKopecks).toBe(expectedRevenue.toString());

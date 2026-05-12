@@ -221,6 +221,7 @@ export function registerBatchRoutes(
         kg: body.kg,
         saleId: body.saleId,
         pricePerKg: body.pricePerKg,
+        saleChannel: body.saleChannel,
         paymentKind: body.paymentKind,
         cashKopecksMixed,
         cardTransferKopecks,

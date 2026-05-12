@@ -22,6 +22,10 @@ const minimalReport = (id: string, tripNumber: string): ShipmentReportResponse =
     totalCashKopecks: "25000",
     totalDebtKopecks: "15000",
     totalCardTransferKopecks: "0",
+    retailGrams: "400",
+    wholesaleGrams: "0",
+    retailRevenueKopecks: "40000",
+    wholesaleRevenueKopecks: "0",
     byBatch: [
       {
         batchId: "b1",
@@ -77,6 +81,10 @@ describe("aggregateSellerShipmentReports", () => {
     b.shipment.byBatch = [{ batchId: "b2", grams: "2000", packageCount: "20" }];
     b.sales.totalGrams = "500";
     b.sales.totalRevenueKopecks = "50000";
+    b.sales.retailGrams = "500";
+    b.sales.wholesaleGrams = "0";
+    b.sales.retailRevenueKopecks = "50000";
+    b.sales.wholesaleRevenueKopecks = "0";
     b.sales.totalCashKopecks = "50000";
     b.sales.totalDebtKopecks = "0";
     b.sales.totalCardTransferKopecks = "0";

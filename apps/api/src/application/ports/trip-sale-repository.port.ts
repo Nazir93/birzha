@@ -10,6 +10,8 @@ export type TripSaleAppend = {
   debtKopecks: bigint;
   /** Перевод на карту (без эквайринга); вместе с cash и debt закрывает выручку. */
   cardTransferKopecks: bigint;
+  /** Розница или опт. */
+  saleChannel: "retail" | "wholesale";
   /** null / undefined — не указан (агрегируется в пустую метку в отчёте). */
   clientLabel?: string | null;
   /** Ссылка на справочник; снимок имени дублируется в `clientLabel`. */
@@ -43,6 +45,10 @@ export type TripSaleAggregate = {
   totalCashKopecks: bigint;
   totalDebtKopecks: bigint;
   totalCardTransferKopecks: bigint;
+  retailGrams: bigint;
+  wholesaleGrams: bigint;
+  retailRevenueKopecks: bigint;
+  wholesaleRevenueKopecks: bigint;
   byBatch: TripSaleBatchLine[];
   byClient: TripSaleClientLine[];
 };

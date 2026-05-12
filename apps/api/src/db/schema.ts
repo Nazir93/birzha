@@ -213,6 +213,8 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   counterpartyId: text("counterparty_id").references(() => counterparties.id, { onDelete: "set null" }),
   /** Кто внёс строку продажи; для «только продавец» — фильтр отчёта по `users.id`. */
   recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  /** Розница или опт (для отчётности; старые строки — `retail`). */
+  saleChannel: text("sale_channel").notNull().default("retail"),
 });
 
 /** Успешно обработанные офлайн-действия (идемпотентность по устройству). */

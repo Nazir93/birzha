@@ -24,8 +24,8 @@ export function SellerCabinetHome() {
             Рабочее место продавца
           </h2>
           <p className="birzha-home-hero__lead">
-            Выберите свой рейс, укажите товар и калибр, вес и оплату. В разделе «Отчёты по рейсу» — что уже продано и по
-            каким суммам.
+            Товар уже отгружен со склада в рейс — он «в пути» в машине. Выберите рейс, затем калибр и вес сделки, цену и
+            оплату. В «Отчётах по рейсу» — что продано и по каким суммам.
           </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия продавца">
@@ -69,7 +69,7 @@ export function SellerCabinetHome() {
               <span className="birzha-seller-guide__num">2</span>
               <div>
                 <strong>Внесите продажу</strong>
-                <p>Товар и калибр, килограммы, цену за кг и способ оплаты — наличные, долг или смешанно.</p>
+                <p>Товар и калибр, килограммы, цену за кг и оплату — наличные или в долг.</p>
               </div>
             </article>
             <article className="birzha-seller-guide__item">

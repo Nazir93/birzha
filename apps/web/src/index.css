@@ -499,6 +499,32 @@ a.birzha-kpi-tile--link:focus-visible {
   background: var(--birzha-surface);
 }
 
+/* Единый вид полей формы «Продажа с рейса» в кабинете продавца */
+.birzha-seller-sell-panel .birzha-seller-form-control {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.75rem;
+  font-family: var(--font-ui);
+  font-size: 1.02rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--color-text);
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.birzha-seller-sell-panel .birzha-seller-form-control:focus-visible {
+  outline: none;
+  border-color: var(--birzha-accent);
+  box-shadow: 0 0 0 2px var(--birzha-accent-soft);
+}
+
 .birzha-seller-trip-meta {
   list-style: none;
   margin: 0.65rem 0 0;
@@ -538,6 +564,42 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-disclosure.birzha-seller-sell-panel {
   border-bottom: none;
   padding-bottom: 0;
+}
+
+.birzha-seller-sale-flash {
+  margin: 0 0 1rem;
+  padding: 1rem 1rem 1.05rem;
+  border-radius: var(--birzha-radius);
+  border: 2px solid #15803d;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 55%, #ecfdf5 100%);
+  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.18);
+}
+
+.birzha-seller-sale-flash__title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #14532d;
+  margin: 0 0 0.45rem;
+}
+
+.birzha-seller-sale-flash__lead {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.birzha-seller-sale-flash__sep {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.birzha-seller-sale-flash__meta {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  word-break: break-all;
 }
 
 .birzha-seller-footer-nav {

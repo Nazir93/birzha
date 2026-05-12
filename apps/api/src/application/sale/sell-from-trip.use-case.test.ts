@@ -54,6 +54,47 @@ describe("SellFromTripUseCase", () => {
     expect(agg.totalCashKopecks).toBe(100_000n);
     expect(agg.totalDebtKopecks).toBe(0n);
     expect(agg.totalCardTransferKopecks).toBe(0n);
+    expect(agg.retailGrams).toBe(100_000n);
+    expect(agg.wholesaleGrams).toBe(0n);
+    expect(agg.retailRevenueKopecks).toBe(100_000n);
+    expect(agg.wholesaleRevenueKopecks).toBe(0n);
+  });
+
+  it("saleChannel wholesale попадает в агрегат отчёта", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    await new CreateTripUseCase(trips).execute({ id: "t-wh", tripNumber: "Ф-WH" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-wh",
+      purchaseId: "p-wh",
+      totalKg: 100,
+      pricePerKg: 2,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-wh",
+      kg: 50,
+      tripId: "t-wh",
+    });
+
+    await new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties).execute({
+      batchId: "b-wh",
+      tripId: "t-wh",
+      kg: 12,
+      saleId: "s-wh",
+      pricePerKg: 10,
+      saleChannel: "wholesale",
+    });
+
+    const agg = await sales.aggregateByTripId("t-wh");
+    expect(agg.wholesaleGrams).toBe(12_000n);
+    expect(agg.retailGrams).toBe(0n);
+    expect(agg.wholesaleRevenueKopecks).toBe(agg.totalRevenueKopecks);
+    expect(agg.retailRevenueKopecks).toBe(0n);
   });
 
   it("при counterpartyId пишет снимок имени в отчёт по клиентам", async () => {

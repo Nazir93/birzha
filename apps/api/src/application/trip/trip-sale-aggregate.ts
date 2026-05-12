@@ -11,6 +11,8 @@ export type TripSaleRowForAggregate = {
   debtKopecks: bigint;
   cardTransferKopecks?: bigint;
   clientLabel: string | null | undefined;
+  /** Без поля — как розница (данные до введения канала). */
+  saleChannel?: "retail" | "wholesale";
 };
 
 /** Сводка продаж по рейсу из сырых строк журнала (партии и клиенты). */
@@ -32,6 +34,10 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
   let totalCash = 0n;
   let totalDebt = 0n;
   let totalCard = 0n;
+  let retailGrams = 0n;
+  let wholesaleGrams = 0n;
+  let retailRevenue = 0n;
+  let wholesaleRevenue = 0n;
 
   for (const r of rows) {
     const card = r.cardTransferKopecks ?? 0n;
@@ -40,6 +46,15 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
     totalCash += r.cashKopecks;
     totalDebt += r.debtKopecks;
     totalCard += card;
+
+    const isWholesale = r.saleChannel === "wholesale";
+    if (isWholesale) {
+      wholesaleGrams += r.grams;
+      wholesaleRevenue += r.revenueKopecks;
+    } else {
+      retailGrams += r.grams;
+      retailRevenue += r.revenueKopecks;
+    }
 
     byBatchGrams.set(r.batchId, (byBatchGrams.get(r.batchId) ?? 0n) + r.grams);
     byBatchRevenue.set(r.batchId, (byBatchRevenue.get(r.batchId) ?? 0n) + r.revenueKopecks);
@@ -93,6 +108,10 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
     totalCashKopecks: totalCash,
     totalDebtKopecks: totalDebt,
     totalCardTransferKopecks: totalCard,
+    retailGrams,
+    wholesaleGrams,
+    retailRevenueKopecks: retailRevenue,
+    wholesaleRevenueKopecks: wholesaleRevenue,
     byBatch,
     byClient,
   };

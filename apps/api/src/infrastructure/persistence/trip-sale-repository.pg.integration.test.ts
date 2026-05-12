@@ -63,10 +63,13 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
       cashKopecks: 2500n,
       debtKopecks: 0n,
       cardTransferKopecks: 0n,
+      saleChannel: "retail",
     });
 
     const agg = await sales.aggregateByTripId(tripId);
     expect(agg.totalGrams).toBe(25_000n);
+    expect(agg.retailGrams).toBe(25_000n);
+    expect(agg.wholesaleGrams).toBe(0n);
     expect(agg.totalRevenueKopecks).toBe(2500n);
     expect(agg.totalCashKopecks).toBe(2500n);
     expect(agg.totalDebtKopecks).toBe(0n);

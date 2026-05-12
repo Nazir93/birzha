@@ -43,6 +43,7 @@ describe("GetTripReportUseCase", () => {
       cashKopecks: 400n,
       debtKopecks: 0n,
       cardTransferKopecks: 0n,
+      saleChannel: "retail",
     });
 
     const { trip, shipment, sales: saleAgg, shortage, financials } = await new GetTripReportUseCase(
@@ -113,6 +114,7 @@ describe("GetTripReportUseCase", () => {
         cashKopecks: cash,
         debtKopecks: rev - cash,
         cardTransferKopecks: 0n,
+        saleChannel: "retail",
         recordedByUserId: uid,
       });
     await line("a", "s-a", 10_000n, 1_000n, 1_000n, "u-alice");

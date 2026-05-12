@@ -18,6 +18,8 @@ export type SellFromTripInput = {
   saleId: string;
   /** Цена продажи за кг, рубли (например 120.5). */
   pricePerKg: number;
+  /** Розница или опт; по умолчанию розница. */
+  saleChannel?: "retail" | "wholesale";
   /** По умолчанию вся выручка — наличные. */
   paymentKind?: "cash" | "debt" | "mixed" | "card_transfer";
   /** При `mixed`: сколько копеек выручки — нал (остальное в долг). */
@@ -130,6 +132,7 @@ export class SellFromTripUseCase {
     );
 
     const { clientLabel, counterpartyId } = await this.resolveClientSnapshot(input);
+    const saleChannel: "retail" | "wholesale" = input.saleChannel === "wholesale" ? "wholesale" : "retail";
 
     const persist = async (batches: BatchRepository, saleRepo: TripSaleRepository) => {
       const batch = await loadBatchOrThrow(batches, input.batchId);
@@ -146,6 +149,7 @@ export class SellFromTripUseCase {
         cashKopecks,
         debtKopecks,
         cardTransferKopecks,
+        saleChannel,
         clientLabel,
         counterpartyId,
         recordedByUserId: input.recordedByUserId?.trim() || null,

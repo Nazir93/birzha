@@ -43,6 +43,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
       clientLabel: row.clientLabel?.trim() || null,
       counterpartyId: row.counterpartyId?.trim() || null,
       recordedByUserId: uid || null,
+      saleChannel: row.saleChannel,
     });
   }
 
@@ -75,6 +76,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
         debtKopecks: r.debtKopecks,
         cardTransferKopecks: r.cardTransferKopecks,
         clientLabel: r.clientLabel,
+        saleChannel: r.saleChannel === "wholesale" ? "wholesale" : "retail",
       })),
     );
   }
