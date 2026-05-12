@@ -47,7 +47,6 @@ export const tripsFullListQueryOptions = () =>
     queryKey: queryRoots.trips,
     queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
     /** Меньше «мигания» таблиц при invalidate после мутаций (Operations, отчёт, распределение). */
     placeholderData: keepPreviousData,
   });
@@ -58,7 +57,6 @@ export const tripsFieldSellerOptionsQueryOptions = () =>
     queryKey: [...queryRoots.trips, "field-seller-options"] as const,
     queryFn: () => apiGetJson<FieldSellerOptionsResponse>("/api/trips/field-seller-options"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 /**
@@ -79,7 +77,6 @@ export const tripsSearchPickerQueryOptions = (search: string) => {
       return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
     },
     staleTime: QUERY_STALE_TRIP_PICKER_MS,
-    retry: 1,
   });
 };
 
@@ -91,7 +88,6 @@ export const tripByIdQueryOptions = (tripId: string) => {
     queryFn: () => apiGetJson<{ trip: TripJson }>(`/api/trips/${encodeURIComponent(id)}`),
     enabled: id.length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 };
 
@@ -103,7 +99,6 @@ export const batchesFullListQueryOptions = () =>
     queryKey: queryRoots.batches,
     queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
     placeholderData: keepPreviousData,
   });
 
@@ -120,7 +115,6 @@ export const batchesByIdsQueryOptions = (ids: readonly string[]) => {
     },
     enabled: sorted.length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 };
 
@@ -137,7 +131,6 @@ export const batchesSearchQueryOptions = (search: string, limit = 20) => {
     },
     enabled: q.length >= 2,
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 };
 
@@ -146,7 +139,6 @@ export const warehousesFullListQueryOptions = () =>
     queryKey: queryRoots.warehouses,
     queryFn: () => apiGetJson<WarehousesListResponse>("/api/warehouses"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const productGradesFullListQueryOptions = () =>
@@ -154,7 +146,6 @@ export const productGradesFullListQueryOptions = () =>
     queryKey: queryRoots.productGrades,
     queryFn: () => apiGetJson<ProductGradesListResponse>("/api/product-grades"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const purchaseDocumentsFullListQueryOptions = () =>
@@ -162,7 +153,6 @@ export const purchaseDocumentsFullListQueryOptions = () =>
     queryKey: queryRoots.purchaseDocuments,
     queryFn: () => apiGetJson<PurchaseDocumentsListResponse>("/api/purchase-documents"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const counterpartiesFullListQueryOptions = () =>
@@ -170,7 +160,6 @@ export const counterpartiesFullListQueryOptions = () =>
     queryKey: queryRoots.counterparties,
     queryFn: () => apiGetJson<CounterpartiesListResponse>("/api/counterparties"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const shipDestinationsFullListQueryOptions = () =>
@@ -178,7 +167,6 @@ export const shipDestinationsFullListQueryOptions = () =>
     queryKey: queryRoots.shipDestinations,
     queryFn: () => apiGetJson<ShipDestinationsListResponse>("/api/ship-destinations"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const loadingManifestDetailQueryOptions = (manifestId: string) =>
@@ -187,7 +175,6 @@ export const loadingManifestDetailQueryOptions = (manifestId: string) =>
     queryFn: () => apiGetJson<LoadingManifestDetailResponse>(`/api/loading-manifests/${encodeURIComponent(manifestId)}`),
     enabled: manifestId.trim().length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 export const loadingManifestsListQueryOptions = () =>
@@ -195,7 +182,6 @@ export const loadingManifestsListQueryOptions = () =>
     queryKey: [...queryRoots.loadingManifest, "list"] as const,
     queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });
 
 /** `GET /api/trips/:id/shipment-report` — один queryKey на рейс для кеша во всех экранах. */
@@ -207,7 +193,6 @@ export const shipmentReportQueryOptions = (tripId: string) =>
         `/api/trips/${encodeURIComponent(tripId)}/shipment-report`,
       ),
     staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
-    retry: 1,
   });
 
 /**
@@ -227,5 +212,4 @@ export const purchaseDocumentDetailQueryOptions = (documentId: string) =>
       return res.json() as Promise<PurchaseDocumentDetail>;
     },
     staleTime: QUERY_STALE_LISTS_MS,
-    retry: 1,
   });

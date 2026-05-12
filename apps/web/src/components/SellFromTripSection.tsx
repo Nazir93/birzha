@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
+import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
 import type { BatchListItem, TripJson } from "../api/types.js";
 import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
@@ -14,6 +15,7 @@ import {
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
+import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
 import {
   batchesByIdsQueryOptions,
   batchesSearchQueryOptions,
@@ -24,6 +26,7 @@ import {
 } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
+import { enqueue, requestOutboxBackgroundSync } from "../sync/index.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { TripSearchPicker } from "./TripSearchPicker.js";
@@ -65,6 +68,7 @@ export type SellFromTripVariant = "seller" | "operations";
  */
 export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
   const { meta } = useAuth();
+  const online = useNavigatorOnLine();
   const isSellerUx = variant === "seller";
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -112,7 +116,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     kg: string;
     sumRub: string;
     productLine: string;
+    /** Продажа сохранена в офлайн-очередь (отправка при сети). */
+    queued?: boolean;
   } | null>(null);
+  const [operationsQueuedHint, setOperationsQueuedHint] = useState<string | null>(null);
 
   useEffect(() => {
     setSellerSaleFlash(null);
@@ -357,6 +364,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
 
   const createCounterparty = useMutation({
     mutationFn: async () => {
+      if (!online) {
+        throw new Error(
+          "Нет сети: новый контрагент в справочник не создаётся. Выберите из списка или укажите подпись в поле ниже.",
+        );
+      }
       const displayName = newCounterpartyName.trim();
       if (!displayName) {
         throw new Error("Укажите название контрагента");
@@ -386,7 +398,29 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         clientLabel: sellClientLabel,
         counterpartyId: sellCounterpartyId || undefined,
       });
-      await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`, body);
+      const url = `/api/batches/${encodeURIComponent(batchId)}/sell-from-trip`;
+      let queued = false;
+      try {
+        await apiPostJson(url, body);
+      } catch (e) {
+        const syncEnabled = meta?.syncApi === "enabled";
+        if (!syncEnabled && isLikelyNetworkOrOfflineFailure(e)) {
+          throw new Error(
+            "Нет связи с сервером, а синхронизация очереди на сервере недоступна. Подключите интернет или обратитесь к администратору.",
+          );
+        }
+        if (syncEnabled && isLikelyNetworkOrOfflineFailure(e)) {
+          await enqueue({
+            actionType: "sell_from_trip",
+            payload: { batchId, ...body },
+          });
+          void requestOutboxBackgroundSync();
+          void queryClient.invalidateQueries({ queryKey: ["outbox"] });
+          queued = true;
+        } else {
+          throw e;
+        }
+      }
       const totalKopecks = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, {
         kgMaxFrac: 6,
         priceMaxFrac: 4,
@@ -403,20 +437,28 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         kg: sellKg.trim(),
         sumRub,
         productLine,
+        queued,
       };
     },
     onMutate: () => {
       if (isSellerUx) {
         setSellerSaleFlash(null);
       }
+      setOperationsQueuedHint(null);
     },
     onSuccess: (data) => {
-      invalidateDomain();
+      if (!data.queued) {
+        invalidateDomain();
+      }
       if (isSellerUx) {
-        setSellerSaleFlash(data);
+        setSellerSaleFlash({ ...data, queued: data.queued });
         requestAnimationFrame(() => {
           document.getElementById(sellerFlashDomId)?.scrollIntoView({ behavior: "smooth", block: "center" });
         });
+      } else if (data.queued) {
+        setOperationsQueuedHint(
+          "Нет связи с сервером: продажа сохранена в офлайн-очередь и уйдёт на сервер при появлении сети. Проверьте раздел «Офлайн».",
+        );
       }
     },
   });
@@ -440,7 +482,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           role="status"
           aria-live="assertive"
         >
-          <div className="birzha-seller-sale-flash__title">Продажа записана</div>
+          <div className="birzha-seller-sale-flash__title">
+            {sellerSaleFlash.queued ? "Продажа в очереди" : "Продажа записана"}
+          </div>
           <p className="birzha-seller-sale-flash__lead">
             <strong>{sellerSaleFlash.productLine}</strong>
             <span className="birzha-seller-sale-flash__sep"> · </span>
@@ -450,6 +494,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               сумма <strong>{sellerSaleFlash.sumRub} ₽</strong>
             </span>
           </p>
+          {sellerSaleFlash.queued ? (
+            <p className="birzha-seller-sale-flash__meta" style={{ marginTop: "0.35rem" }}>
+              Когда появится интернет, запись отправится на сервер автоматически. Статус — в разделе «Офлайн».
+            </p>
+          ) : null}
           <p className="birzha-seller-sale-flash__meta">Номер в системе: {sellerSaleFlash.saleId}</p>
           <button
             type="button"
@@ -461,12 +510,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </button>
         </div>
       ) : null}
-      {variant === "seller" ? (
-        <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", fontSize: "0.95rem", lineHeight: 1.5 }}>
-          <strong>Выберите рейс</strong> в списке ниже, затем товар и калибр, килограммы, цену за кг и способ оплаты.
-        </p>
-      ) : (
+      {variant === "seller" ? null : (
         <>
+          {operationsQueuedHint ? (
+            <p className="birzha-callout-info" role="status" style={{ marginBottom: "0.65rem" }}>
+              {operationsQueuedHint}
+            </p>
+          ) : null}
           <p className="birzha-callout-info">Выберите рейс, калибр, тип продажи (розница/опт), кг, цену и оплату.</p>
           {import.meta.env.DEV && (
             <div className="birzha-callout-info" style={{ marginBottom: "0.6rem", fontSize: "0.82rem" }}>
@@ -489,10 +539,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">Рейс *</span>
       {isSellerUx ? (
         <>
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
-            В списке только рейсы, закреплённые за вами. Пока товар в машине — он учитывается как «в пути»; продажа здесь
-            — отгрузка покупателю.
-          </p>
           {sellerTripsListQ.isPending && (
             <p style={{ margin: "0 0 0.5rem" }} role="status">
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
@@ -883,13 +929,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </span>
         )}
       </p>
-      {counterpartiesCatalog && (
+      {counterpartiesCatalog ? (
         <>
           <label
             htmlFor={`${idPrefix}-sel-cp`}
             className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
           >
-            Контрагент (справочник)
+            Клиент
           </label>
           <select
             id={`${idPrefix}-sel-cp`}
@@ -901,7 +947,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             aria-busy={counterpartiesQ.isPending || undefined}
           >
             <option value="">
-              {counterpartiesQ.isPending ? "— загрузка справочника —" : "— подпись вручную (ниже) —"}
+              {counterpartiesQ.isPending ? "— загрузка справочника —" : "— из справочника —"}
             </option>
             {(counterpartiesQ.data?.counterparties ?? []).map((c) => (
               <option key={c.id} value={c.id}>
@@ -913,27 +959,66 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             htmlFor={`${idPrefix}-in-new-cp`}
             className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
           >
-            Новый контрагент
+            Новый в справочнике
           </label>
+          {!online ? (
+            <p className="birzha-callout-info" style={{ margin: "0 0 0.45rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
+              Без сети новую запись в справочник добавить нельзя — выберите из сохранённого списка или введите подпись
+              ниже; её можно использовать в продаже офлайн.
+            </p>
+          ) : null}
           <input
             id={`${idPrefix}-in-new-cp`}
             value={newCounterpartyName}
             onChange={(e) => setNewCounterpartyName(e.target.value)}
             className={sellerFieldClass}
             style={isSellerUx ? sellerFieldMb : fieldStyle}
-            placeholder="название"
+            placeholder="название для справочника"
             maxLength={200}
             autoComplete="off"
+            disabled={!online}
           />
           <button
             type="button"
             style={{ ...btnStyle, marginTop: "0.35rem" }}
-            disabled={createCounterparty.isPending}
+            disabled={!online || createCounterparty.isPending}
             onClick={() => createCounterparty.mutate()}
           >
             {createCounterparty.isPending ? "…" : "Добавить в справочник"}
           </button>
           <FieldError error={createCounterparty.error as Error | null} />
+          <input
+            id={`${idPrefix}-in-client`}
+            value={sellClientLabel}
+            onChange={(e) => setSellClientLabel(e.target.value)}
+            className={sellerFieldClass}
+            style={isSellerUx ? { ...sellerFieldMb, marginTop: "0.55rem" } : { ...fieldStyle, marginTop: "0.55rem" }}
+            placeholder="Подпись без справочника, напр. ИП Иванов"
+            maxLength={120}
+            autoComplete="off"
+            disabled={Boolean(sellCounterpartyId)}
+            aria-label="Подпись клиента для отчёта, если не выбран справочник"
+          />
+        </>
+      ) : (
+        <>
+          <label
+            htmlFor={`${idPrefix}-in-client`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
+            Клиент
+          </label>
+          <input
+            id={`${idPrefix}-in-client`}
+            value={sellClientLabel}
+            onChange={(e) => setSellClientLabel(e.target.value)}
+            className={sellerFieldClass}
+            style={isSellerUx ? sellerFieldMb : fieldStyle}
+            placeholder="например ИП Иванов"
+            maxLength={120}
+            autoComplete="off"
+            disabled={Boolean(sellCounterpartyId)}
+          />
         </>
       )}
       <label htmlFor={`${idPrefix}-sel-sale-ch`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
@@ -949,20 +1034,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         <option value="retail">Розница</option>
         <option value="wholesale">Опт</option>
       </select>
-      <label htmlFor={`${idPrefix}-in-client`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        Клиент вручную (опц., если не выбран справочник)
-      </label>
-      <input
-        id={`${idPrefix}-in-client`}
-        value={sellClientLabel}
-        onChange={(e) => setSellClientLabel(e.target.value)}
-        className={sellerFieldClass}
-        style={isSellerUx ? sellerFieldMb : fieldStyle}
-        placeholder="например ИП Иванов"
-        maxLength={120}
-        autoComplete="off"
-        disabled={Boolean(sellCounterpartyId)}
-      />
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         {isSellerUx ? "Как оплачивает клиент *" : "Как оплатил клиент *"}
       </label>

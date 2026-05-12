@@ -1,21 +1,21 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import {
   enqueue,
   loadOutbox,
   processSyncQueueSerialized,
   requestOutboxBackgroundSync,
-  subscribeBackgroundSyncMessages,
-  subscribeSyncOnOnline,
   type ProcessSyncResult,
 } from "../sync/index.js";
-import { randomUuid } from "../lib/random-uuid.js";
+import { announceSyncProcessResult } from "../sync/announce-sync-process-result.js";
 import { getOutboxScopeKey } from "../sync/outbox-scope.js";
+import { BIRZHA_SYNC_RESULT_EVENT } from "../sync/sync-result-events.js";
 import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { btnStyleInline, errorText, preJson, warnText } from "../ui/styles.js";
+import { randomUuid } from "../lib/random-uuid.js";
 
 const showDeveloperTools = import.meta.env.DEV;
 
@@ -24,40 +24,30 @@ const showDeveloperTools = import.meta.env.DEV;
  */
 export function OfflineQueuePanel() {
   const { meta } = useAuth();
-  const [queueTick, setQueueTick] = useState(0);
-  const refreshQueue = useCallback(() => setQueueTick((t) => t + 1), []);
+  const queryClient = useQueryClient();
 
   const outboxQuery = useQuery({
-    queryKey: ["outbox", queueTick, getOutboxScopeKey()],
+    queryKey: ["outbox", getOutboxScopeKey()],
     queryFn: () => loadOutbox(),
   });
 
   const [lastSync, setLastSync] = useState<ProcessSyncResult | null>(null);
 
   useEffect(() => {
-    return subscribeSyncOnOnline({
-      periodicIntervalMs: 120_000,
-      onResult: (result) => {
-        setLastSync(result);
-        refreshQueue();
-      },
-    });
-  }, [refreshQueue]);
-
-  useEffect(() => {
-    return subscribeBackgroundSyncMessages({
-      onResult: (result) => {
-        setLastSync(result);
-        refreshQueue();
-      },
-    });
-  }, [refreshQueue]);
+    const onSyncResult = (ev: Event) => {
+      const ce = ev as CustomEvent<ProcessSyncResult>;
+      if (ce.detail) {
+        setLastSync(ce.detail);
+      }
+    };
+    window.addEventListener(BIRZHA_SYNC_RESULT_EVENT, onSyncResult);
+    return () => window.removeEventListener(BIRZHA_SYNC_RESULT_EVENT, onSyncResult);
+  }, []);
 
   const syncMutation = useMutation({
     mutationFn: () => processSyncQueueSerialized(),
     onSuccess: (result) => {
-      setLastSync(result);
-      refreshQueue();
+      announceSyncProcessResult(queryClient, result);
     },
     onError: () => {
       setLastSync(null);
@@ -74,7 +64,7 @@ export function OfflineQueuePanel() {
         },
       });
       void requestOutboxBackgroundSync();
-      refreshQueue();
+      void queryClient.invalidateQueries({ queryKey: ["outbox"] });
       setLastSync(null);
     })();
   };

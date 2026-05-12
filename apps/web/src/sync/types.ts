@@ -14,9 +14,12 @@ export type OutboxItem = {
         kg: number;
         saleId: string;
         pricePerKg: number;
+        saleChannel?: "retail" | "wholesale";
         paymentKind?: "cash" | "debt" | "mixed" | "card_transfer";
         cashKopecksMixed?: string | number;
         cardTransferKopecks?: string | number;
+        clientLabel?: string;
+        counterpartyId?: string;
       };
     }
   | {
