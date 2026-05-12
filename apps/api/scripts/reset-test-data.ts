@@ -1,15 +1,15 @@
 /**
- * Очистка **данных** PostgreSQL для ручного тестирования: схема не трогается.
+ * Очистка **данных** PostgreSQL для тестового стенда: схема не трогается.
  *
- * - Удаляет: движения рейса, накладные, партии (в т.ч. `written_off_grams` / KPI «Списано» в админке), журнал
- *   `batch_warehouse_write_offs`, рейсы, `sync_processed_actions`, контрагентов, склады, калибры.
- * - Не трогает: `users`, `user_roles`, `roles` (логин и роли остаются).
- * - Снова вставляет **склады и калибры** как в миграции `drizzle/0011_…` (Манас/Каякент, №5… — как у заказчика).
+ * - Удаляет: рейсы, отгрузки/продажи/недостачи по рейсу, погрузочные накладные, закупочные накладные и партии,
+ *   списания с склада, контрагентов, офлайн-журнал `sync_processed_actions`, **склады и калибры** (как в демо).
+ * - Не трогает: `users`, `user_roles`, `roles`, `ship_destinations` (направления отгрузки).
+ * - Снова вставляет **склады и калибры** как в сиде ниже (Манас/Каякент, №5…).
  *
  *   cd apps/api
  *   pnpm db:reset-test-data
  *
- * Нужен `DATABASE_URL` в `apps/api/.env`. На production делайте бэкап `pg_dump` заранее.
+ * Нужен `DATABASE_URL` в `apps/api/.env`. Перед продакшеном — `pg_dump`.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,16 +33,18 @@ const TRUNCATE = `
     trip_batch_sales,
     trip_batch_shortages,
     trip_batch_shipments,
-    sync_processed_actions,
-    purchase_document_lines,
-    purchase_documents,
-    batch_warehouse_write_offs,
-    batches,
+    loading_manifest_lines,
+    loading_manifests,
     trips,
+    batch_warehouse_write_offs,
+    purchase_document_lines,
+    batches,
+    purchase_documents,
     counterparties,
+    sync_processed_actions,
     warehouses,
     product_grades
-  CASCADE
+  RESTART IDENTITY CASCADE
 `;
 
 const SEED_WAREHOUSES = `
@@ -68,7 +70,7 @@ try {
     await q.unsafe(SEED_WAREHOUSES);
     await q.unsafe(SEED_GRADES);
   });
-  console.log("OK: данные сброшены; склады и калибры — как в сиде. Пользователи и роли не изменены.");
+  console.log("OK: накладные, рейсы, продажи, партии и справочники склад/калибр сброшены; пользователи и направления отгрузки не тронуты.");
 } finally {
   await sql.end({ timeout: 5 });
 }

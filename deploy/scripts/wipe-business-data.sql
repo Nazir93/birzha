@@ -6,7 +6,11 @@
 -- Перед запуском на продакшене:
 --   pg_dump "$DATABASE_URL" --format=custom --file "birzha-before-wipe-$(date +%F-%H%M).dump"
 --
--- Запуск (из каталога с доступом к .env):
+-- Локально (из корня монорепо, с `DATABASE_URL` в `apps/api/.env`) удобнее:
+--   cd apps/api && pnpm db:reset-test-data
+--   (тот же смысл по данным + заново сиды складов/калибров.)
+--
+-- Запуск SQL напрямую:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/scripts/wipe-business-data.sql
 -- =============================================================================
 
