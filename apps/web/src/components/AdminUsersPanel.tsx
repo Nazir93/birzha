@@ -180,7 +180,8 @@ function UserRowActions({
         {canDel ? (
           <button
             type="button"
-            style={{ ...btnStyleInline, color: "#b91c1c", borderColor: "#fecaca" }}
+            className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+            style={{ marginTop: "0.35rem" }}
             disabled={deleteBusy}
             onClick={() => {
               if (!window.confirm(`Удалить учётную запись «${row.login}»? Действие необратимо.`)) {

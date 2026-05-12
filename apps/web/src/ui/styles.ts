@@ -23,10 +23,9 @@ export const fieldStyle: CSSProperties = {
   transition: "border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
-/** `input[type="date"]` — плюс `color-scheme` (см. `index.css`), единообразно с `fieldStyle`. */
+/** `input[type="date"]` — цвет схемы как у страницы (тёмная тема без «засвета»). */
 export const dateFieldStyle: CSSProperties = {
   ...fieldStyle,
-  colorScheme: "only light",
   accentColor: "var(--birzha-accent)",
 };
 
@@ -68,8 +67,10 @@ export const btnStyle: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  background: "var(--birzha-surface)",
+  border: "1px solid var(--birzha-btn-outline-border)",
+  background: "var(--birzha-btn-outline-bg)",
+  color: "var(--color-text)",
+  boxShadow: "var(--birzha-btn-outline-shadow)",
   transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
@@ -83,8 +84,10 @@ export const btnStyleInline: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  background: "var(--birzha-surface)",
+  border: "1px solid var(--birzha-btn-outline-border)",
+  background: "var(--birzha-btn-outline-bg)",
+  color: "var(--color-text)",
+  boxShadow: "var(--birzha-btn-outline-shadow)",
   transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
@@ -97,8 +100,10 @@ export const btnSecondary: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  background: "var(--birzha-surface)",
+  border: "1px solid var(--birzha-btn-outline-border)",
+  background: "var(--birzha-btn-outline-bg)",
+  color: "var(--color-text)",
+  boxShadow: "var(--birzha-btn-outline-shadow)",
 };
 
 export const tableStyle: CSSProperties = {

@@ -165,7 +165,8 @@ export function CounterpartiesPanel() {
                       <td style={thtdDense}>
                         <button
                           type="button"
-                          style={{ ...btnStyle, fontSize: "0.85rem", padding: "0.25rem 0.5rem" }}
+                          className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                          style={{ fontSize: "0.85rem" }}
                           disabled={deleteM.isPending}
                           onClick={() => {
                             if (window.confirm(`Удалить «${c.displayName}»?`)) {

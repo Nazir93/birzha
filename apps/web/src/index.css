@@ -56,6 +56,10 @@
   --birzha-chrome-elevated: #fafafa;
   --birzha-radius-drawer: 16px;
   --birzha-shadow-drawer: 8px 0 32px rgba(15, 23, 42, 0.12);
+  /* Вторичные кнопки (style btnStyle / btnStyleInline в TS) */
+  --birzha-btn-outline-bg: #ffffff;
+  --birzha-btn-outline-border: #cbd5e1;
+  --birzha-btn-outline-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 html,
@@ -92,6 +96,9 @@ html[data-birzha-theme="dark"] {
   --birzha-chrome-muted: #3f3f46;
   --birzha-chrome-elevated: #2e2e33;
   --birzha-shadow-drawer: 12px 0 40px rgba(0, 0, 0, 0.45);
+  --birzha-btn-outline-bg: #52525b;
+  --birzha-btn-outline-border: #d4d4d8;
+  --birzha-btn-outline-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 html[data-birzha-theme="dark"] .birzha-cabinet-main {
@@ -112,6 +119,90 @@ html[data-birzha-theme="dark"] .birzha-btn-primary {
 html[data-birzha-theme="dark"] .birzha-btn-primary:hover:not(:disabled) {
   background: #fafafa;
   border-color: #fafafa;
+  color: #18181b;
+}
+
+/* Сводка админки в тёмной теме: убрать «белые карточки» с невидимым текстом */
+html[data-birzha-theme="dark"] .birzha-admin-dash__hero {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.18), transparent 36%),
+    radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.14), transparent 38%),
+    linear-gradient(135deg, #27272a 0%, #1f1f23 55%, #252532 100%);
+  border-color: rgba(82, 82, 91, 0.55);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 22px 60px -42px rgba(0, 0, 0, 0.55);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-stat {
+  background: rgba(39, 39, 42, 0.95);
+  border-color: rgba(161, 161, 170, 0.35);
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-stat--xl .birzha-admin-stat__value {
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-stat--amber .birzha-admin-stat__value {
+  color: #fcd34d;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-stat--blue .birzha-admin-stat__value {
+  color: #93c5fd;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-mass-ring__hole {
+  background: #3f3f46;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+  border-color: rgba(161, 161, 170, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__value {
+  color: #fafafa;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--accent {
+  background: linear-gradient(180deg, #14532d 0%, #27272a 100%);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__value {
+  color: #bbf7d0;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--amber {
+  background: linear-gradient(180deg, #78350f 0%, #27272a 100%);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__value {
+  color: #fde68a;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--blue {
+  background: linear-gradient(180deg, #1e3a8a 0%, #27272a 100%);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__value {
+  color: #bfdbfe;
+}
+
+html[data-birzha-theme="dark"] .birzha-chart-card--premium {
+  background: linear-gradient(180deg, rgba(46, 46, 51, 0.98) 0%, rgba(39, 39, 42, 0.99) 100%);
+  border-color: rgba(113, 113, 122, 0.45);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 18px 48px -36px rgba(0, 0, 0, 0.55);
 }
 
 /* Весь документ не шире экрана: без горизонтального «шата» и белой кромки на мобильных / PWA. */
@@ -1238,8 +1329,38 @@ a.birzha-kpi-tile--link:focus-visible {
 }
 
 .birzha-btn-danger-outline {
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text) !important;
+  background: var(--birzha-btn-outline-bg) !important;
+  border: 2px solid var(--birzha-danger) !important;
+  border-radius: var(--birzha-radius-sm);
+  box-shadow: var(--birzha-btn-outline-shadow);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.birzha-btn-danger-outline:hover:not(:disabled) {
+  background: var(--birzha-surface-muted) !important;
   border-color: var(--birzha-danger) !important;
-  color: #991b1b !important;
+}
+
+.birzha-btn-danger-outline:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--birzha-btn-outline-shadow);
+}
+
+.birzha-btn-danger-outline:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.birzha-btn-danger-outline--compact {
+  font-size: 0.82rem !important;
+  padding: 0.25rem 0.5rem !important;
 }
 
 /* Индикаторы загрузки (см. `ui/LoadingIndicator.tsx`) */

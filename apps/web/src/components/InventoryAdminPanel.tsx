@@ -539,7 +539,7 @@ export function InventoryAdminPanel() {
                             ) : null}
                             <button
                               type="button"
-                              style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                               disabled={deleteTrip.isPending}
                               onClick={() => {
                                 if (
@@ -602,7 +602,7 @@ export function InventoryAdminPanel() {
                     <td style={thtdDense}>
                       <button
                         type="button"
-                        style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                        className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                         disabled={deletePurchaseDocument.isPending}
                         onClick={() => {
                           if (
@@ -807,7 +807,7 @@ export function InventoryAdminPanel() {
                 <td style={thtdDense}>
                   <button
                     type="button"
-                    style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                    className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                     disabled={deleteWarehouse.isPending}
                     onClick={() => {
                       if (window.confirm(`Удалить склад «${w.name}»?`)) {
@@ -912,7 +912,7 @@ export function InventoryAdminPanel() {
                   <td style={thtdDense}>
                     <button
                       type="button"
-                      style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                      className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                       disabled={deleteProductGrade.isPending}
                       onClick={() => {
                         if (window.confirm(`Удалить калибр «${g.code}»?`)) {
