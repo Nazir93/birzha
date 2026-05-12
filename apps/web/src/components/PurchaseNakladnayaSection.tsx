@@ -19,7 +19,6 @@ import {
 } from "../validation/api-schemas.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { totalsByGradeFromNakladnayaFormLines } from "../format/purchase-nakladnaya-totals-by-grade.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
@@ -252,23 +251,6 @@ export function PurchaseNakladnayaSection() {
     return { totalKg, totalPackages, totalLineKopecks, totalAllKopecks };
   }, [lines, extraCostKopecksForTotals]);
 
-  const gradeLabelForId = useCallback(
-    (productGradeId: string) => {
-      const id = productGradeId.trim();
-      if (!id) {
-        return "— не выбран —";
-      }
-      const g = gradesQ.data?.productGrades.find((x) => x.id === id);
-      return g ? `${g.code} — ${g.displayName}` : id;
-    },
-    [gradesQ.data?.productGrades],
-  );
-
-  const nakladnayaTotalsByGrade = useMemo(
-    () => totalsByGradeFromNakladnayaFormLines(lines, gradeLabelForId),
-    [lines, gradeLabelForId],
-  );
-
   const totalKgLabel = useMemo(
     () =>
       new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
@@ -432,8 +414,11 @@ export function PurchaseNakladnayaSection() {
               <th style={thHeadDense}>Кг</th>
               <th style={thHeadDense}>Короба</th>
               <th style={thHeadDense}>Цена</th>
-              <th style={thHeadDense} title="Сумма строки">
-                Сумма
+              <th
+                style={thHeadDense}
+                title="Сумма строки в ₽: «руб,коп» (например 16470,00) или целое число — копейки без запятой"
+              >
+                Сумма, ₽
               </th>
               <th className="birzha-nakl-lines-table__actions" style={thHeadDense} />
             </tr>
@@ -498,7 +483,7 @@ export function PurchaseNakladnayaSection() {
                     style={{ ...fieldStyle, maxWidth: 110 }}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="Сумма строки"
+                    title="«руб,коп» или целое — копейки; кнопка «Рассчитать» подставит ₽ по кг × цена"
                   />
                 </td>
                 <td style={thtdDense}>
@@ -523,46 +508,6 @@ export function PurchaseNakladnayaSection() {
               </tr>
             ))}
           </tbody>
-          {nakladnayaTotalsByGrade.length > 0 && (
-            <tbody>
-              <tr className="birzha-table-subtotal-row">
-                <td
-                  colSpan={6}
-                  style={{
-                    ...thtdDense,
-                    fontWeight: 600,
-                    borderTop: "1px solid var(--color-border)",
-                  }}
-                >
-                  Итого по товару (калибру)
-                </td>
-              </tr>
-              {nakladnayaTotalsByGrade.map((row) => (
-                <tr key={row.gradeKey}>
-                  <td style={{ ...thtdDense, fontWeight: 500 }}>{row.label}</td>
-                  <td style={thtdDense}>
-                    {new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
-                      row.totalKg,
-                    )}{" "}
-                    <span className="birzha-text-muted birzha-text-muted--xs">кг</span>
-                  </td>
-                  <td style={thtdDense}>
-                    {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
-                      row.totalPackages,
-                    )}{" "}
-                    <span className="birzha-text-muted birzha-text-muted--xs">кор.</span>
-                  </td>
-                  <td className="birzha-text-muted" style={thtdDense}>
-                    —
-                  </td>
-                  <td style={{ ...thtdDense, fontWeight: 600 }}>
-                    {kopecksToRubLabel(row.lineKopSum.toString())} ₽
-                  </td>
-                  <td style={thtdDense} />
-                </tr>
-              ))}
-            </tbody>
-          )}
           <tfoot>
             <tr>
               <th
@@ -606,10 +551,9 @@ export function PurchaseNakladnayaSection() {
                 <span>{kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽</span>
                 {extraCostKopecksForTotals > 0 && (
                   <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
-                    Всего (строки + доп.): {nakladnayaFormTotals.totalAllKopecks} коп. ={" "}
-                    {kopecksToRubLabel(nakladnayaFormTotals.totalAllKopecks.toString())} ₽
+                    Всего (строки + доп.): {kopecksToRubLabel(nakladnayaFormTotals.totalAllKopecks.toString())} ₽
                     <div className="birzha-text-subtle" style={{ fontSize: "0.76rem", fontWeight: 400, marginTop: 2 }}>
-                      (доп. расходы: {extraCostKopecksForTotals} коп.)
+                      (доп. расходы: {kopecksToRubLabel(extraCostKopecksForTotals.toString())} ₽)
                     </div>
                   </div>
                 )}
