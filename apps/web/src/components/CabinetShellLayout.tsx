@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "../auth/cabinet-nav.js";
+import { ThemeToggle } from "./ThemeToggle.js";
 import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
@@ -231,30 +232,33 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
             <span className="birzha-cabinet-topbar__title">{title}</span>
           </div>
         </div>
-        {showUser ? (
-          <div className="birzha-cabinet-topbar__actions">
-            {user ? (
-              <>
-                <span className="birzha-cabinet-topbar__user" title={user.login}>
-                  {user.login}
-                </span>
-                <button
-                  type="button"
-                  className="birzha-cabinet-topbar__logout"
-                  onClick={() => void logout()}
-                  aria-label="Выйти из системы"
-                  title="Выйти"
-                >
-                  <LogoutIcon />
-                </button>
-              </>
-            ) : (
-              <NavLink to="/login" className="birzha-cabinet-topbar__login-link">
-                Вход
-              </NavLink>
-            )}
-          </div>
-        ) : null}
+        <div className="birzha-cabinet-topbar__actions">
+          <ThemeToggle />
+          {showUser ? (
+            <>
+              {user ? (
+                <>
+                  <span className="birzha-cabinet-topbar__user" title={user.login}>
+                    {user.login}
+                  </span>
+                  <button
+                    type="button"
+                    className="birzha-cabinet-topbar__logout"
+                    onClick={() => void logout()}
+                    aria-label="Выйти из системы"
+                    title="Выйти"
+                  >
+                    <LogoutIcon />
+                  </button>
+                </>
+              ) : (
+                <NavLink to="/login" className="birzha-cabinet-topbar__login-link">
+                  Вход
+                </NavLink>
+              )}
+            </>
+          ) : null}
+        </div>
       </header>
 
       <div className="birzha-cabinet-body">
@@ -303,6 +307,40 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
               <nav className="birzha-cabinet-sidebar__nav birzha-cabinet-drawer__nav" aria-label="Разделы приложения">
                 {sidebarNav}
               </nav>
+              <footer className="birzha-cabinet-drawer__footer">
+                <div className="birzha-cabinet-drawer__footer-block">
+                  <span className="birzha-cabinet-drawer__footer-caption">Тема оформления</span>
+                  <ThemeToggle variant="labeled" />
+                </div>
+                {showUser ? (
+                  <div className="birzha-cabinet-drawer__footer-block birzha-cabinet-drawer__footer-block--session">
+                    {user ? (
+                      <>
+                        <span className="birzha-cabinet-drawer__footer-user" title={user.login}>
+                          {user.login}
+                        </span>
+                        <button
+                          type="button"
+                          className="birzha-cabinet-drawer__footer-logout"
+                          onClick={() => void logout()}
+                          aria-label="Выйти из системы"
+                        >
+                          <LogoutIcon size={18} />
+                          <span>Выйти</span>
+                        </button>
+                      </>
+                    ) : (
+                      <NavLink
+                        to="/login"
+                        className="birzha-cabinet-drawer__footer-login"
+                        onClick={() => setMobileDrawerOpen(false)}
+                      >
+                        Вход
+                      </NavLink>
+                    )}
+                  </div>
+                ) : null}
+              </footer>
             </aside>
           </>
         ) : null}

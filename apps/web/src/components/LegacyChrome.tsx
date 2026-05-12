@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
 import { AppNav, AppNavPanel } from "./AppNav.js";
+import { ThemeToggle } from "./ThemeToggle.js";
 
 const mqMobile = "(max-width: 47.9375rem)"; /* < 768px */
 
@@ -68,6 +69,9 @@ export function LegacyChrome({ title = "Биржа" }: { title?: string }) {
             </button>
           ) : null}
           <h1 className="birzha-page-title birzha-app-header__title">{title}</h1>
+          <div className="birzha-app-header__actions">
+            <ThemeToggle />
+          </div>
         </div>
         {import.meta.env.DEV ? (
           <p className="birzha-callout-info birzha-app-header__dev-hint" style={{ marginBottom: "0.65rem", fontSize: "0.82rem" }}>
@@ -106,6 +110,10 @@ export function LegacyChrome({ title = "Биржа" }: { title?: string }) {
             <nav className="birzha-legacy-drawer__nav" aria-label="Разделы приложения">
               <AppNavPanel variant="drawer" onNavigate={() => setDrawerOpen(false)} />
             </nav>
+            <footer className="birzha-legacy-drawer__footer">
+              <span className="birzha-legacy-drawer__footer-caption">Тема оформления</span>
+              <ThemeToggle variant="labeled" />
+            </footer>
           </aside>
         </>
       ) : null}

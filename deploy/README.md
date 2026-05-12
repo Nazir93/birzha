@@ -32,7 +32,25 @@ curl -fsS http://127.0.0.1:3000/health
 BIRZHA_BACKUP_CONFIRMED=1 ./deploy/server-update.sh
 ```
 
-Один раз может понадобиться `chmod +x deploy/server-update.sh`. См. переменные в начале **`server-update.sh`** (`BIRZHA_GIT_BRANCH`, пропуск БД, перезапуска или healthcheck). Без `BIRZHA_BACKUP_CONFIRMED=1` скрипт остановится перед `db:push`. По умолчанию после рестарта проверяется `http://127.0.0.1:3000/health`.
+Или **автоматический дамп на сервере** перед `db:push` (нужны `pg_dump`, `DATABASE_URL` в `apps/api/.env`):
+
+```bash
+BIRZHA_AUTO_BACKUP=1 ./deploy/server-update.sh
+```
+
+Короткая обёртка с тем же смыслом (всегда включает автоматический дамп):
+
+```bash
+bash deploy/obnovit-server.sh
+```
+
+После выкладки статики nginx обычно достаточно отдаёт новые файлы с диска; если меняли конфиг nginx:
+
+```bash
+RELOAD_NGINX=1 BIRZHA_AUTO_BACKUP=1 ./deploy/server-update.sh
+```
+
+Один раз может понадобиться `chmod +x deploy/server-update.sh`. См. переменные в начале **`server-update.sh`** (`BIRZHA_GIT_BRANCH`, пропуск БД, перезапуска или healthcheck). Без `BIRZHA_BACKUP_CONFIRMED=1` **и** без `BIRZHA_AUTO_BACKUP=1` скрипт остановится перед `db:push`. По умолчанию после рестарта проверяется `http://127.0.0.1:3000/health`.
 
 ## Откат кода
 
@@ -63,3 +81,5 @@ curl -fsS http://127.0.0.1:3000/health
 Workflow **Deploy to server** (только **workflow_dispatch** — запуск вручную на вкладке Actions) подключается по SSH и выполняет `deploy/server-update.sh` на сервере. Перед запуском workflow нужно отметить input **`backup_confirmed`** — это подтверждение, что свежий бэкап уже сделан или `db:push` не нужен.
 
 Первый раз на сервере должен быть **настроен `git remote`** и доступ **по ключу** для CI-пользователя.
+
+В **Actions → Deploy to server** можно включить **`auto_pg_dump`**: тогда на VPS выполняется `BIRZHA_AUTO_BACKUP=1` (дамп в `backups/` перед `db:push`). Иначе по-прежнему нужен отмеченный **`backup_confirmed`**.

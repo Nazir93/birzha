@@ -121,9 +121,12 @@ export function App() {
   const { pathname } = useLocation();
   const showChrome = pathname !== login;
   const cabinetShell = isCabinetShellPath(pathname);
+  const legacyStickyHeader = showChrome && !cabinetShell;
 
   return (
-    <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
+    <main
+      className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}${legacyStickyHeader ? " app-shell--legacy-sticky-header" : ""}`}
+    >
       {showChrome && !cabinetShell ? <LegacyChrome /> : null}
 
       <Suspense fallback={<RouteFallback />}>
