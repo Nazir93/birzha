@@ -532,14 +532,13 @@ export function PurchaseNakladnayaSection() {
           </tbody>
           {nakladnayaTotalsByGrade.length > 0 && (
             <tbody>
-              <tr>
+              <tr className="birzha-table-subtotal-row">
                 <td
                   colSpan={6}
                   style={{
                     ...thtdDense,
                     fontWeight: 600,
-                    background: "rgba(0,0,0,0.04)",
-                    borderTop: "1px solid var(--color-border, rgba(0,0,0,0.12))",
+                    borderTop: "1px solid var(--color-border)",
                   }}
                 >
                   Итого по товару (калибру)
