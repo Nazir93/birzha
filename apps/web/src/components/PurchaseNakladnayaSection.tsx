@@ -88,7 +88,6 @@ export function PurchaseNakladnayaSection() {
 
   const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
 
-  const [documentId, setDocumentId] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
@@ -109,7 +108,6 @@ export function PurchaseNakladnayaSection() {
       setFormError(null);
       setLastOk(null);
       const body = parseCreatePurchaseDocumentForm({
-        documentId,
         documentNumber,
         docDate,
         warehouseId,
@@ -123,7 +121,6 @@ export function PurchaseNakladnayaSection() {
     onSuccess: (data) => {
       setLastOk(`Создан документ: ${data.documentId}. Форма очищена — можно ввести новую накладную.`);
       setFormError(null);
-      setDocumentId("");
       setDocumentNumber("");
       setDocDate(todayIsoDate());
       setWarehouseId("");
@@ -402,10 +399,6 @@ export function PurchaseNakladnayaSection() {
               </option>
             ))}
           </select>
-        </label>
-        <label className="birzha-form-label">
-          Идентификатор документа (опционально)
-          <input value={documentId} onChange={(e) => setDocumentId(e.target.value)} style={fieldStyle} placeholder="" />
         </label>
         <label className="birzha-form-label">
           Поставщик (опц.)

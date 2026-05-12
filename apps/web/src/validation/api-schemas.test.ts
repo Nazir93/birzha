@@ -36,7 +36,6 @@ describe("parseCreateBatchForm", () => {
 describe("parseCreatePurchaseDocumentForm", () => {
   it("собирает тело накладной", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentId: "",
       documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-manas",
@@ -60,7 +59,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
 
   it("короба с запятой округляются до целого", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentId: "",
       documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-1",
@@ -82,7 +80,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
 
   it("сумма строки «руб,коп» в точные копейки без float", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentId: "",
       documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-1",

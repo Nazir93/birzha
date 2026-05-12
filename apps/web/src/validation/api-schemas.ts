@@ -226,7 +226,6 @@ export function lineTotalKopecksForNakladnayaSum(raw: string): number {
 }
 
 export function parseCreatePurchaseDocumentForm(input: {
-  documentId: string;
   documentNumber: string;
   docDate: string;
   warehouseId: string;
@@ -305,10 +304,6 @@ export function parseCreatePurchaseDocumentForm(input: {
       extraCostKopecks,
       lines,
     };
-    const docId = input.documentId.trim();
-    if (docId) {
-      payload.id = docId;
-    }
     const sup = input.supplierName.trim();
     if (sup) {
       payload.supplierName = sup;
