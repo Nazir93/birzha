@@ -3222,6 +3222,18 @@ a.birzha-admin-stat--link:focus-visible {
     padding: 0 !important;
     max-width: none !important;
   }
+
+  /* Закупочная накладная (/a/purchase-nakladnaya/:id): тело раскрытия всегда на печати */
+  .birzha-purchase-nakl-print details .birzha-disclosure__body {
+    display: block !important;
+  }
+
+  .birzha-purchase-nakl-print .birzha-disclosure {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+  }
 }
 
 @media (max-width: 900px) {

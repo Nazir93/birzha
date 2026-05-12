@@ -98,7 +98,11 @@ export function PurchaseNakladnayaDetailSection() {
   );
 
   return (
-    <section className="birzha-panel" aria-labelledby="nakl-detail-heading" role="region">
+    <section
+      className="birzha-panel birzha-purchase-nakl-print"
+      aria-labelledby="nakl-detail-heading"
+      role="region"
+    >
       <BirzhaDisclosure
         defaultOpen
         title={
@@ -108,15 +112,34 @@ export function PurchaseNakladnayaDetailSection() {
         }
         hint={formatPurchaseDocDateRu(doc.docDate)}
       >
-      <div style={{ marginBottom: "0.5rem" }}>
+      <div
+        className="no-print"
+        style={{
+          marginBottom: "0.5rem",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "0.5rem 0.75rem",
+        }}
+      >
         <Link to={listPath} className="birzha-ui-sm">
           ← Все закупки товара
         </Link>
+        <button
+          type="button"
+          className="birzha-btn-ghost"
+          title="Откроется окно печати браузера; выберите «Сохранить как PDF», если нужен файл."
+          onClick={() => {
+            globalThis.window?.print();
+          }}
+        >
+          Печать / PDF
+        </button>
       </div>
       <p style={{ margin: "0 0 0.75rem", fontSize: "1.05rem", fontWeight: 600 }}>
         Дата документа: {formatPurchaseDocDateRu(doc.docDate)}
       </p>
-      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
+      <p className="birzha-callout-info no-print" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
         ID в системе (поддержка): <code style={{ fontSize: "0.82rem" }}>{doc.id}</code>
         {doc.createdAt ? (
           <>
