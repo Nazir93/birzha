@@ -31,6 +31,7 @@ import { registerWholesalerRoutes } from "./http/register-wholesaler-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
+import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
 import { registerSyncRoutes } from "./http/register-sync-routes.js";
 import { registerTripRoutes } from "./http/register-trip-routes.js";
@@ -40,6 +41,7 @@ import { DrizzleTripRepository } from "./infrastructure/persistence/drizzle-trip
 import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-trip-sale.repository.js";
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
+import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
 import { DrizzleSyncIdempotencyRepository } from "./infrastructure/persistence/drizzle-sync-idempotency.repository.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
