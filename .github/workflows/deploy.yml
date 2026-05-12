@@ -6,11 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       backup_confirmed:
-        description: "Свежий pg_dump/backup перед db:push сделан или db:push не нужен"
+        description: "Свежий pg_dump/backup перед изменением схемы БД сделан или шаг БД не нужен"
         required: true
         type: boolean
       auto_pg_dump:
-        description: "Перед db:push сервер сам сделает pg_dump в backups/ (DATABASE_URL из apps/api/.env)"
+        description: "Перед шагом БД сервер сам сделает pg_dump в backups/ (DATABASE_URL из apps/api/.env)"
+        required: false
+        type: boolean
+        default: false
+      drizzle_migrate:
+        description: "На сервере BIRZHA_DB_APPLY=migrate (журнал apps/api/drizzle/*.sql); иначе db:push"
         required: false
         type: boolean
         default: false
@@ -36,6 +41,9 @@ jobs:
             ROOT='${{ secrets.BIRZHA_DEPLOY_PATH }}'
             if [ -z "$ROOT" ]; then ROOT="/opt/birzha"; fi
             cd "$ROOT"
+            if [ "${{ inputs.drizzle_migrate }}" = "true" ]; then
+              export BIRZHA_DB_APPLY=migrate
+            fi
             if [ "${{ inputs.auto_pg_dump }}" = "true" ]; then
               BIRZHA_AUTO_BACKUP=1 bash deploy/server-update.sh
             else

@@ -7,9 +7,11 @@
 #   BIRZHA_GIT_BRANCH     — ветка (по умолчанию main)
 #   BIRZHA_SYSTEMD_SERVICE — unit systemd API (по умолчанию birzha-api)
 #   BIRZHA_HEALTH_URL      — post-deploy smoke URL (по умолчанию http://127.0.0.1:3000/health)
-#   BIRZHA_BACKUP_CONFIRMED=1 — вы уже сделали свежий бэкап БД перед db:push
-#   BIRZHA_AUTO_BACKUP=1     — перед db:push скрипт сам сделает pg_dump (нужен DATABASE_URL в apps/api/.env)
-#   SKIP_DB=1                — не вызывать drizzle db:push
+#   BIRZHA_BACKUP_CONFIRMED=1 — вы уже сделали свежий бэкап БД перед шагом БД
+#   BIRZHA_AUTO_BACKUP=1     — перед шагом БД скрипт сам сделает pg_dump (нужен DATABASE_URL в apps/api/.env)
+#   BIRZHA_DB_APPLY          — push | migrate (по умолчанию push): migrate = журнал drizzle/*.sql;
+#                              push = drizzle-kit push (как раньше). Для выкатки *.sql из drizzle/ задайте migrate.
+#   SKIP_DB=1                — не менять схему БД (ни push, ни migrate)
 #   SKIP_SYSTEMD_RESTART=1   — не перезапускать systemd
 #   SKIP_HEALTHCHECK=1       — не проверять /health после рестарта
 #   RELOAD_NGINX=1           — после успешного healthcheck: nginx -t && systemctl reload nginx
@@ -29,7 +31,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 if [[ "${SKIP_DB:-0}" != "1" && "${BIRZHA_BACKUP_CONFIRMED:-0}" != "1" && "${BIRZHA_AUTO_BACKUP:-0}" != "1" ]]; then
-  echo "Ошибка: перед db:push нужен бэкап БД или явное подтверждение." >&2
+  echo "Ошибка: перед изменением схемы БД нужен бэкап или явное подтверждение." >&2
   echo "  BIRZHA_BACKUP_CONFIRMED=1  — вы уже сделали pg_dump вручную" >&2
   echo "  BIRZHA_AUTO_BACKUP=1       — скрипт сделает pg_dump в $ROOT/backups/ (из apps/api/.env)" >&2
   echo "  SKIP_DB=1                  — без изменения схемы БД" >&2
@@ -71,10 +73,23 @@ if [[ "${SKIP_DB:-0}" != "1" ]]; then
     pg_dump "$DATABASE_URL" --format=custom --file "$BK"
     echo ">>> бэкап сохранён: $BK"
   fi
-  echo ">>> drizzle db:push (apps/api)"
-  (cd apps/api && pnpm db:push)
+  DB_APPLY="${BIRZHA_DB_APPLY:-push}"
+  case "$DB_APPLY" in
+    migrate)
+      echo ">>> drizzle db:migrate (apps/api) — журнал SQL из drizzle/"
+      (cd apps/api && pnpm db:migrate)
+      ;;
+    push)
+      echo ">>> drizzle db:push (apps/api)"
+      (cd apps/api && pnpm db:push)
+      ;;
+    *)
+      echo "Ошибка: BIRZHA_DB_APPLY должен быть migrate или push, сейчас: $DB_APPLY" >&2
+      exit 1
+      ;;
+  esac
 else
-  echo ">>> SKIP_DB=1 — пропуск db:push"
+  echo ">>> SKIP_DB=1 — пропуск изменения схемы БД"
 fi
 
 if [[ "${SKIP_SYSTEMD_RESTART:-0}" != "1" ]]; then

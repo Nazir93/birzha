@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Полное обновление на сервере из корня клона: git pull → install → build → pg_dump → db:push → API → healthcheck.
+# Полное обновление на сервере из корня клона: git pull → install → build → pg_dump → схема БД → API → healthcheck.
+# Схема БД: по умолчанию db:push; для журнала SQL (`drizzle/*.sql`) — BIRZHA_DB_APPLY=migrate (см. server-update.sh).
 # Запуск: из каталога репозитория на VPS, например:
 #   bash deploy/obnovit-server.sh
 # или:
