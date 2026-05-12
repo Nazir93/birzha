@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import {
   apiDelete,
@@ -16,7 +17,6 @@ import type {
 import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
 import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import {
-  batchesFullListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
@@ -31,7 +31,6 @@ import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
-import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
@@ -49,6 +48,7 @@ function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scop
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
  */
 export function InventoryAdminPanel() {
+  const { hash } = useLocation();
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
@@ -77,6 +77,19 @@ export function InventoryAdminPanel() {
   const [newTripDeparted, setNewTripDeparted] = useState(""); // datetime-local
   const [tripError, setTripError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (hash !== "#inv-product-grades") {
+      return;
+    }
+    const el = document.getElementById("inv-product-grades");
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el.tagName === "DETAILS" && !el.hasAttribute("open")) {
+        el.setAttribute("open", "");
+      }
+    }
+  }, [hash]);
+
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.warehouses });
     void queryClient.invalidateQueries({ queryKey: queryRoots.productGrades });
@@ -98,10 +111,6 @@ export function InventoryAdminPanel() {
     enabled: enabled && tripsApiEnabled,
   });
   const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
-  const batchesNaklRefQ = useQuery({
-    ...batchesFullListQueryOptions(),
-    enabled,
-  });
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
     enabled: enabled && shipDestEnabled,
@@ -413,35 +422,6 @@ export function InventoryAdminPanel() {
           </Link>
         </nav>
       </header>
-
-      <BirzhaDisclosure
-        id="batches-nakl-ref"
-        defaultOpen
-        title={
-          <span className="birzha-disclosure__title-stack">
-            <span className="birzha-section-heading__eyebrow">Партии</span>
-            <span
-              style={{
-                fontSize: "0.95rem",
-                margin: 0,
-                fontWeight: 600,
-                scrollMarginTop: "0.5rem",
-              }}
-            >
-              Партии по накладным
-            </span>
-          </span>
-        }
-        hint="id партий и кг по документам"
-      >
-        <BatchesByNakladnayaReference
-          batches={batchesNaklRefQ.data?.batches}
-          isLoading={batchesNaklRefQ.isPending}
-          sectionHeadingId="batches-nakl-ref-h"
-          showBulkExpandControls
-        />
-        {batchesNaklRefQ.isError && <p style={errorText}>Партии не загрузились: {String(batchesNaklRefQ.error)}</p>}
-      </BirzhaDisclosure>
 
       {tripsApiEnabled && (
         <BirzhaDisclosure
@@ -976,6 +956,7 @@ export function InventoryAdminPanel() {
       </BirzhaDisclosure>
 
       <BirzhaDisclosure
+        id="inv-product-grades"
         defaultOpen
         title={
           <span className="birzha-disclosure__title-stack">

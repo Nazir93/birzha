@@ -39,6 +39,14 @@ export const adminRoutes = {
   assignSeller: `${prefix.admin}/assign-seller`,
   offline: `${prefix.admin}/offline`,
   inventory: `${prefix.admin}/inventory`,
+  /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
+  tripRegistry: `${prefix.admin}/trip-registry`,
+  /** Рейсы с ненулевым остатком «в пути». */
+  transitTrips: `${prefix.admin}/transit-trips`,
+  /** Продажи по продавцам (поиск, даты рейсов). */
+  soldBySeller: `${prefix.admin}/sold-by-seller`,
+  /** Склады: справочник + остатки по выбранному складу. */
+  stockWarehouses: `${prefix.admin}/stock-warehouses`,
   users: `${prefix.admin}/users`,
   service: `${prefix.admin}/service`,
 } as const;

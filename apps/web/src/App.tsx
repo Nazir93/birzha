@@ -30,6 +30,18 @@ const AdminUsersPanel = lazy(() =>
 const AdminLoadingManifestsPanel = lazy(() =>
   import("./components/AdminLoadingManifestsPanel.js").then((m) => ({ default: m.AdminLoadingManifestsPanel })),
 );
+const AdminSoldBySellerPage = lazy(() =>
+  import("./components/AdminSoldBySellerPage.js").then((m) => ({ default: m.AdminSoldBySellerPage })),
+);
+const AdminStockWarehousesPage = lazy(() =>
+  import("./components/AdminStockWarehousesPage.js").then((m) => ({ default: m.AdminStockWarehousesPage })),
+);
+const AdminTransitTripsPage = lazy(() =>
+  import("./components/AdminTransitTripsPage.js").then((m) => ({ default: m.AdminTransitTripsPage })),
+);
+const AdminTripRegistryPage = lazy(() =>
+  import("./components/AdminTripRegistryPage.js").then((m) => ({ default: m.AdminTripRegistryPage })),
+);
 const AssignSellerPanel = lazy(() =>
   import("./components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
 );
@@ -336,6 +348,46 @@ export function App() {
               element={
                 <RequirePanel panel="offline">
                   <OfflineQueuePanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="trip-registry"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <AdminTripRegistryPage />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="transit-trips"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <AdminTransitTripsPage />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="sold-by-seller"
+              element={
+                <RequirePanel panel="assignSeller">
+                  <section className="birzha-card">
+                    <AdminSoldBySellerPage />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="stock-warehouses"
+              element={
+                <RequirePanel panel="inventory">
+                  <section className="birzha-card">
+                    <AdminStockWarehousesPage />
+                  </section>
                 </RequirePanel>
               }
             />

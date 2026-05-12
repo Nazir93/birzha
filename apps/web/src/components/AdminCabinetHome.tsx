@@ -271,9 +271,9 @@ export function AdminCabinetHome() {
             </Link>
             <div className="birzha-admin-dash__hero-stats">
               <Link
-                to={adminRoutes.distribution}
+                to={adminRoutes.stockWarehouses}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="Остатки на складах — распределение"
+                title="Склады и остатки по складам"
               >
                 <span className="birzha-admin-stat__label">На складах</span>
                 <span className="birzha-admin-stat__value">
@@ -281,9 +281,9 @@ export function AdminCabinetHome() {
                 </span>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={adminRoutes.transitTrips}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--amber birzha-admin-stat--link"
-                title="Рейсы и отчёты — масса в пути по рейсам"
+                title="Рейсы с массой «в пути»"
               >
                 <span className="birzha-admin-stat__label">В пути</span>
                 <span className="birzha-admin-stat__value">
@@ -291,9 +291,9 @@ export function AdminCabinetHome() {
                 </span>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={adminRoutes.soldBySeller}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--blue birzha-admin-stat--link"
-                title="Продажи и отчёты по рейсам"
+                title="Продажи по продавцам"
               >
                 <span className="birzha-admin-stat__label">Продано (партии)</span>
                 <span className="birzha-admin-stat__value">
@@ -307,41 +307,41 @@ export function AdminCabinetHome() {
             <BirzhaDisclosure title="Сводные показатели" hint="рейсы, партии, склады" defaultOpen>
             <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">
               <Link
-                to={adminRoutes.reports}
+                to={adminRoutes.tripRegistry}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Все рейсы и отчёты"
+                title="Реестр рейсов: поиск и погрузочные накладные"
               >
                 <div className="birzha-kpi-tile__label">Рейсов</div>
                 <div className="birzha-kpi-tile__value">{aggregates.tripCount}</div>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={`${adminRoutes.tripRegistry}?status=open`}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Открытые рейсы — в отчётах"
+                title="Открытые рейсы"
               >
                 <div className="birzha-kpi-tile__label">Открытых</div>
                 <div className="birzha-kpi-tile__value">{aggregates.tripsOpen}</div>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={`${adminRoutes.tripRegistry}?status=closed`}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Закрытые рейсы — в отчётах"
+                title="Закрытые рейсы"
               >
                 <div className="birzha-kpi-tile__label">Закрытых</div>
                 <div className="birzha-kpi-tile__value">{aggregates.tripsClosed}</div>
               </Link>
               <Link
-                to={adminRoutes.distribution}
+                to={`${adminRoutes.inventory}#inv-product-grades`}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Партии и распределение по накладным"
+                title="Справочник калибров"
               >
                 <div className="birzha-kpi-tile__label">Партий</div>
                 <div className="birzha-kpi-tile__value">{aggregates.batchCount}</div>
               </Link>
               <Link
-                to={adminRoutes.distribution}
+                to={adminRoutes.stockWarehouses}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
-                title="Остатки на складах"
+                title="Склады и остатки"
               >
                 <div className="birzha-kpi-tile__label">На складах, кг</div>
                 <div className="birzha-kpi-tile__value">
@@ -349,9 +349,9 @@ export function AdminCabinetHome() {
                 </div>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={adminRoutes.transitTrips}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
-                title="Масса в пути — детали в отчётах по рейсам"
+                title="Рейсы в пути"
               >
                 <div className="birzha-kpi-tile__label">В пути, кг</div>
                 <div className="birzha-kpi-tile__value">
@@ -359,9 +359,9 @@ export function AdminCabinetHome() {
                 </div>
               </Link>
               <Link
-                to={adminRoutes.reports}
+                to={adminRoutes.soldBySeller}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue birzha-kpi-tile--link"
-                title="Продано — отчёты по рейсам"
+                title="Продано по продавцам"
               >
                 <div className="birzha-kpi-tile__label">Продано, кг</div>
                 <div className="birzha-kpi-tile__value">
@@ -473,12 +473,12 @@ export function AdminCabinetHome() {
             <BirzhaDisclosure title="Рейсы" hint="последние, отчёт" defaultOpen>
             <div className="birzha-admin-dash__trips">
               <p style={{ margin: "0 0 0.75rem", fontSize: "0.88rem", lineHeight: 1.45 }}>
-                <Link to={adminRoutes.reports} style={{ fontWeight: 600 }}>
-                  Все рейсы и отчёты
+                <Link to={adminRoutes.tripRegistry} style={{ fontWeight: 600 }}>
+                  Реестр рейсов
                 </Link>
                 <span className="birzha-text-muted">
                   {" "}
-                  — полный список; здесь постранично ({ADMIN_TRIPS_PAGE_SIZE} на страницу).
+                  — полный список с фильтром; здесь постранично ({ADMIN_TRIPS_PAGE_SIZE} на страницу).
                 </span>
               </p>
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
