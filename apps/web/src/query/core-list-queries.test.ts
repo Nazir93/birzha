@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   batchesFullListQueryOptions,
   counterpartiesFullListQueryOptions,
+  loadingManifestReservedBatchIdsQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
@@ -34,5 +35,11 @@ describe("core-list-queries / queryRoots", () => {
     const opt = tripsFieldSellerOptionsQueryOptions();
     expect(opt.queryKey[0]).toBe(queryRoots.trips[0]);
     expect(opt.queryKey).toEqual(["trips", "field-seller-options"]);
+  });
+
+  it("reserved-batch-ids под префиксом loading-manifest", () => {
+    const opt = loadingManifestReservedBatchIdsQueryOptions("wh-1");
+    expect(opt.queryKey[0]).toBe(queryRoots.loadingManifest[0]);
+    expect(opt.queryKey).toEqual(["loading-manifest", "reserved-batch-ids", "wh-1"]);
   });
 });

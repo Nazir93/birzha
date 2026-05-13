@@ -178,6 +178,9 @@ export type LoadingManifestDetail = {
 
 export type LoadingManifestDetailResponse = { manifest: LoadingManifestDetail };
 
+/** GET /loading-manifests/reserved-batch-ids */
+export type LoadingManifestReservedBatchIdsResponse = { batchIds: string[] };
+
 /** Ответы `/trips` и `/trips/:id/shipment-report` (согласовано с `register-trip-routes`). */
 
 export type TripJson = {

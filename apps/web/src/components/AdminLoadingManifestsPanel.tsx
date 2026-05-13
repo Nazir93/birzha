@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
 import { apiPostJson } from "../api/fetch-api.js";
-import { loadingManifestDetailQueryOptions, loadingManifestsListQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import {
+  loadingManifestDetailQueryOptions,
+  loadingManifestsListQueryOptions,
+  queryRoots,
+  tripsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -21,12 +27,47 @@ function formatPkg(n: number | null | undefined): string {
   return n.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
 }
 
+/** Карточка GET /loading-manifests/:id для списка, пока общий GET /list ещё без этой строки. */
+function loadingSummaryFromDetail(d: LoadingManifestDetail): LoadingManifestSummary {
+  let totalKg = 0;
+  let packagesSum = 0;
+  let linesWithPkg = 0;
+  for (const ln of d.lines) {
+    totalKg += ln.kg;
+    const raw = ln.packageCount?.trim();
+    if (raw != null && raw !== "") {
+      const n = Number(raw.replace(",", "."));
+      if (Number.isFinite(n) && n > 0) {
+        packagesSum += n;
+        linesWithPkg += 1;
+      }
+    }
+  }
+  return {
+    id: d.id,
+    manifestNumber: d.manifestNumber,
+    docDate: d.docDate,
+    warehouseId: d.warehouseId,
+    warehouseName: d.warehouseName,
+    warehouseCode: d.warehouseCode,
+    destinationCode: d.destinationCode,
+    destinationName: d.destinationName,
+    tripId: d.tripId,
+    createdAt: d.createdAt,
+    lineCount: d.lines.length,
+    totalKg,
+    packagesApprox: linesWithPkg > 0 ? packagesSum : null,
+    calibers: [],
+  };
+}
+
 export function AdminLoadingManifestsPanel() {
   const { manifestId = "" } = useParams();
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>(() => readPreferredWarehouseId() ?? "");
   const listQuery = useQuery(loadingManifestsListQueryOptions());
+  const warehousesQuery = useQuery(warehousesFullListQueryOptions());
   const detailQuery = useQuery(loadingManifestDetailQueryOptions(manifestId));
   const tripsQuery = useQuery(tripsFullListQueryOptions());
 
@@ -39,44 +80,84 @@ export function AdminLoadingManifestsPanel() {
   }, [tripsQuery.data?.trips]);
 
   const manifests = listQuery.data?.loadingManifests ?? [];
+  const detail = detailQuery.data?.manifest;
 
   const warehouseOptions = useMemo(() => {
     const map = new Map<string, string>();
+    for (const w of warehousesQuery.data?.warehouses ?? []) {
+      map.set(w.id, `${w.name} (${w.code})`);
+    }
     for (const m of manifests) {
       if (!map.has(m.warehouseId)) {
         map.set(m.warehouseId, `${m.warehouseName} (${m.warehouseCode})`);
       }
     }
+    if (detail && !map.has(detail.warehouseId)) {
+      map.set(detail.warehouseId, `${detail.warehouseName} (${detail.warehouseCode})`);
+    }
     return [...map.entries()]
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label, "ru"));
-  }, [manifests]);
+  }, [warehousesQuery.data?.warehouses, manifests, detail]);
 
   useEffect(() => {
     if (!selectedWarehouse) {
       return;
     }
     if (!warehouseOptions.some((w) => w.id === selectedWarehouse)) {
+      if (manifestId.trim() && detailQuery.isPending) {
+        return;
+      }
       setSelectedWarehouse("");
     }
-  }, [selectedWarehouse, warehouseOptions]);
-
-  const filteredManifests = useMemo(
-    () => (selectedWarehouse ? manifests.filter((m) => m.warehouseId === selectedWarehouse) : []),
-    [manifests, selectedWarehouse],
-  );
+  }, [selectedWarehouse, warehouseOptions, manifestId, detailQuery.isPending]);
 
   useEffect(() => {
     if (!manifestId.trim()) {
       return;
     }
-    const m = manifests.find((x) => x.id === manifestId);
-    if (!m) {
+    void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "list"] });
+  }, [manifestId, queryClient]);
+
+  useEffect(() => {
+    const id = manifestId.trim();
+    if (!id) {
       return;
     }
-    setSelectedWarehouse(m.warehouseId);
-    writePreferredWarehouseId(m.warehouseId);
-  }, [manifestId, manifests]);
+    const fromList = manifests.find((x) => x.id === id);
+    if (fromList) {
+      setSelectedWarehouse(fromList.warehouseId);
+      writePreferredWarehouseId(fromList.warehouseId);
+      return;
+    }
+    if (detail && detail.id === id) {
+      setSelectedWarehouse(detail.warehouseId);
+      writePreferredWarehouseId(detail.warehouseId);
+    }
+  }, [manifestId, manifests, detail]);
+
+  const syntheticSummary = useMemo((): LoadingManifestSummary | null => {
+    const id = manifestId.trim();
+    if (!id || !detail || detail.id !== id) {
+      return null;
+    }
+    if (manifests.some((x) => x.id === id)) {
+      return null;
+    }
+    return loadingSummaryFromDetail(detail);
+  }, [manifestId, detail, manifests]);
+
+  const displayManifests = useMemo(() => {
+    if (!selectedWarehouse) {
+      return [];
+    }
+    const filtered = manifests.filter((m) => m.warehouseId === selectedWarehouse);
+    const syn = syntheticSummary;
+    if (syn && syn.warehouseId === selectedWarehouse && !filtered.some((m) => m.id === syn.id)) {
+      return [syn, ...filtered];
+    }
+    return filtered;
+  }, [manifests, selectedWarehouse, syntheticSummary]);
 
   const grandSummary = useMemo(() => {
     let totalKg = 0;
@@ -85,7 +166,7 @@ export function AdminLoadingManifestsPanel() {
     const byWarehouse = new Map<string, { kg: number; manifests: number }>();
     const byDestination = new Map<string, { kg: number; manifests: number }>();
 
-    for (const m of filteredManifests) {
+    for (const m of displayManifests) {
       totalKg += m.totalKg ?? 0;
       const pkg = m.packagesApprox;
       if (pkg != null && pkg > 0) {
@@ -105,15 +186,15 @@ export function AdminLoadingManifestsPanel() {
     }
 
     return {
-      count: filteredManifests.length,
+      count: displayManifests.length,
       totalKg,
       packagesSum: packagesKnown > 0 ? packagesSum : null,
       byWarehouse: [...byWarehouse.entries()].sort((a, b) => a[0].localeCompare(b[0], "ru")),
       byDestination: [...byDestination.entries()].sort((a, b) => a[0].localeCompare(b[0], "ru")),
     };
-  }, [filteredManifests]);
+  }, [displayManifests]);
 
-  const detail = detailQuery.data?.manifest;
+  const hasMainExplorer = manifests.length > 0 || manifestId.trim().length > 0;
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -123,8 +204,9 @@ export function AdminLoadingManifestsPanel() {
       await apiPostJson(`/api/loading-manifests/${encodeURIComponent(manifestId)}/assign-trip`, { tripId: assignTripId.trim() });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["loading-manifest"] });
-      void queryClient.invalidateQueries({ queryKey: ["trips"] });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "list"] });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, manifestId.trim()] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
     },
   });
 
@@ -143,12 +225,17 @@ export function AdminLoadingManifestsPanel() {
         </p>
       ) : null}
 
-      {listQuery.data && (
+      {(listQuery.data != null || manifestId.trim().length > 0) && (
         <>
-          {manifests.length === 0 ? (
+          {!hasMainExplorer ? (
             <BirzhaEmptyState compact title="Нет сохранённых накладных" />
           ) : (
             <>
+              {manifestId.trim() && detailQuery.isPending && !manifests.some((x) => x.id === manifestId.trim()) ? (
+                <p className="birzha-text-muted" style={{ margin: "0 0 0.75rem", fontSize: "0.88rem" }} role="status">
+                  Загрузка накладной по ссылке…
+                </p>
+              ) : null}
               <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
                 <label
                   htmlFor="load-manifest-warehouse"
@@ -165,6 +252,8 @@ export function AdminLoadingManifestsPanel() {
                     writePreferredWarehouseId(v === "" ? null : v);
                   }}
                   style={{ ...fieldStyle, maxWidth: "100%" }}
+                  disabled={warehousesQuery.isPending}
+                  aria-busy={warehousesQuery.isPending ? true : undefined}
                 >
                   <option value="">— выберите склад —</option>
                   {warehouseOptions.map((w) => (
@@ -173,6 +262,12 @@ export function AdminLoadingManifestsPanel() {
                     </option>
                   ))}
                 </select>
+                {warehousesQuery.isError ? (
+                  <p className="birzha-text-muted" style={{ margin: "0.35rem 0 0", fontSize: "0.82rem" }} role="status">
+                    Справочник складов не загрузился — в списке только склады из накладных.{" "}
+                    {(warehousesQuery.error as Error)?.message ?? String(warehousesQuery.error ?? "")}
+                  </p>
+                ) : null}
               </div>
 
               {!selectedWarehouse ? (
@@ -187,16 +282,16 @@ export function AdminLoadingManifestsPanel() {
                     defaultOpen
                     title="Погрузочные накладные"
                     hint={
-                      filteredManifests.length === 0
+                      displayManifests.length === 0
                         ? "на этом складе пусто"
-                        : `${filteredManifests.length} шт. — раскройте строку`
+                        : `${displayManifests.length} шт. — раскройте строку`
                     }
                     bodyClassName="birzha-disclosure__body birzha-disclosure__body--stack"
                   >
-                    {filteredManifests.length === 0 ? (
+                    {displayManifests.length === 0 ? (
                       <BirzhaEmptyState compact title="На этом складе нет сохранённых накладных" />
                     ) : (
-                      filteredManifests.map((m) => (
+                      displayManifests.map((m) => (
                         <ManifestAccordionBlock
                           key={m.id}
                           m={m}

@@ -18,6 +18,7 @@ import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferen
 import {
   batchesFullListQueryOptions,
   loadingManifestDetailQueryOptions,
+  loadingManifestReservedBatchIdsQueryOptions,
   loadingManifestsListQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
@@ -182,6 +183,18 @@ export function AllocationPanel() {
     enabled: Boolean(selectedWarehouse),
   });
 
+  const reservedBatchIdsQuery = useQuery({
+    ...loadingManifestReservedBatchIdsQueryOptions(selectedWarehouse),
+    enabled: Boolean(selectedWarehouse),
+  });
+
+  const reservedBatchIdSet = useMemo(() => {
+    if (reservedBatchIdsQuery.isError) {
+      return new Set<string>();
+    }
+    return new Set(reservedBatchIdsQuery.data?.batchIds ?? []);
+  }, [reservedBatchIdsQuery.data?.batchIds, reservedBatchIdsQuery.isError]);
+
   const manifestsOnThisWarehouse = useMemo(
     () => manifestsForWarehouseSorted(manifestsListQuery.data?.loadingManifests, selectedWarehouse),
     [manifestsListQuery.data?.loadingManifests, selectedWarehouse],
@@ -199,8 +212,11 @@ export function AllocationPanel() {
     },
     onSuccess: (res) => {
       setSavedManifestId(res.manifestId);
+      setLoadNaklSelection(new Set());
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "list"] });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
+      void navigate(`${loadingManifestsBase}/${encodeURIComponent(res.manifestId)}`);
     },
   });
 
@@ -226,8 +242,9 @@ export function AllocationPanel() {
     () =>
       (batchesQuery.data?.batches ?? [])
         .filter((b) => b.onWarehouseKg > 0)
-        .filter(isFromPurchaseNakladnaya),
-    [batchesQuery.data?.batches],
+        .filter(isFromPurchaseNakladnaya)
+        .filter((b) => !reservedBatchIdSet.has(b.id)),
+    [batchesQuery.data?.batches, reservedBatchIdSet],
   );
   const loading = batchesQuery.isPending;
   const refetching = batchesQuery.isFetching && !batchesQuery.isPending;
@@ -419,7 +436,17 @@ export function AllocationPanel() {
       {loading && <LoadingBlock label="Загрузка партий…" minHeight={100} skeleton skeletonRows={6} />}
 
       <StaleDataNotice show={refetching} label="Обновление списка партий…" />
+      <StaleDataNotice
+        show={Boolean(selectedWarehouse) && reservedBatchIdsQuery.isFetching && !reservedBatchIdsQuery.isPending}
+        label="Обновление учёта погрузочных накладных…"
+      />
 
+      {!loading && selectedWarehouse && reservedBatchIdsQuery.isError && (
+        <p className="birzha-callout-warning" role="status">
+          Не удалось загрузить список партий, уже внесённых в погрузочные накладные — отбор показывает полный остаток.
+          {(reservedBatchIdsQuery.error as Error)?.message ? ` ${(reservedBatchIdsQuery.error as Error).message}` : ""}
+        </p>
+      )}
       {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 && (
         <p style={warnText} role="status">
           Остатки с оформленной <strong>закупкой товара</strong> (id документа и склад в строке) здесь не найдены — на отбор не
@@ -513,6 +540,11 @@ export function AllocationPanel() {
               title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Отбор накладных и таблица партий</span>}
               hint="погрузка"
             >
+              <p className="birzha-text-muted" style={{ margin: "0 0 0.65rem", fontSize: "0.86rem", lineHeight: 1.45 }}>
+                Партии, которые уже попали в любую сохранённую погрузочную накладную на этом складе, здесь не
+                показываются — их ведут в разделе «Погрузка» (привязка к рейсу и дальше). Так проще не собрать второй
+                раз тот же остаток в новую ПН.
+              </p>
               {documentOptions.length === 0 && batchesInWh.length > 0 && (
                 <p className="birzha-callout-info" role="status">
                   На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом

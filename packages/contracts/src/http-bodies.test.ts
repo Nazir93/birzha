@@ -4,6 +4,7 @@ import {
   assignLoadingManifestTripBodySchema,
   assignTripSellerBodySchema,
   createLoadingManifestBodySchema,
+  loadingManifestReservedBatchIdsQuerySchema,
   createBatchBodySchema,
   createTripBodySchema,
   createProductGradeBodySchema,
@@ -390,6 +391,13 @@ describe("assignTripSellerBodySchema", () => {
 
   it("отклоняет пустой sellerUserId", () => {
     expect(() => assignTripSellerBodySchema.parse({ sellerUserId: "" })).toThrow();
+  });
+});
+
+describe("loadingManifestReservedBatchIdsQuerySchema", () => {
+  it("требует warehouseId", () => {
+    expect(loadingManifestReservedBatchIdsQuerySchema.parse({ warehouseId: " wh-1 " })).toEqual({ warehouseId: "wh-1" });
+    expect(() => loadingManifestReservedBatchIdsQuerySchema.parse({ warehouseId: "" })).toThrow();
   });
 });
 

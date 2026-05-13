@@ -174,6 +174,11 @@ export const assignLoadingManifestTripBodySchema = z.object({
   tripId: z.string().min(1).max(200).transform((s) => s.trim()),
 });
 
+/** GET /loading-manifests/reserved-batch-ids?warehouseId= — партии, уже в строках ПН на этом складе. */
+export const loadingManifestReservedBatchIdsQuerySchema = z.object({
+  warehouseId: z.string().min(1).max(200).transform((s) => s.trim()),
+});
+
 /** Payload `ship_to_trip` в POST /sync */
 export const shipToTripSyncPayloadSchema = shipBodySchema.extend({
   batchId: z.string().min(1),

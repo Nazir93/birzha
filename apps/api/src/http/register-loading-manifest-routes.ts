@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   assignLoadingManifestTripBodySchema,
   createLoadingManifestBodySchema,
+  loadingManifestReservedBatchIdsQuerySchema,
 } from "@birzha/contracts";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -208,6 +209,21 @@ export function registerLoadingManifestRoutes(
           };
         }),
       });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/loading-manifests/reserved-batch-ids", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
+    try {
+      const q = loadingManifestReservedBatchIdsQuerySchema.parse(req.query);
+      const rows = await db
+        .select({ batchId: loadingManifestLines.batchId })
+        .from(loadingManifestLines)
+        .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
+        .where(eq(loadingManifests.warehouseId, q.warehouseId))
+        .groupBy(loadingManifestLines.batchId);
+      return reply.send({ batchIds: rows.map((r) => r.batchId) });
     } catch (error) {
       return sendMappedError(reply, error);
     }

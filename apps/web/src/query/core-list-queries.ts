@@ -9,6 +9,7 @@ import type {
   PurchaseDocumentDetail,
   PurchaseDocumentsListResponse,
   LoadingManifestDetailResponse,
+  LoadingManifestReservedBatchIdsResponse,
   LoadingManifestsListResponse,
   ShipmentReportResponse,
   ShipDestinationsListResponse,
@@ -193,6 +194,19 @@ export const loadingManifestsListQueryOptions = () =>
   queryOptions({
     queryKey: [...queryRoots.loadingManifest, "list"] as const,
     queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+/** Партии, уже внесённые в погрузочные накладные на складе (не показывать в отборе распределения). */
+export const loadingManifestReservedBatchIdsQueryOptions = (warehouseId: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids", warehouseId] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("warehouseId", warehouseId.trim());
+      return apiGetJson<LoadingManifestReservedBatchIdsResponse>(`/api/loading-manifests/reserved-batch-ids?${p}`);
+    },
+    enabled: warehouseId.trim().length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
   });
 

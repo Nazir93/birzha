@@ -28,6 +28,7 @@ export type { PostWarehouseWriteOffBody } from "./warehouse-write-off.js";
 export {
   assignTripSellerBodySchema,
   assignLoadingManifestTripBodySchema,
+  loadingManifestReservedBatchIdsQuerySchema,
   createBatchBodySchema,
   createLoadingManifestBodySchema,
   createCounterpartyBodySchema,
