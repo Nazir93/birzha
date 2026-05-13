@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { FastifyInstance } from "fastify";
 import {
   assignLoadingManifestTripBodySchema,
@@ -9,6 +11,7 @@ import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
+import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
 import {
@@ -344,21 +347,34 @@ export function registerLoadingManifestRoutes(
 
         for (const line of lines) {
           const ledger = await shipRepo.totalGramsForTripAndBatch(body.tripId, line.batchId);
-          const delta = line.grams - ledger;
-          if (delta <= 0n) {
-            continue;
-          }
           const [br] = await exec
-            .select({ onWarehouseGrams: batches.onWarehouseGrams })
+            .select({
+              onWarehouseGrams: batches.onWarehouseGrams,
+              inTransitGrams: batches.inTransitGrams,
+            })
             .from(batches)
             .where(eq(batches.id, line.batchId))
             .limit(1);
-          const cap = br?.onWarehouseGrams ?? 0n;
-          const move = delta < cap ? delta : cap;
-          if (move <= 0n) {
+          const plan = planLoadingManifestAssignTripShipment({
+            lineGrams: line.grams,
+            ledgerGramsForTripBatch: ledger,
+            onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
+            inTransitGrams: br?.inTransitGrams ?? 0n,
+          });
+          if (plan.kind === "none") {
             continue;
           }
-          const kg = Number(move) / 1000;
+          if (plan.kind === "ledger_append_in_transit") {
+            await shipRepo.append({
+              id: randomUUID(),
+              tripId: body.tripId,
+              batchId: line.batchId,
+              grams: plan.grams,
+              packageCount: null,
+            });
+            continue;
+          }
+          const kg = Number(plan.grams) / 1000;
           await shipUse.execute({
             batchId: line.batchId,
             tripId: body.tripId,
