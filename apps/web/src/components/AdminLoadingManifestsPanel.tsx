@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
@@ -12,6 +12,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
+import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -63,6 +64,8 @@ function loadingSummaryFromDetail(d: LoadingManifestDetail): LoadingManifestSumm
 
 export function AdminLoadingManifestsPanel() {
   const { manifestId = "" } = useParams();
+  const { pathname } = useLocation();
+  const manifestBasePath = adminAwarePathForPath(pathname, adminRoutes.loadingManifests, ops.loadingManifests);
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>(() => readPreferredWarehouseId() ?? "");
@@ -284,7 +287,7 @@ export function AdminLoadingManifestsPanel() {
                     hint={
                       displayManifests.length === 0
                         ? "на этом складе пусто"
-                        : `${displayManifests.length} шт. — раскройте строку`
+                        : `${displayManifests.length} шт. — нажмите строку, чтобы открыть карточку и привязку к рейсу`
                     }
                     bodyClassName="birzha-disclosure__body birzha-disclosure__body--stack"
                   >
@@ -296,6 +299,7 @@ export function AdminLoadingManifestsPanel() {
                           key={m.id}
                           m={m}
                           manifestId={manifestId}
+                          manifestBasePath={manifestBasePath}
                           tripNumberById={tripNumberById}
                           detail={detail && detail.id === m.id ? detail : null}
                           detailLoading={Boolean(manifestId && manifestId === m.id && detailQuery.isPending)}
@@ -394,6 +398,7 @@ export function AdminLoadingManifestsPanel() {
 function ManifestAccordionBlock({
   m,
   manifestId,
+  manifestBasePath,
   tripNumberById,
   detail,
   detailLoading,
@@ -405,6 +410,7 @@ function ManifestAccordionBlock({
 }: {
   m: LoadingManifestSummary;
   manifestId: string;
+  manifestBasePath: string;
   tripNumberById: Map<string, string>;
   detail: LoadingManifestDetail | null;
   detailLoading: boolean;
@@ -419,12 +425,25 @@ function ManifestAccordionBlock({
   };
   trips: { id: string; tripNumber: string; status: string }[];
 }) {
+  const navigate = useNavigate();
   const tripLabel = m.tripId ? tripNumberById.get(m.tripId) ?? m.tripId : "—";
   const isOpen = manifestId === m.id;
+  const detailPath = `${manifestBasePath}/${encodeURIComponent(m.id)}`;
 
   return (
     <details className="birzha-disclosure birzha-disclosure--nested" open={isOpen}>
-      <summary className="birzha-disclosure__summary">
+      <summary
+        className="birzha-disclosure__summary"
+        style={{ cursor: "pointer" }}
+        onClick={(e) => {
+          e.preventDefault();
+          if (manifestId === m.id) {
+            navigate(manifestBasePath);
+          } else {
+            navigate(detailPath);
+          }
+        }}
+      >
         <span>
           № <strong>{m.manifestNumber}</strong> · {m.docDate} · {m.warehouseName} ({m.warehouseCode}) · {m.destinationName} ·
           рейс: {tripLabel}
