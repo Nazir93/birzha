@@ -152,8 +152,8 @@ export function SellerDispatchPanel() {
   });
 
   return (
-    <div role="region" aria-label="Отгружено">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Отгружено</h2>
+    <div role="region" aria-label="Отгрузка">
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Отгрузка</h2>
       <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem" }}>
         Какой продавец закреплён за каким рейсом и какой товар на рейсе по отчёту отгрузки. После привязки рейса к
         погрузочной накладной в «Погрузке» тоннаж по строкам ПН переносится в рейс автоматически — у продавца

@@ -1,7 +1,7 @@
 import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
@@ -17,6 +17,7 @@ import {
 import {
   formatSellerCaliberGroupOptionLabel,
   groupSellableRowsByCaliber,
+  type SellerCaliberGroup,
 } from "../format/seller-trip-caliber-groups.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
@@ -31,7 +32,6 @@ import {
 } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
-import { routes } from "../routes.js";
 import { enqueue, requestOutboxBackgroundSync } from "../sync/index.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -363,6 +363,62 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     });
   }, [sellerCaliberGroups, partyFilter]);
 
+  const sellBatchSelectDisabled = useMemo(
+    () =>
+      !sellTripIdTrim ||
+      (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
+      (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) ||
+      (sellReportQuery.isFetched && sellReportQuery.isError) ||
+      (batchIdsOnTrip.length > 0 && batchesForTripQuery.isPending),
+    [
+      sellTripIdTrim,
+      sellReportQuery.isFetched,
+      sellReportQuery.isSuccess,
+      sellReportQuery.isError,
+      sellableOnTripRows.length,
+      batchIdsOnTrip.length,
+      batchesForTripQuery.isPending,
+    ],
+  );
+
+  const applySellerCaliberGroup = useCallback(
+    (g: SellerCaliberGroup) => {
+      setSellBatchId(g.primaryBatchId);
+      const row = sellableOnTripRows.find((r) => r.batchId === g.primaryBatchId);
+      if (row) {
+        setSellKg(gramsBigIntToKgDecimalString(g.rows.length <= 1 ? g.totalNetG : row.netTransitG));
+      }
+    },
+    [sellableOnTripRows],
+  );
+
+  const sellerCaliberGridStatusMessage = useMemo(() => {
+    if (!sellTripIdTrim) {
+      return "Сначала выберите рейс.";
+    }
+    if (!sellReportQuery.isFetched) {
+      return "Загрузка остатков…";
+    }
+    if (sellReportQuery.isError) {
+      return "Список недоступен — укажите ID партии вручную.";
+    }
+    if (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) {
+      return "Нечего продавать по этому рейсу.";
+    }
+    if (batchIdsOnTrip.length > 0 && batchesForTripQuery.isPending) {
+      return "Загрузка партий…";
+    }
+    return "";
+  }, [
+    sellTripIdTrim,
+    sellReportQuery.isFetched,
+    sellReportQuery.isError,
+    sellReportQuery.isSuccess,
+    sellableOnTripRows.length,
+    batchIdsOnTrip.length,
+    batchesForTripQuery.isPending,
+  ]);
+
   const sellerMultiBatchGroup = useMemo(() => {
     if (!isSellerUx || !sellBatchId.trim()) {
       return null;
@@ -533,9 +589,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           document.getElementById(sellerFlashDomId)?.scrollIntoView({ behavior: "smooth", block: "center" });
         });
       } else if (data.queued) {
-        setOperationsQueuedHint(
-          "Нет связи с сервером: продажа сохранена в офлайн-очередь и уйдёт на сервер при появлении сети. Проверьте раздел «Офлайн».",
-        );
+        setOperationsQueuedHint("Офлайн: продажа в очереди.");
       }
     },
   });
@@ -550,7 +604,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           {variant === "seller" ? "Продажа с рейса" : "Шаг 2 · Продажа с рейса"}
         </h3>
       }
-      hint={variant === "seller" ? "розница или опт → рейс" : "после отгрузки"}
     >
       {isSellerUx && sellerSaleFlash ? (
         <div
@@ -573,7 +626,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </p>
           {sellerSaleFlash.queued ? (
             <p className="birzha-seller-sale-flash__meta" style={{ marginTop: "0.35rem" }}>
-              Когда появится интернет, запись отправится на сервер автоматически. Статус — в разделе «Офлайн».
+              Офлайн — отправится при сети.
             </p>
           ) : null}
           <p className="birzha-seller-sale-flash__meta">Номер в системе: {sellerSaleFlash.saleId}</p>
@@ -594,22 +647,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               {operationsQueuedHint}
             </p>
           ) : null}
-          <p className="birzha-callout-info">Выберите рейс, калибр, тип продажи (розница/опт), кг, цену и оплату.</p>
-          {import.meta.env.DEV && (
-            <div className="birzha-callout-info" style={{ marginBottom: "0.6rem", fontSize: "0.82rem" }}>
-              <BirzhaDisclosure
-                nested
-                defaultOpen={false}
-                title={<span style={{ fontWeight: 600 }}>Технические детали API</span>}
-                hint="DEV"
-              >
-                <p style={{ margin: "0.35rem 0 0", lineHeight: 1.45 }}>
-                  <code>POST /api/batches/:batchId/sell-from-trip</code> — поле кг по умолчанию подставляется из остатка
-                  «в пути» по партии.
-                </p>
-              </BirzhaDisclosure>
-            </div>
-          )}
         </>
       )}
 
@@ -641,7 +678,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               aria-pressed={saleChannel === "wholesale"}
               disabled={!wholesalersCatalog}
               title={
-                wholesalersCatalog ? undefined : "Справочник оптовиков на сервере недоступен — оформите как розницу"
+                wholesalersCatalog ? undefined : "Опт недоступен"
               }
               onClick={() => {
                 if (!wholesalersCatalog) {
@@ -657,8 +694,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             </button>
           </div>
           {!wholesalersCatalog ? (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0", lineHeight: 1.45 }}>
-              Опт сейчас недоступен в этом окружении. Используйте розницу или обратитесь к администратору.
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
+              Опт недоступен — розница.
             </p>
           ) : null}
           {saleChannel === "retail" ? (
@@ -693,9 +730,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                     Новый в справочнике
                   </label>
                   {!online ? (
-                    <p className="birzha-callout-info" style={{ margin: "0 0 0.45rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
-                      Без сети новую запись в справочник добавить нельзя — выберите из списка или введите подпись ниже;
-                      её можно использовать в продаже офлайн.
+                    <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.45rem" }}>
+                      Без сети — только список или подпись ниже.
                     </p>
                   ) : null}
                   <input
@@ -777,7 +813,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
                   {wholesaleRowsFiltered.length === 0 ? (
                     <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-                      Нет совпадений. Оптовиков добавляет администратор.
+                      Нет совпадений.
                     </li>
                   ) : (
                     wholesaleRowsFiltered.map((w) => (
@@ -800,18 +836,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               )}
               {wholesaleBuyerId ? (
                 <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.45rem 0 0" }}>
-                  Выбрано: <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
+                  <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
                 </p>
-              ) : (
-                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.45rem 0 0" }}>
-                  Нажмите строку в списке.
-                </p>
-              )}
+              ) : null}
             </div>
           ) : null}
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0", lineHeight: 1.45 }}>
-            Дальше — рейс, калибр (партия), вес, цена за кг и способ оплаты; в конце нажмите «Зафиксировать продажу».
-          </p>
         </section>
       ) : null}
 
@@ -825,16 +854,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
           {sellerTripsListQ.isError && (
             <p role="alert" className="birzha-ui-sm birzha-text-danger" style={{ margin: "0 0 0.5rem" }}>
-              Не удалось загрузить рейсы. Проверьте связь и повторите.
+              Рейсы не загрузились.
             </p>
           )}
           {sellerTripsListQ.isSuccess && sellerTripOptions.length === 0 && (
             <div style={{ marginBottom: "0.5rem" }}>
-              <BirzhaEmptyState
-                compact
-                title="Нет закреплённых рейсов"
-                description="Обратитесь к администратору — вам нужно назначить рейс в системе."
-              />
+              <BirzhaEmptyState compact title="Нет закреплённых рейсов" />
             </div>
           )}
           {sellerTripsListQ.isSuccess && sellerTripOptions.length > 0 && (
@@ -890,7 +915,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       )}
       {sellTripIdTrim && sellReportQuery.isError && (
         <p role="alert" style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
-          Не удалось загрузить данные по рейсу. Продажа по списку недоступна — укажите ID партии вручную ниже.
+          Ошибка отчёта по рейсу. Ниже — ID партии вручную.
         </p>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
@@ -900,24 +925,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             title={
               !tripHasPositiveShipment
                 ? isSellerUx
-                  ? "Пока нечего продавать: нет отгрузки в рейс"
-                  : "Нет отгрузки в рейс или нечего продавать"
-                : "На этом рейсе нечего продавать"
-            }
-            description={
-              !tripHasPositiveShipment ? (
-                <>
-                  Список партий строится по <strong>фактической отгрузке в этот рейс</strong> (кг «в пути» в отчёте).
-                  Если рейс привязан к погрузочной накладной в разделе «Погрузка», отгрузка в рейс по строкам накладной
-                  создаётся <strong>автоматически</strong> при привязке. Если Погрузки не было, склад оформляет отгрузку
-                  вручную: <Link to={routes.ops.operations}>Операции</Link> или <Link to={routes.ops.trips}>Рейсы</Link>.
-                </>
-              ) : (
-                <>
-                  По отчёту рейса весь отгруженный товар уже учтён как проданный или как недостача — остатка «в пути»
-                  нет.
-                </>
-              )
+                  ? "Нет отгрузки в рейс"
+                  : "Нет отгрузки в рейс"
+                : "Нечего продавать"
             }
           />
         </div>
@@ -946,74 +956,96 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           />
         </>
       )}
-      <label htmlFor={`${idPrefix}-sel-batch`} className="birzha-form-label">
-        {isSellerUx ? "Калибр и остаток в машине *" : "Накладная и калибр (кг в машине) *"}
-      </label>
-      {isSellerUx && sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 ? (
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
-          Один калибр — одна строка: килограммы «в машине» суммируются по всем партиям этого калибра на рейсе (номера
-          накладных в списке не показываем).
-        </p>
-      ) : null}
-      <select
-        id={`${idPrefix}-sel-batch`}
-        value={sellBatchId}
-        onChange={(e) => {
-          const id = e.target.value;
-          setSellBatchId(id);
-          if (!id.trim()) {
-            setSellKg("");
-            return;
-          }
-          if (isSellerUx) {
-            const g = sellerCaliberGroups.find((x) => x.primaryBatchId === id);
-            const row = sellableOnTripRows.find((r) => r.batchId === id);
-            if (g && row) {
-              setSellKg(
-                gramsBigIntToKgDecimalString(g.rows.length <= 1 ? g.totalNetG : row.netTransitG),
-              );
-            }
-            return;
-          }
-          const row = sellableOnTripRows.find((r) => r.batchId === id);
-          if (row) {
-            setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
-          }
-        }}
-        className={isSellerUx ? "birzha-seller-form-control birzha-seller-batch-select" : sellerFieldClass}
-        style={
-          isSellerUx
-            ? { ...sellerFieldMb, marginBottom: "0.2rem", maxHeight: "min(55vh, 26rem)" }
-            : { ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }
-        }
-        disabled={
-          !sellTripIdTrim ||
-          (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
-          (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) ||
-          (sellReportQuery.isFetched && sellReportQuery.isError) ||
-          (batchIdsOnTrip.length > 0 && batchesForTripQuery.isPending)
-        }
-      >
-        <option value="">
-          {!sellTripIdTrim
-            ? "— сначала выберите рейс —"
-            : !sellReportQuery.isFetched
-              ? "… загрузка остатков …"
-              : sellReportQuery.isError
-                ? "— список недоступен, введите ID партии ниже —"
-                : batchesForTripQuery.isPending && batchIdsOnTrip.length > 0
-                  ? "… загрузка партий …"
-                  : isSellerUx
-                    ? "— выберите калибр (кг в строке) —"
-                    : "— выберите партию (калибр) —"}
-        </option>
-        {isSellerUx
-          ? sellerCaliberGroupsFiltered.map((g) => (
-              <option key={g.primaryBatchId} value={g.primaryBatchId}>
-                {formatSellerCaliberGroupOptionLabel(g, gramsBigIntToKgDecimalString)}
-              </option>
-            ))
-          : sellTripRowsFiltered.map((g) => (
+      {isSellerUx ? (
+        <fieldset
+          className="birzha-seller-caliber-fieldset"
+          style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
+        >
+          <legend className="birzha-form-label" style={{ padding: 0, marginBottom: "0.35rem" }}>
+            Калибр и остаток в машине *
+          </legend>
+          {sellBatchSelectDisabled ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+              {sellerCaliberGridStatusMessage}
+            </p>
+          ) : (
+            <>
+              {sellerCaliberGroupsFiltered.length === 0 ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+                  {sellerCaliberGroups.length > 0 ? "Нет совпадений по поиску." : "Нет строк."}
+                </p>
+              ) : (
+                <div
+                  className="birzha-seller-caliber-grid"
+                  role="listbox"
+                  aria-label="Калибр и остаток в машине"
+                  id={`${idPrefix}-sel-batch`}
+                >
+                  {sellerCaliberGroupsFiltered.map((g) => {
+                    const selected = sellBatchId === g.primaryBatchId;
+                    const kgLine = gramsBigIntToKgDecimalString(g.totalNetG);
+                    return (
+                      <button
+                        key={g.primaryBatchId}
+                        type="button"
+                        className={
+                          selected
+                            ? "birzha-seller-caliber-tile birzha-seller-caliber-tile--selected"
+                            : "birzha-seller-caliber-tile"
+                        }
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => applySellerCaliberGroup(g)}
+                      >
+                        <span className="birzha-seller-caliber-tile__line">{g.lineLabel}</span>
+                        <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
+                        {g.rows.length > 1 ? (
+                          <span className="birzha-seller-caliber-tile__meta">{g.rows.length} партии</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </fieldset>
+      ) : (
+        <>
+          <label htmlFor={`${idPrefix}-sel-batch`} className="birzha-form-label">
+            Накладная и калибр (кг в машине) *
+          </label>
+          <select
+            id={`${idPrefix}-sel-batch`}
+            value={sellBatchId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSellBatchId(id);
+              if (!id.trim()) {
+                setSellKg("");
+                return;
+              }
+              const row = sellableOnTripRows.find((r) => r.batchId === id);
+              if (row) {
+                setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
+              }
+            }}
+            className={sellerFieldClass}
+            style={{ ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }}
+            disabled={sellBatchSelectDisabled}
+          >
+            <option value="">
+              {!sellTripIdTrim
+                ? "— сначала выберите рейс —"
+                : !sellReportQuery.isFetched
+                  ? "… загрузка остатков …"
+                  : sellReportQuery.isError
+                    ? "— список недоступен, введите ID партии ниже —"
+                    : batchesForTripQuery.isPending && batchIdsOnTrip.length > 0
+                      ? "… загрузка партий …"
+                      : "— выберите партию (калибр) —"}
+            </option>
+            {sellTripRowsFiltered.map((g) => (
               <optgroup key={g.key} label={g.optgroupLabel}>
                 {g.rows.map((row) => (
                   <option key={row.batchId} value={row.batchId}>
@@ -1022,16 +1054,17 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 ))}
               </optgroup>
             ))}
-      </select>
+          </select>
+        </>
+      )}
       {isSellerUx && sellerMultiBatchGroup ? (
         <p
           className="birzha-callout-info"
           style={{ fontSize: "0.86rem", marginTop: "0.35rem", marginBottom: "0.45rem", lineHeight: 1.45 }}
           role="status"
         >
-          По этому калибру несколько партий на рейсе. За одну сделку — с партии с наибольшим остатком, до{" "}
-          <strong>{gramsBigIntToKgDecimalString(sellerMultiBatchGroup.primaryRow.netTransitG)} кг</strong>; остаток по
-          калибру оформите следующей продажей.
+          Несколько партий по калибру — до{" "}
+          <strong>{gramsBigIntToKgDecimalString(sellerMultiBatchGroup.primaryRow.netTransitG)} кг</strong> за сделку.
         </p>
       ) : null}
       {sellSelectionSummary && (
@@ -1056,13 +1089,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           {sellSelectionSummary.hasPkgData && sellSelectionSummary.estPkg > 0n && (
             <>
               {" "}
-              · <strong>≈ {String(sellSelectionSummary.estPkg)} ящ</strong> (оценка по кг в отгрузке)
+              · <strong>≈ {String(sellSelectionSummary.estPkg)} ящ</strong>
             </>
           )}
-          {sellSelectionSummary.subUnitPackages && <> · остаток в пути &lt; 1 ящ (оценка по кг), в сделке — кг</>}
-          {sellSelectionSummary.hasShipped && !sellSelectionSummary.hasPkgData && (
-            <> · ящики в отчёте не заданы — введите при отгрузке со склада в рейс, иначе оценки нет</>
-          )}
+          {sellSelectionSummary.subUnitPackages && <> · &lt; 1 ящ</>}
         </p>
       )}
       {showBatchManualControls && (
@@ -1071,16 +1101,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             <BirzhaDisclosure
               nested
               defaultOpen={Boolean(sellTripIdTrim && sellReportQuery.isError)}
-              title="Не видно нужный товар в списке?"
-              hint="ввод по ID — для поддержки"
+              title="ID партии вручную"
               bodyStyle={{ marginBottom: "0.45rem" }}
             >
-              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
-                Обычно достаточно выбрать строку выше. Если список не загрузился или пустой — используйте поля ниже (
-                по указанию администратора).
-              </p>
               <label htmlFor={`${idPrefix}-in-batch`} className="birzha-form-label">
-                ID партии вручную
+                ID партии
               </label>
               <input
                 id={`${idPrefix}-in-batch`}
@@ -1247,21 +1272,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         }}
         role="status"
         aria-live="polite"
-        aria-label={sellDealTotalLabel ? `Сумма сделки ${sellDealTotalLabel} рублей` : undefined}
+        aria-label={sellDealTotalLabel ? `Сумма ${sellDealTotalLabel} ₽` : undefined}
       >
         {sellDealTotalLabel ? (
           <>
-            Сумма сделки: <strong>{sellDealTotalLabel} ₽</strong>
-            {isSellerUx ? (
-              <span className="birzha-text-muted birzha-text-muted--sm" style={{ fontWeight: 500, marginLeft: "0.35rem" }}>
-                (кг × цена за кг)
-              </span>
-            ) : null}
+            Сумма: <strong>{sellDealTotalLabel} ₽</strong>
           </>
         ) : (
-          <span className="birzha-text-muted">
-            Укажите килограммы и цену за кг — здесь появится сумма сделки.
-          </span>
+          <span className="birzha-text-muted">—</span>
         )}
       </p>
       {!isSellerUx && saleChannel === "retail" && counterpartiesCatalog ? (
@@ -1297,9 +1315,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             Новый в справочнике
           </label>
           {!online ? (
-            <p className="birzha-callout-info" style={{ margin: "0 0 0.45rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
-              Без сети новую запись в справочник добавить нельзя — выберите из сохранённого списка или введите подпись
-              ниже; её можно использовать в продаже офлайн.
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.45rem" }}>
+              Без сети — только список или подпись ниже.
             </p>
           ) : null}
           <input
@@ -1390,7 +1407,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               Оптовик *
             </span>
           }
-          hint="поиск и выбор"
         >
           <input
             value={wholesalerSearch}
@@ -1423,7 +1439,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             >
               {wholesaleRowsFiltered.length === 0 ? (
                 <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-                  Нет совпадений. Добавьте оптовиков в кабинете администратора → «Склады и калибры».
+                  Нет совпадений.
                 </li>
               ) : (
                 wholesaleRowsFiltered.map((w) => (
@@ -1452,13 +1468,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
           {wholesaleBuyerId ? (
             <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.4rem 0 0" }}>
-              Выбрано: <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
+              <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
             </p>
-          ) : (
-            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.4rem 0 0" }}>
-              Выберите оптовика из списка.
-            </p>
-          )}
+          ) : null}
         </BirzhaDisclosure>
       ) : null}
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">

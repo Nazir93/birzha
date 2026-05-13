@@ -25,8 +25,7 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   reports: "Отчёты и рейсы",
   /** Запись недостачи по рейсу (`OperationsPanel`); отгрузка — в «Распределении», продажа — у продавца. */
   operations: "Недостача по рейсу",
-  /** Закрепление рейса за продавцом, матрица отгрузок (`SellerDispatchPanel`). */
-  sellerDispatch: "Отгружено",
+  sellerDispatch: "Отгрузка",
   assignSeller: "Продажи",
   offline: "Офлайн-очередь",
   service: "Диагностика",

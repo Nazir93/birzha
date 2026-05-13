@@ -165,6 +165,9 @@ export function AdminCabinetHome() {
         display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
       }));
 
+    /** Масса партий вне склада: в рейсах и уже проданная (для сводки «Отгружено»). */
+    const dispatchedKg = transitKg + soldKg;
+
     return {
       tripCount: trips.length,
       tripsOpen,
@@ -173,6 +176,7 @@ export function AdminCabinetHome() {
       warehouseKg,
       transitKg,
       soldKg,
+      dispatchedKg,
       pendingInboundKg,
       writtenOffKg,
       warehouseCatalogCount: whQ.data?.warehouses.length ?? 0,
@@ -217,9 +221,7 @@ export function AdminCabinetHome() {
         throw new Error("Рейс не найден в списке");
       }
       if (!tripListShowsSoldOut(t)) {
-        const ok = window.confirm(
-          "В рейсе по данным системы ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
-        );
+        const ok = window.confirm("В пути ещё есть остаток. Закрыть рейс?");
         if (!ok) {
           return;
         }
@@ -241,7 +243,7 @@ export function AdminCabinetHome() {
       {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} skeleton skeletonRows={5} />}
       {err && (
         <p role="alert" style={errorText}>
-          Часть данных не загрузилась. Проверьте API.
+          Ошибка загрузки данных.
         </p>
       )}
       {!loading && !err && (
@@ -300,15 +302,25 @@ export function AdminCabinetHome() {
                   {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
                 </span>
               </Link>
+              <Link
+                to={adminRoutes.sellerDispatch}
+                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
+                title="В пути по рейсам и продано с партий — учёт в разделе «Отгрузка»"
+              >
+                <span className="birzha-admin-stat__label">Отгружено</span>
+                <span className="birzha-admin-stat__value">
+                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
+                </span>
+              </Link>
             </div>
           </header>
 
-          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Отгружено и погрузка">
+          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Погрузка и отгрузка">
             <Link to={adminRoutes.loadingManifests}>Погрузка на машину</Link>
             <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
               ·
             </span>
-            <Link to={adminRoutes.sellerDispatch}>Отгружено в рейс</Link>
+            <Link to={adminRoutes.sellerDispatch}>Отгрузка в рейс</Link>
             <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
               ·
             </span>
@@ -316,7 +328,7 @@ export function AdminCabinetHome() {
           </nav>
 
           <div className="birzha-dashboard-layout birzha-admin-dash__body">
-            <BirzhaDisclosure title="Сводные показатели" hint="рейсы, партии, склады" defaultOpen>
+            <BirzhaDisclosure title="Сводные показатели" defaultOpen>
             <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">
               <Link
                 to={adminRoutes.tripRegistry}
@@ -368,6 +380,16 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__label">В пути, кг</div>
                 <div className="birzha-kpi-tile__value">
                   {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                </div>
+              </Link>
+              <Link
+                to={adminRoutes.sellerDispatch}
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
+                title="В пути и продано с партий — раздел «Отгрузка»"
+              >
+                <div className="birzha-kpi-tile__label">Отгружено, кг</div>
+                <div className="birzha-kpi-tile__value">
+                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                 </div>
               </Link>
               <Link
@@ -454,14 +476,14 @@ export function AdminCabinetHome() {
 
             {(pdErr || cpErr) && (
               <p role="status" className="birzha-callout-warning" style={{ margin: 0 }}>
-                {pdErr ? "Список накладных закупки не подгрузился — проверьте API." : null}
+                {pdErr ? "Накладные закупки: ошибка загрузки." : null}
                 {pdErr && cpErr ? " " : ""}
-                {cpErr ? "Справочник контрагентов не подгрузился — проверьте API." : null}
+                {cpErr ? "Контрагенты: ошибка загрузки." : null}
               </p>
             )}
             </BirzhaDisclosure>
 
-            <BirzhaDisclosure title="Диаграммы" hint="масса, склады, виды товара" defaultOpen={false}>
+            <BirzhaDisclosure title="Диаграммы" defaultOpen={false}>
             <div className="birzha-dashboard-row">
               <div className="birzha-chart-card birzha-chart-card--premium">
                 <h3>Масса: склад · в пути · продано</h3>
@@ -475,7 +497,7 @@ export function AdminCabinetHome() {
                 <h3>Топ складов по остатку</h3>
                 <HorizontalBarChart
                   items={aggregates.warehouseBars}
-                  emptyHint="Нет остатков по складам или не привязаны склады в накладных."
+                  emptyHint="Нет данных."
                   valueSuffix="кг"
                 />
               </div>
@@ -483,23 +505,19 @@ export function AdminCabinetHome() {
                 <h3>Виды товара (вес партий)</h3>
                 <HorizontalBarChart
                   items={aggregates.groupBars}
-                  emptyHint="Нет партий или виды не заполнены."
+                  emptyHint="Нет данных."
                   valueSuffix="кг"
                 />
               </div>
             </div>
             </BirzhaDisclosure>
 
-            <BirzhaDisclosure title="Рейсы" hint="последние, отчёт" defaultOpen>
+            <BirzhaDisclosure title="Рейсы" defaultOpen>
             <div className="birzha-admin-dash__trips">
-              <p style={{ margin: "0 0 0.75rem", fontSize: "0.88rem", lineHeight: 1.45 }}>
+              <p style={{ margin: "0 0 0.5rem" }}>
                 <Link to={adminRoutes.tripRegistry} style={{ fontWeight: 600 }}>
-                  Реестр рейсов
+                  Все рейсы
                 </Link>
-                <span className="birzha-text-muted">
-                  {" "}
-                  — полный список с фильтром; здесь постранично ({ADMIN_TRIPS_PAGE_SIZE} на страницу).
-                </span>
               </p>
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Последние рейсы">
@@ -537,7 +555,7 @@ export function AdminCabinetHome() {
                               className="birzha-text-muted birzha-ui-sm"
                               style={{ display: "block", marginTop: "0.2rem", fontWeight: 400 }}
                             >
-                              Остаток в пути 0 — можно закрыть рейс.
+                              0 в пути
                             </span>
                           ) : null}
                         </td>

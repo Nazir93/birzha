@@ -213,6 +213,86 @@ html[data-birzha-theme="dark"] .birzha-chart-card--premium {
     0 18px 48px -36px rgba(0, 0, 0, 0.55);
 }
 
+/* Тёмная тема: продавец (вспышка продажи), KPI вне админ-сводки, карточки кабинета, календарь */
+html[data-birzha-theme="dark"] .birzha-seller-sale-flash {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: linear-gradient(145deg, #14532d 0%, #166534 42%, #27272a 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+html[data-birzha-theme="dark"] .birzha-seller-sale-flash__title {
+  color: #bbf7d0;
+}
+
+html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile--premium {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+  border-color: rgba(161, 161, 170, 0.35);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile--premium .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile--premium .birzha-kpi-tile__value,
+html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile--premium .birzha-kpi-tile__cash-debt {
+  color: #fafafa;
+}
+
+html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile__cash-debt-key {
+  color: #d4d4d8;
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--amber {
+  background: linear-gradient(180deg, #422006 0%, #27272a 100%);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--amber .birzha-kpi-tile__label {
+  color: #fde68a;
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--amber .birzha-kpi-tile__value {
+  color: #fde68a;
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--blue {
+  background: linear-gradient(180deg, #1e3a8a 0%, #27272a 100%);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--blue .birzha-kpi-tile__label {
+  color: #bfdbfe;
+}
+
+html[data-birzha-theme="dark"] .birzha-kpi-tile--blue .birzha-kpi-tile__value {
+  color: #bfdbfe;
+}
+
+html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-disclosure,
+html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-panel {
+  border-color: rgba(82, 82, 91, 0.55);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 14px 36px -30px rgba(0, 0, 0, 0.45);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__secondary,
+html[data-birzha-theme="dark"] .birzha-dp__primary {
+  border-color: var(--color-border);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__secondary {
+  background: var(--birzha-surface);
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__secondary:hover {
+  background: var(--birzha-surface-muted);
+  border-color: var(--color-border);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__linkish:hover {
+  color: var(--color-text);
+}
+
 /* Весь документ не шире экрана: без горизонтального «шата» и белой кромки на мобильных / PWA. */
 html {
   overflow-x: clip;
@@ -765,7 +845,80 @@ a.birzha-kpi-tile--link:focus-visible {
   box-shadow: 0 0 0 2px var(--birzha-accent-soft);
 }
 
-/* Список партий продавца: плоский перечень калибров с кг в строке */
+/* Сетка калибров — кабинет продавца */
+.birzha-seller-caliber-fieldset {
+  width: 100%;
+  max-width: 100%;
+}
+
+.birzha-seller-caliber-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0 0 0.45rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.birzha-seller-caliber-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  min-height: 3.35rem;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text);
+  border-radius: var(--birzha-radius-sm);
+  border: 2px solid var(--color-border);
+  background: var(--birzha-surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  word-break: break-word;
+}
+
+.birzha-seller-caliber-tile:hover:not(:disabled) {
+  border-color: var(--birzha-accent);
+}
+
+.birzha-seller-caliber-tile:focus-visible {
+  outline: none;
+  border-color: var(--birzha-accent);
+  box-shadow: 0 0 0 2px var(--birzha-accent-soft);
+}
+
+.birzha-seller-caliber-tile--selected {
+  border-color: var(--birzha-accent);
+  background: var(--birzha-accent-soft);
+  box-shadow: 0 0 0 1px var(--birzha-accent-soft);
+}
+
+.birzha-seller-caliber-tile__line {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.birzha-seller-caliber-tile__kg {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.birzha-seller-caliber-tile__meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* Список партий в кабинете операций */
 .birzha-seller-sell-panel select.birzha-seller-batch-select {
   font-size: 0.98rem;
   line-height: 1.35;
@@ -840,7 +993,7 @@ a.birzha-kpi-tile--link:focus-visible {
 }
 
 .birzha-seller-wholesaler-list__pick--active {
-  background: rgba(0, 0, 0, 0.07);
+  background: var(--birzha-accent-soft);
   font-weight: 700;
 }
 
@@ -957,8 +1110,8 @@ a.birzha-kpi-tile--link:focus-visible {
   align-items: flex-start;
   padding: 0.65rem 0.7rem;
   border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface-muted);
 }
 
 .birzha-seller-guide__item p {
@@ -3198,16 +3351,16 @@ a.birzha-admin-stat--link:focus-visible {
   padding: 1.25rem 1.35rem;
   border-radius: 16px;
   border: 1px solid var(--color-border);
-  background: #ffffff;
+  background: var(--birzha-surface);
   box-shadow: var(--birzha-shadow-sm);
 }
 
 .birzha-home-hero--sales {
-  background: #ffffff;
+  background: var(--birzha-surface);
 }
 
 .birzha-home-hero--accounting {
-  background: #ffffff;
+  background: var(--birzha-surface);
 }
 
 .birzha-home-hero__eyebrow,
@@ -3225,7 +3378,7 @@ a.birzha-admin-stat--link:focus-visible {
   font-size: clamp(1.45rem, 3vw, 2.1rem);
   line-height: 1.08;
   letter-spacing: -0.045em;
-  color: #0f172a;
+  color: var(--color-text);
 }
 
 .birzha-home-hero__lead {
@@ -3252,8 +3405,8 @@ a.birzha-admin-stat--link:focus-visible {
   padding: 0.75rem 0.85rem;
   border-radius: 13px;
   border: 1px solid var(--color-border);
-  background: #f2f2f2;
-  color: #0f172a;
+  background: var(--birzha-surface-muted);
+  color: var(--color-text);
   text-decoration: none;
   box-shadow: none;
   transition:
@@ -3264,7 +3417,7 @@ a.birzha-admin-stat--link:focus-visible {
 
 .birzha-home-action:hover {
   transform: translateY(-1px);
-  background: #ebebeb;
+  background: var(--birzha-accent-soft);
   box-shadow: var(--birzha-shadow-sm);
 }
 

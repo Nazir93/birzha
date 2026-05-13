@@ -153,7 +153,7 @@ export function AssignSellerPanel() {
           <h2 className="birzha-assign-seller__title">Продажи по продавцу</h2>
           <p className="birzha-assign-seller__lead">
             Сводка по закреплённым рейсам: масса, остаток в пути, выручка, наличные и продажи в долг по клиентам.
-            Закрепление рейса — раздел «Отгружено».
+            Закрепление рейса — раздел «Отгрузка».
           </p>
         </div>
         <div className="birzha-assign-seller__pick">
@@ -265,7 +265,7 @@ export function AssignSellerPanel() {
               <BirzhaEmptyState
                 compact
                 title="Нет закреплённых рейсов"
-                description="Назначьте рейс продавцу в разделе «Отгружено»."
+                description="Назначьте рейс продавцу в разделе «Отгрузка»."
               />
             ) : (
               <div className="birzha-assign-seller__trip-table-wrap birzha-table-scroll birzha-table-scroll--sticky-head">
