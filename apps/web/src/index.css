@@ -68,6 +68,14 @@ body,
   color-scheme: light dark;
 }
 
+/* PWA с экрана «Домой»: дополнительно фиксируем текст (viewport — в index.html). */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
 /* Тёмная тема: токены переопределяются на корне (см. ThemeToggle + sync в main.tsx). */
 html[data-birzha-theme="dark"] {
   color-scheme: dark;

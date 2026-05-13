@@ -6,6 +6,25 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <!-- В браузере масштаб не трогаем; в PWA (с экрана «Домой») отключаем щипок двумя пальцами — иначе уезжает шапка. -->
+    <script>
+      (function () {
+        try {
+          var pwa =
+            (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+            (window.matchMedia && window.matchMedia("(display-mode: fullscreen)").matches) ||
+            (typeof navigator !== "undefined" &&
+              /** @type {Navigator & { standalone?: boolean }} */ (navigator).standalone === true);
+          if (!pwa) return;
+          var m = document.querySelector('meta[name="viewport"]');
+          if (m)
+            m.setAttribute(
+              "content",
+              "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no",
+            );
+        } catch (_) {}
+      })();
+    </script>
     <meta name="theme-color" content="#f4f4f5" />
     <meta name="color-scheme" content="light dark" />
     <meta name="mobile-web-app-capable" content="yes" />
