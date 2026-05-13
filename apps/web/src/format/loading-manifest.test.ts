@@ -5,8 +5,10 @@ import {
   AGGREGATE_NO_PURCHASE_DOCUMENT_KEY,
   aggregateBatchesByCaliberLine,
   aggregateBatchesByPurchaseDocument,
+  aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
+  loadingManifestRoadCsvContent,
   sumLoadingManifestTotals,
   summarizeAllocationBreakdown,
 } from "./loading-manifest.js";
@@ -197,5 +199,37 @@ describe("summarizeAllocationBreakdown", () => {
     const s = summarizeAllocationBreakdown(batches, ["moscow"], { moscow: "Москва" });
     expect(s.unassigned.kg).toBe(10);
     expect(s.inTransit).toMatchObject({ kg: 25, batchCount: 1 });
+  });
+});
+
+describe("aggregateLoadingManifestLinesByCaliber", () => {
+  it("суммирует кг и ящики по одному калибру из нескольких строк", () => {
+    const rows = aggregateLoadingManifestLinesByCaliber([
+      { kg: 100, packageCount: "10", productGroup: "Помидоры", productGradeCode: "№5" },
+      { kg: 50, packageCount: "5", productGroup: "Помидоры", productGradeCode: "№5" },
+      { kg: 3, packageCount: null, productGroup: "Помидоры", productGradeCode: "№8" },
+    ]);
+    expect(rows).toHaveLength(2);
+    const r5 = rows.find((r) => r.caliberLabel.includes("№5"));
+    expect(r5?.totalKg).toBe(150);
+    expect(r5?.totalPackages).toBe(15);
+    const r8 = rows.find((r) => r.caliberLabel.includes("№8"));
+    expect(r8?.totalPackages).toBeNull();
+  });
+});
+
+describe("loadingManifestRoadCsvContent", () => {
+  it("включает шапку и итого", () => {
+    const csv = loadingManifestRoadCsvContent({
+      manifestNumber: "ПН-1",
+      docDate: "2026-05-13",
+      warehouseLabel: "Манас (MANAS)",
+      destinationName: "Москва",
+      tripLabel: "Р-01",
+      rows: [{ caliberLabel: "Помидоры · №5", totalKg: 10.5, totalPackages: 2 }],
+    });
+    expect(csv).toContain("Погрузочная накладная (на машину);ПН-1");
+    expect(csv).toContain("Рейс;Р-01");
+    expect(csv).toContain("Итого");
   });
 });

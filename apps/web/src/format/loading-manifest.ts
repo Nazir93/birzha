@@ -1,5 +1,6 @@
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
+import { escapeCsvField } from "./csv.js";
 
 /** Остаток в ящиках: доля onWarehouseKg к totalKg, × ящиков по строке накладной. */
 export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
@@ -246,4 +247,94 @@ export function summarizeAllocationBreakdown(
     unassigned: { kg: unKg, batchCount: unBc },
     inTransit: { kg: trKg, batchCount: trBc },
   };
+}
+
+/** Строка карточки ПН (GET), достаточная для свода по калибру. */
+export type LoadingManifestDetailLineForCaliber = {
+  kg: number;
+  packageCount: string | null;
+  productGroup: string | null;
+  productGradeCode: string | null;
+};
+
+function parseManifestLinePackageCount(raw: string | null | undefined): number | null {
+  if (raw == null || String(raw).trim() === "") {
+    return null;
+  }
+  const n = Number(String(raw).replace(",", ".").trim());
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return n;
+}
+
+/** Свод «на машину»: одна строка на калибр (кг и ящики суммируются по всем партиям в ПН). */
+export function aggregateLoadingManifestLinesByCaliber(
+  lines: readonly LoadingManifestDetailLineForCaliber[],
+): { caliberLabel: string; totalKg: number; totalPackages: number | null }[] {
+  const m = new Map<string, { totalKg: number; pkgSum: number; pkgLines: number }>();
+  for (const line of lines) {
+    const caliberLabel = `${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`;
+    const cur = m.get(caliberLabel) ?? { totalKg: 0, pkgSum: 0, pkgLines: 0 };
+    cur.totalKg += line.kg;
+    const p = parseManifestLinePackageCount(line.packageCount);
+    if (p != null) {
+      cur.pkgSum += p;
+      cur.pkgLines += 1;
+    }
+    m.set(caliberLabel, cur);
+  }
+  return [...m.entries()]
+    .map(([caliberLabel, v]) => ({
+      caliberLabel,
+      totalKg: v.totalKg,
+      totalPackages: v.pkgLines > 0 ? Math.round(v.pkgSum) : null,
+    }))
+    .sort((a, b) => a.caliberLabel.localeCompare(b.caliberLabel, "ru"));
+}
+
+export type LoadingManifestRoadCsvParams = {
+  manifestNumber: string;
+  docDate: string;
+  warehouseLabel: string;
+  destinationName: string;
+  tripLabel: string;
+  rows: { caliberLabel: string; totalKg: number; totalPackages: number | null }[];
+};
+
+/** CSV для «накладной на машину» (UTF-8, `;`, поля через escapeCsvField). */
+export function loadingManifestRoadCsvContent(p: LoadingManifestRoadCsvParams): string {
+  const lines: string[] = [];
+  lines.push(`Погрузочная накладная (на машину);${escapeCsvField(p.manifestNumber)}`);
+  lines.push(`Дата;${escapeCsvField(p.docDate)}`);
+  lines.push(`Склад;${escapeCsvField(p.warehouseLabel)}`);
+  lines.push(`Направление;${escapeCsvField(p.destinationName)}`);
+  lines.push(`Рейс;${escapeCsvField(p.tripLabel)}`);
+  lines.push("");
+  lines.push(["Калибр", "Кг", "Ящ"].map(escapeCsvField).join(";"));
+  let sumKg = 0;
+  let sumPkg = 0;
+  let anyPkg = false;
+  for (const r of p.rows) {
+    sumKg += r.totalKg;
+    if (r.totalPackages != null) {
+      sumPkg += r.totalPackages;
+      anyPkg = true;
+    }
+    lines.push(
+      [
+        escapeCsvField(r.caliberLabel),
+        String(r.totalKg).replace(".", ","),
+        r.totalPackages != null ? String(r.totalPackages) : "",
+      ].join(";"),
+    );
+  }
+  lines.push(
+    [
+      escapeCsvField("Итого"),
+      String(sumKg).replace(".", ","),
+      anyPkg ? String(Math.round(sumPkg)) : "",
+    ].join(";"),
+  );
+  return lines.join("\r\n");
 }

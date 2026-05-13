@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
 import { apiPostJson } from "../api/fetch-api.js";
 import {
+  aggregateLoadingManifestLinesByCaliber,
+  loadingManifestRoadCsvContent,
+} from "../format/loading-manifest.js";
+import {
   loadingManifestDetailQueryOptions,
   loadingManifestsListQueryOptions,
   queryRoots,
@@ -426,6 +430,17 @@ function ManifestAccordionBlock({
   trips: { id: string; tripNumber: string; status: string }[];
 }) {
   const navigate = useNavigate();
+  const caliberRows = useMemo(
+    () => (detail ? aggregateLoadingManifestLinesByCaliber(detail.lines) : []),
+    [detail],
+  );
+  const roadTripLabel = detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : "";
+  const [partyLinesOpen, setPartyLinesOpen] = useState(true);
+  useEffect(() => {
+    if (detail) {
+      setPartyLinesOpen(!detail.tripId);
+    }
+  }, [detail?.tripId, detail?.id]);
   const tripLabel = m.tripId ? tripNumberById.get(m.tripId) ?? m.tripId : "—";
   const isOpen = manifestId === m.id;
   const detailPath = `${manifestBasePath}/${encodeURIComponent(m.id)}`;
@@ -498,7 +513,101 @@ function ManifestAccordionBlock({
               </div>
             </details>
 
-            <details className="birzha-disclosure birzha-disclosure--nested" open>
+            {detail.tripId ? (
+              <section
+                className="loading-manifest-print birzha-loading-manifest"
+                aria-labelledby={`road-manifest-${detail.id}`}
+              >
+                <h3 id={`road-manifest-${detail.id}`} style={{ margin: "0 0 0.5rem", fontSize: "0.98rem" }}>
+                  Накладная на машину (свод по калибрам)
+                </h3>
+                <p style={{ margin: "0 0 0.55rem", fontSize: "0.88rem", lineHeight: 1.45 }} className="birzha-text-muted">
+                  № <strong>{detail.manifestNumber}</strong> · {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode}) ·{" "}
+                  {detail.destinationName} · рейс: <strong>{roadTripLabel}</strong>
+                </p>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                  <table style={{ ...tableStyle, minWidth: 420 }}>
+                    <thead>
+                      <tr>
+                        <th style={thHead}>Калибр</th>
+                        <th style={thHead}>Кг</th>
+                        <th style={thHead}>Ящ.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {caliberRows.map((r) => (
+                        <tr key={r.caliberLabel}>
+                          <td style={thtd}>{r.caliberLabel}</td>
+                          <td style={thtd}>{r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
+                          <td style={thtd}>
+                            {r.totalPackages != null ? r.totalPackages.toLocaleString("ru-RU") : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
+                          Итого
+                        </th>
+                        <td style={thtd}>
+                          {caliberRows
+                            .reduce((a, r) => a + r.totalKg, 0)
+                            .toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={thtd}>
+                          {caliberRows.some((r) => r.totalPackages != null)
+                            ? caliberRows
+                                .reduce((a, r) => a + (r.totalPackages ?? 0), 0)
+                                .toLocaleString("ru-RU", { maximumFractionDigits: 0 })
+                            : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div className="no-print" style={{ marginTop: "0.65rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <button type="button" style={btnStyle} onClick={() => window.print()}>
+                    Печать накладной
+                  </button>
+                  <button
+                    type="button"
+                    style={btnStyle}
+                    onClick={() => {
+                      const csv = loadingManifestRoadCsvContent({
+                        manifestNumber: detail.manifestNumber,
+                        docDate: detail.docDate,
+                        warehouseLabel: `${detail.warehouseName} (${detail.warehouseCode})`,
+                        destinationName: detail.destinationName,
+                        tripLabel: roadTripLabel,
+                        rows: caliberRows,
+                      });
+                      const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      const slug = detail.manifestNumber.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 72) || "pn";
+                      a.download = `nakladnaya-na-mashinu-${slug}-${detail.docDate}.csv`;
+                      a.rel = "noopener";
+                      document.body.append(a);
+                      a.click();
+                      a.remove();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Сохранить CSV
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
+            <details
+              className="birzha-disclosure birzha-disclosure--nested"
+              open={partyLinesOpen}
+              onToggle={(e) => {
+                setPartyLinesOpen(e.currentTarget.open);
+              }}
+            >
               <summary className="birzha-disclosure__summary">
                 Все строки (партии)
                 <span className="birzha-disclosure__hint">{detail.lines.length} строк</span>
