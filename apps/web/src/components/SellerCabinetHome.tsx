@@ -22,7 +22,10 @@ export function SellerCabinetHome() {
           <h2 id="seller-work-h" className="birzha-home-hero__title">
             Рабочее место продавца
           </h2>
-          <p className="birzha-home-hero__lead">Продажа с рейса — форма ниже.</p>
+          <p className="birzha-home-hero__lead">
+            Сводка «Мои продажи» выше; ниже — новая продажа с рейса: сначала розница или опт, затем рейс, калибр, вес,
+            цена и оплата.
+          </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия продавца">
           <Link to={sales.reports} className="birzha-home-action">

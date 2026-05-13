@@ -522,7 +522,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           {variant === "seller" ? "Продажа с рейса" : "Шаг 2 · Продажа с рейса"}
         </h3>
       }
-      hint={variant === "seller" ? "форма" : "после отгрузки"}
+      hint={variant === "seller" ? "розница или опт → рейс" : "после отгрузки"}
     >
       {isSellerUx && sellerSaleFlash ? (
         <div
@@ -584,6 +584,208 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           )}
         </>
       )}
+
+      {isSellerUx ? (
+        <section
+          className="birzha-seller-deal-kind"
+          aria-labelledby={`${idPrefix}-deal-kind-h`}
+          style={{ marginBottom: "0.9rem" }}
+        >
+          <h4 id={`${idPrefix}-deal-kind-h`} className="birzha-seller-label" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
+            Сначала выберите тип сделки
+          </h4>
+          <div className="birzha-seller-channel-pills" role="group" aria-label="Розница или опт">
+            <button
+              type="button"
+              className={`birzha-seller-channel-pills__btn${saleChannel === "retail" ? " birzha-seller-channel-pills__btn--active" : ""}`}
+              aria-pressed={saleChannel === "retail"}
+              onClick={() => {
+                setSaleChannel("retail");
+                setWholesaleBuyerId("");
+                setWholesalerSearch("");
+              }}
+            >
+              Розница
+            </button>
+            <button
+              type="button"
+              className={`birzha-seller-channel-pills__btn${saleChannel === "wholesale" ? " birzha-seller-channel-pills__btn--active" : ""}`}
+              aria-pressed={saleChannel === "wholesale"}
+              disabled={!wholesalersCatalog}
+              title={
+                wholesalersCatalog ? undefined : "Справочник оптовиков на сервере недоступен — оформите как розницу"
+              }
+              onClick={() => {
+                if (!wholesalersCatalog) {
+                  return;
+                }
+                setSaleChannel("wholesale");
+                setSellCounterpartyId("");
+                setSellClientLabel("");
+                setNewCounterpartyName("");
+              }}
+            >
+              Опт
+            </button>
+          </div>
+          {!wholesalersCatalog ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0", lineHeight: 1.45 }}>
+              Опт сейчас недоступен в этом окружении. Используйте розницу или обратитесь к администратору.
+            </p>
+          ) : null}
+          {saleChannel === "retail" ? (
+            <div style={{ marginTop: "0.85rem" }} role="region" aria-labelledby={`${idPrefix}-buyer-h`}>
+              <span id={`${idPrefix}-buyer-h`} className="birzha-form-label birzha-form-label--block" style={{ marginBottom: "0.35rem" }}>
+                Кому продаёте *
+              </span>
+              {counterpartiesCatalog ? (
+                <>
+                  <label htmlFor={`${idPrefix}-sel-cp-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
+                    Из справочника
+                  </label>
+                  <select
+                    id={`${idPrefix}-sel-cp-seller`}
+                    value={sellCounterpartyId}
+                    onChange={(e) => setSellCounterpartyId(e.target.value)}
+                    className={sellerFieldClass}
+                    style={{ ...selectWide, ...sellerFieldMb }}
+                    disabled={counterpartiesQ.isPending}
+                    aria-busy={counterpartiesQ.isPending || undefined}
+                  >
+                    <option value="">
+                      {counterpartiesQ.isPending ? "— загрузка справочника —" : "— выберите контрагента —"}
+                    </option>
+                    {(counterpartiesQ.data?.counterparties ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.displayName}
+                      </option>
+                    ))}
+                  </select>
+                  <label htmlFor={`${idPrefix}-in-new-cp-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
+                    Новый в справочнике
+                  </label>
+                  {!online ? (
+                    <p className="birzha-callout-info" style={{ margin: "0 0 0.45rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
+                      Без сети новую запись в справочник добавить нельзя — выберите из списка или введите подпись ниже;
+                      её можно использовать в продаже офлайн.
+                    </p>
+                  ) : null}
+                  <input
+                    id={`${idPrefix}-in-new-cp-seller`}
+                    value={newCounterpartyName}
+                    onChange={(e) => setNewCounterpartyName(e.target.value)}
+                    className={sellerFieldClass}
+                    style={sellerFieldMb}
+                    placeholder="название для справочника"
+                    maxLength={200}
+                    autoComplete="off"
+                    disabled={!online}
+                  />
+                  <button
+                    type="button"
+                    style={{ ...btnStyle, marginTop: "0.35rem" }}
+                    disabled={!online || createCounterparty.isPending}
+                    onClick={() => createCounterparty.mutate()}
+                  >
+                    {createCounterparty.isPending ? "…" : "Добавить в справочник"}
+                  </button>
+                  <FieldError error={createCounterparty.error as Error | null} />
+                  <label htmlFor={`${idPrefix}-in-client-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
+                    Подпись в отчёт (если не из справочника)
+                  </label>
+                  <input
+                    id={`${idPrefix}-in-client-seller`}
+                    value={sellClientLabel}
+                    onChange={(e) => setSellClientLabel(e.target.value)}
+                    className={sellerFieldClass}
+                    style={sellerFieldMb}
+                    placeholder="например ИП Иванов"
+                    maxLength={120}
+                    autoComplete="off"
+                    disabled={Boolean(sellCounterpartyId)}
+                  />
+                </>
+              ) : (
+                <>
+                  <label htmlFor={`${idPrefix}-in-client-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
+                    Клиент (подпись в отчёт)
+                  </label>
+                  <input
+                    id={`${idPrefix}-in-client-seller`}
+                    value={sellClientLabel}
+                    onChange={(e) => setSellClientLabel(e.target.value)}
+                    className={sellerFieldClass}
+                    style={sellerFieldMb}
+                    placeholder="например ИП Иванов"
+                    maxLength={120}
+                    autoComplete="off"
+                  />
+                </>
+              )}
+            </div>
+          ) : wholesalersCatalog ? (
+            <div style={{ marginTop: "0.85rem" }} role="region" aria-labelledby={`${idPrefix}-wholesale-h`}>
+              <span id={`${idPrefix}-wholesale-h`} className="birzha-form-label birzha-form-label--block" style={{ marginBottom: "0.35rem" }}>
+                Оптовик *
+              </span>
+              <input
+                value={wholesalerSearch}
+                onChange={(e) => setWholesalerSearch(e.target.value)}
+                className={sellerFieldClass}
+                style={{ ...sellerFieldMb, maxWidth: "100%" }}
+                placeholder="Найти по названию…"
+                autoComplete="off"
+                aria-label="Поиск оптовика"
+              />
+              {wholesalersQ.isPending ? (
+                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.35rem 0 0" }}>
+                  Загрузка списка оптовиков…
+                </p>
+              ) : wholesalersQ.isError ? (
+                <p style={warnText} role="alert">
+                  {wholesalersQ.error instanceof Error ? wholesalersQ.error.message : String(wholesalersQ.error)}
+                </p>
+              ) : (
+                <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
+                  {wholesaleRowsFiltered.length === 0 ? (
+                    <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
+                      Нет совпадений. Оптовиков добавляет администратор.
+                    </li>
+                  ) : (
+                    wholesaleRowsFiltered.map((w) => (
+                      <li key={w.id} className="birzha-seller-wholesaler-list__item">
+                        <button
+                          type="button"
+                          onClick={() => setWholesaleBuyerId(w.id)}
+                          className={
+                            wholesaleBuyerId === w.id
+                              ? "birzha-seller-wholesaler-list__pick birzha-seller-wholesaler-list__pick--active"
+                              : "birzha-seller-wholesaler-list__pick"
+                          }
+                        >
+                          {w.name}
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+              {wholesaleBuyerId ? (
+                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.45rem 0 0" }}>
+                  Выбрано: <strong>{selectedWholesalerLabel || wholesaleBuyerId}</strong>
+                </p>
+              ) : (
+                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.45rem 0 0" }}>
+                  Нажмите строку в списке.
+                </p>
+              )}
+            </div>
+          ) : null}
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0", lineHeight: 1.45 }}>
+            Дальше — рейс, калибр (партия), вес, цена за кг и способ оплаты; в конце нажмите «Зафиксировать продажу».
+          </p>
+        </section>
+      ) : null}
 
       <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">Рейс *</span>
       {isSellerUx ? (
@@ -998,7 +1200,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </span>
         )}
       </p>
-      {saleChannel === "retail" && counterpartiesCatalog ? (
+      {!isSellerUx && saleChannel === "retail" && counterpartiesCatalog ? (
         <>
           <label
             htmlFor={`${idPrefix}-sel-cp`}
@@ -1011,7 +1213,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             value={sellCounterpartyId}
             onChange={(e) => setSellCounterpartyId(e.target.value)}
             className={sellerFieldClass}
-            style={isSellerUx ? { ...selectWide, ...sellerFieldMb } : selectWide}
+            style={selectWide}
             disabled={counterpartiesQ.isPending}
             aria-busy={counterpartiesQ.isPending || undefined}
           >
@@ -1041,7 +1243,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             value={newCounterpartyName}
             onChange={(e) => setNewCounterpartyName(e.target.value)}
             className={sellerFieldClass}
-            style={isSellerUx ? sellerFieldMb : fieldStyle}
+            style={fieldStyle}
             placeholder="название для справочника"
             maxLength={200}
             autoComplete="off"
@@ -1061,7 +1263,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             value={sellClientLabel}
             onChange={(e) => setSellClientLabel(e.target.value)}
             className={sellerFieldClass}
-            style={isSellerUx ? { ...sellerFieldMb, marginTop: "0.55rem" } : { ...fieldStyle, marginTop: "0.55rem" }}
+            style={{ ...fieldStyle, marginTop: "0.55rem" }}
             placeholder="Подпись без справочника, напр. ИП Иванов"
             maxLength={120}
             autoComplete="off"
@@ -1069,7 +1271,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             aria-label="Подпись клиента для отчёта, если не выбран справочник"
           />
         </>
-      ) : saleChannel === "retail" ? (
+      ) : !isSellerUx && saleChannel === "retail" ? (
         <>
           <label
             htmlFor={`${idPrefix}-in-client`}
@@ -1082,7 +1284,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             value={sellClientLabel}
             onChange={(e) => setSellClientLabel(e.target.value)}
             className={sellerFieldClass}
-            style={isSellerUx ? sellerFieldMb : fieldStyle}
+            style={fieldStyle}
             placeholder="например ИП Иванов"
             maxLength={120}
             autoComplete="off"
@@ -1090,31 +1292,35 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           />
         </>
       ) : null}
-      <label htmlFor={`${idPrefix}-sel-sale-ch`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        Тип продажи *
-      </label>
-      <select
-        id={`${idPrefix}-sel-sale-ch`}
-        value={saleChannel}
-        onChange={(e) => {
-          const v = e.target.value as "retail" | "wholesale";
-          setSaleChannel(v);
-          if (v === "wholesale") {
-            setSellCounterpartyId("");
-            setSellClientLabel("");
-          }
-        }}
-        className={sellerFieldClass}
-        style={isSellerUx ? sellerFieldMb : fieldStyle}
-      >
-        <option value="retail">Розница</option>
-        <option value="wholesale" disabled={!wholesalersCatalog}>
-          Опт {!wholesalersCatalog ? "(недоступно)" : ""}
-        </option>
-      </select>
-      {saleChannel === "wholesale" && wholesalersCatalog ? (
+      {!isSellerUx ? (
+        <>
+          <label htmlFor={`${idPrefix}-sel-sale-ch`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
+            Тип продажи *
+          </label>
+          <select
+            id={`${idPrefix}-sel-sale-ch`}
+            value={saleChannel}
+            onChange={(e) => {
+              const v = e.target.value as "retail" | "wholesale";
+              setSaleChannel(v);
+              if (v === "wholesale") {
+                setSellCounterpartyId("");
+                setSellClientLabel("");
+              }
+            }}
+            className={sellerFieldClass}
+            style={fieldStyle}
+          >
+            <option value="retail">Розница</option>
+            <option value="wholesale" disabled={!wholesalersCatalog}>
+              Опт {!wholesalersCatalog ? "(недоступно)" : ""}
+            </option>
+          </select>
+        </>
+      ) : null}
+      {!isSellerUx && saleChannel === "wholesale" && wholesalersCatalog ? (
         <BirzhaDisclosure
-          defaultOpen={isSellerUx}
+          defaultOpen
           title={
             <span className="birzha-form-label" style={{ margin: 0, fontWeight: 600 }}>
               Оптовик *
@@ -1126,7 +1332,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             value={wholesalerSearch}
             onChange={(e) => setWholesalerSearch(e.target.value)}
             className={sellerFieldClass}
-            style={isSellerUx ? { ...sellerFieldMb, maxWidth: "100%" } : { ...fieldStyle, maxWidth: "100%" }}
+            style={{ ...fieldStyle, maxWidth: "100%" }}
             placeholder="Найти по имени…"
             autoComplete="off"
             aria-label="Поиск оптовика"
