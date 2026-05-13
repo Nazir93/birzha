@@ -540,11 +540,6 @@ export function AllocationPanel() {
               title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Отбор накладных и таблица партий</span>}
               hint="погрузка"
             >
-              <p className="birzha-text-muted" style={{ margin: "0 0 0.65rem", fontSize: "0.86rem", lineHeight: 1.45 }}>
-                Партии, которые уже попали в любую сохранённую погрузочную накладную на этом складе, здесь не
-                показываются — их ведут в разделе «Погрузка» (привязка к рейсу и дальше). Так проще не собрать второй
-                раз тот же остаток в новую ПН.
-              </p>
               {documentOptions.length === 0 && batchesInWh.length > 0 && (
                 <p className="birzha-callout-info" role="status">
                   На выбранном складе нет привязки к номеру накладной в ответе API — показаны все партии с остатком на этом
@@ -744,11 +739,7 @@ export function AllocationPanel() {
                   </p>
                 ) : null}
                 {manifestsOnThisWarehouse.length === 0 && !manifestsListQuery.isPending && !manifestsListQuery.isError ? (
-                  <BirzhaEmptyState
-                    compact
-                    title="Пока нет сохранённых ПН на этом складе"
-                    description="Сохраните погрузочную накладную блоком выше — она появится в этом списке. Привязку к рейсу делают в разделе «Погрузка»."
-                  />
+                  <BirzhaEmptyState compact title="Пока нет сохранённых ПН на этом складе" />
                 ) : null}
                 {manifestsOnThisWarehouse.length > 0 ? (
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
