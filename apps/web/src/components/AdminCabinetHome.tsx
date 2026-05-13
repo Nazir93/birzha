@@ -303,6 +303,18 @@ export function AdminCabinetHome() {
             </div>
           </header>
 
+          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Отгружено и погрузка">
+            <Link to={adminRoutes.loadingManifests}>Погрузка на машину</Link>
+            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
+              ·
+            </span>
+            <Link to={adminRoutes.sellerDispatch}>Отгружено в рейс</Link>
+            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
+              ·
+            </span>
+            <Link to={adminRoutes.transitTrips}>В пути по рейсам</Link>
+          </nav>
+
           <div className="birzha-dashboard-layout birzha-admin-dash__body">
             <BirzhaDisclosure title="Сводные показатели" hint="рейсы, партии, склады" defaultOpen>
             <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">

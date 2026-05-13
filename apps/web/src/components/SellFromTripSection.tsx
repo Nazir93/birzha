@@ -14,6 +14,10 @@ import {
   estimateNetTransitPackageCount,
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
+import {
+  formatSellerCaliberGroupOptionLabel,
+  groupSellableRowsByCaliber,
+} from "../format/seller-trip-caliber-groups.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
 import {
@@ -51,17 +55,6 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   }
   const frac = rem.toString().padStart(3, "0").replace(/0+$/, "");
   return `${negative ? "-" : ""}${whole}.${frac}`;
-}
-
-/** Одна строка списка продавца: накладная (если есть) · калибр · кг в машине — без optgroup. */
-function formatSellerFlatBatchOption(row: TripBatchTableRow, batch: BatchListItem | undefined): string {
-  const caliberLine = batch ? formatNakladLineLabel(batch) : `партия ${formatShortBatchId(row.batchId)}`;
-  const kg = gramsBigIntToKgDecimalString(row.netTransitG);
-  const doc = batch?.nakladnaya?.documentNumber?.trim();
-  if (doc) {
-    return `№ ${doc} · ${caliberLine} · ${kg} кг`;
-  }
-  return `${caliberLine} · ${kg} кг`;
 }
 
 function useDebouncedValue<T>(value: T, ms: number): T {
@@ -354,40 +347,29 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       .filter((g) => g.rows.length > 0);
   }, [sellTripRowsByNaklad, partyFilter]);
 
-  /** Продавец: все калибры одним списком (без групп по накладной), сортировка по товару/калибру. */
-  const sellerTripRowsFlatSorted = useMemo(() => {
-    const rows = [...sellableOnTripRows];
-    rows.sort((a, b) => {
-      const ba = batchByIdForSell.get(a.batchId);
-      const bb = batchByIdForSell.get(b.batchId);
-      const lineA = ba ? formatNakladLineLabel(ba) : a.batchId;
-      const lineB = bb ? formatNakladLineLabel(bb) : b.batchId;
-      let cmp = lineA.localeCompare(lineB, "ru");
-      if (cmp !== 0) {
-        return cmp;
-      }
-      const docA = ba?.nakladnaya?.documentNumber?.trim() ?? "";
-      const docB = bb?.nakladnaya?.documentNumber?.trim() ?? "";
-      cmp = docA.localeCompare(docB, "ru");
-      if (cmp !== 0) {
-        return cmp;
-      }
-      return a.batchId.localeCompare(b.batchId);
-    });
-    return rows;
-  }, [sellableOnTripRows, batchByIdForSell]);
+  const sellerCaliberGroups = useMemo(
+    () => groupSellableRowsByCaliber(sellableOnTripRows, batchByIdForSell),
+    [sellableOnTripRows, batchByIdForSell],
+  );
 
-  const sellerTripRowsFlatFiltered = useMemo(() => {
+  const sellerCaliberGroupsFiltered = useMemo(() => {
     const q = partyFilter.trim().toLowerCase();
     if (!q) {
-      return sellerTripRowsFlatSorted;
+      return sellerCaliberGroups;
     }
-    return sellerTripRowsFlatSorted.filter((row) => {
-      const b = batchByIdForSell.get(row.batchId);
-      const text = formatSellerFlatBatchOption(row, b).toLowerCase();
-      return text.includes(q) || row.batchId.toLowerCase().includes(q);
+    return sellerCaliberGroups.filter((g) => {
+      const opt = formatSellerCaliberGroupOptionLabel(g, gramsBigIntToKgDecimalString).toLowerCase();
+      return opt.includes(q) || g.rows.some((r) => r.batchId.toLowerCase().includes(q));
     });
-  }, [sellerTripRowsFlatSorted, batchByIdForSell, partyFilter]);
+  }, [sellerCaliberGroups, partyFilter]);
+
+  const sellerMultiBatchGroup = useMemo(() => {
+    if (!isSellerUx || !sellBatchId.trim()) {
+      return null;
+    }
+    const id = sellBatchId.trim();
+    return sellerCaliberGroups.find((g) => g.primaryBatchId === id && g.rows.length > 1) ?? null;
+  }, [isSellerUx, sellBatchId, sellerCaliberGroups]);
 
   const wholesaleRowsFiltered = useMemo(() => {
     const all = wholesalersQ.data?.wholesalers ?? [];
@@ -425,7 +407,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     Boolean(sellTripIdTrim) &&
     sellReportQuery.isSuccess &&
     sellableOnTripRows.length > 0 &&
-    (isSellerUx ? sellerTripRowsFlatSorted.length > 8 : true);
+    (isSellerUx ? sellerCaliberGroups.length > 8 : true);
 
   const sellSelectionSummary = useMemo((): {
     line: string;
@@ -951,7 +933,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       {showBatchListFilter && (
         <>
           <label htmlFor={`${idPrefix}-party-filter`} className="birzha-form-label">
-            {isSellerUx ? "Поиск по списку (много позиций)" : "Фильтр списка партий (накладная, калибр, id)"}
+            {isSellerUx ? "Поиск по калибру или id партии" : "Фильтр списка партий (накладная, калибр, id)"}
           </label>
           <input
             id={`${idPrefix}-party-filter`}
@@ -959,7 +941,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             onChange={(e) => setPartyFilter(e.target.value)}
             className={sellerFieldClass}
             style={isSellerUx ? sellerFieldMb : { ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
-            placeholder={isSellerUx ? "Калибр, № накладной или id партии…" : "Сузить длинный список…"}
+            placeholder={isSellerUx ? "Калибр или id партии…" : "Сузить длинный список…"}
             autoComplete="off"
           />
         </>
@@ -969,7 +951,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       </label>
       {isSellerUx && sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
-          Все позиции рейса одним списком: в каждой строке — калибр и сколько килограмм ещё в машине.
+          Один калибр — одна строка: килограммы «в машине» суммируются по всем партиям этого калибра на рейсе (номера
+          накладных в списке не показываем).
         </p>
       ) : null}
       <select
@@ -978,6 +961,20 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         onChange={(e) => {
           const id = e.target.value;
           setSellBatchId(id);
+          if (!id.trim()) {
+            setSellKg("");
+            return;
+          }
+          if (isSellerUx) {
+            const g = sellerCaliberGroups.find((x) => x.primaryBatchId === id);
+            const row = sellableOnTripRows.find((r) => r.batchId === id);
+            if (g && row) {
+              setSellKg(
+                gramsBigIntToKgDecimalString(g.rows.length <= 1 ? g.totalNetG : row.netTransitG),
+              );
+            }
+            return;
+          }
           const row = sellableOnTripRows.find((r) => r.batchId === id);
           if (row) {
             setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
@@ -1011,9 +1008,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                     : "— выберите партию (калибр) —"}
         </option>
         {isSellerUx
-          ? sellerTripRowsFlatFiltered.map((row) => (
-              <option key={row.batchId} value={row.batchId}>
-                {formatSellerFlatBatchOption(row, batchByIdForSell.get(row.batchId))}
+          ? sellerCaliberGroupsFiltered.map((g) => (
+              <option key={g.primaryBatchId} value={g.primaryBatchId}>
+                {formatSellerCaliberGroupOptionLabel(g, gramsBigIntToKgDecimalString)}
               </option>
             ))
           : sellTripRowsFiltered.map((g) => (
@@ -1026,6 +1023,17 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               </optgroup>
             ))}
       </select>
+      {isSellerUx && sellerMultiBatchGroup ? (
+        <p
+          className="birzha-callout-info"
+          style={{ fontSize: "0.86rem", marginTop: "0.35rem", marginBottom: "0.45rem", lineHeight: 1.45 }}
+          role="status"
+        >
+          По этому калибру несколько партий на рейсе. За одну сделку — с партии с наибольшим остатком, до{" "}
+          <strong>{gramsBigIntToKgDecimalString(sellerMultiBatchGroup.primaryRow.netTransitG)} кг</strong>; остаток по
+          калибру оформите следующей продажей.
+        </p>
+      ) : null}
       {sellSelectionSummary && (
         <p
           className="birzha-callout-info"
@@ -1036,12 +1044,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           {isSellerUx ? (
             <>
               <strong>{sellSelectionSummary.line}</strong>
-              {sellSelectionSummary.doc !== "—" && (
-                <>
-                  {" "}
-                  (накладная № {sellSelectionSummary.doc})
-                </>
-              )}
               {". "}
             </>
           ) : (
