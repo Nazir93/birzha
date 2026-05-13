@@ -8,6 +8,8 @@ import { desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
+import type { TripRepository } from "../application/ports/trip-repository.port.js";
+import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
 import {
   batches,
@@ -22,6 +24,8 @@ import {
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
+import { DrizzleBatchRepository } from "../infrastructure/persistence/drizzle-batch.repository.js";
+import { DrizzleTripShipmentRepository } from "../infrastructure/persistence/drizzle-trip-shipment.repository.js";
 
 type JwtUser = { sub: string; roles: AuthRoleGrant[] };
 
@@ -40,6 +44,8 @@ export function registerLoadingManifestRoutes(
   app: FastifyInstance,
   db: DbClient,
   routeAuth: BusinessRouteAuth,
+  /** Для POST assign-trip: синхронизация отгрузки в рейс по строкам ПН (иначе только запись trip_id). */
+  tripRead?: TripRepository,
 ): void {
   app.post("/loading-manifests", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
@@ -292,14 +298,75 @@ export function registerLoadingManifestRoutes(
     try {
       const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
       const body = assignLoadingManifestTripBodySchema.parse(req.body);
-      const [row] = await db
-        .update(loadingManifests)
-        .set({ tripId: body.tripId })
-        .where(eq(loadingManifests.id, params.manifestId))
-        .returning({ id: loadingManifests.id });
-      if (!row) {
+      const manifestId = params.manifestId;
+
+      const [existing] = await db
+        .select({ tripId: loadingManifests.tripId })
+        .from(loadingManifests)
+        .where(eq(loadingManifests.id, manifestId))
+        .limit(1);
+      if (!existing) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
+      if (existing.tripId && existing.tripId !== body.tripId) {
+        return reply.code(400).send({
+          error: "loading_manifest_trip_change_forbidden",
+          message: "Смена рейса у уже привязанной погрузочной накладной не поддерживается.",
+        });
+      }
+
+      if (!tripRead) {
+        await db
+          .update(loadingManifests)
+          .set({ tripId: body.tripId })
+          .where(eq(loadingManifests.id, manifestId));
+        return reply.send({ ok: true });
+      }
+
+      await db.transaction(async (tx) => {
+        const exec = tx as unknown as DbClient;
+        await exec
+          .update(loadingManifests)
+          .set({ tripId: body.tripId })
+          .where(eq(loadingManifests.id, manifestId));
+
+        const lines = await exec
+          .select({
+            batchId: loadingManifestLines.batchId,
+            grams: loadingManifestLines.grams,
+          })
+          .from(loadingManifestLines)
+          .where(eq(loadingManifestLines.manifestId, manifestId));
+
+        const batchRepo = new DrizzleBatchRepository(exec);
+        const shipRepo = new DrizzleTripShipmentRepository(exec);
+        const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined);
+
+        for (const line of lines) {
+          const ledger = await shipRepo.totalGramsForTripAndBatch(body.tripId, line.batchId);
+          const delta = line.grams - ledger;
+          if (delta <= 0n) {
+            continue;
+          }
+          const [br] = await exec
+            .select({ onWarehouseGrams: batches.onWarehouseGrams })
+            .from(batches)
+            .where(eq(batches.id, line.batchId))
+            .limit(1);
+          const cap = br?.onWarehouseGrams ?? 0n;
+          const move = delta < cap ? delta : cap;
+          if (move <= 0n) {
+            continue;
+          }
+          const kg = Number(move) / 1000;
+          await shipUse.execute({
+            batchId: line.batchId,
+            tripId: body.tripId,
+            kg,
+          });
+        }
+      });
+
       return reply.send({ ok: true });
     } catch (error) {
       return sendMappedError(reply, error);

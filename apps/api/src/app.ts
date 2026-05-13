@@ -406,7 +406,7 @@ export async function buildApp(options: {
     );
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
-      registerLoadingManifestRoutes(app, db, routeAuth);
+      registerLoadingManifestRoutes(app, db, routeAuth, tripRepository ?? undefined);
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
     }
 
