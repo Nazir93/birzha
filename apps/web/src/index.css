@@ -757,6 +757,12 @@ a.birzha-kpi-tile--link:focus-visible {
   box-shadow: 0 0 0 2px var(--birzha-accent-soft);
 }
 
+/* Список партий продавца: плоский перечень калибров с кг в строке */
+.birzha-seller-sell-panel select.birzha-seller-batch-select {
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
 /* Розница / опт — первый шаг в форме продавца */
 .birzha-seller-channel-pills {
   display: flex;

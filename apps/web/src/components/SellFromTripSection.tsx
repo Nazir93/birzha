@@ -53,6 +53,17 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
+/** Одна строка списка продавца: накладная (если есть) · калибр · кг в машине — без optgroup. */
+function formatSellerFlatBatchOption(row: TripBatchTableRow, batch: BatchListItem | undefined): string {
+  const caliberLine = batch ? formatNakladLineLabel(batch) : `партия ${formatShortBatchId(row.batchId)}`;
+  const kg = gramsBigIntToKgDecimalString(row.netTransitG);
+  const doc = batch?.nakladnaya?.documentNumber?.trim();
+  if (doc) {
+    return `№ ${doc} · ${caliberLine} · ${kg} кг`;
+  }
+  return `${caliberLine} · ${kg} кг`;
+}
+
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -343,6 +354,41 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       .filter((g) => g.rows.length > 0);
   }, [sellTripRowsByNaklad, partyFilter]);
 
+  /** Продавец: все калибры одним списком (без групп по накладной), сортировка по товару/калибру. */
+  const sellerTripRowsFlatSorted = useMemo(() => {
+    const rows = [...sellableOnTripRows];
+    rows.sort((a, b) => {
+      const ba = batchByIdForSell.get(a.batchId);
+      const bb = batchByIdForSell.get(b.batchId);
+      const lineA = ba ? formatNakladLineLabel(ba) : a.batchId;
+      const lineB = bb ? formatNakladLineLabel(bb) : b.batchId;
+      let cmp = lineA.localeCompare(lineB, "ru");
+      if (cmp !== 0) {
+        return cmp;
+      }
+      const docA = ba?.nakladnaya?.documentNumber?.trim() ?? "";
+      const docB = bb?.nakladnaya?.documentNumber?.trim() ?? "";
+      cmp = docA.localeCompare(docB, "ru");
+      if (cmp !== 0) {
+        return cmp;
+      }
+      return a.batchId.localeCompare(b.batchId);
+    });
+    return rows;
+  }, [sellableOnTripRows, batchByIdForSell]);
+
+  const sellerTripRowsFlatFiltered = useMemo(() => {
+    const q = partyFilter.trim().toLowerCase();
+    if (!q) {
+      return sellerTripRowsFlatSorted;
+    }
+    return sellerTripRowsFlatSorted.filter((row) => {
+      const b = batchByIdForSell.get(row.batchId);
+      const text = formatSellerFlatBatchOption(row, b).toLowerCase();
+      return text.includes(q) || row.batchId.toLowerCase().includes(q);
+    });
+  }, [sellerTripRowsFlatSorted, batchByIdForSell, partyFilter]);
+
   const wholesaleRowsFiltered = useMemo(() => {
     const all = wholesalersQ.data?.wholesalers ?? [];
     const active = all.filter((w) => w.isActive);
@@ -379,7 +425,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     Boolean(sellTripIdTrim) &&
     sellReportQuery.isSuccess &&
     sellableOnTripRows.length > 0 &&
-    (isSellerUx ? sellableOnTripRows.length > 12 : true);
+    (isSellerUx ? sellerTripRowsFlatSorted.length > 8 : true);
 
   const sellSelectionSummary = useMemo((): {
     line: string;
@@ -896,7 +942,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
-          <LoadingIndicator size="sm" label="Загрузка накладных по строкам рейса…" />
+          <LoadingIndicator
+            size="sm"
+            label={isSellerUx ? "Загрузка калибров и накладных…" : "Загрузка накладных по строкам рейса…"}
+          />
         </p>
       )}
       {showBatchListFilter && (
@@ -910,14 +959,19 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             onChange={(e) => setPartyFilter(e.target.value)}
             className={sellerFieldClass}
             style={isSellerUx ? sellerFieldMb : { ...fieldStyle, marginBottom: "0.45rem", maxWidth: "100%" }}
-            placeholder={isSellerUx ? "Начните вводить калибр или номер накладной…" : "Сузить длинный список…"}
+            placeholder={isSellerUx ? "Калибр, № накладной или id партии…" : "Сузить длинный список…"}
             autoComplete="off"
           />
         </>
       )}
       <label htmlFor={`${idPrefix}-sel-batch`} className="birzha-form-label">
-        {isSellerUx ? "Товар и калибр (сколько кг ещё в машине) *" : "Накладная и калибр (кг в машине) *"}
+        {isSellerUx ? "Калибр и остаток в машине *" : "Накладная и калибр (кг в машине) *"}
       </label>
+      {isSellerUx && sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 ? (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.4rem", lineHeight: 1.45 }}>
+          Все позиции рейса одним списком: в каждой строке — калибр и сколько килограмм ещё в машине.
+        </p>
+      ) : null}
       <select
         id={`${idPrefix}-sel-batch`}
         value={sellBatchId}
@@ -929,10 +983,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
           }
         }}
-        className={sellerFieldClass}
+        className={isSellerUx ? "birzha-seller-form-control birzha-seller-batch-select" : sellerFieldClass}
         style={
           isSellerUx
-            ? { ...sellerFieldMb, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }
+            ? { ...sellerFieldMb, marginBottom: "0.2rem", maxHeight: "min(55vh, 26rem)" }
             : { ...selectWide, marginBottom: "0.2rem", maxHeight: "min(50vh, 22rem)" }
         }
         disabled={
@@ -952,17 +1006,25 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 ? "— список недоступен, введите ID партии ниже —"
                 : batchesForTripQuery.isPending && batchIdsOnTrip.length > 0
                   ? "… загрузка партий …"
-                  : "— выберите партию (калибр) —"}
+                  : isSellerUx
+                    ? "— выберите калибр (кг в строке) —"
+                    : "— выберите партию (калибр) —"}
         </option>
-        {sellTripRowsFiltered.map((g) => (
-          <optgroup key={g.key} label={g.optgroupLabel}>
-            {g.rows.map((row) => (
+        {isSellerUx
+          ? sellerTripRowsFlatFiltered.map((row) => (
               <option key={row.batchId} value={row.batchId}>
-                {formatSellBatchOptionLabel(row, { includeNakladPrefix: false })}
+                {formatSellerFlatBatchOption(row, batchByIdForSell.get(row.batchId))}
               </option>
+            ))
+          : sellTripRowsFiltered.map((g) => (
+              <optgroup key={g.key} label={g.optgroupLabel}>
+                {g.rows.map((row) => (
+                  <option key={row.batchId} value={row.batchId}>
+                    {formatSellBatchOptionLabel(row, { includeNakladPrefix: false })}
+                  </option>
+                ))}
+              </optgroup>
             ))}
-          </optgroup>
-        ))}
       </select>
       {sellSelectionSummary && (
         <p
