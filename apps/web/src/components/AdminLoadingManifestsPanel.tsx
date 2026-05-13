@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
 import { apiPostJson } from "../api/fetch-api.js";
 import { loadingManifestDetailQueryOptions, loadingManifestsListQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
-import { adminRoutes } from "../routes.js";
+import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { CreateTripIfAllowed } from "./CreateTripIfAllowed.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -38,7 +38,10 @@ function formatPkg(n: number | null | undefined): string {
 }
 
 export function AdminLoadingManifestsPanel() {
+  const { pathname } = useLocation();
   const { manifestId = "" } = useParams();
+  const loadingManifestsBase = adminAwarePathForPath(pathname, adminRoutes.loadingManifests, ops.loadingManifests);
+  const reportsBase = adminAwarePathForPath(pathname, adminRoutes.reports, ops.reports);
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
   const listQuery = useQuery(loadingManifestsListQueryOptions());
@@ -112,8 +115,9 @@ export function AdminLoadingManifestsPanel() {
         Погрузка
       </h2>
       <p className="birzha-callout-info" style={{ marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
-        Свод по документам и рейсам: сверху общая картина по складам, направлениям и калибрам; ниже рейсы и каждая накладная в
-        отдельном раскрывающемся блоке — как матрёшка. Откройте нужный уровень по очереди.
+        Здесь привязка сохранённых погрузочных накладных к рейсу. Накладную сначала оформляют в «Распределении» — после
+        сохранения она появляется в списке ниже; откройте строку и назначьте рейс. Сверху — общая сводка по складам и
+        направлениям; ниже рейсы и каждая накладная в отдельном блоке.
       </p>
 
       {listQuery.isPending ? (
@@ -242,7 +246,7 @@ export function AdminLoadingManifestsPanel() {
                     <td style={thtd}>{t.status}</td>
                     <td style={thtd}>{t.vehicleLabel ?? "—"}</td>
                     <td style={thtd}>
-                      <Link to={`${adminRoutes.reports}?trip=${encodeURIComponent(t.id)}`}>Открыть</Link>
+                      <Link to={`${reportsBase}?trip=${encodeURIComponent(t.id)}`}>Открыть</Link>
                     </td>
                   </tr>
                 ))}
@@ -266,6 +270,7 @@ export function AdminLoadingManifestsPanel() {
                   key={m.id}
                   m={m}
                   manifestId={manifestId}
+                  loadingManifestsBase={loadingManifestsBase}
                   tripNumberById={tripNumberById}
                   detail={detail && detail.id === m.id ? detail : null}
                   detailLoading={Boolean(manifestId && manifestId === m.id && detailQuery.isPending)}
@@ -286,6 +291,7 @@ export function AdminLoadingManifestsPanel() {
 function ManifestAccordionBlock({
   m,
   manifestId,
+  loadingManifestsBase,
   tripNumberById,
   detail,
   detailLoading,
@@ -297,6 +303,7 @@ function ManifestAccordionBlock({
 }: {
   m: LoadingManifestSummary;
   manifestId: string;
+  loadingManifestsBase: string;
   tripNumberById: Map<string, string>;
   detail: LoadingManifestDetail | null;
   detailLoading: boolean;
@@ -328,7 +335,7 @@ function ManifestAccordionBlock({
       </summary>
       <div className="birzha-disclosure__body">
         <p className="birzha-callout-info" style={{ fontSize: "0.82rem", marginTop: 0 }}>
-          <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`}>Открыть карточку (URL)</Link> — полная
+          <Link to={`${loadingManifestsBase}/${encodeURIComponent(m.id)}`}>Открыть карточку (URL)</Link> — полная
           форма привязки к рейсу и строки партий ниже, если карточка загружена.
         </p>
 

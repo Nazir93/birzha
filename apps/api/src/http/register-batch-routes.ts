@@ -21,6 +21,7 @@ import {
   productGrades,
   purchaseDocumentLines,
   purchaseDocuments,
+  warehouses as warehousesTable,
 } from "../db/schema.js";
 import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
 
@@ -332,19 +333,75 @@ export function registerBatchRoutes(
         return reply.code(503).send({ error: "warehouse_write_off_ledger_requires_postgres" });
       }
       try {
-        const q = z.object({ purchaseDocumentId: z.string().min(1) });
-        const { purchaseDocumentId } = q.parse(req.query);
+        const q = z.object({
+          purchaseDocumentId: z.string().min(1).optional(),
+          limit: z.coerce.number().int().min(1).max(500).optional(),
+          warehouseId: z.string().min(1).optional(),
+        });
+        const parsed = q.parse(req.query);
+
+        if (parsed.purchaseDocumentId) {
+          const purchaseDocumentId = parsed.purchaseDocumentId;
+          const rows = await db
+            .select({
+              id: batchWarehouseWriteOffs.id,
+              batchId: batchWarehouseWriteOffs.batchId,
+              grams: batchWarehouseWriteOffs.grams,
+              createdAt: batchWarehouseWriteOffs.createdAt,
+              documentId: purchaseDocuments.id,
+              documentNumber: purchaseDocuments.documentNumber,
+              productGradeCode: productGrades.code,
+            })
+            .from(batchWarehouseWriteOffs)
+            .innerJoin(
+              purchaseDocumentLines,
+              eq(batchWarehouseWriteOffs.batchId, purchaseDocumentLines.batchId),
+            )
+            .innerJoin(
+              purchaseDocuments,
+              eq(purchaseDocumentLines.documentId, purchaseDocuments.id),
+            )
+            .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
+            .where(
+              and(
+                eq(purchaseDocuments.id, purchaseDocumentId),
+                eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+              ),
+            )
+            .orderBy(desc(batchWarehouseWriteOffs.createdAt));
+          return reply.send({
+            documentId: purchaseDocumentId,
+            totalKg: rows.reduce((a, r) => a + gramsToKg(r.grams), 0),
+            lines: rows.map((r) => ({
+              id: r.id,
+              batchId: r.batchId,
+              kg: gramsToKg(r.grams),
+              createdAt: r.createdAt.toISOString(),
+              productGradeCode: r.productGradeCode,
+            })),
+          });
+        }
+
+        const limit = parsed.limit ?? 200;
+        const conditions = [eq(batchWarehouseWriteOffs.reason, "quality_reject")];
+        if (parsed.warehouseId) {
+          conditions.push(eq(batchesTable.warehouseId, parsed.warehouseId));
+        }
         const rows = await db
           .select({
             id: batchWarehouseWriteOffs.id,
             batchId: batchWarehouseWriteOffs.batchId,
             grams: batchWarehouseWriteOffs.grams,
             createdAt: batchWarehouseWriteOffs.createdAt,
-            documentId: purchaseDocuments.id,
+            purchaseDocumentId: purchaseDocuments.id,
             documentNumber: purchaseDocuments.documentNumber,
             productGradeCode: productGrades.code,
+            warehouseName: warehousesTable.name,
+            warehouseCode: warehousesTable.code,
           })
           .from(batchWarehouseWriteOffs)
+          .innerJoin(batchesTable, eq(batchWarehouseWriteOffs.batchId, batchesTable.id))
+          .leftJoin(warehousesTable, eq(batchesTable.warehouseId, warehousesTable.id))
           .innerJoin(
             purchaseDocumentLines,
             eq(batchWarehouseWriteOffs.batchId, purchaseDocumentLines.batchId),
@@ -354,22 +411,25 @@ export function registerBatchRoutes(
             eq(purchaseDocumentLines.documentId, purchaseDocuments.id),
           )
           .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
-          .where(
-            and(
-              eq(purchaseDocuments.id, purchaseDocumentId),
-              eq(batchWarehouseWriteOffs.reason, "quality_reject"),
-            ),
-          )
-          .orderBy(desc(batchWarehouseWriteOffs.createdAt));
+          .where(and(...conditions))
+          .orderBy(desc(batchWarehouseWriteOffs.createdAt))
+          .limit(limit);
+
         return reply.send({
-          documentId: purchaseDocumentId,
+          ledger: "recent",
+          warehouseIdFilter: parsed.warehouseId ?? null,
+          limit,
           totalKg: rows.reduce((a, r) => a + gramsToKg(r.grams), 0),
           lines: rows.map((r) => ({
             id: r.id,
             batchId: r.batchId,
             kg: gramsToKg(r.grams),
             createdAt: r.createdAt.toISOString(),
+            purchaseDocumentId: r.purchaseDocumentId,
+            documentNumber: r.documentNumber,
             productGradeCode: r.productGradeCode,
+            warehouseName: r.warehouseName,
+            warehouseCode: r.warehouseCode,
           })),
         });
       } catch (error) {

@@ -47,6 +47,8 @@ export const adminRoutes = {
   soldBySeller: `${prefix.admin}/sold-by-seller`,
   /** Склады: справочник + остатки по выбранному складу. */
   stockWarehouses: `${prefix.admin}/stock-warehouses`,
+  /** Журнал списаний брака с остатка (все накладные). */
+  warehouseWriteOffsLedger: `${prefix.admin}/warehouse-write-offs`,
   users: `${prefix.admin}/users`,
   service: `${prefix.admin}/service`,
 } as const;

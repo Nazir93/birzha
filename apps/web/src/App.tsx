@@ -36,6 +36,11 @@ const AdminSoldBySellerPage = lazy(() =>
 const AdminStockWarehousesPage = lazy(() =>
   import("./components/AdminStockWarehousesPage.js").then((m) => ({ default: m.AdminStockWarehousesPage })),
 );
+const AdminWarehouseWriteOffsLedgerPage = lazy(() =>
+  import("./components/AdminWarehouseWriteOffsLedgerPage.js").then((m) => ({
+    default: m.AdminWarehouseWriteOffsLedgerPage,
+  })),
+);
 const AdminTransitTripsPage = lazy(() =>
   import("./components/AdminTransitTripsPage.js").then((m) => ({ default: m.AdminTransitTripsPage })),
 );
@@ -387,6 +392,16 @@ export function App() {
                 <RequirePanel panel="inventory">
                   <section className="birzha-card">
                     <AdminStockWarehousesPage />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="warehouse-write-offs"
+              element={
+                <RequirePanel panel="inventory">
+                  <section className="birzha-card">
+                    <AdminWarehouseWriteOffsLedgerPage />
                   </section>
                 </RequirePanel>
               }

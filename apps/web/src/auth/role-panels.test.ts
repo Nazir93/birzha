@@ -33,12 +33,18 @@ describe("role-panels", () => {
     const u = userWithRoles("manager");
     expect(canAccessCabinet(u, "admin")).toBe(false);
     expect(canAccessPanel(u, "inventory")).toBe(false);
-    expect(canAccessPanel(u, "loadingManifests")).toBe(false);
+    expect(canAccessPanel(u, "loadingManifests")).toBe(true);
     expect(canAccessPanel(u, "sellerDispatch")).toBe(true);
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canAccessPanel(u, "service")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
+  });
+
+  it("warehouse и logistics видят Погрузку (как Распределение)", () => {
+    expect(canAccessPanel(userWithRoles("warehouse"), "loadingManifests")).toBe(true);
+    expect(canAccessPanel(userWithRoles("logistics"), "loadingManifests")).toBe(true);
+    expect(canAccessPanel(userWithRoles("receiver"), "loadingManifests")).toBe(true);
   });
 
   it("бухгалтер — отчёты, не операции и не накладная", () => {

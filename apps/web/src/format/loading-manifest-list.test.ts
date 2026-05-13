@@ -1,0 +1,51 @@
+import { describe, expect, it } from "vitest";
+
+import type { LoadingManifestSummary } from "../api/types.js";
+
+import { manifestsForWarehouseSorted } from "./loading-manifest-list.js";
+
+function m(p: Partial<LoadingManifestSummary> & Pick<LoadingManifestSummary, "id" | "warehouseId" | "createdAt">): LoadingManifestSummary {
+  return {
+    manifestNumber: "1",
+    docDate: "2024-01-01",
+    warehouseName: "W",
+    warehouseCode: "w",
+    destinationCode: "moscow",
+    destinationName: "Москва",
+    tripId: null,
+    lineCount: 1,
+    totalKg: 10,
+    packagesApprox: null,
+    calibers: [],
+    ...p,
+  };
+}
+
+describe("manifestsForWarehouseSorted", () => {
+  it("пустой или пробельный warehouseId — пустой массив", () => {
+    expect(manifestsForWarehouseSorted([], "")).toEqual([]);
+    expect(manifestsForWarehouseSorted(undefined, "   ")).toEqual([]);
+  });
+
+  it("undefined список — как пустой", () => {
+    expect(manifestsForWarehouseSorted(undefined, "wh-1")).toEqual([]);
+  });
+
+  it("фильтрует по warehouseId", () => {
+    const rows = [
+      m({ id: "a", warehouseId: "wh-1", createdAt: "2024-01-01T10:00:00.000Z" }),
+      m({ id: "b", warehouseId: "wh-2", createdAt: "2024-01-02T10:00:00.000Z" }),
+    ];
+    const r = manifestsForWarehouseSorted(rows, "wh-1");
+    expect(r.map((x) => x.id)).toEqual(["a"]);
+  });
+
+  it("сортирует по createdAt по убыванию (новее выше)", () => {
+    const rows = [
+      m({ id: "old", warehouseId: "wh-1", createdAt: "2024-01-01T10:00:00.000Z" }),
+      m({ id: "new", warehouseId: "wh-1", createdAt: "2024-06-01T12:00:00.000Z" }),
+    ];
+    const r = manifestsForWarehouseSorted(rows, "wh-1");
+    expect(r.map((x) => x.id)).toEqual(["new", "old"]);
+  });
+});

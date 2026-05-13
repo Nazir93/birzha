@@ -379,9 +379,17 @@ export function AdminCabinetHome() {
                 </div>
               </Link>
               <Link
-                to={adminRoutes.distribution}
+                to={
+                  meta?.warehouseWriteOffApi === "enabled"
+                    ? adminRoutes.warehouseWriteOffsLedger
+                    : adminRoutes.distribution
+                }
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Списание с остатка на складе (брак и т.п.) — распределение"
+                title={
+                  meta?.warehouseWriteOffApi === "enabled"
+                    ? "Журнал списаний брака с остатка на складе"
+                    : "Распределение — списание с остатка при PostgreSQL"
+                }
               >
                 <div className="birzha-kpi-tile__label">Списано, кг</div>
                 <div className="birzha-kpi-tile__value">

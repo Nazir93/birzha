@@ -64,19 +64,28 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
   totalPkg: number;
   linesWithPkg: number;
   partCount: number;
+  batches: BatchListItem[];
 }[] {
   const m = new Map<
     string,
-    { lineLabel: string; totalKg: number; totalPkg: number; linesWithPkg: number; partCount: number }
+    {
+      lineLabel: string;
+      totalKg: number;
+      totalPkg: number;
+      linesWithPkg: number;
+      partCount: number;
+      batches: BatchListItem[];
+    }
   >();
   for (const b of batches) {
     const lineLabel = formatNakladLineLabel(b);
     if (!m.has(lineLabel)) {
-      m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0 });
+      m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0, batches: [] });
     }
     const g = m.get(lineLabel)!;
     g.totalKg += b.onWarehouseKg;
     g.partCount += 1;
+    g.batches.push(b);
     const e = estimatedPackageCountOnShelf(b);
     if (e != null) {
       g.totalPkg += e;
@@ -84,6 +93,94 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
     }
   }
   return Array.from(m.values()).sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
+}
+
+/** Ключ строки без id закупочной накладной в данных (все такие партии в одной строке). */
+export const AGGREGATE_NO_PURCHASE_DOCUMENT_KEY = "__no_purchase_document__";
+
+/** Свод по закупочной накладной: одна строка — все партии с тем же `documentId`. */
+export type PurchaseDocumentAggregateRow = {
+  rowKey: string;
+  documentId: string | null;
+  documentNumber: string;
+  displayLabel: string;
+  totalKg: number;
+  totalPkg: number;
+  linesWithPkg: number;
+  partCount: number;
+  batches: BatchListItem[];
+};
+
+export function aggregateBatchesByPurchaseDocument(batches: readonly BatchListItem[]): PurchaseDocumentAggregateRow[] {
+  type Acc = {
+    rowKey: string;
+    documentId: string | null;
+    documentNumber: string;
+    totalKg: number;
+    totalPkg: number;
+    linesWithPkg: number;
+    partCount: number;
+    batches: BatchListItem[];
+  };
+  const m = new Map<string, Acc>();
+  for (const b of batches) {
+    const docId = b.nakladnaya?.documentId?.trim();
+    const docNum = b.nakladnaya?.documentNumber?.trim() ?? "";
+    const rowKey = docId && docId.length > 0 ? docId : AGGREGATE_NO_PURCHASE_DOCUMENT_KEY;
+    if (!m.has(rowKey)) {
+      m.set(rowKey, {
+        rowKey,
+        documentId: docId && docId.length > 0 ? docId : null,
+        documentNumber: docNum,
+        totalKg: 0,
+        totalPkg: 0,
+        linesWithPkg: 0,
+        partCount: 0,
+        batches: [],
+      });
+    }
+    const g = m.get(rowKey)!;
+    g.totalKg += b.onWarehouseKg;
+    g.partCount += 1;
+    g.batches.push(b);
+    const e = estimatedPackageCountOnShelf(b);
+    if (e != null) {
+      g.totalPkg += e;
+      g.linesWithPkg += 1;
+    }
+    if (docNum) {
+      g.documentNumber = docNum;
+    }
+  }
+  const out: PurchaseDocumentAggregateRow[] = [];
+  for (const v of m.values()) {
+    const displayLabel =
+      v.documentId && v.documentNumber
+        ? `№ ${v.documentNumber}`
+        : v.documentId
+          ? `№ …${v.documentId.slice(-6)}`
+          : "Без накладной в данных";
+    out.push({
+      rowKey: v.rowKey,
+      documentId: v.documentId,
+      documentNumber: v.documentNumber,
+      displayLabel,
+      totalKg: v.totalKg,
+      totalPkg: v.totalPkg,
+      linesWithPkg: v.linesWithPkg,
+      partCount: v.partCount,
+      batches: v.batches,
+    });
+  }
+  return out.sort((a, b) => {
+    if (a.rowKey === AGGREGATE_NO_PURCHASE_DOCUMENT_KEY) {
+      return 1;
+    }
+    if (b.rowKey === AGGREGATE_NO_PURCHASE_DOCUMENT_KEY) {
+      return -1;
+    }
+    return a.displayLabel.localeCompare(b.displayLabel, "ru");
+  });
 }
 
 /** Кг на складе по `allocation.destination`, без направления и отдельно в пути — для сводов в распределении и погрузке. */

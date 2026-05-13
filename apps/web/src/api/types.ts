@@ -37,6 +37,25 @@ export type WarehouseWriteOffsByDocumentResponse = {
   lines: { id: string; batchId: string; kg: number; createdAt: string; productGradeCode: string | null }[];
 };
 
+/** Ответ `GET /warehouse-write-offs` без `purchaseDocumentId` — последние списания по всем накладным. */
+export type WarehouseWriteOffsRecentResponse = {
+  ledger: "recent";
+  warehouseIdFilter: string | null;
+  limit: number;
+  totalKg: number;
+  lines: {
+    id: string;
+    batchId: string;
+    kg: number;
+    createdAt: string;
+    purchaseDocumentId: string;
+    documentNumber: string | null;
+    productGradeCode: string | null;
+    warehouseName: string | null;
+    warehouseCode: string | null;
+  }[];
+};
+
 export type BatchesListMeta = {
   limit: number;
   offset: number;

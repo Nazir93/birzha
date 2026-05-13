@@ -14,6 +14,7 @@ import type {
   ShipDestinationsListResponse,
   TripJson,
   TripsListResponse,
+  WarehouseWriteOffsRecentResponse,
   WarehousesListResponse,
   WholesalersListResponse,
 } from "../api/types.js";
@@ -37,6 +38,8 @@ export const queryRoots = {
   wholesalers: ["wholesalers"] as const,
   shipDestinations: ["ship-destinations"] as const,
   loadingManifest: ["loading-manifest"] as const,
+  /** Журнал списаний с остатка (брак) — `GET /warehouse-write-offs` без purchaseDocumentId. */
+  warehouseWriteOffsLedger: ["warehouse-write-offs-ledger"] as const,
   /** Префикс всех `GET …/shipment-report` по рейсам */
   shipmentReport: ["shipment-report"] as const,
 } as const;
@@ -190,6 +193,21 @@ export const loadingManifestsListQueryOptions = () =>
   queryOptions({
     queryKey: [...queryRoots.loadingManifest, "list"] as const,
     queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+/** Журнал списаний брака с остатка: `GET /warehouse-write-offs?limit=&warehouseId=`. */
+export const warehouseWriteOffsLedgerQueryOptions = (opts: { warehouseId?: string; limit?: number }) =>
+  queryOptions({
+    queryKey: [...queryRoots.warehouseWriteOffsLedger, opts.warehouseId ?? "", opts.limit ?? 300] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("limit", String(opts.limit ?? 300));
+      if (opts.warehouseId && opts.warehouseId.trim().length > 0) {
+        p.set("warehouseId", opts.warehouseId.trim());
+      }
+      return apiGetJson<WarehouseWriteOffsRecentResponse>(`/api/warehouse-write-offs?${p}`);
+    },
     staleTime: QUERY_STALE_LISTS_MS,
   });
 

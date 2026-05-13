@@ -31,7 +31,7 @@ export type ApiMeta = {
   shipDestinationsApi?: string;
   /** Справочник оптовиков для продаж «оптом», только при PostgreSQL. */
   wholesalersCatalogApi?: string;
-  /** `POST /batches/…/warehouse-write-off` и `GET /warehouse-write-offs?purchaseDocumentId=` при PostgreSQL. */
+  /** `POST /batches/…/warehouse-write-off` и `GET /warehouse-write-offs` (по документу или журнал) при PostgreSQL. */
   warehouseWriteOffApi?: string;
   syncApi: string;
   authApi: string;

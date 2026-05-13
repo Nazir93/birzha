@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { BatchListItem } from "../api/types.js";
 import {
+  AGGREGATE_NO_PURCHASE_DOCUMENT_KEY,
   aggregateBatchesByCaliberLine,
+  aggregateBatchesByPurchaseDocument,
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
   sumLoadingManifestTotals,
@@ -129,6 +131,39 @@ describe("aggregateBatchesByCaliberLine", () => {
     expect(g[0]!.lineLabel).toContain("5");
     expect(g[0]!.totalKg).toBe(35);
     expect(g[0]!.partCount).toBe(2);
+  });
+});
+
+describe("aggregateBatchesByPurchaseDocument", () => {
+  it("склеивает партии одной накладной в одну строку", () => {
+    const nk = {
+      documentId: "doc-1",
+      warehouseId: "w1",
+      productGradeCode: "5",
+      productGroup: "Том",
+      documentNumber: "100",
+      linePackageCount: 100,
+    } as BatchListItem["nakladnaya"];
+    const batches = [
+      b({ id: "a1", totalKg: 100, onWarehouseKg: 30, nakladnaya: nk }),
+      b({ id: "a2", totalKg: 50, onWarehouseKg: 20, nakladnaya: nk }),
+    ];
+    const rows = aggregateBatchesByPurchaseDocument(batches);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.rowKey).toBe("doc-1");
+    expect(rows[0]!.totalKg).toBe(50);
+    expect(rows[0]!.partCount).toBe(2);
+    expect(rows[0]!.displayLabel).toContain("100");
+  });
+
+  it("партии без накладной — одна строка в конце", () => {
+    const rows = aggregateBatchesByPurchaseDocument([
+      b({ id: "x", totalKg: 1, onWarehouseKg: 1 }),
+      b({ id: "y", totalKg: 2, onWarehouseKg: 2 }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.rowKey).toBe(AGGREGATE_NO_PURCHASE_DOCUMENT_KEY);
+    expect(rows[0]!.totalKg).toBe(3);
   });
 });
 

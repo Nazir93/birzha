@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
-import type { BatchListItem, CreateWarehouseResponse } from "../api/types.js";
+import type { CreateWarehouseResponse } from "../api/types.js";
 import {
   batchesFullListQueryOptions,
   queryRoots,
@@ -65,30 +65,39 @@ export function AdminStockWarehousesPage() {
     },
   });
 
-  const stockRows = useMemo(() => {
+  /** Суммы по партициям одного калибра и вида на выбранном складе (без разбивки по накладным). */
+  const gradeStockAggregates = useMemo(() => {
     const wid = selectedWarehouseId.trim();
     if (!wid) {
-      return [] as BatchListItem[];
+      return [];
     }
     const q = gradeSearch.trim().toLowerCase();
-    const list = (batchesQ.data?.batches ?? []).filter((b) => {
+    type Agg = { gradeCode: string; productGroup: string; onWarehouseKg: number; inTransitKg: number; soldKg: number };
+    const map = new Map<string, Agg>();
+    for (const b of batchesQ.data?.batches ?? []) {
       if ((b.nakladnaya?.warehouseId ?? "") !== wid) {
-        return false;
+        continue;
       }
-      if ((b.onWarehouseKg ?? 0) <= 0) {
-        return false;
-      }
-      if (!q) {
-        return true;
-      }
-      const code = (b.nakladnaya?.productGradeCode ?? "").toLowerCase();
-      const group = (b.nakladnaya?.productGroup ?? "").toLowerCase();
-      const doc = (b.nakladnaya?.documentNumber ?? "").toLowerCase();
-      const hay = `${code} ${group} ${doc}`;
-      return hay.includes(q);
-    });
-    list.sort((a, b) => (a.nakladnaya?.productGradeCode ?? "").localeCompare(b.nakladnaya?.productGradeCode ?? "", "ru"));
-    return list;
+      const gradeCode = (b.nakladnaya?.productGradeCode ?? "").trim() || "—";
+      const productGroup = (b.nakladnaya?.productGroup ?? "").trim() || "—";
+      const key = `${gradeCode}\0${productGroup}`;
+      const prev = map.get(key) ?? { gradeCode, productGroup, onWarehouseKg: 0, inTransitKg: 0, soldKg: 0 };
+      prev.onWarehouseKg += b.onWarehouseKg ?? 0;
+      prev.inTransitKg += b.inTransitKg ?? 0;
+      prev.soldKg += b.soldKg ?? 0;
+      map.set(key, prev);
+    }
+    let rows = [...map.values()].filter(
+      (r) => r.onWarehouseKg > 0 || r.inTransitKg > 0 || r.soldKg > 0,
+    );
+    if (q) {
+      rows = rows.filter((r) => {
+        const hay = `${r.gradeCode} ${r.productGroup}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    rows.sort((a, b) => a.gradeCode.localeCompare(b.gradeCode, "ru"));
+    return rows;
   }, [batchesQ.data?.batches, selectedWarehouseId, gradeSearch]);
 
   const loading = warehousesQ.isPending || batchesQ.isPending;
@@ -109,8 +118,8 @@ export function AdminStockWarehousesPage() {
           Склады и остатки
         </h2>
         <p style={{ margin: "0.35rem 0 0", fontSize: "0.88rem", color: "var(--color-muted)", maxWidth: 52 * 16 }}>
-          Справочник складов, добавление и удаление. Выберите склад — таблица покажет партии с остатком на складе. Поиск по
-          коду калибра, виду товара и номеру накладной.
+          Справочник складов, добавление и удаление. Выберите склад — внизу итоги по калибру (все накладные суммируются в
+          одну строку на калибр). Поиск — по калибру и виду товара.
         </p>
       </header>
 
@@ -217,7 +226,13 @@ export function AdminStockWarehousesPage() {
           <BirzhaDisclosure
             defaultOpen
             title={<span style={{ fontWeight: 600 }}>Остатки по выбранному складу</span>}
-            hint={selectedWarehouseId ? "партии, кг на складе" : "выберите склад в таблице выше"}
+            hint={
+              selectedWarehouseId
+                ? gradeStockAggregates.length === 0
+                  ? "нет данных"
+                  : `${gradeStockAggregates.length} калибров`
+                : "выберите склад в таблице выше"
+            }
           >
             {!selectedWarehouseId ? (
               <p className="birzha-text-muted" style={{ margin: 0 }}>
@@ -226,7 +241,7 @@ export function AdminStockWarehousesPage() {
             ) : (
               <>
                 <label className="birzha-field-label" htmlFor="stock-grade-search">
-                  Поиск по калибру / виду / накладной
+                  Поиск по калибру и виду товара
                 </label>
                 <input
                   id="stock-grade-search"
@@ -236,36 +251,34 @@ export function AdminStockWarehousesPage() {
                   placeholder="Например №5 или помидоры"
                   autoComplete="off"
                 />
-                {stockRows.length === 0 ? (
+                {gradeStockAggregates.length === 0 ? (
                   <p style={{ margin: 0 }} className="birzha-text-muted">
-                    Нет строк с остатком на этом складе (или ничего не найдено по поиску).
+                    Нет данных по этому складу (или ничего не найдено по поиску).
                   </p>
                 ) : (
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                    <table style={{ ...tableStyle, minWidth: 520 }}>
+                    <table style={{ ...tableStyle, minWidth: 420 }}>
                       <thead>
                         <tr>
                           <th style={thHeadDense}>Калибр</th>
                           <th style={thHeadDense}>Вид</th>
-                          <th style={thHeadDense}>Накладная</th>
                           <th style={thHeadDense}>На складе, кг</th>
                           <th style={thHeadDense}>В пути, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {stockRows.map((b) => (
-                          <tr key={b.id}>
+                        {gradeStockAggregates.map((r) => (
+                          <tr key={`${r.gradeCode}\0${r.productGroup}`}>
                             <td style={thtdDense}>
-                              <strong>{b.nakladnaya?.productGradeCode ?? "—"}</strong>
+                              <strong>{r.gradeCode}</strong>
                             </td>
-                            <td style={thtdDense}>{b.nakladnaya?.productGroup ?? "—"}</td>
-                            <td style={thtdDense} className="birzha-text-muted birzha-text-muted--sm">
-                              {b.nakladnaya?.documentNumber ?? b.nakladnaya?.documentId?.slice(0, 8) ?? "—"}
+                            <td style={thtdDense}>{r.productGroup}</td>
+                            <td style={thtdDense}>
+                              {r.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
                             </td>
-                            <td style={thtdDense}>{b.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
-                            <td style={thtdDense}>{b.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
-                            <td style={thtdDense}>{b.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
+                            <td style={thtdDense}>{r.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
+                            <td style={thtdDense}>{r.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
                           </tr>
                         ))}
                       </tbody>

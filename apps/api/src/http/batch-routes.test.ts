@@ -299,4 +299,13 @@ describe("Batch HTTP", () => {
     await app.close();
   });
 
+  it("GET /warehouse-write-offs без PostgreSQL — 503", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({ env, db: null, batchRepository: new InMemoryBatchRepository() });
+    const res = await app.inject({ method: "GET", url: "/warehouse-write-offs" });
+    expect(res.statusCode).toBe(503);
+    const body = JSON.parse(res.body) as { error?: string };
+    expect(body.error).toBe("warehouse_write_off_ledger_requires_postgres");
+    await app.close();
+  });
 });

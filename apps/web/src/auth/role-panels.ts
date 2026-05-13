@@ -36,7 +36,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
-  loadingManifests: ["admin"],
+  /** Погрузочные накладные и привязка к рейсу — те же роли, что и «Распределение». */
+  loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
   assignSeller: ["admin", "manager", "purchaser", "logistics", "accountant"],
