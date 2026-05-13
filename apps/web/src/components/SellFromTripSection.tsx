@@ -57,6 +57,11 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
+/** Кг для одной сделки по группе калибра (как подставляется в поле «кг»). */
+function sellerCaliberGroupDealGrams(g: SellerCaliberGroup): bigint {
+  return g.rows.length <= 1 ? g.totalNetG : g.primaryRow.netTransitG;
+}
+
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -381,16 +386,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     ],
   );
 
-  const applySellerCaliberGroup = useCallback(
-    (g: SellerCaliberGroup) => {
-      setSellBatchId(g.primaryBatchId);
-      const row = sellableOnTripRows.find((r) => r.batchId === g.primaryBatchId);
-      if (row) {
-        setSellKg(gramsBigIntToKgDecimalString(g.rows.length <= 1 ? g.totalNetG : row.netTransitG));
-      }
-    },
-    [sellableOnTripRows],
-  );
+  const applySellerCaliberGroup = useCallback((g: SellerCaliberGroup) => {
+    setSellBatchId(g.primaryBatchId);
+    setSellKg(gramsBigIntToKgDecimalString(sellerCaliberGroupDealGrams(g)));
+  }, []);
 
   const sellerCaliberGridStatusMessage = useMemo(() => {
     if (!sellTripIdTrim) {
@@ -418,14 +417,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     batchIdsOnTrip.length,
     batchesForTripQuery.isPending,
   ]);
-
-  const sellerMultiBatchGroup = useMemo(() => {
-    if (!isSellerUx || !sellBatchId.trim()) {
-      return null;
-    }
-    const id = sellBatchId.trim();
-    return sellerCaliberGroups.find((g) => g.primaryBatchId === id && g.rows.length > 1) ?? null;
-  }, [isSellerUx, sellBatchId, sellerCaliberGroups]);
 
   const wholesaleRowsFiltered = useMemo(() => {
     const all = wholesalersQ.data?.wholesalers ?? [];
@@ -983,7 +974,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 >
                   {sellerCaliberGroupsFiltered.map((g) => {
                     const selected = sellBatchId === g.primaryBatchId;
-                    const kgLine = gramsBigIntToKgDecimalString(g.totalNetG);
+                    const dealG = sellerCaliberGroupDealGrams(g);
+                    const kgLine = gramsBigIntToKgDecimalString(dealG);
+                    const restG = g.rows.length > 1 ? g.totalNetG - dealG : 0n;
+                    const restLabel =
+                      restG > 0n ? `ещё ${gramsBigIntToKgDecimalString(restG)} кг по калибру` : null;
                     return (
                       <button
                         key={g.primaryBatchId}
@@ -999,9 +994,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                       >
                         <span className="birzha-seller-caliber-tile__line">{g.lineLabel}</span>
                         <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
-                        {g.rows.length > 1 ? (
-                          <span className="birzha-seller-caliber-tile__meta">{g.rows.length} партии</span>
-                        ) : null}
+                        {restLabel ? <span className="birzha-seller-caliber-tile__meta">{restLabel}</span> : null}
                       </button>
                     );
                   })}
@@ -1057,16 +1050,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           </select>
         </>
       )}
-      {isSellerUx && sellerMultiBatchGroup ? (
-        <p
-          className="birzha-callout-info"
-          style={{ fontSize: "0.86rem", marginTop: "0.35rem", marginBottom: "0.45rem", lineHeight: 1.45 }}
-          role="status"
-        >
-          Несколько партий по калибру — до{" "}
-          <strong>{gramsBigIntToKgDecimalString(sellerMultiBatchGroup.primaryRow.netTransitG)} кг</strong> за сделку.
-        </p>
-      ) : null}
       {sellSelectionSummary && (
         <p
           className="birzha-callout-info"
@@ -1085,7 +1068,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               {". "}
             </>
           )}
-          <strong>В пути: {sellSelectionSummary.kg} кг</strong>
+          <strong>{isSellerUx ? "В машине" : "В пути"}: {sellSelectionSummary.kg} кг</strong>
           {sellSelectionSummary.hasPkgData && sellSelectionSummary.estPkg > 0n && (
             <>
               {" "}
