@@ -13,6 +13,7 @@ export type CabinetNavEntry = { to: string; label: string; key: string };
 const ANON_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: ops.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "dist", to: ops.distribution, label: NAV_PANEL_LABELS.distribution },
+  { key: "trips", to: ops.trips, label: NAV_PANEL_LABELS.trips },
   { key: "rep", to: ops.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: ops.operations, label: NAV_PANEL_LABELS.operations },
   { key: "off", to: ops.offline, label: NAV_PANEL_LABELS.offline },
@@ -21,6 +22,7 @@ const ANON_OPS: CabinetNavEntry[] = [
 const ANON_ADMIN_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: adminRoutes.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "dist", to: adminRoutes.distribution, label: NAV_PANEL_LABELS.distribution },
+  { key: "trips", to: adminRoutes.trips, label: NAV_PANEL_LABELS.trips },
   { key: "lm", to: adminRoutes.loadingManifests, label: NAV_PANEL_LABELS.loadingManifests },
   { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: adminRoutes.operations, label: NAV_PANEL_LABELS.operations },
@@ -60,6 +62,7 @@ export function buildCabinetNavEntries(
       ? ([
           "nakladnaya",
           "distribution",
+          "trips",
           "loadingManifests",
           "sellerDispatch",
           "assignSeller",

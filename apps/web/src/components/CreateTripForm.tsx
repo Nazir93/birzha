@@ -9,9 +9,18 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { parseCreateTripForm } from "../validation/api-schemas.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
-export function CreateTripForm({ disclosureDefaultOpen = true }: { disclosureDefaultOpen?: boolean } = {}) {
+export function CreateTripForm({
+  disclosureDefaultOpen = true,
+  showAssignedSeller = true,
+}: {
+  disclosureDefaultOpen?: boolean;
+  showAssignedSeller?: boolean;
+} = {}) {
   const queryClient = useQueryClient();
-  const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
+  const fieldSellersQuery = useQuery({
+    ...tripsFieldSellerOptionsQueryOptions(),
+    enabled: showAssignedSeller,
+  });
   const [tripNumber, setTripNumber] = useState("");
   const [tripId, setTripId] = useState("");
   const [vehicleLabel, setVehicleLabel] = useState("");
@@ -27,7 +36,7 @@ export function CreateTripForm({ disclosureDefaultOpen = true }: { disclosureDef
         vehicleLabel,
         driverName,
         departedAtLocal,
-        assignedSellerUserId,
+        showAssignedSeller ? assignedSellerUserId : "",
       );
       return apiPostJson("/api/trips", body) as Promise<{ ok?: boolean }>;
     },
@@ -119,41 +128,45 @@ export function CreateTripForm({ disclosureDefaultOpen = true }: { disclosureDef
         className="birzha-input-date"
         emptyLabel="— не задано —"
       />
-      <label
-        htmlFor="ct-assigned-seller"
-        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
-      >
-        Продавец в поле (опционально, можно назначить позже)
-      </label>
-      <select
-        id="ct-assigned-seller"
-        value={assignedSellerUserId}
-        onChange={(e) => setAssignedSellerUserId(e.target.value)}
-        style={{ ...fieldStyleCompact, maxWidth: "100%" }}
-        disabled={fieldSellersQuery.isPending}
-      >
-        <option value="">— пока не показывать продавцам —</option>
-        {(fieldSellersQuery.data?.fieldSellers ?? []).map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.login}
-          </option>
-        ))}
-      </select>
-      {fieldSellersQuery.isError && (
-        <p role="alert" style={{ ...errorText, fontSize: "0.85rem", marginTop: "0.35rem" }}>
-          Список продавцов не загрузился: {(fieldSellersQuery.error as Error).message}. Можно создать рейс без
-          закрепления или проверьте права (нужна роль логиста / руководителя).
-        </p>
-      )}
-      {fieldSellersQuery.isSuccess &&
-        (fieldSellersQuery.data?.fieldSellers?.length ?? 0) === 0 &&
-        !fieldSellersQuery.isPending && (
-          <BirzhaEmptyState
-            compact
-            title="Нет учётных записей продавцов"
-            description="Администратор должен создать отдельные пользователей с ролью продавца — тогда их можно будет закрепить за рейсом."
-          />
-        )}
+      {showAssignedSeller ? (
+        <>
+          <label
+            htmlFor="ct-assigned-seller"
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
+          >
+            Продавец в поле (опционально, можно назначить позже)
+          </label>
+          <select
+            id="ct-assigned-seller"
+            value={assignedSellerUserId}
+            onChange={(e) => setAssignedSellerUserId(e.target.value)}
+            style={{ ...fieldStyleCompact, maxWidth: "100%" }}
+            disabled={fieldSellersQuery.isPending}
+          >
+            <option value="">— пока не показывать продавцам —</option>
+            {(fieldSellersQuery.data?.fieldSellers ?? []).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.login}
+              </option>
+            ))}
+          </select>
+          {fieldSellersQuery.isError && (
+            <p role="alert" style={{ ...errorText, fontSize: "0.85rem", marginTop: "0.35rem" }}>
+              Список продавцов не загрузился: {(fieldSellersQuery.error as Error).message}. Можно создать рейс без
+              закрепления или проверьте права (нужна роль логиста / руководителя).
+            </p>
+          )}
+          {fieldSellersQuery.isSuccess &&
+            (fieldSellersQuery.data?.fieldSellers?.length ?? 0) === 0 &&
+            !fieldSellersQuery.isPending && (
+              <BirzhaEmptyState
+                compact
+                title="Нет учётных записей продавцов"
+                description="Администратор должен создать отдельные пользователи с ролью продавца — тогда их можно будет закрепить за рейсом."
+              />
+            )}
+        </>
+      ) : null}
       <div>
         <button
           type="button"

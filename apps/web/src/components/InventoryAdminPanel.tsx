@@ -2,26 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import {
-  apiDelete,
-  apiDeleteOr403,
-  apiPostJson,
-  apiPostJsonOr403,
-  closeTripById,
-  deleteTripById,
-} from "../api/fetch-api.js";
+import { apiDelete, apiDeleteOr403, apiPostJson, apiPostJsonOr403 } from "../api/fetch-api.js";
 import type {
   CreateProductGradeResponse,
   CreateWarehouseResponse,
 } from "../api/types.js";
-import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
-import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import {
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
-  tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
   wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -31,29 +21,14 @@ import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
-import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
-
-const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
-
-function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
-  if (!user) {
-    return false;
-  }
-  return TRIP_WRITE_ROLES.some((r) =>
-    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
-  );
-}
-
 /**
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
  */
 export function InventoryAdminPanel() {
   const { hash } = useLocation();
-  const { meta, user } = useAuth();
+  const { meta } = useAuth();
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
-  const showCloseTrip = canTripWrite(user);
-
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseCode, setNewWarehouseCode] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
@@ -70,12 +45,6 @@ export function InventoryAdminPanel() {
   const [newWholesalerName, setNewWholesalerName] = useState("");
   const [newWholesalerOrder, setNewWholesalerOrder] = useState("");
   const [nakladError, setNakladError] = useState<string | null>(null);
-  const [newTripId, setNewTripId] = useState("");
-  const [newTripNumber, setNewTripNumber] = useState("");
-  const [newTripVehicle, setNewTripVehicle] = useState("");
-  const [newTripDriver, setNewTripDriver] = useState("");
-  const [newTripDeparted, setNewTripDeparted] = useState(""); // datetime-local
-  const [tripError, setTripError] = useState<string | null>(null);
 
   useEffect(() => {
     if (hash !== "#inv-product-grades") {
@@ -96,7 +65,6 @@ export function InventoryAdminPanel() {
     void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipDestinations });
     void queryClient.invalidateQueries({ queryKey: queryRoots.wholesalers });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   }, [queryClient]);
 
@@ -104,12 +72,6 @@ export function InventoryAdminPanel() {
 
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
   const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
-  const tripsApiEnabled = meta?.tripsApi === "enabled";
-
-  const tripsQ = useQuery({
-    ...tripsFullListQueryOptions(),
-    enabled: enabled && tripsApiEnabled,
-  });
   const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
@@ -305,93 +267,6 @@ export function InventoryAdminPanel() {
     },
   });
 
-  const createTrip = useMutation({
-    mutationFn: async () => {
-      setTripError(null);
-      const id = newTripId.trim();
-      const tripNumber = newTripNumber.trim();
-      if (!id || !tripNumber) {
-        throw new Error("Id рейса (технический) и отображаемый номер обязательны");
-      }
-      const body: {
-        id: string;
-        tripNumber: string;
-        vehicleLabel?: string | null;
-        driverName?: string | null;
-        departedAt?: string | null;
-      } = { id, tripNumber };
-      const vl = newTripVehicle.trim();
-      if (vl) {
-        body.vehicleLabel = vl;
-      }
-      const dr = newTripDriver.trim();
-      if (dr) {
-        body.driverName = dr;
-      }
-      if (newTripDeparted) {
-        const t = new Date(newTripDeparted);
-        if (Number.isNaN(t.getTime())) {
-          throw new Error("Неверная дата/время отправления");
-        }
-        body.departedAt = t.toISOString();
-      }
-      await apiPostJsonOr403(
-        "/api/trips",
-        body,
-        "Нет прав: создание рейса — роли admin, manager, logistics",
-      );
-    },
-    onSuccess: () => {
-      setNewTripId("");
-      setNewTripNumber("");
-      setNewTripVehicle("");
-      setNewTripDriver("");
-      setNewTripDeparted("");
-      invalidate();
-    },
-    onError: (e: Error) => {
-      setTripError(e.message);
-    },
-  });
-
-  const deleteTrip = useMutation({
-    mutationFn: async (tripId: string) => {
-      setTripError(null);
-      await deleteTripById(tripId, "Нет прав на удаление рейса");
-    },
-    onSuccess: () => {
-      invalidate();
-    },
-    onError: (e: Error) => {
-      setTripError(e.message);
-    },
-  });
-
-  const closeTrip = useMutation({
-    mutationFn: async (tripId: string) => {
-      setTripError(null);
-      const t = (tripsQ.data?.trips ?? []).find((x) => x.id === tripId);
-      if (!t) {
-        throw new Error("Рейс не найден");
-      }
-      if (!tripListShowsSoldOut(t)) {
-        const ok = window.confirm(
-          "В рейсе по данным системы ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
-        );
-        if (!ok) {
-          return;
-        }
-      }
-      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
-    },
-    onSuccess: () => {
-      invalidate();
-    },
-    onError: (e: Error) => {
-      setTripError(e.message);
-    },
-  });
-
   if (!enabled) {
     return (
       <section className="birzha-panel">
@@ -422,181 +297,6 @@ export function InventoryAdminPanel() {
           </Link>
         </nav>
       </header>
-
-      {tripsApiEnabled && (
-        <BirzhaDisclosure
-          defaultOpen
-          title={
-            <span className="birzha-disclosure__title-stack">
-              <span className="birzha-section-heading__eyebrow">Логистика</span>
-              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Рейсы</span>
-            </span>
-          }
-          hint="Создание и удаление пустых рейсов"
-        >
-          {tripError && <p style={errorText}>{tripError}</p>}
-          <div className="birzha-inventory-logistics-form">
-            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--wide">
-              <label className="birzha-field-label">Идентификатор</label>
-              <div className="birzha-inventory-trip-id-row">
-                <input
-                  value={newTripId}
-                  onChange={(e) => setNewTripId(e.target.value)}
-                  style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-                  placeholder="можно оставить пустым"
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  className="birzha-inventory-trip-id-row__gen"
-                  style={{ ...btnStyle, fontSize: "0.82rem" }}
-                  onClick={() => {
-                    if (globalThis.crypto?.randomUUID) {
-                      setNewTripId(globalThis.crypto.randomUUID());
-                    }
-                  }}
-                >
-                  Сгенерировать
-                </button>
-              </div>
-            </div>
-            <div className="birzha-inventory-logistics-form__field">
-              <label className="birzha-field-label">№ рейса</label>
-              <input
-                value={newTripNumber}
-                onChange={(e) => setNewTripNumber(e.target.value)}
-                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-                placeholder="Ф-12"
-                autoComplete="off"
-              />
-            </div>
-            <div className="birzha-inventory-logistics-form__field">
-              <label className="birzha-field-label">ТС</label>
-              <input
-                value={newTripVehicle}
-                onChange={(e) => setNewTripVehicle(e.target.value)}
-                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-                placeholder="опц."
-                autoComplete="off"
-              />
-            </div>
-            <div className="birzha-inventory-logistics-form__field">
-              <label className="birzha-field-label">Водитель</label>
-              <input
-                value={newTripDriver}
-                onChange={(e) => setNewTripDriver(e.target.value)}
-                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-                placeholder="опц."
-                autoComplete="off"
-              />
-            </div>
-            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--datetime">
-              <label htmlFor="inv-adm-new-trip-departed" className="birzha-field-label">
-                Отправление
-              </label>
-              <BirzhaDateTimeField
-                id="inv-adm-new-trip-departed"
-                value={newTripDeparted}
-                onChange={setNewTripDeparted}
-                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0, marginTop: 0.35 }}
-                className="birzha-input-date"
-                emptyLabel="—"
-              />
-            </div>
-            <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--submit">
-              <button
-                type="button"
-                className="birzha-inventory-logistics-form__submit-btn"
-                style={btnStyle}
-                disabled={createTrip.isPending}
-                onClick={() => void createTrip.mutate()}
-              >
-                {createTrip.isPending ? "…" : "Создать рейс"}
-              </button>
-            </div>
-          </div>
-          {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
-          {tripsQ.isPending && (
-            <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />
-          )}
-          {tripsQ.isSuccess && (
-            <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.9rem" }}>
-              <table style={{ ...tableStyle, minWidth: 720 }}>
-                <thead>
-                  <tr>
-                    <th style={thHeadDense}>№ (борт)</th>
-                    <th style={thHeadDense}>Статус</th>
-                    <th style={thHeadDense}>ТС</th>
-                    <th style={thHeadDense}>Водитель</th>
-                    <th style={thHeadDense}>id</th>
-                    <th style={thHeadDense}>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortTripsByTripNumberNumericAsc(tripsQ.data.trips ?? []).map((t) => (
-                      <tr key={t.id}>
-                        <td style={thtdDense}>
-                          <strong>№ {t.tripNumber}</strong>{" "}
-                          <Link to={adminRoutes.operations} style={{ fontSize: "0.8rem" }}>
-                            к операциям
-                          </Link>
-                        </td>
-                        <td style={thtdDense}>
-                          <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                          {tripListShowsSoldOut(t) ? (
-                            <span
-                              className="birzha-text-muted"
-                              style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}
-                            >
-                              Остаток в пути 0
-                            </span>
-                          ) : null}
-                        </td>
-                        <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
-                        <td style={thtdDense}>{t.driverName ?? "—"}</td>
-                        <td style={thtdDense}>
-                          <code style={{ fontSize: "0.75rem" }} title={t.id}>
-                            {t.id.slice(0, 8)}…
-                          </code>
-                        </td>
-                        <td style={thtdDense}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
-                            {showCloseTrip && t.status === "open" ? (
-                              <button
-                                type="button"
-                                style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
-                                disabled={closeTrip.isPending}
-                                onClick={() => void closeTrip.mutate(t.id)}
-                              >
-                                {closeTrip.isPending ? "…" : "Закрыть рейс"}
-                              </button>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                              disabled={deleteTrip.isPending}
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
-                                  )
-                                ) {
-                                  void deleteTrip.mutate(t.id);
-                                }
-                              }}
-                            >
-                              Удалить
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </BirzhaDisclosure>
-      )}
 
       <BirzhaDisclosure
         defaultOpen

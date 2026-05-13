@@ -59,8 +59,8 @@ const AllocationPanel = lazy(() =>
 const CounterpartiesPanel = lazy(() =>
   import("./components/CounterpartiesPanel.js").then((m) => ({ default: m.CounterpartiesPanel })),
 );
-const CreateTripIfAllowed = lazy(() =>
-  import("./components/CreateTripIfAllowed.js").then((m) => ({ default: m.CreateTripIfAllowed })),
+const AdminTripsLogisticsPanel = lazy(() =>
+  import("./components/AdminTripsLogisticsPanel.js").then((m) => ({ default: m.AdminTripsLogisticsPanel })),
 );
 const InventoryAdminPanel = lazy(() =>
   import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
@@ -168,15 +168,11 @@ export function App() {
               element={
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
-                    <div className="no-print">
-                      <CreateTripIfAllowed />
-                    </div>
                     <TripReportPanel viewContext="default" />
                   </section>
                 </RequirePanel>
               }
             />
-            <Route path="trips" element={<Navigate to="reports" replace />} />
             <Route
               path="purchase-nakladnaya"
               element={
@@ -197,6 +193,14 @@ export function App() {
                   <section className="birzha-card">
                     <AllocationPanel />
                   </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="trips"
+              element={
+                <RequirePanel panel="trips">
+                  <AdminTripsLogisticsPanel />
                 </RequirePanel>
               }
             />
@@ -270,15 +274,11 @@ export function App() {
               element={
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
-                    <div className="no-print">
-                      <CreateTripIfAllowed />
-                    </div>
                     <TripReportPanel viewContext="default" />
                   </section>
                 </RequirePanel>
               }
             />
-            <Route path="trips" element={<Navigate to="reports" replace />} />
             <Route
               path="purchase-nakladnaya"
               element={
@@ -299,6 +299,14 @@ export function App() {
                   <section className="birzha-card">
                     <AllocationPanel />
                   </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="trips"
+              element={
+                <RequirePanel panel="trips">
+                  <AdminTripsLogisticsPanel />
                 </RequirePanel>
               }
             />
@@ -455,9 +463,6 @@ export function App() {
               element={
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
-                    <div className="no-print">
-                      <CreateTripIfAllowed />
-                    </div>
                     <TripReportPanel viewContext="sales" />
                   </section>
                 </RequirePanel>
@@ -497,9 +502,6 @@ export function App() {
               element={
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
-                    <div className="no-print">
-                      <CreateTripIfAllowed />
-                    </div>
                     <TripReportPanel viewContext="accounting" />
                   </section>
                 </RequirePanel>

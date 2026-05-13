@@ -12,7 +12,6 @@ import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.
 import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
-  summarizeAllocationBreakdown,
 } from "../format/loading-manifest.js";
 import { manifestsForWarehouseSorted } from "../format/loading-manifest-list.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
@@ -217,8 +216,8 @@ export function AllocationPanel() {
         delete next[inputKey];
         return next;
       });
-      setSavedManifestId("");
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest] });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.warehouseWriteOffsLedger] });
     },
   });
@@ -300,11 +299,6 @@ export function AllocationPanel() {
   const batchesInWh = useMemo(
     () => (selectedWarehouse ? (byWarehouse.get(selectedWarehouse) ?? []) : []),
     [byWarehouse, selectedWarehouse],
-  );
-
-  const allocationBreakdown = useMemo(
-    () => summarizeAllocationBreakdown(batchesInWh, destAllowed, labelDest),
-    [batchesInWh, destAllowed, labelDest],
   );
 
   const documentOptions = useMemo(() => documentOptionsForAllocation(batchesInWh), [batchesInWh]);
@@ -451,7 +445,7 @@ export function AllocationPanel() {
         <>
           <BirzhaDisclosure
             defaultOpen
-            title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Склад и свод по направлениям</span>}
+            title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Склад</span>}
             hint="шаг 1"
           >
           <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
@@ -459,7 +453,7 @@ export function AllocationPanel() {
               htmlFor="alloc-sel-warehouse"
               className="birzha-form-label birzha-form-label--block birzha-form-label--mb-sm"
             >
-              1. Склад (куда сходятся остатки с приёмов по накладным) *
+              Склад *
             </label>
             <select
               id="alloc-sel-warehouse"
@@ -511,75 +505,6 @@ export function AllocationPanel() {
             )}
           </div>
 
-          {selectedWarehouse && whSummary && whSummary.batches > 0 && (
-            <div
-              className="birzha-inline-panel"
-              style={{ marginBottom: "0.9rem" }}
-              role="region"
-              aria-label="Свод по распределению на складе"
-            >
-              <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.45rem" }}>Уже распределено и остаток к рейсам</h3>
-              <p className="birzha-callout-info">
-                На складе: кг по полю направления в партии (куда планируется везти товар). Без направления — то, что ещё
-                предстоит разнести по городам и отгрузить рейсами. Отдельно — кг уже отгруженные в рейсы (в пути), по тем же
-                партиям этого склада.
-              </p>
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 440 }}>
-                  <thead>
-                    <tr>
-                      <th scope="col" style={thHead}>
-                        Направление / статус
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Кг
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Партий
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allocationBreakdown.assignedRows.map((row) => (
-                      <tr key={`alloc-dir-${row.code}`}>
-                        <td style={thtd}>{row.label}</td>
-                        <td style={thtd}>{row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
-                        <td style={thtd}>{row.batchCount}</td>
-                      </tr>
-                    ))}
-                    {allocationBreakdown.unassigned.kg > 0 && (
-                      <tr key="alloc-unassigned">
-                        <td style={thtd}>
-                          <strong>Не назначено направление</strong>
-                          <span className="birzha-text-muted birzha-text-muted--xs" style={{ display: "block", marginTop: 2 }}>
-                            дальше — по городам и рейсам
-                          </span>
-                        </td>
-                        <td style={thtd}>
-                          {allocationBreakdown.unassigned.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                        </td>
-                        <td style={thtd}>{allocationBreakdown.unassigned.batchCount}</td>
-                      </tr>
-                    )}
-                    {allocationBreakdown.inTransit.kg > 0 && (
-                      <tr key="alloc-in-transit">
-                        <td style={thtd}>
-                          <strong>Уже в рейсе (в пути)</strong>
-                          <span className="birzha-text-muted birzha-text-muted--xs" style={{ display: "block", marginTop: 2 }}>
-                            отгружено с этого склада, не на полке
-                          </span>
-                        </td>
-                        <td style={thtd}>
-                          {allocationBreakdown.inTransit.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                        </td>
-                        <td style={thtd}>{allocationBreakdown.inTransit.batchCount}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
           </BirzhaDisclosure>
 
           {selectedWarehouse && (
@@ -912,10 +837,6 @@ export function AllocationPanel() {
                   Операции: отгрузить в рейс без ПН
                 </button>
               </div>
-              <p className="birzha-text-muted birzha-text-muted--xs" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
-                Кнопка «Операции» — прямая отгрузка партий из отбора; для оформленной погрузочной накладной используйте
-                «Погрузку».
-              </p>
             </div>
           )}
 

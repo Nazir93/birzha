@@ -4,19 +4,23 @@ import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js"
 import { accounting, adminRoutes, ops, prefix } from "../routes.js";
 
 describe("cabinet-nav", () => {
-  it("аноним: операции — только пять ссылок /o", () => {
+  it("аноним: операции — шесть ссылок /o (в т.ч. Рейсы)", () => {
     const links = buildCabinetNavEntries("operations", null, false);
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
+    expect(links[1]?.to).toBe(ops.distribution);
+    expect(links[2]?.to).toBe(ops.trips);
+    expect(links[3]?.to).toBe(ops.reports);
   });
 
-  it("аноним: админ — сводка /a + те же операции", () => {
+  it("аноним: админ — сводка /a + те же операции и Рейсы", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.distribution);
-    expect(links[3]?.to).toBe(adminRoutes.loadingManifests);
-    expect(links).toHaveLength(7);
+    expect(links[3]?.to).toBe(adminRoutes.trips);
+    expect(links[4]?.to).toBe(adminRoutes.loadingManifests);
+    expect(links).toHaveLength(8);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {
@@ -27,6 +31,7 @@ describe("cabinet-nav", () => {
     };
     const links = buildCabinetNavEntries("admin", user, true);
     expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
+    expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
     expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
     expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links.find((x) => x.key === "reports")).toBeUndefined();

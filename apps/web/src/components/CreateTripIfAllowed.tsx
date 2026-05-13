@@ -8,7 +8,7 @@ import { CreateTripForm } from "./CreateTripForm.js";
  * Форма нового рейса — только если на API разрешён TRIP_WRITE (согласуется с `CreateTripForm` / POST /trips).
  * Если в URL уже есть `?trip=…` (ссылка на отчёт по рейсу), блок по умолчанию свёрнут — экран про просмотр, не про создание.
  */
-export function CreateTripIfAllowed() {
+export function CreateTripIfAllowed({ showAssignedSeller = true }: { showAssignedSeller?: boolean } = {}) {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const tripDeepLink = Boolean(searchParams.get("trip")?.trim());
@@ -16,5 +16,7 @@ export function CreateTripIfAllowed() {
   if (!user || !canCreateTrip(user)) {
     return null;
   }
-  return <CreateTripForm disclosureDefaultOpen={!tripDeepLink} />;
+  return (
+    <CreateTripForm disclosureDefaultOpen={!tripDeepLink} showAssignedSeller={showAssignedSeller} />
+  );
 }

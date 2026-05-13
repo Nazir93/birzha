@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
@@ -46,8 +46,35 @@ function writeOffKeyDocument(rowKey: string): string {
   return `wo-doc:${rowKey}`;
 }
 
+/** Если строка ПН есть, а партия не попала в текущий список склада — показать кг из снимка ПН. */
+function syntheticBatchFromManifestLine(
+  line: LoadingManifestDetail["lines"][number],
+): BatchListItem {
+  const pkgRaw = line.packageCount != null && line.packageCount !== "" ? Number(line.packageCount) : NaN;
+  const linePk = Number.isFinite(pkgRaw) && pkgRaw > 0 ? pkgRaw : null;
+  return {
+    id: line.batchId,
+    purchaseId: "—",
+    totalKg: line.kg,
+    pricePerKg: 0,
+    pendingInboundKg: 0,
+    onWarehouseKg: line.kg,
+    inTransitKg: 0,
+    soldKg: 0,
+    writtenOffKg: 0,
+    nakladnaya: {
+      documentId: null,
+      warehouseId: null,
+      productGradeCode: line.productGradeCode,
+      productGroup: line.productGroup,
+      documentNumber: line.purchaseDocumentNumber,
+      linePackageCount: linePk,
+    },
+  };
+}
+
 /**
- * Свод на погрузку: мультинакл., таблица остатка по калибру или по накладной (с итого), списание брака тем же переключателем; печать/CSV.
+ * Свод на погрузку: мультинакл., таблица остатка по калибру или по накладной (с итого), списание брака тем же переключателем.
  */
 export function LoadingManifestBlock({
   documentOptions,
@@ -73,7 +100,10 @@ export function LoadingManifestBlock({
       return includedBatchesFromSelection;
     }
     const byId = new Map(batchesInWh.map((b) => [b.id, b]));
-    return manifest.lines.map((line) => byId.get(line.batchId)).filter((b): b is BatchListItem => Boolean(b));
+    return manifest.lines.map((line) => {
+      const b = byId.get(line.batchId);
+      return b ?? syntheticBatchFromManifestLine(line);
+    });
   }, [batchesInWh, includedBatchesFromSelection, manifest]);
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
@@ -92,50 +122,6 @@ export function LoadingManifestBlock({
     return [...m.values()].sort((a, b) => a.number.localeCompare(b.number, "ru"));
   }, [includedBatches]);
 
-  const buildCsv = useCallback(() => {
-    const rows: string[] = [];
-    if (stockTableMode === "caliber") {
-      rows.push("===Свод_по_калибрам===");
-      rows.push(["Калибр", "Кг_ост", "Ящ_оцен", "Парт"].join(";"));
-      for (const row of caliberRows) {
-        rows.push(
-          [
-            row.lineLabel.replace(/;/g, " "),
-            String(row.totalKg),
-            row.linesWithPkg === 0 ? "" : String(row.totalPkg),
-            String(row.partCount),
-          ].join(";"),
-        );
-      }
-    } else {
-      rows.push("===Свод_по_накладным===");
-      rows.push(["Накладная", "Кг_ост", "Ящ_оцен", "Парт"].join(";"));
-      for (const row of documentRows) {
-        rows.push(
-          [
-            row.displayLabel.replace(/;/g, " "),
-            String(row.totalKg),
-            row.linesWithPkg === 0 ? "" : String(row.totalPkg),
-            String(row.partCount),
-          ].join(";"),
-        );
-      }
-    }
-    rows.push("");
-    rows.push(`Свод_кг;${totals.kg};Свод_ящ;${totals.pkg};парт;${includedBatches.length}`);
-    return "\uFEFF" + rows.join("\n");
-  }, [caliberRows, documentRows, includedBatches.length, stockTableMode, totals.kg, totals.pkg]);
-
-  const downloadCsv = useCallback(() => {
-    const blob = new Blob([buildCsv()], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pogruzka-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [buildCsv]);
-
   const stockTableLabelId = "loading-manifest-stock-table";
   const modeToggleId = "loading-manifest-mode";
 
@@ -149,10 +135,11 @@ export function LoadingManifestBlock({
           <strong>№ {manifest.manifestNumber}</strong> от {manifest.docDate} · {manifest.destinationName} ·{" "}
           {manifest.warehouseName} ({manifest.warehouseCode})
         </p>
-      ) : null}
-      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-        Склад: <strong>{manifest?.warehouseName ?? warehouseName}</strong>.
-      </p>
+      ) : (
+        <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>
+          Склад: <strong>{warehouseName}</strong>.
+        </p>
+      )}
       {documentOptions.length > 0 && (
         <div className="no-print" style={{ marginBottom: "0.75rem" }}>
           <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
@@ -529,15 +516,6 @@ export function LoadingManifestBlock({
               ) : null}
             </div>
           ) : null}
-
-          <p className="no-print" style={{ margin: "0.6rem 0 0" }}>
-            <button type="button" style={btnStyle} onClick={() => window.print()}>
-              Печать листа
-            </button>{" "}
-            <button type="button" style={btnStyle} onClick={downloadCsv}>
-              Скачать CSV
-            </button>
-          </p>
         </div>
       )}
     </section>

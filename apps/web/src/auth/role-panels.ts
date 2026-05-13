@@ -6,6 +6,7 @@ export type PanelId =
   | "reports"
   | "nakladnaya"
   | "distribution"
+  | "trips"
   | "loadingManifests"
   | "sellerDispatch"
   | "operations"
@@ -19,6 +20,7 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Распределение товара",
+  trips: "Рейсы",
   loadingManifests: "Погрузка",
   reports: "Отчёты и рейсы",
   /** Запись недостачи по рейсу (`OperationsPanel`); отгрузка — в «Распределении», продажа — у продавца. */
@@ -36,7 +38,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
-  /** Погрузочные накладные и привязка к рейсу — те же роли, что и «Распределение». */
+  trips: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
@@ -243,6 +245,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const base: PanelId[] = [
     "nakladnaya",
     "distribution",
+    "trips",
     "loadingManifests",
     "sellerDispatch",
     "assignSeller",
@@ -301,6 +304,9 @@ export function hrefForPanelInCabinet(
     if (panel === "distribution") {
       return adminRoutes.distribution;
     }
+    if (panel === "trips") {
+      return adminRoutes.trips;
+    }
     if (panel === "loadingManifests") {
       return adminRoutes.loadingManifests;
     }
@@ -326,6 +332,9 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "distribution") {
       return ops.distribution;
+    }
+    if (panel === "trips") {
+      return ops.trips;
     }
     if (panel === "loadingManifests") {
       return ops.loadingManifests;

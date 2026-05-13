@@ -59,6 +59,7 @@ type SidebarNavIconName =
   | "document"
   | "distribution"
   | "reports"
+  | "trips"
   | "operations"
   | "assignSeller"
   | "offline"
@@ -79,6 +80,9 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   }
   if (key === "dist" || key === "distribution") {
     return "distribution";
+  }
+  if (key === "trips") {
+    return "trips";
   }
   if (key === "rep" || key === "reports") {
     return "reports";
@@ -115,6 +119,7 @@ function SidebarNavIcon({ name }: { name: SidebarNavIconName }) {
     dashboard: ["M4 13h7V4H4v9z", "M13 20h7V4h-7v16z", "M4 20h7v-5H4v5z"],
     document: ["M7 3h7l4 4v14H7V3z", "M14 3v5h5", "M9.5 12h6", "M9.5 16h6"],
     distribution: ["M4 7h5v5H4V7z", "M15 4h5v5h-5V4z", "M15 15h5v5h-5v-5z", "M9 9.5h3.5a3 3 0 013 3V15", "M12.5 12.5H15"],
+    trips: ["M7 7h10", "M14 4l3 3-3 3", "M17 17H7", "M10 14l-3 3 3 3"],
     reports: ["M5 19V5", "M5 19h14", "M9 15v-4", "M13 15V8", "M17 15v-7"],
     operations: ["M7 7h10", "M14 4l3 3-3 3", "M17 17H7", "M10 14l-3 3 3 3"],
     assignSeller: ["M7 7h10", "M12 12h8", "M9 18a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0"],
