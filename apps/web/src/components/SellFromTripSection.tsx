@@ -1,7 +1,7 @@
 import { purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
@@ -27,6 +27,7 @@ import {
 } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
+import { routes } from "../routes.js";
 import { enqueue, requestOutboxBackgroundSync } from "../sync/index.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -218,6 +219,20 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       return [] as TripBatchTableRow[];
     }
     return buildTripBatchRows(sellReportQuery.data).filter((r) => r.netTransitG > 0n);
+  }, [sellReportQuery.data]);
+
+  /** Есть ли в отчёте рейса ненулевая отгрузка со склада в рейс (без этого продавцу нечего выбирать). */
+  const tripHasPositiveShipment = useMemo(() => {
+    if (!sellReportQuery.data) {
+      return false;
+    }
+    return sellReportQuery.data.shipment.byBatch.some((b) => {
+      try {
+        return BigInt(b.grams || "0") > 0n;
+      } catch {
+        return false;
+      }
+    });
   }, [sellReportQuery.data]);
 
   const batchIdsOnTrip = useMemo(
@@ -652,8 +667,29 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
           <BirzhaEmptyState
             compact
-            title="На этом рейсе нечего продавать"
-            description="Не было отгрузок со склада в рейс или весь товар уже продан / списан по недостаче."
+            title={
+              !tripHasPositiveShipment
+                ? isSellerUx
+                  ? "Пока нечего продавать: нет отгрузки в рейс"
+                  : "Нет отгрузки в рейс или нечего продавать"
+                : "На этом рейсе нечего продавать"
+            }
+            description={
+              !tripHasPositiveShipment ? (
+                <>
+                  Список партий строится по <strong>фактической отгрузке со склада в этот рейс</strong> (масса в
+                  машине). Закрепление рейса за продавцом и погрузочная накладная <strong>сами по себе не переносят</strong>{" "}
+                  кг в рейс — это оформляет склад/логистика: раздел{" "}
+                  <Link to={routes.ops.operations}>Операции</Link> или <Link to={routes.ops.trips}>Рейсы</Link> в
+                  кабинете операций. После появления отгрузок в отчёте рейса здесь появятся строки для продажи.
+                </>
+              ) : (
+                <>
+                  По отчёту рейса весь отгруженный товар уже учтён как проданный или как недостача — остатка «в пути»
+                  нет.
+                </>
+              )
+            }
           />
         </div>
       )}
