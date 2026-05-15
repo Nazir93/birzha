@@ -53,6 +53,7 @@ export const tripsFullListQueryOptions = () =>
     queryKey: queryRoots.trips,
     queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
     staleTime: QUERY_STALE_LISTS_MS,
+    refetchOnWindowFocus: true,
     /** Меньше «мигания» таблиц при invalidate после мутаций (Operations, отчёт, распределение). */
     placeholderData: keepPreviousData,
   });
@@ -94,6 +95,7 @@ export const tripByIdQueryOptions = (tripId: string) => {
     queryFn: () => apiGetJson<{ trip: TripJson }>(`/api/trips/${encodeURIComponent(id)}`),
     enabled: id.length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -105,6 +107,7 @@ export const batchesFullListQueryOptions = () =>
     queryKey: queryRoots.batches,
     queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
     staleTime: QUERY_STALE_LISTS_MS,
+    refetchOnWindowFocus: true,
     placeholderData: keepPreviousData,
   });
 
@@ -121,6 +124,7 @@ export const batchesByIdsQueryOptions = (ids: readonly string[]) => {
     },
     enabled: sorted.length > 0,
     staleTime: QUERY_STALE_LISTS_MS,
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -234,6 +238,7 @@ export const shipmentReportQueryOptions = (tripId: string) =>
         `/api/trips/${encodeURIComponent(tripId)}/shipment-report`,
       ),
     staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
+    refetchOnWindowFocus: true,
   });
 
 /**

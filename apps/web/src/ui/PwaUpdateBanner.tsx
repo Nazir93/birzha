@@ -1,17 +1,48 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
+
+/** Проверка новой сборки SW в фоне (иначе баннер «Обновить» появляется только при следующем «холодном» заходе). */
+const SW_VERSION_CHECK_MS = 30 * 60 * 1000;
 
 /**
  * Уведомление о новой версии после деплоя (registerType: prompt в vite-plugin-pwa).
  * «Офлайн готов» показываем коротко один раз — без навязчивости.
  */
 export function PwaUpdateBanner() {
+  const swCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (swCheckIntervalRef.current != null) {
+        clearInterval(swCheckIntervalRef.current);
+        swCheckIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  const registerSwOptions = useMemo(
+    () => ({
+      immediate: true as const,
+      onRegistered(r: ServiceWorkerRegistration | undefined) {
+        if (!r) {
+          return;
+        }
+        if (swCheckIntervalRef.current != null) {
+          clearInterval(swCheckIntervalRef.current);
+        }
+        swCheckIntervalRef.current = setInterval(() => {
+          void r.update();
+        }, SW_VERSION_CHECK_MS);
+      },
+    }),
+    [],
+  );
+
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW({
-    immediate: true,
-  });
+  } = useRegisterSW(registerSwOptions);
 
   if (!needRefresh && !offlineReady) {
     return null;

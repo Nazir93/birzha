@@ -9,7 +9,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
 import type { BatchListItem, TripJson } from "../api/types.js";
-import { formatBatchPartyCaption, formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { TRIP_STATUS_CLOSED, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
@@ -44,6 +44,15 @@ const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 /** У продавца: не выводим весь справочник — только по поиску (и прокрутка внутри блока). */
 const WHOLESALER_SELLER_SEARCH_MIN_CHARS = 2;
 const WHOLESALER_SELLER_MAX_ROWS = 80;
+
+/** В кабинете продавца на плитке — только товар/калибр, без номера накладной. */
+function sellerCaliberTileHeadline(b: BatchListItem | undefined, batchId: string): string {
+  const line = b ? formatNakladLineLabel(b) : "—";
+  if (line !== "—") {
+    return line;
+  }
+  return formatShortBatchId(batchId);
+}
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -99,7 +108,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const counterpartiesQ = useQuery({
     ...counterpartiesFullListQueryOptions(),
-    enabled: counterpartiesCatalog,
+    /** Розница у полевого продавца — без справочника контрагентов в UI. */
+    enabled: counterpartiesCatalog && !isSellerUx,
   });
   const wholesalersQ = useQuery({
     ...wholesalersFullListQueryOptions(),
@@ -202,17 +212,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellTripId(list[0]!.id);
   }, [isSellerUx, searchParams, sellTripId, sellerTripsListQ.data?.trips]);
 
-  /** В кабинете продавца — без смешанного «нал + долг»; онлайн-перевод на карту + нал разрешён (не эквайринг). */
-  useEffect(() => {
-    if (!isSellerUx) {
-      return;
-    }
-    if (paymentKind === "mixed") {
-      setPaymentKind("cash");
-      setCashMixed("");
-    }
-  }, [isSellerUx, paymentKind]);
-
   useEffect(() => {
     setPartyFilter("");
   }, [sellTripId]);
@@ -221,10 +220,15 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     if (saleChannel === "retail") {
       setWholesaleBuyerId("");
       setWholesalerSearch("");
+      if (isSellerUx) {
+        setSellCounterpartyId("");
+        setSellClientLabel("");
+        setNewCounterpartyName("");
+      }
     } else {
       setSellCounterpartyId("");
     }
-  }, [saleChannel]);
+  }, [saleChannel, isSellerUx]);
 
   useLayoutEffect(() => {
     if (searchParams.get("focus") !== "sell") {
@@ -399,8 +403,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     const rows = sellableOnTripRows.slice().sort((a, b) => {
       const ba = batchByIdForSell.get(a.batchId);
       const bb = batchByIdForSell.get(b.batchId);
-      const ca = formatBatchPartyCaption(ba, a.batchId);
-      const cb = formatBatchPartyCaption(bb, b.batchId);
+      const ca = sellerCaliberTileHeadline(ba, a.batchId);
+      const cb = sellerCaliberTileHeadline(bb, b.batchId);
       const c = ca.localeCompare(cb, "ru");
       if (c !== 0) {
         return c;
@@ -410,12 +414,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     const captionCount = new Map<string, number>();
     for (const r of rows) {
       const b = batchByIdForSell.get(r.batchId);
-      const cap = formatBatchPartyCaption(b, r.batchId);
+      const cap = sellerCaliberTileHeadline(b, r.batchId);
       captionCount.set(cap, (captionCount.get(cap) ?? 0) + 1);
     }
     return rows.map((row) => {
       const b = batchByIdForSell.get(row.batchId);
-      const headline = formatBatchPartyCaption(b, row.batchId);
+      const headline = sellerCaliberTileHeadline(b, row.batchId);
       const dupCaption = (captionCount.get(headline) ?? 0) > 1;
       const subId = `партия ${formatShortBatchId(row.batchId)}`;
       return {
@@ -458,7 +462,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       return "Загрузка остатков…";
     }
     if (sellReportQuery.isError) {
-      return "Список недоступен — укажите ID партии вручную.";
+      return "Список недоступен — повторите позже или обратитесь к администратору.";
     }
     if (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) {
       return "Нечего продавать по этому рейсу.";
@@ -544,17 +548,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     enabled: !isSellerUx && debouncedBatchIdSearch.trim().length >= 2,
   });
 
-  /** Для продавца: список партий на рейсе загрузился и есть что продавать — технический fallback скрываем. */
-  const sellerBatchListReady =
-    isSellerUx &&
-    sellReportQuery.isSuccess &&
-    sellableOnTripRows.length > 0 &&
-    batchesForTripQuery.isFetched;
-
-  /** Ручной ввод id партии — не показывать пока грузится отчёт (иначе мелькает блок «не видно товар»). */
-  const showBatchManualControls =
-    !isSellerUx ||
-    (Boolean(sellTripIdTrim) && !sellReportQuery.isPending && !sellerBatchListReady);
+  const showBatchManualControls = !isSellerUx;
 
   /** Фильтр списка партий — в кабинете продавца не показываем (выбор по плиткам калибра + прокрутка). */
   const showBatchListFilter =
@@ -632,6 +626,33 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         }
       }
     }
+    if (paymentKind === "mixed") {
+      const raw = cashMixed.trim();
+      if (!raw) {
+        return isSellerUx
+          ? "Укажите сумму наличными при смешанной оплате (рубли)"
+          : "Укажите сумму наличными (копейки в поле ниже)";
+      }
+      if (isSellerUx) {
+        const rub = nonnegativeDecimalStringToNumber(raw, 2);
+        if (!Number.isFinite(rub) || rub < 0) {
+          return "Сумма наличными: рубли, например 1500 или 1500,50";
+        }
+        const totalK = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, { kgMaxFrac: 6, priceMaxFrac: 4 });
+        if (Number.isFinite(totalK) && totalK >= 0) {
+          const cashK = Math.round(rub * 100);
+          if (cashK > totalK) {
+            return "Наличная часть не больше выручки по строке (кг × цена)";
+          }
+          if (cashK <= 0) {
+            return "Сумма наличными больше нуля — иначе выберите «В долг целиком»";
+          }
+          if (cashK >= totalK) {
+            return "Должна остаться часть в долг — уменьшите наличные или выберите «Наличными целиком»";
+          }
+        }
+      }
+    }
     return null;
   }, [
     isSellerUx,
@@ -644,6 +665,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     wholesaleRowsFiltered.length,
     paymentKind,
     cardTransferKopecks,
+    cashMixed,
     sellKg,
     sellPrice,
   ]);
@@ -662,6 +684,32 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     }
     return kopecksToRubLabel(String(Math.round(rub * 100)));
   }, [isSellerUx, paymentKind, cardTransferKopecks]);
+
+  /** Превью суммы наличными и остатка в долг при смешанной оплате (кабинет продавца, рубли). */
+  const { sellerCashMixedRubPreview, sellerCashMixedDebtPreviewRub } = useMemo(() => {
+    if (!isSellerUx || paymentKind !== "mixed") {
+      return { sellerCashMixedRubPreview: null as string | null, sellerCashMixedDebtPreviewRub: null as string | null };
+    }
+    const raw = cashMixed.trim();
+    if (!raw) {
+      return { sellerCashMixedRubPreview: null, sellerCashMixedDebtPreviewRub: null };
+    }
+    const rub = nonnegativeDecimalStringToNumber(raw, 2);
+    if (!Number.isFinite(rub) || rub < 0) {
+      return { sellerCashMixedRubPreview: null, sellerCashMixedDebtPreviewRub: null };
+    }
+    const cashK = Math.round(rub * 100);
+    const cashLabel = kopecksToRubLabel(String(cashK));
+    const totalK = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, { kgMaxFrac: 6, priceMaxFrac: 4 });
+    if (!Number.isFinite(totalK) || totalK < 0 || cashK >= totalK) {
+      return { sellerCashMixedRubPreview: cashLabel, sellerCashMixedDebtPreviewRub: null };
+    }
+    const debtK = totalK - cashK;
+    return {
+      sellerCashMixedRubPreview: cashLabel,
+      sellerCashMixedDebtPreviewRub: kopecksToRubLabel(String(debtK)),
+    };
+  }, [isSellerUx, paymentKind, cashMixed, sellKg, sellPrice]);
 
   const createCounterparty = useMutation({
     mutationFn: async () => {
@@ -801,6 +849,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 setSaleChannel("retail");
                 setWholesaleBuyerId("");
                 setWholesalerSearch("");
+                setSellCounterpartyId("");
+                setSellClientLabel("");
+                setNewCounterpartyName("");
               }}
             >
               Розница
@@ -831,96 +882,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               Опт недоступен — розница.
             </p>
           ) : null}
-          {saleChannel === "retail" ? (
-            <div style={{ marginTop: "0.85rem" }} role="region" aria-labelledby={`${idPrefix}-buyer-h`}>
-              <span id={`${idPrefix}-buyer-h`} className="birzha-form-label birzha-form-label--block" style={{ marginBottom: "0.35rem" }}>
-                Кому продаёте *
-              </span>
-              {counterpartiesCatalog ? (
-                <>
-                  <label htmlFor={`${idPrefix}-sel-cp-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
-                    Из справочника
-                  </label>
-                  <select
-                    id={`${idPrefix}-sel-cp-seller`}
-                    value={sellCounterpartyId}
-                    onChange={(e) => setSellCounterpartyId(e.target.value)}
-                    className={sellerFieldClass}
-                    style={{ ...selectWide, ...sellerFieldMb }}
-                    disabled={counterpartiesQ.isPending}
-                    aria-busy={counterpartiesQ.isPending || undefined}
-                  >
-                    <option value="">
-                      {counterpartiesQ.isPending ? "— загрузка справочника —" : "— выберите контрагента —"}
-                    </option>
-                    {(counterpartiesQ.data?.counterparties ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.displayName}
-                      </option>
-                    ))}
-                  </select>
-                  <label htmlFor={`${idPrefix}-in-new-cp-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
-                    Новый в справочнике
-                  </label>
-                  {!online ? (
-                    <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.45rem" }}>
-                      Без сети — только список или подпись ниже.
-                    </p>
-                  ) : null}
-                  <input
-                    id={`${idPrefix}-in-new-cp-seller`}
-                    value={newCounterpartyName}
-                    onChange={(e) => setNewCounterpartyName(e.target.value)}
-                    className={sellerFieldClass}
-                    style={sellerFieldMb}
-                    placeholder="название для справочника"
-                    maxLength={200}
-                    autoComplete="off"
-                    disabled={!online}
-                  />
-                  <button
-                    type="button"
-                    style={{ ...btnStyle, marginTop: "0.35rem" }}
-                    disabled={!online || createCounterparty.isPending}
-                    onClick={() => createCounterparty.mutate()}
-                  >
-                    {createCounterparty.isPending ? "…" : "Добавить в справочник"}
-                  </button>
-                  <FieldError error={createCounterparty.error as Error | null} />
-                  <label htmlFor={`${idPrefix}-in-client-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
-                    Подпись в отчёт (если не из справочника)
-                  </label>
-                  <input
-                    id={`${idPrefix}-in-client-seller`}
-                    value={sellClientLabel}
-                    onChange={(e) => setSellClientLabel(e.target.value)}
-                    className={sellerFieldClass}
-                    style={sellerFieldMb}
-                    placeholder="например ИП Иванов"
-                    maxLength={120}
-                    autoComplete="off"
-                    disabled={Boolean(sellCounterpartyId)}
-                  />
-                </>
-              ) : (
-                <>
-                  <label htmlFor={`${idPrefix}-in-client-seller`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm">
-                    Клиент (подпись в отчёт)
-                  </label>
-                  <input
-                    id={`${idPrefix}-in-client-seller`}
-                    value={sellClientLabel}
-                    onChange={(e) => setSellClientLabel(e.target.value)}
-                    className={sellerFieldClass}
-                    style={sellerFieldMb}
-                    placeholder="например ИП Иванов"
-                    maxLength={120}
-                    autoComplete="off"
-                  />
-                </>
-              )}
-            </div>
-          ) : wholesalersCatalog ? (
+          {saleChannel === "retail" ? null : wholesalersCatalog ? (
             <div style={{ marginTop: "0.85rem" }} role="region" aria-labelledby={`${idPrefix}-wholesale-h`}>
               <span id={`${idPrefix}-wholesale-h`} className="birzha-form-label birzha-form-label--block" style={{ marginBottom: "0.35rem" }}>
                 Оптовик *
@@ -1050,15 +1012,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               <option value="">— Выберите рейс —</option>
               {sellerTripOptions.map((t: TripJson) => (
                 <option key={t.id} value={t.id}>
-                  {formatTripSelectLabel(t)}
+                  {formatTripSelectLabel(t, isSellerUx ? { includeTechnicalId: false } : undefined)}
                 </option>
               ))}
               {sellTripIdTrim &&
               !sellerTripOptions.some((t) => t.id === sellTripIdTrim) ? (
-                <option value={sellTripIdTrim}>
-                  Рейс (ссылка) {sellTripIdTrim.slice(0, 10)}
-                  {sellTripIdTrim.length > 10 ? "…" : ""}
-                </option>
+                <option value={sellTripIdTrim}>Рейс из ссылки</option>
               ) : null}
             </select>
           )}
@@ -1086,7 +1045,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       )}
       {sellTripIdTrim && sellReportQuery.isError && (
         <p role="alert" style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
-          Ошибка отчёта по рейсу. Ниже — ID партии вручную.
+          {isSellerUx
+            ? "Ошибка загрузки остатков по рейсу. Повторите позже или обратитесь к администратору."
+            : "Ошибка отчёта по рейсу. Ниже — ID партии вручную."}
         </p>
       )}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
@@ -1107,7 +1068,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
           <LoadingIndicator
             size="sm"
-            label={isSellerUx ? "Загрузка калибров и накладных…" : "Загрузка накладных по строкам рейса…"}
+            label={isSellerUx ? "Загрузка калибров…" : "Загрузка накладных по строкам рейса…"}
           />
         </p>
       )}
@@ -1133,7 +1094,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
         >
           <legend className="birzha-form-label" style={{ padding: 0, marginBottom: "0.35rem" }}>
-            Партия на рейсе (накладная · калибр) *
+            Калибр на рейсе *
           </legend>
           {sellBatchSelectDisabled ? (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
@@ -1149,7 +1110,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 <div
                   className="birzha-seller-caliber-grid"
                   role="listbox"
-                  aria-label="Партии на рейсе (остаток в машине)"
+                  aria-label="Калибры на рейсе (остаток в машине)"
                   id={`${idPrefix}-sel-batch`}
                 >
                   {sellerTripSellTiles.map((t) => {
@@ -1603,9 +1564,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       >
         <option value="cash">Наличными целиком</option>
         <option value="debt">В долг целиком (без наличных)</option>
-        {!isSellerUx ? (
-          <option value="mixed">Смешанно: наличные + долг (укажите нал ниже)</option>
-        ) : null}
+        <option value="mixed">
+          {isSellerUx ? "Наличные + долг (сумма наличными — в рублях ниже)" : "Смешанно: наличные + долг (укажите нал ниже)"}
+        </option>
         <option value="card_transfer">
           {isSellerUx
             ? "Онлайн-перевод на карту + наличные (остаток наличными, не терминал)"
@@ -1648,17 +1609,33 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             htmlFor={`${idPrefix}-in-mixed`}
             className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
           >
-            Сколько наличными из сделки (копейки, только цифры) *
+            {isSellerUx ? "Сколько наличными из сделки, руб *" : "Сколько наличными из сделки (копейки, только цифры) *"}
           </label>
           <input
             id={`${idPrefix}-in-mixed`}
             value={cashMixed}
             onChange={(e) => setCashMixed(e.target.value)}
-            style={fieldStyle}
-            placeholder="например 50000 (= 500 руб)"
-            inputMode="numeric"
+            className={isSellerUx ? sellerFieldClass : undefined}
+            style={isSellerUx ? { ...fieldStyle, ...sellerFieldMb } : fieldStyle}
+            placeholder={
+              isSellerUx
+                ? "например 2500 или 2500,50 — остаток выручки в долг"
+                : "например 50000 (= 500 руб)"
+            }
+            inputMode={isSellerUx ? "decimal" : "numeric"}
             autoComplete="off"
           />
+          {isSellerUx && sellerCashMixedRubPreview ? (
+            <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "-0.35rem 0 0.35rem", lineHeight: 1.45 }}>
+              В учёт уйдёт наличными: <strong>{sellerCashMixedRubPreview} ₽</strong>
+              {sellerCashMixedDebtPreviewRub ? (
+                <>
+                  {" "}
+                  · в долг: <strong>{sellerCashMixedDebtPreviewRub} ₽</strong>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </>
       )}
       {isSellerUx && sellerSellBlockReason ? (

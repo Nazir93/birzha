@@ -4,8 +4,11 @@
  */
 export const QUERY_STALE_LISTS_MS = 120_000;
 
-/** Отчёт по рейсу дорогой (БД + агрегации) — не помечать устаревшим чаще, чем списки. */
-export const QUERY_STALE_SHIPMENT_REPORT_MS = 120_000;
+/**
+ * Отчёт по рейсу дорогой (БД + агрегации), но продажа могла прийти с другого устройства —
+ * короче staleTime + `refetchOnWindowFocus` / `visibilitychange` дают актуальные кг без «миллиона» перелогинов.
+ */
+export const QUERY_STALE_SHIPMENT_REPORT_MS = 45_000;
 
 /** Подбор рейса в форме (ограниченная выборка) — чаще обновлять, чем полный список. */
 export const QUERY_STALE_TRIP_PICKER_MS = 30_000;

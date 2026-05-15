@@ -256,7 +256,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
             {tripsForSelect.map((t) => {
-              const label = formatTripSelectLabel(t);
+              const label = formatTripSelectLabel(t, {
+                includeTechnicalId: !fieldSellerSalesReport,
+              });
               return (
                 <option key={t.id} value={t.id}>
                   {label.length > 120 ? `${label.slice(0, 117)}…` : label}

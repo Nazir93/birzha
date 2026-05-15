@@ -10,6 +10,7 @@ import { MutationErrorBanner } from "./query/MutationErrorBanner.js";
 import { AppErrorBoundary } from "./ui/AppErrorBoundary.js";
 import { PwaInstallBanner } from "./ui/PwaInstallBanner.js";
 import { PwaUpdateBanner } from "./ui/PwaUpdateBanner.js";
+import { RefetchDomainOnAppVisible } from "./query/RefetchDomainOnAppVisible.js";
 
 import "./index.css";
 import { syncBirzhaThemeFromStorage } from "./theme/birzha-theme.js";
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
       <WebQueryProvider client={queryClient}>
         <PwaInstallBanner />
         <PwaUpdateBanner />
+        <RefetchDomainOnAppVisible />
         <MutationErrorBanner />
         <AuthProvider>
           <BrowserRouter>

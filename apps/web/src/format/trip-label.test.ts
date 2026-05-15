@@ -60,5 +60,20 @@ describe("trip-label", () => {
     });
     expect(label).toContain("10.05.2026");
     expect(label).toContain("Иванов");
+    expect(label).toContain("— trip-1");
+  });
+
+  it("без технического id — только номер, статус и реквизиты (кабинет продавца)", () => {
+    const label = formatTripSelectLabel(
+      {
+        ...baseTrip,
+        tripNumber: "Р-12",
+        vehicleLabel: "Камаз",
+        departedAt: "2026-05-10T08:00:00.000Z",
+      },
+      { includeTechnicalId: false },
+    );
+    expect(label).toBe("Р-12 (Открыт) 10.05.2026 Камаз");
+    expect(label).not.toContain("trip-1");
   });
 });
