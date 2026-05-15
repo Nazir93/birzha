@@ -135,14 +135,13 @@ export function registerTripRoutes(
         return reply.code(403).send({ error: "forbidden" });
       }
       const onlySales = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
-      const { trip, shipment, sales: saleAgg, shortage: shortageAgg, financials } = await tripReport.execute(
-        tripId,
-        onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined,
-      );
+      const { trip, shipment, sales: saleAgg, salesForTripStock, shortage: shortageAgg, financials } =
+        await tripReport.execute(tripId, onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined);
       return reply.send({
         trip: tripToJson(trip),
         shipment: shipmentLedgerToJson(shipment),
         sales: saleLedgerAggregateToJson(saleAgg),
+        ...(salesForTripStock ? { salesForTripStock: saleLedgerAggregateToJson(salesForTripStock) } : {}),
         shortage: ledgerAggregateToJson(shortageAgg),
         financials: tripFinancialsToJson(financials),
       });

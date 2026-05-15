@@ -83,6 +83,28 @@ describe("buildTripBatchRows", () => {
     expect(b2.revenueK).toBe(0n);
   });
 
+  it("salesForTripStock: soldG и netTransit по всем продажам, выручка по строкам — из sales", () => {
+    const r = baseReport();
+    r.salesForTripStock = {
+      ...r.sales,
+      totalGrams: "2500",
+      byBatch: [
+        {
+          batchId: "b1",
+          grams: "2500",
+          revenueKopecks: "99999",
+          cashKopecks: "0",
+          debtKopecks: "0",
+          cardTransferKopecks: "0",
+        },
+      ],
+    };
+    const b1 = buildTripBatchRows(r).find((x) => x.batchId === "b1")!;
+    expect(b1.soldG).toBe(2500n);
+    expect(b1.revenueK).toBe(50000n);
+    expect(b1.netTransitG).toBe(0n);
+  });
+
   it("пустые byBatch дают пустой массив", () => {
     const r = baseReport();
     r.shipment.byBatch = [];

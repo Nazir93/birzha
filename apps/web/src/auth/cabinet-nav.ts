@@ -48,10 +48,11 @@ export function buildCabinetNavEntries(
     out.push({ to: adminRoutes.home, label: "Сводка", key: "admin-home" });
   }
   if (cabinet === "sales") {
-    /** У полевого продавца нет подразделов — только `/s`; пункт «Сводка» не дублируем в сайдбаре. */
-    if (!isFieldSellerOnly(user)) {
-      out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
-    }
+    out.push({
+      to: sales.home,
+      label: isFieldSellerOnly(user) ? "Продажа" : "Сводка",
+      key: "sales-home",
+    });
   }
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
@@ -79,7 +80,9 @@ export function buildCabinetNavEntries(
     if (to) {
       const label =
         cabinet === "sales" && p === "reports"
-          ? "Отчёты по рейсу"
+          ? isFieldSellerOnly(user)
+            ? "Отчёт по рейсу"
+            : "Отчёты по рейсу"
           : NAV_PANEL_LABELS[p];
       out.push({ to, label, key: p });
     }

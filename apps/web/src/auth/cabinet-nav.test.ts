@@ -53,13 +53,16 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
   });
 
-  it("продавец (только seller): кабинет /s — без пунктов в сайдбаре", () => {
+  it("продавец (только seller): кабинет /s — продажа и отчёт по рейсу", () => {
     const user = {
       id: "u1",
       login: "seller1",
       roles: [{ roleCode: "seller", scopeType: "global" as const, scopeId: "" }],
     };
-    expect(buildCabinetNavEntries("sales", user, true)).toEqual([]);
+    const links = buildCabinetNavEntries("sales", user, true);
+    expect(links).toHaveLength(2);
+    expect(links[0]).toEqual({ to: sales.home, label: "Продажа", key: "sales-home" });
+    expect(links[1]).toEqual({ to: sales.reports, label: "Отчёт по рейсу", key: "reports" });
   });
 
   it("seller + склад: на /s остаётся сводка и доступные подразделы", () => {

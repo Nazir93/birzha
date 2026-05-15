@@ -126,9 +126,11 @@ describe("GetTripReportUseCase", () => {
 
     const forAlice = await uc.execute("t-2", { onlySalesRecordedByUserId: "u-alice" });
     expect(forAlice.sales.totalGrams).toBe(10_000n);
+    expect(forAlice.salesForTripStock?.totalGrams).toBe(15_000n);
     expect(forAlice.financials.revenueKopecks).toBe(1_000n);
 
     const forBob = await uc.execute("t-2", { onlySalesRecordedByUserId: "u-bob" });
     expect(forBob.sales.totalGrams).toBe(5_000n);
+    expect(forBob.salesForTripStock?.totalGrams).toBe(15_000n);
   });
 });

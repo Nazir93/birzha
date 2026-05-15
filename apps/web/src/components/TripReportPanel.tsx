@@ -15,7 +15,7 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
-import { canCreateTrip } from "../auth/role-panels.js";
+import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesFullListQueryOptions,
@@ -46,7 +46,7 @@ export type TripReportViewContext = "default" | "accounting" | "sales";
 const headingByContext: Record<TripReportViewContext, string> = {
   default: "Рейсы и отчёт по фуре",
   accounting: "Отчёт по рейсу (сверка)",
-  sales: "Отчёт по рейсу: что продано",
+  sales: "Отчёт по рейсу",
 };
 
 export function TripReportPanel({ viewContext = "default" }: { viewContext?: TripReportViewContext }) {
@@ -75,19 +75,37 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     [tripsQuery.data?.trips],
   );
 
+  const fieldSellerSalesReport = viewContext === "sales" && Boolean(user && isFieldSellerOnly(user));
+
+  const tripsForSelect = useMemo(() => {
+    if (!fieldSellerSalesReport || !user) {
+      return sortedTrips;
+    }
+    return sortedTrips.filter((t) => t.assignedSellerUserId === user.id);
+  }, [sortedTrips, fieldSellerSalesReport, user]);
+
   useEffect(() => {
     if (initialTripFromUrl.current) {
       return;
     }
     const p = searchParams.get("trip")?.trim() ?? "";
-    if (!p || sortedTrips.length === 0) {
+    if (!p || tripsForSelect.length === 0) {
       return;
     }
-    if (sortedTrips.some((t) => t.id === p)) {
+    if (tripsForSelect.some((t) => t.id === p)) {
       setTripId(p);
       initialTripFromUrl.current = true;
     }
-  }, [searchParams, sortedTrips]);
+  }, [searchParams, tripsForSelect]);
+
+  useEffect(() => {
+    if (!fieldSellerSalesReport || !tripId) {
+      return;
+    }
+    if (!tripsForSelect.some((t) => t.id === tripId)) {
+      setTripId("");
+    }
+  }, [fieldSellerSalesReport, tripsForSelect, tripId]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),
@@ -217,24 +235,27 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
         </p>
       )}
 
-      {tripsQuery.data && sortedTrips.length === 0 && (
+      {tripsQuery.data && tripsForSelect.length === 0 && (
         <div className="no-print" style={{ marginTop: "0.5rem" }}>
-          <BirzhaEmptyState compact title="Нет рейсов" />
+          <BirzhaEmptyState
+            compact
+            title={fieldSellerSalesReport ? "Нет закреплённых за вами рейсов" : "Нет рейсов"}
+          />
         </div>
       )}
 
-      {sortedTrips.length > 0 && (
+      {tripsForSelect.length > 0 && (
         <div className="no-print" style={{ marginTop: "0.75rem" }}>
           <label
             htmlFor="trip-select"
             className="birzha-text-muted birzha-text-muted--lg"
             style={{ display: "block", marginBottom: "0.35rem" }}
           >
-            Выберите рейс
+            {fieldSellerSalesReport ? "Выберите закреплённый за вами рейс" : "Выберите рейс"}
           </label>
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
-            {sortedTrips.map((t) => {
+            {tripsForSelect.map((t) => {
               const label = formatTripSelectLabel(t);
               return (
                 <option key={t.id} value={t.id}>
@@ -363,10 +384,12 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   <td style={thtd}>Отгрузка в рейс</td>
                   <td style={thtd}>{gramsToKgLabel(r.shipment.totalGrams)} кг</td>
                 </tr>
-                <tr>
-                  <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
-                  <td style={thtd}>{r.shipment.totalPackageCount}</td>
-                </tr>
+                {!fieldSellerSalesReport ? (
+                  <tr>
+                    <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
+                    <td style={thtd}>{r.shipment.totalPackageCount}</td>
+                  </tr>
+                ) : null}
                 <tr>
                   <td style={thtd}>Продажи</td>
                   <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
@@ -398,7 +421,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             defaultOpen
             title={
               <h3 id="trip-report-money" style={{ fontSize: "0.95rem", margin: 0 }}>
-                Деньги (копейки → руб.)
+                {fieldSellerSalesReport ? "Выручка и способ оплаты" : "Деньги (копейки → руб.)"}
               </h3>
             }
           >
@@ -419,24 +442,28 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   <td style={thtd}>Выручка</td>
                   <td style={thtd}>{kopecksToRubLabel(r.financials.revenueKopecks)} ₽</td>
                 </tr>
+                {!fieldSellerSalesReport ? (
+                  <>
+                    <tr>
+                      <td style={thtd}>Себестоимость проданного</td>
+                      <td style={thtd}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)} ₽</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>Себестоимость недостачи</td>
+                      <td style={thtd}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)} ₽</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>
+                        <strong>Валовая прибыль</strong>
+                      </td>
+                      <td style={thtd}>
+                        <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
+                      </td>
+                    </tr>
+                  </>
+                ) : null}
                 <tr>
-                  <td style={thtd}>Себестоимость проданного</td>
-                  <td style={thtd}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)} ₽</td>
-                </tr>
-                <tr>
-                  <td style={thtd}>Себестоимость недостачи</td>
-                  <td style={thtd}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)} ₽</td>
-                </tr>
-                <tr>
-                  <td style={thtd}>
-                    <strong>Валовая прибыль</strong>
-                  </td>
-                  <td style={thtd}>
-                    <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={thtd}>Выручка: нал / перевод на карту / долг</td>
+                  <td style={thtd}>Наличные / перевод на карту / долг</td>
                   <td style={thtd}>
                     {kopecksToRubLabel(r.sales.totalCashKopecks)} ₽ /{" "}
                     {kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} ₽ /{" "}
@@ -469,9 +496,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <th scope="col" style={thHead}>
                         Продано, кг
                       </th>
-                      <th scope="col" style={thHead}>
-                        Выручка
-                      </th>
+                      {!fieldSellerSalesReport ? (
+                        <th scope="col" style={thHead}>
+                          Выручка
+                        </th>
+                      ) : null}
                       <th scope="col" style={thHead}>
                         Нал
                       </th>
@@ -488,7 +517,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={row.lineLabel}>
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
-                        <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
+                        {!fieldSellerSalesReport ? (
+                          <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
+                        ) : null}
                         <td style={thtd}>{kopecksToRubLabel(row.cash.toString())} ₽</td>
                         <td style={thtd}>{kopecksToRubLabel(row.card.toString())} ₽</td>
                         <td style={thtd}>{kopecksToRubLabel(row.debt.toString())} ₽</td>
@@ -509,6 +540,12 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </h3>
               }
             >
+              {fieldSellerSalesReport ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+                  Розница и опт по сумме килограммов — в блоке «Массы» выше. У опта в колонке «Клиент» указано имя оптовика
+                  из справочника. Оплата: наличные, перевод на карту (как в сделке) и долг — в рублях по строке.
+                </p>
+              ) : null}
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table style={tableStyle} aria-labelledby="trip-report-clients">
                   <thead>
@@ -519,9 +556,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <th scope="col" style={thHead}>
                         Прод., кг
                       </th>
-                      <th scope="col" style={thHead}>
-                        Выручка
-                      </th>
+                      {!fieldSellerSalesReport ? (
+                        <th scope="col" style={thHead}>
+                          Выручка
+                        </th>
+                      ) : null}
                       <th scope="col" style={thHead}>
                         Нал / карта / долг
                       </th>
@@ -532,7 +571,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={`${row.clientLabel}-${idx}`}>
                         <td style={thtd}>{row.clientLabel ? row.clientLabel : "—"}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
-                        <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
+                        {!fieldSellerSalesReport ? (
+                          <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
+                        ) : null}
                         <td style={thtd}>
                           {kopecksToRubLabel(row.cashKopecks)} / {kopecksToRubLabel(row.cardTransferKopecks || "0")} /{" "}
                           {kopecksToRubLabel(row.debtKopecks)}
@@ -545,6 +586,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </BirzhaDisclosure>
           )}
 
+          {!fieldSellerSalesReport ? (
+            <>
           <BirzhaDisclosure
             defaultOpen
             title={
@@ -673,6 +716,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </pre>
             </BirzhaDisclosure>
           </div>
+            </>
+          ) : null}
         </div>
       )}
     </div>

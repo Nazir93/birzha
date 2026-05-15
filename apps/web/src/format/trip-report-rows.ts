@@ -24,8 +24,12 @@ function bi(x: string | undefined): bigint {
 
 /** Объединяет `byBatch` из отчёта рейса в строки для таблицы сверки. */
 export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow[] {
+  const salesStock = r.salesForTripStock ?? r.sales;
   const ids = new Set<string>();
   for (const b of r.shipment.byBatch) {
+    ids.add(b.batchId);
+  }
+  for (const b of salesStock.byBatch) {
     ids.add(b.batchId);
   }
   for (const b of r.sales.byBatch) {
@@ -43,12 +47,14 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   }
 
   const soldG = new Map<string, bigint>();
+  for (const b of salesStock.byBatch) {
+    soldG.set(b.batchId, bi(b.grams));
+  }
   const revenue = new Map<string, bigint>();
   const cash = new Map<string, bigint>();
   const debt = new Map<string, bigint>();
   const card = new Map<string, bigint>();
   for (const b of r.sales.byBatch) {
-    soldG.set(b.batchId, bi(b.grams));
     revenue.set(b.batchId, bi(b.revenueKopecks));
     cash.set(b.batchId, bi(b.cashKopecks));
     debt.set(b.batchId, bi(b.debtKopecks));
@@ -145,13 +151,14 @@ export function reconcileBatchTotalsWithReport(
   agg: ReturnType<typeof aggregateTripBatchRows>,
 ): BatchTotalsReconciliation {
   const shipTotal = bi(r.shipment.totalGrams);
-  const salesTotal = bi(r.sales.totalGrams);
+  const salesTotalGrams = bi((r.salesForTripStock ?? r.sales).totalGrams);
   const shortTotal = bi(r.shortage.totalGrams);
   const revTotal = bi(r.sales.totalRevenueKopecks);
   const cashTotal = bi(r.sales.totalCashKopecks);
   const debtTotal = bi(r.sales.totalDebtKopecks);
   const cardTotal = bi(r.sales.totalCardTransferKopecks);
 
+  const salesTotalForClients = bi(r.sales.totalGrams);
   let sumClientG = 0n;
   let sumClientRev = 0n;
   let sumClientCash = 0n;
@@ -165,7 +172,7 @@ export function reconcileBatchTotalsWithReport(
     sumClientCard += bi(c.cardTransferKopecks);
   }
   const clientTotalsOk =
-    sumClientG === salesTotal &&
+    sumClientG === salesTotalForClients &&
     sumClientRev === revTotal &&
     sumClientCash === cashTotal &&
     sumClientDebt === debtTotal &&
@@ -176,7 +183,7 @@ export function reconcileBatchTotalsWithReport(
 
   return {
     shipmentGramsOk: agg.shippedG === shipTotal,
-    salesGramsOk: agg.soldG === salesTotal,
+    salesGramsOk: agg.soldG === salesTotalGrams,
     shortageGramsOk: agg.shortageG === shortTotal,
     revenueKopecksOk: agg.revenueK === revTotal,
     cashDebtOk: paymentSplitOk,

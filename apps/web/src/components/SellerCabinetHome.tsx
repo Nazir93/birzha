@@ -2,12 +2,12 @@ import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet, isFieldSellerOnly } from "../auth/role-panels.js";
-import { ops } from "../routes.js";
+import { ops, sales } from "../routes.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
 
 /**
- * Полевой продавец: только форма «Продажа с рейса» на `/s`, без переходов в другие разделы.
- * Совмещение ролей (seller + склад): ссылка в операции `/o`, без дубля отчёта на `/s/reports`.
+ * Полевой продавец: форма «Продажа с рейса» и ссылка на отчёт по закреплённым рейсам.
+ * Совмещение ролей (seller + склад): ссылка в операции `/o`.
  */
 export function SellerCabinetHome() {
   const { user } = useAuth();
@@ -23,14 +23,20 @@ export function SellerCabinetHome() {
             Кабинет продавца
           </h2>
         </div>
-        {!fieldSellerOnly && canOpsCabinet ? (
-          <nav className="birzha-home-actions no-print" aria-label="Связанные разделы">
+        <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
+          {fieldSellerOnly ? (
+            <Link to={sales.reports} className="birzha-home-action">
+              <span>Итоги</span>
+              <strong>Отчёт по рейсу</strong>
+            </Link>
+          ) : null}
+          {!fieldSellerOnly && canOpsCabinet ? (
             <Link to={ops.operations} className="birzha-home-action">
               <span>Для старшего</span>
               <strong>Операции склада</strong>
             </Link>
-          </nav>
-        ) : null}
+          ) : null}
+        </nav>
       </header>
 
       <SellFromTripSection variant="seller" />

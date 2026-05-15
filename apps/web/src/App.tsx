@@ -84,9 +84,6 @@ const SellerCabinetHome = lazy(() =>
 const SellerSalesOperationsRedirect = lazy(() =>
   import("./components/SellerSalesOperationsRedirect.js").then((m) => ({ default: m.SellerSalesOperationsRedirect })),
 );
-const FieldSellerSalesReportsRedirect = lazy(() =>
-  import("./components/FieldSellerSalesReportsRedirect.js").then((m) => ({ default: m.FieldSellerSalesReportsRedirect })),
-);
 const TripReportPanel = lazy(() =>
   import("./components/TripReportPanel.js").then((m) => ({ default: m.TripReportPanel })),
 );
@@ -440,7 +437,16 @@ export function App() {
               </RequireCabinet>
             }
           >
-            <Route path="reports" element={<FieldSellerSalesReportsRedirect />} />
+            <Route
+              path="reports"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <TripReportPanel viewContext="sales" />
+                  </section>
+                </RequirePanel>
+              }
+            />
             <Route path="operations" element={<SellerSalesOperationsRedirect />} />
             <Route
               index

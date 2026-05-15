@@ -18,7 +18,7 @@ export class GetTripReportUseCase {
   ) {}
 
   /**
-   * @param onlySalesRecordedByUserId — если задан, блок `sales` и `financials` (через продажи) только по строкам, записанным этим пользователем (полевой «только seller»).
+   * @param onlySalesRecordedByUserId — если задан, блок `sales` и `financials` (через продажи) только по строкам, записанным этим пользователем (полевой «только seller»). Дополнительно возвращается `salesForTripStock` — все продажи по рейсу для расчёта физического остатка в машине (отгрузка − продано − недостача).
    */
   async execute(
     tripId: string,
@@ -30,10 +30,11 @@ export class GetTripReportUseCase {
     }
     const shipment = await this.shipments.aggregateByTripId(tripId);
     const uid = options?.onlySalesRecordedByUserId?.trim();
-    const sales = await this.sales.aggregateByTripId(
-      tripId,
-      uid ? { onlyRecordedByUserId: uid } : undefined,
-    );
+    const salesAll = await this.sales.aggregateByTripId(tripId);
+    const sales = uid
+      ? await this.sales.aggregateByTripId(tripId, { onlyRecordedByUserId: uid })
+      : salesAll;
+    const salesForTripStock = uid ? salesAll : undefined;
     const shortage = await this.shortages.aggregateByTripId(tripId);
 
     const batchIds = new Set<string>();
@@ -50,6 +51,6 @@ export class GetTripReportUseCase {
     }
     const financials = computeTripFinancials(sales, shortage, purchaseRubPerKgByBatchId);
 
-    return { trip, shipment, sales, shortage, financials };
+    return { trip, shipment, sales, salesForTripStock, shortage, financials };
   }
 }

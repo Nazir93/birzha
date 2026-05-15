@@ -291,6 +291,11 @@ export type ShipmentReportResponse = {
   trip: TripJson;
   shipment: ShipmentLedgerBlock;
   sales: SalesBlock;
+  /**
+   * Все продажи по рейсу (без фильтра по `recorded_by`), только когда в API для полевого продавца
+   * отфильтрован блок `sales`. Нужен для «кг в машине» / плиток продажи с рейса.
+   */
+  salesForTripStock?: SalesBlock;
   shortage: LedgerBlock;
   financials: FinancialsBlock;
 };
