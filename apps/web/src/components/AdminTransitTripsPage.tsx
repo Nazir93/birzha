@@ -145,7 +145,7 @@ export function AdminTransitTripsPage() {
           >
             {rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: "0.9rem" }} className="birzha-text-muted">
-                Нет подходящих рейсов. Измените фильтры или дождитесь отгрузки в рейс.
+                Нет подходящих рейсов.
               </p>
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">

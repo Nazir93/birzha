@@ -76,7 +76,8 @@ describe("role-panels", () => {
 
   it("postLoginRedirectPath — не оставлять другой кабинет после смены учётки", () => {
     expect(postLoginRedirectPath(userWithRoles("admin"), sales.reports)).toBe(adminRoutes.home);
-    expect(postLoginRedirectPath(userWithRoles("seller"), sales.reports)).toBe(sales.reports);
+    expect(postLoginRedirectPath(userWithRoles("seller"), sales.reports)).toBe(sales.home);
+    expect(postLoginRedirectPath(userWithRoles("seller"), `${sales.reports}?trip=t1`)).toBe(`${sales.home}?trip=t1`);
     expect(postLoginRedirectPath(userWithRoles("seller"), adminRoutes.reports)).toBe(sales.home);
     expect(postLoginRedirectPath(userWithRoles("warehouse"), ops.reports)).toBe(ops.reports);
   });
@@ -86,8 +87,8 @@ describe("role-panels", () => {
     expect(order[0]).toBe("reports");
   });
 
-  it("operationsPanelOrder: только seller — только отчёты", () => {
-    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports"]);
+  it("operationsPanelOrder: только seller — без подпунктов в меню кабинета продаж", () => {
+    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual([]);
   });
 
   it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {

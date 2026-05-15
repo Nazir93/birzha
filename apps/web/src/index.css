@@ -3564,10 +3564,6 @@ a.birzha-admin-stat--link:focus-visible {
   min-width: 0;
 }
 
-.birzha-assign-seller__detail-grid {
-  min-width: 0;
-}
-
 .birzha-assign-seller__hero {
   display: flex;
   flex-wrap: wrap;
@@ -3762,6 +3758,12 @@ a.birzha-admin-stat--link:focus-visible {
   border: 1px solid #fde68a;
 }
 
+.birzha-assign-seller__badge--soldout {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
 .birzha-assign-seller__detail {
   padding: 1rem 1.1rem;
   border-radius: var(--birzha-radius);
@@ -3797,15 +3799,10 @@ a.birzha-admin-stat--link:focus-visible {
 }
 
 .birzha-assign-seller__detail-grid {
-  display: grid;
-  gap: 1.25rem;
-}
-
-@media (min-width: 960px) {
-  .birzha-assign-seller__detail-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
 }
 
 .birzha-assign-seller__detail-block-title {

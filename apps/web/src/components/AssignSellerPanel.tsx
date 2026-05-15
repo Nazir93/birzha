@@ -1,12 +1,13 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
+import { apiFetch, assertOkResponse, closeTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canCreateTrip } from "../auth/role-panels.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
-import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
   aggregateSellerShipmentReports,
@@ -15,14 +16,15 @@ import {
 } from "../format/seller-trip-metrics.js";
 import {
   batchesFullListQueryOptions,
+  queryRoots,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
-import { fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
@@ -37,6 +39,7 @@ function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; sco
 
 export function AssignSellerPanel() {
   const { meta, user } = useAuth();
+  const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const batchesQuery = useQuery(batchesFullListQueryOptions());
   const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
@@ -143,6 +146,28 @@ export function AssignSellerPanel() {
   }, [reportByTripId, selectedSellerTrips]);
 
   const activeReport = activeTripId ? reportByTripId.get(activeTripId) ?? null : null;
+
+  const closeTripSoldOutMut = useMutation({
+    mutationFn: async (tripId: string) => {
+      const rep = reportByTripId.get(tripId);
+      if (!rep) {
+        throw new Error("Нет отчёта по рейсу");
+      }
+      if (!tripReportShowsSoldOut(rep)) {
+        const ok = window.confirm(
+          "По отчёту ещё есть остаток в машине. Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+        );
+        if (!ok) {
+          return;
+        }
+      }
+      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+      await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+    },
+  });
 
   const sellerLabel = assignSellerUserId ? sellerLoginById.get(assignSellerUserId) ?? assignSellerUserId : "";
 
@@ -299,10 +324,12 @@ export function AssignSellerPanel() {
                               className={
                                 t.status === "closed"
                                   ? "birzha-assign-seller__badge birzha-assign-seller__badge--closed"
-                                  : "birzha-assign-seller__badge birzha-assign-seller__badge--open"
+                                  : tripListShowsSoldOut(t)
+                                    ? "birzha-assign-seller__badge birzha-assign-seller__badge--soldout"
+                                    : "birzha-assign-seller__badge birzha-assign-seller__badge--open"
                               }
                             >
-                              {formatTripStatusLabel(t.status)}
+                              {formatTripListStatusLabel(t)}
                             </span>
                           </td>
                           <td style={{ ...thtd, textAlign: "right" }}>
@@ -343,14 +370,32 @@ export function AssignSellerPanel() {
                     className={
                       activeReport.trip.status === "closed"
                         ? "birzha-assign-seller__badge birzha-assign-seller__badge--closed"
-                        : "birzha-assign-seller__badge birzha-assign-seller__badge--open"
+                        : tripReportShowsSoldOut(activeReport)
+                          ? "birzha-assign-seller__badge birzha-assign-seller__badge--soldout"
+                          : "birzha-assign-seller__badge birzha-assign-seller__badge--open"
                     }
                   >
-                    {formatTripStatusLabel(activeReport.trip.status)}
+                    {formatTripReportStatusLabel(activeReport)}
                   </span>
+                  {canCreateTrip(user ?? null) && activeReport.trip.status === "open" ? (
+                    <button
+                      type="button"
+                      className="birzha-ui-sm no-print"
+                      style={btnStyleInline}
+                      disabled={closeTripSoldOutMut.isPending}
+                      onClick={() => closeTripSoldOutMut.mutate(activeReport.trip.id)}
+                    >
+                      {closeTripSoldOutMut.isPending ? "…" : "Закрыть рейс"}
+                    </button>
+                  ) : null}
                 </h3>
               }
             >
+              {closeTripSoldOutMut.isError ? (
+                <p className="birzha-text-danger birzha-ui-sm" role="alert" style={{ margin: "0 0 0.65rem" }}>
+                  {(closeTripSoldOutMut.error as Error).message}
+                </p>
+              ) : null}
               <div className="birzha-assign-seller__detail-grid">
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По партиям (накладная · калибр)</h4>

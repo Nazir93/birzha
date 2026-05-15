@@ -14,7 +14,7 @@ export function tripReportShowsSoldOut(r: ShipmentReportResponse): boolean {
   return !rows.some((x) => x.netTransitG > 0n);
 }
 
-/** Статус рейса в шапке отчёта (учитывает «Продан» по строкам отчёта). */
+/** Статус рейса в шапке отчёта (отличает «ноль в машине» от учётного «Закрыт»). */
 export function formatTripReportStatusLabel(r: ShipmentReportResponse): string {
   if (r.trip.status === "closed") {
     return "Закрыт";
@@ -34,7 +34,7 @@ export function tripListShowsSoldOut(t: TripJson): boolean {
   );
 }
 
-/** Подпись статуса в списках админки / отчётах (учитывает «Продан» по остатку в пути). */
+/** Подпись статуса в списках админки / отчётах (ноль в машине ≠ закрытие рейса в БД). */
 export function formatTripListStatusLabel(t: TripJson): string {
   if (t.status === "closed") {
     return "Закрыт";

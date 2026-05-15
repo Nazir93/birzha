@@ -1,18 +1,18 @@
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
-import { canAccessCabinet } from "../auth/role-panels.js";
-import { ops, sales } from "../routes.js";
+import { canAccessCabinet, isFieldSellerOnly } from "../auth/role-panels.js";
+import { ops } from "../routes.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
-import { SellerCabinetOverview } from "./SellerCabinetOverview.js";
 
 /**
- * Полевой продавец: сводка по выбранному рейсу и форма продажи с рейса.
- * PWA: см. `birzha-seller-workspace` в CSS (safe-area, крупная кнопка в форме).
+ * Полевой продавец: только форма «Продажа с рейса» на `/s`, без переходов в другие разделы.
+ * Совмещение ролей (seller + склад): ссылка в операции `/o`, без дубля отчёта на `/s/reports`.
  */
 export function SellerCabinetHome() {
   const { user } = useAuth();
   const canOpsCabinet = user ? canAccessCabinet(user, "operations") : false;
+  const fieldSellerOnly = user ? isFieldSellerOnly(user) : false;
 
   return (
     <div className="birzha-seller-workspace birzha-home-premium" aria-labelledby="seller-cabinet-h">
@@ -23,21 +23,15 @@ export function SellerCabinetHome() {
             Кабинет продавца
           </h2>
         </div>
-        <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
-          <Link to={sales.reports} className="birzha-home-action">
-            <span>Отчёты</span>
-            <strong>По рейсу (партии, клиенты)</strong>
-          </Link>
-          {canOpsCabinet && (
+        {!fieldSellerOnly && canOpsCabinet ? (
+          <nav className="birzha-home-actions no-print" aria-label="Связанные разделы">
             <Link to={ops.operations} className="birzha-home-action">
               <span>Для старшего</span>
               <strong>Операции склада</strong>
             </Link>
-          )}
-        </nav>
+          </nav>
+        ) : null}
       </header>
-
-      <SellerCabinetOverview />
 
       <SellFromTripSection variant="seller" />
     </div>

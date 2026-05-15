@@ -9,7 +9,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
 import type { BatchListItem, TripJson } from "../api/types.js";
-import { formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
+import { formatBatchPartyCaption, formatNakladLineLabel, formatShortBatchId } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { TRIP_STATUS_CLOSED, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
@@ -18,8 +18,8 @@ import {
   estimateNetTransitPackageCount,
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
-import { groupSellableRowsByCaliber, type SellerCaliberGroup } from "../format/seller-trip-caliber-groups.js";
 import { useAuth } from "../auth/auth-context.js";
+import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
 import {
   batchesByIdsQueryOptions,
@@ -60,11 +60,6 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
-/** Кг для одной сделки по группе калибра (как подставляется в поле «кг»). */
-function sellerCaliberGroupDealGrams(g: SellerCaliberGroup): bigint {
-  return g.rows.length <= 1 ? g.totalNetG : g.primaryRow.netTransitG;
-}
-
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -81,7 +76,7 @@ export type SellFromTripVariant = "seller" | "operations";
  * Используется в кабинете продавца (/s) и в общих операциях (/o/operations).
  */
 export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
   const online = useNavigatorOnLine();
   const isSellerUx = variant === "seller";
   const queryClient = useQueryClient();
@@ -395,10 +390,42 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       .filter((g) => g.rows.length > 0);
   }, [sellTripRowsByNaklad, partyFilter]);
 
-  const sellerCaliberGroups = useMemo(
-    () => groupSellableRowsByCaliber(sellableOnTripRows, batchByIdForSell),
-    [sellableOnTripRows, batchByIdForSell],
-  );
+  /**
+   * Плитки продавца: по одной на партию. Раньше партии с одним калибром схлопывались в одну плитку,
+   * а продажа шла только с «главной» партии — после продажи «всё» по калибру вторая партия снова
+   * выглядела как остаток того же калибра.
+   */
+  const sellerTripSellTiles = useMemo(() => {
+    const rows = sellableOnTripRows.slice().sort((a, b) => {
+      const ba = batchByIdForSell.get(a.batchId);
+      const bb = batchByIdForSell.get(b.batchId);
+      const ca = formatBatchPartyCaption(ba, a.batchId);
+      const cb = formatBatchPartyCaption(bb, b.batchId);
+      const c = ca.localeCompare(cb, "ru");
+      if (c !== 0) {
+        return c;
+      }
+      return a.batchId.localeCompare(b.batchId);
+    });
+    const captionCount = new Map<string, number>();
+    for (const r of rows) {
+      const b = batchByIdForSell.get(r.batchId);
+      const cap = formatBatchPartyCaption(b, r.batchId);
+      captionCount.set(cap, (captionCount.get(cap) ?? 0) + 1);
+    }
+    return rows.map((row) => {
+      const b = batchByIdForSell.get(row.batchId);
+      const headline = formatBatchPartyCaption(b, row.batchId);
+      const dupCaption = (captionCount.get(headline) ?? 0) > 1;
+      const subId = `партия ${formatShortBatchId(row.batchId)}`;
+      return {
+        row,
+        batchId: row.batchId,
+        headline,
+        subLine: dupCaption ? subId : null,
+      };
+    });
+  }, [sellableOnTripRows, batchByIdForSell]);
 
   const sellBatchSelectDisabled = useMemo(
     () =>
@@ -418,9 +445,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     ],
   );
 
-  const applySellerCaliberGroup = useCallback((g: SellerCaliberGroup) => {
-    setSellBatchId(g.primaryBatchId);
-    setSellKg(gramsBigIntToKgDecimalString(sellerCaliberGroupDealGrams(g)));
+  const applySellerSellTile = useCallback((row: TripBatchTableRow) => {
+    setSellBatchId(row.batchId);
+    setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
   }, []);
 
   const sellerCaliberGridStatusMessage = useMemo(() => {
@@ -998,7 +1025,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
                 description={
                   sellerHasAssignedClosedOnly
-                    ? "Закрытые рейсы здесь не выбираются. Итоги и история — в разделе «Отчёты по рейсу»."
+                    ? user && isFieldSellerOnly(user)
+                      ? "Закрытые рейсы здесь не выбираются. По итогам рейса обратитесь к администратору."
+                      : "Закрытые рейсы здесь не выбираются. Итоги и история — в разделе «Отчёты по рейсу»."
                     : undefined
                 }
               />
@@ -1104,7 +1133,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
         >
           <legend className="birzha-form-label" style={{ padding: 0, marginBottom: "0.35rem" }}>
-            Калибр и остаток в машине *
+            Партия на рейсе (накладная · калибр) *
           </legend>
           {sellBatchSelectDisabled ? (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
@@ -1112,7 +1141,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             </p>
           ) : (
             <>
-              {sellerCaliberGroups.length === 0 ? (
+              {sellerTripSellTiles.length === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
                   Нет строк.
                 </p>
@@ -1120,19 +1149,15 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 <div
                   className="birzha-seller-caliber-grid"
                   role="listbox"
-                  aria-label="Калибр и остаток в машине"
+                  aria-label="Партии на рейсе (остаток в машине)"
                   id={`${idPrefix}-sel-batch`}
                 >
-                  {sellerCaliberGroups.map((g) => {
-                    const selected = sellBatchId === g.primaryBatchId;
-                    const dealG = sellerCaliberGroupDealGrams(g);
-                    const kgLine = gramsBigIntToKgDecimalString(dealG);
-                    const restG = g.rows.length > 1 ? g.totalNetG - dealG : 0n;
-                    const restLabel =
-                      restG > 0n ? `ещё ${gramsBigIntToKgDecimalString(restG)} кг по калибру` : null;
+                  {sellerTripSellTiles.map((t) => {
+                    const selected = sellBatchId === t.batchId;
+                    const kgLine = gramsBigIntToKgDecimalString(t.row.netTransitG);
                     return (
                       <button
-                        key={g.primaryBatchId}
+                        key={t.batchId}
                         type="button"
                         className={
                           selected
@@ -1141,11 +1166,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                         }
                         role="option"
                         aria-selected={selected}
-                        onClick={() => applySellerCaliberGroup(g)}
+                        onClick={() => applySellerSellTile(t.row)}
                       >
-                        <span className="birzha-seller-caliber-tile__line">{g.lineLabel}</span>
+                        <span className="birzha-seller-caliber-tile__line">{t.headline}</span>
+                        {t.subLine ? (
+                          <span className="birzha-seller-caliber-tile__meta">{t.subLine}</span>
+                        ) : null}
                         <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
-                        {restLabel ? <span className="birzha-seller-caliber-tile__meta">{restLabel}</span> : null}
                       </button>
                     );
                   })}

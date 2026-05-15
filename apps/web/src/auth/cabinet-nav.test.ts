@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js";
-import { accounting, adminRoutes, ops, prefix } from "../routes.js";
+import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 describe("cabinet-nav", () => {
   it("аноним: операции — пять ссылок /o (в т.ч. Рейсы)", () => {
@@ -51,6 +51,30 @@ describe("cabinet-nav", () => {
     const links = buildCabinetNavEntries("accounting", user, true);
     expect(links.find((x) => x.key === "acc-dispatch")?.to).toBe(accounting.sellerDispatch);
     expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
+  });
+
+  it("продавец (только seller): кабинет /s — без пунктов в сайдбаре", () => {
+    const user = {
+      id: "u1",
+      login: "seller1",
+      roles: [{ roleCode: "seller", scopeType: "global" as const, scopeId: "" }],
+    };
+    expect(buildCabinetNavEntries("sales", user, true)).toEqual([]);
+  });
+
+  it("seller + склад: на /s остаётся сводка и доступные подразделы", () => {
+    const user = {
+      id: "u2",
+      login: "mix",
+      roles: [
+        { roleCode: "seller", scopeType: "global" as const, scopeId: "" },
+        { roleCode: "warehouse", scopeType: "global" as const, scopeId: "" },
+      ],
+    };
+    const links = buildCabinetNavEntries("sales", user, true);
+    expect(links.find((x) => x.key === "sales-home")?.to).toBe(sales.home);
+    expect(links.find((x) => x.key === "reports")?.to).toBe(sales.reports);
+    expect(links.find((x) => x.key === "operations")?.to).toBe(sales.operations);
   });
 
   it("cabinetNavLinkUsesEnd только для корней /a /s /b", () => {

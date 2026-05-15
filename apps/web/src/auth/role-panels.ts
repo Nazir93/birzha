@@ -256,9 +256,9 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     return base;
   }
   const codes = globalRoleCodes(user);
-  /** Только полевой продавец: продажа на `/s`, без второй вкладки «Операции» (дубль формы). */
+  /** Только полевой продавец: на `/s` только форма продажи — без пунктов меню в кабинете продаж. */
   if (isSellerOnly(codes)) {
-    return ["reports"];
+    return [];
   }
   if (codes.has("logistics")) {
     const rest = base.filter((p) => p !== "reports");
@@ -408,6 +408,12 @@ export function postLoginRedirectPath(user: AuthUser, fromPathname: string): str
   const homeCabinet = cabinetForUser(user);
   if (fromCabinet !== null && fromCabinet !== homeCabinet) {
     return defaultRouteForUser(user);
+  }
+  if (isFieldSellerOnly(user)) {
+    const pathOnly = normalized.replace(/[?#].*$/, "");
+    if (pathOnly === sales.reports || pathOnly === sales.operations) {
+      return `${sales.home}${normalized.slice(pathOnly.length)}`;
+    }
   }
   return normalized;
 }

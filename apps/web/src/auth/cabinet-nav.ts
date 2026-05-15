@@ -2,6 +2,7 @@ import type { AuthUser } from "./auth-context.js";
 import {
   canAccessCabinet,
   hrefForPanelInCabinet,
+  isFieldSellerOnly,
   NAV_PANEL_LABELS,
   operationsPanelOrder,
   type CabinetId,
@@ -47,7 +48,10 @@ export function buildCabinetNavEntries(
     out.push({ to: adminRoutes.home, label: "Сводка", key: "admin-home" });
   }
   if (cabinet === "sales") {
-    out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
+    /** У полевого продавца нет подразделов — только `/s`; пункт «Сводка» не дублируем в сайдбаре. */
+    if (!isFieldSellerOnly(user)) {
+      out.push({ to: sales.home, label: "Сводка", key: "sales-home" });
+    }
   }
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });

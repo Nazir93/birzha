@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
+import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
@@ -96,6 +97,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const r = reportQuery.data;
 
   const batchRows = useMemo(() => (r ? buildTripBatchRows(r) : []), [r]);
+
+  const salesByProductLine = useMemo(() => (r ? aggregateTripSalesByProductLine(r, batchById) : []), [r, batchById]);
 
   const batchAgg = useMemo(() => aggregateTripBatchRows(batchRows), [batchRows]);
 
@@ -443,6 +446,58 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </tbody>
             </table>
           </div>
+          </BirzhaDisclosure>
+
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-by-product-line" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Продажи по товару и калибру
+              </h3>
+            }
+          >
+            {salesByProductLine.length === 0 ? (
+              <BirzhaEmptyState compact title="Продаж по строкам накладной нет" />
+            ) : (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="trip-report-by-product-line">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Товар · калибр
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Продано, кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Выручка
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Нал
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Карта
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Долг
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesByProductLine.map((row) => (
+                      <tr key={row.lineLabel}>
+                        <td style={thtd}>{row.lineLabel}</td>
+                        <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                        <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
+                        <td style={thtd}>{kopecksToRubLabel(row.cash.toString())} ₽</td>
+                        <td style={thtd}>{kopecksToRubLabel(row.card.toString())} ₽</td>
+                        <td style={thtd}>{kopecksToRubLabel(row.debt.toString())} ₽</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </BirzhaDisclosure>
 
           {r.sales.byClient.length > 0 && (

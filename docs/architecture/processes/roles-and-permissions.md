@@ -86,6 +86,8 @@
 
 **Реализация в API (MVP, текущий код):** в таблицу `trip_batch_sales` пишется `recorded_by_user_id` (пользователь из JWT при `POST /batches/…/sell-from-trip` и `POST /sync` с `sell_from_trip`). Для учётной записи с **глобальной** ролью **только** `seller` (без `warehouse`, `logistics`, `manager` и т.д., см. `isGlobalSellerOnly` / `isFieldSellerOnly`) блоки **`sales`** и связанные **`financials`** в **`GET /api/trips/:tripId/shipment-report`** строятся только по таким строкам; **отгрузка в рейс** и **недостача** в отчёте — общие по рейсу. Остальные роли получают полный отчёт по продажам.
 
+**Веб (кабинет `/s`):** учётная запись с **только** полевой ролью `seller` (`isFieldSellerOnly`) видит **только** экран «Продажа с рейса»; переходы на `/s/reports` и `/s/operations` в интерфейсе отключены (прямой ввод URL ведёт на `/s`).
+
 **Назначение продавца на рейс:** список кандидатов — **`GET /api/trips/field-seller-options`** (роли `admin`, `manager`, `purchaser`, `logistics`), активные пользователи с глобальной ролью `seller`.
 
 - руководитель видит агрегаты и детализацию по ролям и регионам
