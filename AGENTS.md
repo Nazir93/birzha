@@ -11,7 +11,7 @@
 | Роли, матрица прав, документы | `docs/architecture/processes/roles-and-permissions.md` |
 | Риски (долги, офлайн, возвраты) | `docs/architecture/risks-and-guardrails.md` |
 | Термины, глоссарий | `docs/architecture/business-glossary.md` |
-| Офлайн / sync | `docs/architecture/offline/offline-sync.md` |
+| Sync / кэш | `docs/architecture/offline/offline-sync.md` |
 | Сценарии полей/форм (заказчик) | `docs/guides/dlya-zakazchika-zapolnenie.md` |
 | Деплой, VPS, nginx, домен продакшена (**24birzha.ru**) | `docs/deployment/vps-ubuntu.md`, `docs/deployment/runbook.md`, `deploy/nginx-birzha.example.conf` |
 | Эскиз ER, таблицы, единицы | `docs/architecture/data-model/` (er-model, table-catalog, units) |

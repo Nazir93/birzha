@@ -86,10 +86,10 @@ export function AdminTransitTripsPage() {
           </Link>
         </p>
         <h2 id="transit-trips-h" style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
-          В пути
+          Рейсы с остатком
         </h2>
         <p style={{ margin: "0.35rem 0 0", fontSize: "0.88rem", color: "var(--color-muted)", maxWidth: 52 * 16 }}>
-          Рейсы в статусе «открыт», у которых по данным системы ещё есть масса «в пути». Фильтр по дате выезда — по календарному дню (UTC-дата).
+          Открытые рейсы, у которых по учёту ещё есть масса на рейсе (не продана). Фильтр по дате выезда — по календарному дню (UTC-дата).
         </p>
       </header>
 
@@ -144,8 +144,8 @@ export function AdminTransitTripsPage() {
 
           <BirzhaDisclosure
             defaultOpen
-            title={<span style={{ fontWeight: 600 }}>Рейсы в пути ({rows.length})</span>}
-            hint="остаток «в пути» &gt; 0"
+            title={<span style={{ fontWeight: 600 }}>Список ({rows.length})</span>}
+            hint="остаток на рейсе &gt; 0"
           >
             {rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: "0.9rem" }} className="birzha-text-muted">
@@ -153,7 +153,7 @@ export function AdminTransitTripsPage() {
               </p>
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={tableStyle} aria-label="Рейсы в пути">
+                <table style={tableStyle} aria-label="Рейсы с остатком на рейсе">
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>

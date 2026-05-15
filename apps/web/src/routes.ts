@@ -21,7 +21,6 @@ export const ops = {
   operations: `${prefix.operations}/operations`,
   sellerDispatch: `${prefix.operations}/seller-dispatch`,
   assignSeller: `${prefix.operations}/assign-seller`,
-  offline: `${prefix.operations}/offline`,
 } as const;
 
 /** Справочники (склады, калибры) и meta — узкий круг. */
@@ -37,11 +36,10 @@ export const adminRoutes = {
   operations: `${prefix.admin}/operations`,
   sellerDispatch: `${prefix.admin}/seller-dispatch`,
   assignSeller: `${prefix.admin}/assign-seller`,
-  offline: `${prefix.admin}/offline`,
   inventory: `${prefix.admin}/inventory`,
   /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
   tripRegistry: `${prefix.admin}/trip-registry`,
-  /** Рейсы с ненулевым остатком «в пути». */
+  /** Рейсы с ненулевым остатком на рейсе (учёт). */
   transitTrips: `${prefix.admin}/transit-trips`,
   /** Продажи по продавцам (поиск, даты рейсов). */
   soldBySeller: `${prefix.admin}/sold-by-seller`,
@@ -57,7 +55,6 @@ export const sales = {
   home: prefix.sales,
   reports: `${prefix.sales}/reports`,
   operations: `${prefix.sales}/operations`,
-  offline: `${prefix.sales}/offline`,
 } as const;
 
 export const accounting = {
@@ -85,7 +82,6 @@ export const routes = {
     purchaseNakladnaya: "/purchase-nakladnaya",
     distribution: "/distribution",
     operations: "/operations",
-    offline: "/offline",
     service: "/service",
   },
 } as const;
@@ -96,7 +92,6 @@ export const legacyPathList: readonly string[] = [
   routes.legacy.purchaseNakladnaya,
   routes.legacy.distribution,
   routes.legacy.operations,
-  routes.legacy.offline,
   routes.legacy.service,
 ] as const;
 

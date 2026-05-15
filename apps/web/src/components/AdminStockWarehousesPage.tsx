@@ -263,7 +263,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>Калибр</th>
                           <th style={thHeadDense}>Вид</th>
                           <th style={thHeadDense}>На складе, кг</th>
-                          <th style={thHeadDense}>В пути, кг</th>
+                          <th style={thHeadDense}>На рейсе, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
                         </tr>
                       </thead>

@@ -224,7 +224,7 @@ export function BatchesByNakladnayaReference({
                     на складе, кг
                   </th>
                   <th scope="col" style={thHeadDense}>
-                    в пути
+                    на рейсе, кг
                   </th>
                   <th scope="col" style={thHeadDense}>
                     продано

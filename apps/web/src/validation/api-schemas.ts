@@ -93,6 +93,23 @@ export function parseShipForm(batchIdRaw: string, tripIdRaw: string, kgRaw: stri
   });
 }
 
+/** Рубли (строка поля продавца) → целое копеек для API; только при `sellerMoneyInRubles`. */
+function sellerRublesAmountToKopecksDigits(raw: string): string {
+  const t = raw.trim();
+  if (t === "") {
+    throw new Error("Укажите сумму");
+  }
+  const rub = nonnegativeDecimalStringToNumber(t, 2);
+  if (!Number.isFinite(rub) || rub < 0) {
+    throw new Error("Сумма: неотрицательное число рублей (например 4950 или 4950,50)");
+  }
+  const kop = Math.round(rub * 100);
+  if (kop > Number.MAX_SAFE_INTEGER) {
+    throw new Error("Сумма слишком большая");
+  }
+  return String(kop);
+}
+
 export function parseSellFromTripForm(input: {
   batchId: string;
   tripId: string;
@@ -108,6 +125,11 @@ export function parseSellFromTripForm(input: {
   cardTransferKopecks?: string;
   clientLabel?: string;
   counterpartyId?: string;
+  /**
+   * Кабинет продавца: «нал при смешанной оплате» и «перевод на карту» вводятся в **рублях** (4950 = 4950 ₽).
+   * Операции и прежние тесты — в **копейках** целым числом в строке.
+   */
+  sellerMoneyInRubles?: boolean;
 }) {
   return mapZod(() => {
     const batchId = batchIdParam.parse(input.batchId.trim());
@@ -117,6 +139,7 @@ export function parseSellFromTripForm(input: {
     const pricePerKg = parseDecimalKg(input.pricePerKg);
 
     const saleCh = input.saleChannel ?? "retail";
+    const rublesMode = Boolean(input.sellerMoneyInRubles);
     const base: z.infer<typeof sellFromTripBodySchema> = {
       tripId,
       kg,
@@ -133,11 +156,19 @@ export function parseSellFromTripForm(input: {
     }
     if (input.paymentKind === "mixed") {
       const cm = input.cashMixed.trim();
-      base.cashKopecksMixed = cm || undefined;
+      if (rublesMode && cm) {
+        base.cashKopecksMixed = sellerRublesAmountToKopecksDigits(cm);
+      } else {
+        base.cashKopecksMixed = cm || undefined;
+      }
     }
     if (input.paymentKind === "card_transfer") {
       const ct = input.cardTransferKopecks?.trim() ?? "";
-      base.cardTransferKopecks = ct || undefined;
+      if (rublesMode && ct) {
+        base.cardTransferKopecks = sellerRublesAmountToKopecksDigits(ct);
+      } else {
+        base.cardTransferKopecks = ct || undefined;
+      }
     }
     if (saleCh !== "wholesale") {
       const cp = input.counterpartyId?.trim();

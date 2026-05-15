@@ -151,4 +151,48 @@ describe("parseSellFromTripForm", () => {
       }),
     ).toThrow();
   });
+
+  it("sellerMoneyInRubles: рубли перевода → копейки в теле", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "2",
+      saleId: "s1",
+      pricePerKg: "50",
+      paymentKind: "card_transfer",
+      cashMixed: "",
+      cardTransferKopecks: "4950",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.cardTransferKopecks).toBe("495000");
+  });
+
+  it("sellerMoneyInRubles: дробные рубли перевода", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "1",
+      saleId: "s1",
+      pricePerKg: "10",
+      paymentKind: "card_transfer",
+      cashMixed: "",
+      cardTransferKopecks: "99,50",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.cardTransferKopecks).toBe("9950");
+  });
+
+  it("sellerMoneyInRubles: mixed — нал в рублях → копейки", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "2",
+      saleId: "s1",
+      pricePerKg: "50",
+      paymentKind: "mixed",
+      cashMixed: "100,5",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.cashKopecksMixed).toBe("10050");
+  });
 });

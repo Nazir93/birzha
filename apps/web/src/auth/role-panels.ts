@@ -11,7 +11,6 @@ export type PanelId =
   | "sellerDispatch"
   | "operations"
   | "assignSeller"
-  | "offline"
   | "service"
   | "inventory"
   | "users";
@@ -27,7 +26,6 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   operations: "Недостача по рейсу",
   sellerDispatch: "Отгрузка",
   assignSeller: "Продажи",
-  offline: "Офлайн-очередь",
   service: "Диагностика",
   inventory: "Склады и калибры",
   users: "Сотрудники",
@@ -43,7 +41,6 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
   assignSeller: ["admin", "manager", "purchaser", "logistics", "accountant"],
-  offline: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   service: ["admin"],
   /** Склады и калибры — только admin (согласовано с API). */
   inventory: ["admin"],
@@ -251,7 +248,6 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "assignSeller",
     "reports",
     "operations",
-    "offline",
     "inventory",
     "users",
     "service",
@@ -262,7 +258,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const codes = globalRoleCodes(user);
   /** Только полевой продавец: продажа на `/s`, без второй вкладки «Операции» (дубль формы). */
   if (isSellerOnly(codes)) {
-    return ["reports", "offline"];
+    return ["reports"];
   }
   if (codes.has("logistics")) {
     const rest = base.filter((p) => p !== "reports");
@@ -319,9 +315,6 @@ export function hrefForPanelInCabinet(
     if (panel === "operations") {
       return adminRoutes.operations;
     }
-    if (panel === "offline") {
-      return adminRoutes.offline;
-    }
   }
   if (currentCabinet === "operations") {
     if (panel === "reports") {
@@ -348,9 +341,6 @@ export function hrefForPanelInCabinet(
     if (panel === "operations") {
       return ops.operations;
     }
-    if (panel === "offline") {
-      return ops.offline;
-    }
     if (panel === "inventory" && canManageInventoryCatalog(user)) {
       return adminRoutes.inventory;
     }
@@ -367,9 +357,6 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "operations") {
       return sales.operations;
-    }
-    if (panel === "offline") {
-      return sales.offline;
     }
   }
   if (currentCabinet === "accounting") {
@@ -438,7 +425,6 @@ export function canonicalPathForLegacy(legacy: LegacySegment, user: AuthUser | n
       purchaseNakladnaya: ops.purchaseNakladnaya,
       distribution: ops.distribution,
       operations: ops.operations,
-      offline: ops.offline,
       service: adminRoutes.service,
     }[legacy];
   }
@@ -468,15 +454,6 @@ export function canonicalPathForLegacy(legacy: LegacySegment, user: AuthUser | n
       return sales.operations;
     }
     return ops.operations;
-  }
-  if (legacy === "offline") {
-    if (!canAccessPanel(user, "offline")) {
-      return defaultRouteForUser(user);
-    }
-    if (cabinetForUser(user) === "sales") {
-      return sales.offline;
-    }
-    return ops.offline;
   }
   return routes.legacy[legacy];
 }

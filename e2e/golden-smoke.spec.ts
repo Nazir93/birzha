@@ -462,30 +462,6 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(text).toContain("25000");
   });
 
-  test("офлайн: очередь, create_trip и успешная синхронизация", async ({ page }) => {
-    await page.goto("/offline");
-    await expect(page.locator("#offline-heading")).toContainText("Неотправленные действия");
-    await expect(page.getByRole("button", { name: /Синхронизировать/ })).toBeVisible();
-    const enqueueBtn = page.getByRole("button", { name: /добавить тестовое действие/i });
-    await expect(enqueueBtn).toBeVisible();
-
-    const count = page.locator("#offline-queue-count");
-    await expect(count).not.toHaveText("…", { timeout: 15_000 });
-    const before = Number.parseInt((await count.textContent()) ?? "0", 10);
-    expect(Number.isFinite(before)).toBeTruthy();
-
-    await enqueueBtn.click();
-    await expect(count).toHaveText(String(before + 1), { timeout: 10_000 });
-
-    await page.getByRole("button", { name: /Синхронизировать/ }).click();
-    await expect(count).toHaveText(String(before), { timeout: 20_000 });
-    await expect(page.getByLabel("Технический результат последней синхронизации, JSON")).toContainText(
-      '"stoppedReason": "empty"',
-      { timeout: 15_000 },
-    );
-    await expect(page.getByLabel("Технический результат последней синхронизации, JSON")).toContainText('"processed": 1');
-  });
-
   test("распределение: регион загрузки и legacy /distribution → /o/distribution", async ({ page }) => {
     await page.goto("/o/distribution");
     await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
@@ -526,7 +502,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible();
   });
 
-  test("навигация: вкладки AppNav (закупка → распределение → операции → офлайн → диагностика → отчёты)", async ({ page }) => {
+  test("навигация: вкладки AppNav (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
     await page.goto("/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -543,9 +519,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/operations$/);
     await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible({ timeout: 15_000 });
 
-    await nav.getByRole("link", { name: "Офлайн-очередь" }).click();
-    await expect(page).toHaveURL(/\/offline$/);
-    await expect(page.locator("#offline-heading")).toBeVisible();
+    await nav.getByRole("link", { name: "Рейсы" }).click();
+    await expect(page).toHaveURL(/\/o\/trips$/);
+    await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
 
     /* Ссылка «Диагностика» в шапке только у admin/manager; анонимный e2e — прямой legacy URL. */
     await page.goto("/service");

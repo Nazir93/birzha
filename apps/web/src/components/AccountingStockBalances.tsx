@@ -36,7 +36,7 @@ function warehouseLabel(
 }
 
 /**
- * Остатки товара в штуках учёта: кг на складе, в пути, оценка закупочной стоимости по цене партии из накладной.
+ * Остатки товара в штуках учёта: кг на складе, на рейсе, оценка закупочной стоимости по цене партии из накладной.
  */
 export function AccountingStockBalances() {
   const batchesQ = useQuery(batchesFullListQueryOptions());
@@ -116,7 +116,7 @@ export function AccountingStockBalances() {
           </span>
         </span>
       }
-      hint="Склад, путь и закупочная стоимость"
+      hint="Склад, рейс и закупочная стоимость"
     >
       <div className="birzha-kpi-grid birzha-kpi-grid--wide">
         <div className="birzha-kpi-tile birzha-kpi-tile--premium">
@@ -130,13 +130,13 @@ export function AccountingStockBalances() {
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valWhKop.toString())}</div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
-          <div className="birzha-kpi-tile__label">В пути (в рейсах), кг</div>
+          <div className="birzha-kpi-tile__label">На рейсе, кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {totals.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
-          <div className="birzha-kpi-tile__label">Оценка товара в пути</div>
+          <div className="birzha-kpi-tile__label">Оценка товара на рейсе</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
         </div>
       </div>
@@ -157,7 +157,7 @@ export function AccountingStockBalances() {
                 Оценка остатка, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                В пути, кг
+                На рейсе, кг
               </th>
             </tr>
           </thead>

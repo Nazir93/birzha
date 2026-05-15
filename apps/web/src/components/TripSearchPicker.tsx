@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import { formatTripSelectLabel } from "../format/trip-label.js";
+import { isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import { tripByIdQueryOptions, tripsSearchPickerQueryOptions } from "../query/core-list-queries.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -52,17 +53,34 @@ export function TripSearchPicker({
     return [extra, ...fromPicker];
   }, [pickerQuery.data?.trips, selectedDetailQuery.data?.trip]);
 
-  const selectedTrip = mergedTrips.find((t) => t.id === value) ?? selectedDetailQuery.data?.trip;
+  const visibleTrips = useMemo(
+    () => (sellerWorkspace ? mergedTrips.filter(isTripOpenForSellerWorkspace) : mergedTrips),
+    [mergedTrips, sellerWorkspace],
+  );
+
+  const selectedTrip = visibleTrips.find((t) => t.id === value) ?? selectedDetailQuery.data?.trip;
+  const selectedTripOpen =
+    selectedTrip && (!sellerWorkspace || isTripOpenForSellerWorkspace(selectedTrip)) ? selectedTrip : undefined;
+
+  useEffect(() => {
+    if (!sellerWorkspace || !value || !selectedTrip) {
+      return;
+    }
+    if (isTripOpenForSellerWorkspace(selectedTrip)) {
+      return;
+    }
+    onChange("");
+  }, [sellerWorkspace, value, selectedTrip, onChange]);
 
   const searchInputId = `${idPrefix}-trip-search`;
 
   return (
     <div className="birzha-trip-search-picker">
-      {value && selectedTrip ? (
+      {value && selectedTripOpen ? (
         <div style={{ marginBottom: "0.45rem" }}>
           <p className="birzha-callout-info" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
             {sellerWorkspace ? "Сейчас продаём с рейса: " : "Выбран рейс: "}
-            <strong>{formatTripSelectLabel(selectedTrip)}</strong>
+            <strong>{formatTripSelectLabel(selectedTripOpen)}</strong>
           </p>
           <button
             type="button"
@@ -87,7 +105,7 @@ export function TripSearchPicker({
           </label>
           {sellerWorkspace && (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.35rem", lineHeight: 1.45 }}>
-              В списке только рейсы, закреплённые за вами в системе.
+              В списке только открытые рейсы, закреплённые за вами. Закрытые рейсы — в разделе «Отчёты по рейсу».
             </p>
           )}
           <input
@@ -117,7 +135,7 @@ export function TripSearchPicker({
             aria-label="Список рейсов"
             style={{ listStyle: "none", margin: 0, padding: "0.35rem 0.45rem" }}
           >
-            {mergedTrips.map((t) => (
+            {visibleTrips.map((t) => (
               <li key={t.id} role="none">
                 <button
                   type="button"
@@ -142,7 +160,7 @@ export function TripSearchPicker({
               </li>
             ))}
           </ul>
-          {!pickerQuery.isPending && mergedTrips.length === 0 && (
+          {!pickerQuery.isPending && visibleTrips.length === 0 && (
             <BirzhaEmptyState
               compact
               title="Нет рейсов"

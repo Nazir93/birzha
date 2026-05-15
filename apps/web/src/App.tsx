@@ -14,6 +14,7 @@ import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
+import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingBlock, LoadingScreen } from "./ui/LoadingIndicator.js";
 import { errorText, preJson } from "./ui/styles.js";
@@ -66,9 +67,6 @@ const InventoryAdminPanel = lazy(() =>
   import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
 );
 const LoginPage = lazy(() => import("./components/LoginPage.js").then((m) => ({ default: m.LoginPage })));
-const OfflineQueuePanel = lazy(() =>
-  import("./components/OfflineQueuePanel.js").then((m) => ({ default: m.OfflineQueuePanel })),
-);
 const OperationsPanel = lazy(() =>
   import("./components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
 );
@@ -145,6 +143,7 @@ export function App() {
       className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}${legacyStickyHeader ? " app-shell--legacy-sticky-header" : ""}`}
     >
       {showChrome && !cabinetShell ? <LegacyChrome /> : null}
+      <StaleMetaBanner />
 
       <Suspense fallback={<RouteFallback />}>
         <Routes>
@@ -250,14 +249,6 @@ export function App() {
                 </RequirePanel>
               }
             />
-            <Route
-              path="offline"
-              element={
-                <RequirePanel panel="offline">
-                  <OfflineQueuePanel />
-                </RequirePanel>
-              }
-            />
             <Route index element={<Navigate to="reports" replace />} />
           </Route>
 
@@ -353,14 +344,6 @@ export function App() {
                   <section className="birzha-card">
                     <OperationsPanel />
                   </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="offline"
-              element={
-                <RequirePanel panel="offline">
-                  <OfflineQueuePanel />
                 </RequirePanel>
               }
             />
@@ -469,14 +452,6 @@ export function App() {
               }
             />
             <Route path="operations" element={<SellerSalesOperationsRedirect />} />
-            <Route
-              path="offline"
-              element={
-                <RequirePanel panel="offline">
-                  <OfflineQueuePanel />
-                </RequirePanel>
-              }
-            />
             <Route
               index
               element={

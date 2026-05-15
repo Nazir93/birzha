@@ -268,7 +268,7 @@ export function AdminSoldBySellerPage() {
                   <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.sold.toString())} кг</span>
                 </div>
                 <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--accent">
-                  <span className="birzha-assign-seller__kpi-label">Остаток в пути</span>
+                  <span className="birzha-assign-seller__kpi-label">Остаток на рейсе</span>
                   <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.netTransit.toString())} кг</span>
                 </div>
                 <div className="birzha-assign-seller__kpi-card">

@@ -62,7 +62,6 @@ type SidebarNavIconName =
   | "trips"
   | "operations"
   | "assignSeller"
-  | "offline"
   | "inventory"
   | "users"
   | "service"
@@ -96,9 +95,6 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "sellerDispatch") {
     return "assignSeller";
   }
-  if (key === "off" || key === "offline") {
-    return "offline";
-  }
   if (key === "inventory") {
     return "inventory";
   }
@@ -123,7 +119,6 @@ function SidebarNavIcon({ name }: { name: SidebarNavIconName }) {
     reports: ["M5 19V5", "M5 19h14", "M9 15v-4", "M13 15V8", "M17 15v-7"],
     operations: ["M7 7h10", "M14 4l3 3-3 3", "M17 17H7", "M10 14l-3 3 3 3"],
     assignSeller: ["M7 7h10", "M12 12h8", "M9 18a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0"],
-    offline: ["M6.5 18h10a4 4 0 00.8-7.9A6 6 0 005.6 8.3A4.5 4.5 0 006.5 18z", "M8 8l8 8"],
     inventory: ["M4 9l8-4 8 4-8 4-8-4z", "M6 11v6l6 3 6-3v-6", "M12 13v7"],
     users: ["M9 11a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0", "M17 11a2.5 2.5 0 100-5", "M15.5 15.5A4 4 0 0120 20"],
     service: ["M14.5 5.5a4 4 0 00-5.1 5.1L4 16v4h4l5.4-5.4a4 4 0 005.1-5.1l-3 3-4-4 3-3z"],

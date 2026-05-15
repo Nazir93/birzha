@@ -32,7 +32,7 @@ TypeScript, раздельные API и клиент, **PWA**, **PostgreSQL**.
 | PWA / офлайн | Workbox (Vite PWA) + **IndexedDB** outbox (`apps/web/src/sync`); PNG-иконки из `pwa-icon.svg` при сборке (`sharp`), баннер обновления версии (**`PwaUpdateBanner`**, `registerType: prompt`) |
 | Монорепо | **pnpm** + **Turbo** — `packages/domain`, `packages/contracts`, `apps/api`, `apps/web` |
 
-Next.js по умолчанию не используем. Подробности офлайна: `docs/architecture/offline/offline-sync.md`, `.cursor/rules/02-offline-sync.mdc`.
+Next.js по умолчанию не используем. Клиентский кэш и API синхронизации: `docs/architecture/offline/offline-sync.md`, `.cursor/rules/02-offline-sync.mdc`.
 
 **Офлайн-клиент (черновик):** `apps/web/src/sync` — очередь в **IndexedDB** в браузере (однократная миграция из `birzha:outbox:v1` в `localStorage`); если открытие IDB не удалось или API нет — **память / `localStorage`**; `processSyncQueue()` / **`processSyncQueueSerialized()`** шлют на `POST /api/sync` по одному действию; в UI подключены автопопытки при **`online`** и при возврате на вкладку; при `rejected` голова очереди сохраняется.
 

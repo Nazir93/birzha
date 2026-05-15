@@ -16,7 +16,6 @@ const ANON_OPS: CabinetNavEntry[] = [
   { key: "trips", to: ops.trips, label: NAV_PANEL_LABELS.trips },
   { key: "rep", to: ops.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: ops.operations, label: NAV_PANEL_LABELS.operations },
-  { key: "off", to: ops.offline, label: NAV_PANEL_LABELS.offline },
 ];
 
 const ANON_ADMIN_OPS: CabinetNavEntry[] = [
@@ -26,7 +25,6 @@ const ANON_ADMIN_OPS: CabinetNavEntry[] = [
   { key: "lm", to: adminRoutes.loadingManifests, label: NAV_PANEL_LABELS.loadingManifests },
   { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: adminRoutes.operations, label: NAV_PANEL_LABELS.operations },
-  { key: "off", to: adminRoutes.offline, label: NAV_PANEL_LABELS.offline },
 ];
 
 /**
@@ -67,7 +65,6 @@ export function buildCabinetNavEntries(
           "sellerDispatch",
           "assignSeller",
           "operations",
-          "offline",
           "inventory",
           "users",
           "service",

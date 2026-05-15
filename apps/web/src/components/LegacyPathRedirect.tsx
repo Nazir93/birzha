@@ -10,7 +10,6 @@ const pathToLegacyKey = new Map<string, LegacySegment>([
   [routes.legacy.purchaseNakladnaya, "purchaseNakladnaya"],
   [routes.legacy.distribution, "distribution"],
   [routes.legacy.operations, "operations"],
-  [routes.legacy.offline, "offline"],
   [routes.legacy.service, "service"],
 ]);
 
@@ -38,7 +37,6 @@ export function LegacyPathRedirect() {
       purchaseNakladnaya: ops.purchaseNakladnaya,
       distribution: ops.distribution,
       operations: ops.operations,
-      offline: ops.offline,
       service: adminRoutes.service,
     };
     return <Navigate to={m[key]} replace />;

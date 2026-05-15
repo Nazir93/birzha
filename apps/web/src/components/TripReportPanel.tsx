@@ -136,7 +136,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       }
       if (!tripReportShowsSoldOut(rep)) {
         const ok = window.confirm(
-          "В рейсе по отчёту ещё есть остаток «в пути». Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+          "В рейсе по отчёту ещё есть остаток на рейсе. Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
         if (!ok) {
           return;
@@ -217,9 +217,14 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       </h2>
       <p className="no-print birzha-callout-info">{introByContext[viewContext]}</p>
       {isFieldSellerOnly(user) && viewContext === "sales" ? (
-        <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
-          Только закреплённые за вами рейсы.
-        </p>
+        <>
+          <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
+            Только закреплённые за вами рейсы.
+          </p>
+          <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
+            Закрытые рейсы остаются в этом списке для сверки; на главной кабинета продавца показываются только открытые.
+          </p>
+        </>
       ) : null}
 
       {tripsQuery.isPending && (
@@ -537,7 +542,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               )}
             </div>
           <p className="no-print birzha-callout-info" style={{ margin: "0 0 0.35rem" }}>
-            Остаток в пути = отгружено − продано − недостача.
+            Остаток на рейсе = отгружено − продано − недостача.
           </p>
           {reconciliationIssues.length > 0 && (
             <p role="status" className="birzha-callout-warning">
@@ -572,7 +577,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Недост., кг
                     </th>
                     <th scope="col" style={thHead}>
-                      Остаток в пути, кг
+                      Остаток на рейсе, кг
                     </th>
                     <th scope="col" style={thHead}>
                       Выручка

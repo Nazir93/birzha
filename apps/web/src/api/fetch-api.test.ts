@@ -29,6 +29,8 @@ describe("apiFetch", () => {
       expect(getStoredApiToken()).toBeNull();
       expect(listener).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalled();
+      const call = fetchMock.mock.calls[0] as [string, RequestInit?];
+      expect(call[1]?.signal).toBeInstanceOf(AbortSignal);
     } finally {
       off();
     }

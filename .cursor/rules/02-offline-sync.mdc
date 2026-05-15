@@ -1,5 +1,5 @@
 ---
-description: Правила офлайн-синхронизации
+description: Правила синхронизации и клиентского outbox (см. также offline-sync.md)
 globs:
   - "**/offline/**/*.ts"
   - "**/sync/**/*.ts"

@@ -1,9 +1,15 @@
+import { combineAbortSignals } from "./abort-signal-utils.js";
+
 /**
  * HTTP к `/api`: `apiFetch`, `assertOkResponse`, `apiGetJson`, JSON POST/DELETE и варианты с **403**.
  * Для распределения партий и списания брака — `patchBatchAllocation`, `postBatchWarehouseWriteOffQualityReject`;
  * удаление рейса — `deleteTripById`.
  * Логин и прочие особые ответы — по-прежнему локальный разбор.
  */
+
+/** Максимум ожидания ответа по одному запросу к API (мс). Иначе «вечный» pending при обрыве сети/прокси. */
+export const API_FETCH_TIMEOUT_MS = 120_000;
+
 /** Сессия: дублируем JWT из тела логина (cookie HttpOnly тоже уходит с `credentials: include`). */
 export const API_TOKEN_STORAGE_KEY = "birzha_api_token";
 
@@ -51,15 +57,20 @@ export function setStoredApiToken(token: string | null): void {
 
 /** Все запросы к `/api/*`: Same-Origin cookie + опционально Bearer. При **401** — очистка Bearer в storage и `notifyUnauthorized` (в т.ч. cookie-only сессия без записи в storage). */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const headers = new Headers(init?.headers);
+  const { signal: userSignal, ...restInit } = init ?? {};
+  const headers = new Headers(restInit.headers);
   const token = getStoredApiToken();
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+  const timeoutSignal = AbortSignal.timeout(API_FETCH_TIMEOUT_MS);
+  const signal =
+    userSignal == null ? timeoutSignal : combineAbortSignals(userSignal, timeoutSignal);
   const res = await fetch(input, {
-    ...init,
+    ...restInit,
     credentials: "include",
     headers,
+    signal,
   });
   if (res.status === 401) {
     setStoredApiToken(null);

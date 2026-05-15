@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["vite/client", "vite-plugin-pwa/client"]
   },
-  "include": ["src/sw.ts", "src/sw-globals.d.ts", "src/sync/background-sync-shared.ts"]
+  "include": ["src/sw.ts", "src/sw-globals.d.ts"]
 }

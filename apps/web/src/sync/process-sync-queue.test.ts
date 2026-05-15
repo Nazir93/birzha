@@ -104,4 +104,30 @@ describe("processSyncQueue", () => {
     expect(r.httpStatus).toBe(401);
     expect(loadOutboxSync(s)).toHaveLength(1);
   });
+
+  it("batch_limit: не более maxPerRun успешных отправок за один вызов", async () => {
+    const s = memoryStorage();
+    clearOutboxSync(s);
+    for (let i = 0; i < 3; i += 1) {
+      enqueueSync(
+        {
+          actionType: "create_trip",
+          payload: { id: `t${i}`, tripNumber: `N${i}` },
+          localActionId: `a${i}`,
+        },
+        s,
+      );
+    }
+
+    const fetchImpl = async () =>
+      new Response(JSON.stringify({ status: "ok", actionId: "x" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    const r = await processSyncQueue({ storage: s, fetchImpl, maxPerRun: 2 });
+    expect(r.stoppedReason).toBe("batch_limit");
+    expect(r.processed).toBe(2);
+    expect(loadOutboxSync(s)).toHaveLength(1);
+  });
 });

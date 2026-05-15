@@ -54,10 +54,9 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
     expect(canAccessPanel(u, "distribution")).toBe(false);
     expect(canAccessPanel(u, "operations")).toBe(false);
-    expect(canAccessPanel(u, "offline")).toBe(false);
   });
 
-  it("продавец — только отчёты, операции, офлайн; не накладная и не служебное", () => {
+  it("продавец — только отчёты, операции; не накладная и не служебное", () => {
     const u = userWithRoles("seller");
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
     expect(canAccessPanel(u, "distribution")).toBe(false);
@@ -87,8 +86,8 @@ describe("role-panels", () => {
     expect(order[0]).toBe("reports");
   });
 
-  it("operationsPanelOrder: только seller — отчёт и офлайн без дубля «Операции»", () => {
-    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports", "offline"]);
+  it("operationsPanelOrder: только seller — только отчёты", () => {
+    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports"]);
   });
 
   it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {

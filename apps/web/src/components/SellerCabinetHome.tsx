@@ -4,10 +4,10 @@ import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { ops, sales } from "../routes.js";
 import { SellFromTripSection } from "./SellFromTripSection.js";
-import { SellerSalesSummary } from "./SellerSalesSummary.js";
+import { SellerCabinetOverview } from "./SellerCabinetOverview.js";
 
 /**
- * Полевой продавец: один экран — продажа с рейса (без дублирования с «Операциями»).
+ * Полевой продавец: сводка по выбранному рейсу и форма продажи с рейса.
  * PWA: см. `birzha-seller-workspace` в CSS (safe-area, крупная кнопка в форме).
  */
 export function SellerCabinetHome() {
@@ -15,26 +15,22 @@ export function SellerCabinetHome() {
   const canOpsCabinet = user ? canAccessCabinet(user, "operations") : false;
 
   return (
-    <div className="birzha-seller-workspace birzha-home-premium" aria-labelledby="seller-work-h">
+    <div className="birzha-seller-workspace birzha-home-premium" aria-labelledby="seller-cabinet-h">
       <header className="birzha-home-hero birzha-home-hero--sales">
         <div>
           <p className="birzha-home-hero__eyebrow">Продажи</p>
-          <h2 id="seller-work-h" className="birzha-home-hero__title">
-            Рабочее место продавца
+          <h2 id="seller-cabinet-h" className="birzha-home-hero__title">
+            Кабинет продавца
           </h2>
           <p className="birzha-home-hero__lead">
-            Сводка «Мои продажи» выше; ниже — новая продажа с рейса: сначала розница или опт, затем рейс, калибр, вес,
-            цена и оплата.
+            Ниже — выбор рейса, кратко что продано, по каким товарам и калибрам и как прошла оплата. Полная таблица
+            партий и продаж по клиентам — в разделе «Отчёты по рейсу»; продажа с рейса — внизу страницы.
           </p>
         </div>
-        <nav className="birzha-home-actions no-print" aria-label="Быстрые действия продавца">
+        <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
           <Link to={sales.reports} className="birzha-home-action">
-            <span>Продажи</span>
-            <strong>Отчёты по рейсу</strong>
-          </Link>
-          <Link to={sales.offline} className="birzha-home-action">
-            <span>Если нет сети</span>
-            <strong>Офлайн очередь</strong>
+            <span>Отчёты</span>
+            <strong>По рейсу (партии, клиенты)</strong>
           </Link>
           {canOpsCabinet && (
             <Link to={ops.operations} className="birzha-home-action">
@@ -45,7 +41,7 @@ export function SellerCabinetHome() {
         </nav>
       </header>
 
-      <SellerSalesSummary />
+      <SellerCabinetOverview />
 
       <SellFromTripSection variant="seller" />
     </div>

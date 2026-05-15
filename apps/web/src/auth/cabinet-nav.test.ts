@@ -4,13 +4,14 @@ import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js"
 import { accounting, adminRoutes, ops, prefix } from "../routes.js";
 
 describe("cabinet-nav", () => {
-  it("аноним: операции — шесть ссылок /o (в т.ч. Рейсы)", () => {
+  it("аноним: операции — пять ссылок /o (в т.ч. Рейсы)", () => {
     const links = buildCabinetNavEntries("operations", null, false);
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(5);
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
     expect(links[1]?.to).toBe(ops.distribution);
     expect(links[2]?.to).toBe(ops.trips);
     expect(links[3]?.to).toBe(ops.reports);
+    expect(links[4]?.to).toBe(ops.operations);
   });
 
   it("аноним: админ — сводка /a + те же операции и Рейсы", () => {
@@ -20,7 +21,7 @@ describe("cabinet-nav", () => {
     expect(links[2]?.to).toBe(adminRoutes.distribution);
     expect(links[3]?.to).toBe(adminRoutes.trips);
     expect(links[4]?.to).toBe(adminRoutes.loadingManifests);
-    expect(links).toHaveLength(8);
+    expect(links).toHaveLength(7);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {

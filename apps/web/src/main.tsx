@@ -7,7 +7,6 @@ import { BirzhaThemeProvider } from "./theme/BirzhaThemeProvider.js";
 import { createWebQueryClient } from "./query/create-web-query-client.js";
 import { WebQueryProvider } from "./query/WebQueryProvider.js";
 import { MutationErrorBanner } from "./query/MutationErrorBanner.js";
-import { GlobalOutboxSyncSubscriber } from "./sync/GlobalOutboxSyncSubscriber.js";
 import { AppErrorBoundary } from "./ui/AppErrorBoundary.js";
 import { PwaInstallBanner } from "./ui/PwaInstallBanner.js";
 import { PwaUpdateBanner } from "./ui/PwaUpdateBanner.js";
@@ -23,7 +22,6 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BirzhaThemeProvider>
       <WebQueryProvider client={queryClient}>
-        <GlobalOutboxSyncSubscriber />
         <PwaInstallBanner />
         <PwaUpdateBanner />
         <MutationErrorBanner />

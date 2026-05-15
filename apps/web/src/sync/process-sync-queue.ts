@@ -4,6 +4,9 @@ import { getOrCreateDeviceId } from "./device-id.js";
 import type { StorageLike } from "./storage-types.js";
 import type { OutboxItem, SyncResponse } from "./types.js";
 
+/** За один вызов `processSyncQueue` не отправлять больше элементов (защита от долгого блокирования UI). */
+export const PROCESS_SYNC_QUEUE_MAX_PER_RUN = 200;
+
 export type ProcessSyncOptions = {
   /** По умолчанию POST на `/api/sync` (Vite proxy). */
   syncUrl?: string;
@@ -12,9 +15,11 @@ export type ProcessSyncOptions = {
   /** Синхронное хранилище — оборачивается в `OutboxBackend` (тесты). */
   storage?: StorageLike;
   fetchImpl?: typeof fetch;
+  /** Лимит успешных/принятых элементов за этот вызов; по умолчанию `PROCESS_SYNC_QUEUE_MAX_PER_RUN`. */
+  maxPerRun?: number;
 };
 
-export type ProcessSyncStoppedReason = "empty" | "rejected" | "network_error" | "unauthorized";
+export type ProcessSyncStoppedReason = "empty" | "rejected" | "network_error" | "unauthorized" | "batch_limit";
 
 export type ProcessSyncResult = {
   processed: number;
@@ -52,10 +57,14 @@ export async function processSyncQueue(options: ProcessSyncOptions = {}): Promis
   const outbox = resolveOutbox(options);
   const fetchFn = options.fetchImpl ?? apiFetch;
   const deviceId = getOrCreateDeviceId(options.storage);
+  const maxPerRun = options.maxPerRun ?? PROCESS_SYNC_QUEUE_MAX_PER_RUN;
 
   let processed = 0;
 
   while ((await outbox.outboxLength()) > 0) {
+    if (processed >= maxPerRun) {
+      return { processed, stoppedReason: "batch_limit" };
+    }
     const head = await outbox.peekHead();
     if (!head) {
       return { processed, stoppedReason: "empty" };

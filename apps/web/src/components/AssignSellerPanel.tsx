@@ -152,7 +152,7 @@ export function AssignSellerPanel() {
         <div>
           <h2 className="birzha-assign-seller__title">Продажи по продавцу</h2>
           <p className="birzha-assign-seller__lead">
-            Сводка по закреплённым рейсам: масса, остаток в пути, выручка, наличные и продажи в долг по клиентам.
+            Сводка по закреплённым рейсам: масса, остаток на рейсе, выручка, наличные и продажи в долг по клиентам.
             Закрепление рейса — раздел «Отгрузка».
           </p>
         </div>
@@ -220,7 +220,7 @@ export function AssignSellerPanel() {
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.sold.toString())} кг</span>
               </div>
               <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--accent">
-                <span className="birzha-assign-seller__kpi-label">Остаток в пути</span>
+                <span className="birzha-assign-seller__kpi-label">Остаток на рейсе</span>
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.netTransit.toString())} кг</span>
               </div>
               <div className="birzha-assign-seller__kpi-card">
@@ -281,7 +281,7 @@ export function AssignSellerPanel() {
                         Прод., кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
-                        В пути, кг
+                        На рейсе, кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
                         Выручка

@@ -83,6 +83,10 @@ export async function buildApp(options: {
   const app = Fastify({
     logger: env.NODE_ENV !== "test",
     trustProxy: env.NODE_ENV === "production",
+    /** Приём тела запроса целиком; защита от «залипших» клиентов без лимита по умолчанию в Node. */
+    requestTimeout: env.NODE_ENV === "test" ? 0 : 180_000,
+    /** JSON-API; при необходимости больших вложений — поднять осознанно. */
+    bodyLimit: 5 * 1024 * 1024,
   });
 
   await app.register(helmet, {
