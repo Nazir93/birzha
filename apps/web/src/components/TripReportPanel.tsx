@@ -14,7 +14,7 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
-import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
+import { canCreateTrip } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesFullListQueryOptions,
@@ -136,7 +136,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       }
       if (!tripReportShowsSoldOut(rep)) {
         const ok = window.confirm(
-          "В рейсе по отчёту ещё есть остаток на рейсе. Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+          "По отчёту ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
         if (!ok) {
           return;
@@ -198,35 +198,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     window.print();
   }, []);
 
-  const introByContext: Record<TripReportViewContext, string> = {
-    default: "Отгрузки, продажи, недостачи и деньги по рейсу.",
-    accounting: "Сверка товара и денег по рейсу.",
-    sales: "Выберите рейс — увидите отгрузки в машину, продажи по партиям, наличные и долг.",
-  };
-
-  const emptyTextByContext: Record<TripReportViewContext, string> = {
-    default: "Рейсов пока нет — создайте первый рейс.",
-    accounting: "Рейсов в списке нет.",
-    sales: "Рейсов в списке нет.",
-  };
-
   return (
     <div role="region" aria-labelledby="trip-report-heading">
       <h2 id="trip-report-heading" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
         {headingByContext[viewContext]}
       </h2>
-      <p className="no-print birzha-callout-info">{introByContext[viewContext]}</p>
-      {isFieldSellerOnly(user) && viewContext === "sales" ? (
-        <>
-          <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
-            Только закреплённые за вами рейсы.
-          </p>
-          <p className="no-print birzha-callout-info" style={{ marginTop: "0.35rem" }}>
-            Закрытые рейсы остаются в этом списке для сверки; на главной кабинета продавца показываются только открытые.
-          </p>
-        </>
-      ) : null}
-
       {tripsQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={5} />
@@ -240,7 +216,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
       {tripsQuery.data && sortedTrips.length === 0 && (
         <div className="no-print" style={{ marginTop: "0.5rem" }}>
-          <BirzhaEmptyState compact title="Нет рейсов" description={emptyTextByContext[viewContext]} />
+          <BirzhaEmptyState compact title="Нет рейсов" />
         </div>
       )}
 
@@ -264,12 +240,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               );
             })}
           </select>
-          {canTripWrite && (
-            <p className="birzha-callout-info" style={{ marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
-              Удалить рейс можно только если по нему нет отгрузок, продаж и недостач (пустой «тестовый» рейс). Нужны
-              права логиста, менеджера или администратора.
-            </p>
-          )}
           {tripId && r && canDeleteTrip && canTripWrite && (
             <div style={{ marginTop: "0.5rem" }}>
               <button
@@ -541,9 +511,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </button>
               )}
             </div>
-          <p className="no-print birzha-callout-info" style={{ margin: "0 0 0.35rem" }}>
-            Остаток на рейсе = отгружено − продано − недостача.
-          </p>
           {reconciliationIssues.length > 0 && (
             <p role="status" className="birzha-callout-warning">
               <strong>Сверка строк с итогами:</strong> {reconciliationIssues.join("; ")} — проверьте данные или
@@ -551,11 +518,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </p>
           )}
           {batchRows.length === 0 ? (
-            <BirzhaEmptyState
-              compact
-              title="Нет строк по партиям"
-              description="По этому рейсу ещё нет операций в разбивке."
-            />
+            <BirzhaEmptyState compact title="Нет строк по партиям" />
           ) : (
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={tableStyle} aria-labelledby="trip-report-batches">
@@ -577,7 +540,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Недост., кг
                     </th>
                     <th scope="col" style={thHead}>
-                      Остаток на рейсе, кг
+                      Остаток погруженного, кг
                     </th>
                     <th scope="col" style={thHead}>
                       Выручка
@@ -645,7 +608,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               nested
               defaultOpen={false}
               title={<span className="birzha-text-subtle">Сырой JSON отчёта</span>}
-              hint="отладка"
             >
               <pre
                 style={{ ...preJson, marginTop: "0.5rem", fontSize: "0.8rem" }}

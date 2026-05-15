@@ -4,7 +4,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/auth-context.js";
 import { postLoginRedirectPath } from "../auth/role-panels.js";
 import { ops } from "../routes.js";
-import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { LoadingScreen } from "../ui/LoadingIndicator.js";
 import { errorText, fieldStyle } from "../ui/styles.js";
 
 export function LoginPage() {
@@ -33,13 +33,7 @@ export function LoginPage() {
   }
 
   if (!ready) {
-    return (
-      <div className="birzha-login-wrap">
-        <section className="birzha-login-card" aria-busy role="status" aria-live="polite">
-          <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={4} />
-        </section>
-      </div>
-    );
+    return <LoadingScreen label="Загрузка…" />;
   }
 
   if (meta?.requireApiAuth !== "enabled") {

@@ -111,7 +111,6 @@ export function LegacyChrome({ title = "Биржа" }: { title?: string }) {
               <AppNavPanel variant="drawer" onNavigate={() => setDrawerOpen(false)} />
             </nav>
             <footer className="birzha-legacy-drawer__footer">
-              <span className="birzha-legacy-drawer__footer-caption">Тема оформления</span>
               <ThemeToggle variant="labeled" />
             </footer>
           </aside>

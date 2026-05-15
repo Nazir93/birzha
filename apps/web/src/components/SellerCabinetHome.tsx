@@ -22,10 +22,6 @@ export function SellerCabinetHome() {
           <h2 id="seller-cabinet-h" className="birzha-home-hero__title">
             Кабинет продавца
           </h2>
-          <p className="birzha-home-hero__lead">
-            Ниже — выбор рейса, кратко что продано, по каким товарам и калибрам и как прошла оплата. Полная таблица
-            партий и продаж по клиентам — в разделе «Отчёты по рейсу»; продажа с рейса — внизу страницы.
-          </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
           <Link to={sales.reports} className="birzha-home-action">

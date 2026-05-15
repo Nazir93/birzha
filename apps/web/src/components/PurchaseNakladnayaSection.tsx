@@ -294,7 +294,6 @@ export function PurchaseNakladnayaSection() {
               Закупка товара
             </h3>
           }
-          hint="недоступно"
         >
           <p className="birzha-callout-warning" role="status">
             Раздел накладных временно недоступен. Проверьте подключение к серверу или обратитесь к администратору.
@@ -318,7 +317,6 @@ export function PurchaseNakladnayaSection() {
             </div>
           </div>
         }
-        hint="форма и список накладных"
       >
       {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
       {catalogsEmptyOk && canManageCatalog && (

@@ -1,7 +1,7 @@
 type Props = {
   /** Кг на складах (сумма по партиям). */
   warehouseKg: number;
-  /** Кг на рейсе (учёт: отгружено со склада, ещё не продано). */
+  /** Кг погружено в рейс (в пути, ещё не продано). */
   transitKg: number;
   /** Кг продано. */
   soldKg: number;
@@ -15,7 +15,7 @@ function pct(part: number, total: number): number {
 }
 
 /**
- * Одна полоса «склад / на рейсе / продано» с легендой (CSS, без chart-библиотек).
+ * Одна полоса «склад / погружено / продано» с легендой (CSS, без chart-библиотек).
  */
 export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
   const total = warehouseKg + transitKg + soldKg;
@@ -32,7 +32,7 @@ export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
   const pSold = pct(soldKg, total);
 
   return (
-    <div className="birzha-mass-strip" role="img" aria-label="Распределение массы по партиям: склад, на рейсе, продано">
+    <div className="birzha-mass-strip" role="img" aria-label="Распределение массы по партиям: склад, погружено, продано">
       <div className="birzha-mass-strip__bar">
         {warehouseKg > 0 ? (
           <div
@@ -45,7 +45,7 @@ export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
           <div
             className="birzha-mass-strip__seg birzha-mass-strip__seg--tr"
             style={{ flex: `${transitKg}` }}
-            title={`На рейсе: ${transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг (${pTr}%)`}
+            title={`Погружено: ${transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг (${pTr}%)`}
           />
         ) : null}
         {soldKg > 0 ? (
@@ -62,7 +62,7 @@ export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
           <strong>{warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг ({pWh}%)
         </li>
         <li>
-          <span className="birzha-mass-strip__dot birzha-mass-strip__dot--tr" /> На рейсе:{" "}
+          <span className="birzha-mass-strip__dot birzha-mass-strip__dot--tr" /> Погружено:{" "}
           <strong>{transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг ({pTr}%)
         </li>
         <li>

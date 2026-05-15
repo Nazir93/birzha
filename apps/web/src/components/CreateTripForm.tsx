@@ -59,7 +59,6 @@ export function CreateTripForm({
     <BirzhaDisclosure
       defaultOpen={disclosureDefaultOpen}
       title={<h3 className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>Новый рейс</h3>}
-      hint="пустой рейс в списке"
     >
       <label htmlFor="ct-trip-number" className="birzha-form-label">
         Номер рейса *

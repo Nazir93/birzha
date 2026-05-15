@@ -16,7 +16,7 @@ import {
   queryRoots,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminRoutes, ops, prefix, sales } from "../routes.js";
+import { adminRoutes, ops, prefix } from "../routes.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { parseRecordTripShortageForm, parseShipForm } from "../validation/api-schemas.js";
 
@@ -29,10 +29,6 @@ export function OperationsPanel() {
     location.pathname === prefix.admin || location.pathname.startsWith(`${prefix.admin}/`)
       ? adminRoutes.reports
       : ops.reports;
-  const distributionPath =
-    location.pathname === prefix.admin || location.pathname.startsWith(`${prefix.admin}/`)
-      ? adminRoutes.distribution
-      : ops.distribution;
 
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
@@ -123,22 +119,6 @@ export function OperationsPanel() {
   return (
     <div role="region" aria-label="Недостача по рейсу и справочно партии">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Недостача по рейсу</h2>
-      <p className="birzha-callout-info" style={{ marginBottom: "0.85rem", lineHeight: 1.5 }}>
-        Здесь фиксируют <strong>недостачу при приёмке</strong> — масса списывается из «в пути» по партии и рейсу.
-        Отгрузку со склада в машину делайте в разделе{" "}
-        <Link to={distributionPath} style={{ fontWeight: 600 }}>
-          Распределение товара
-        </Link>
-        ; продажу с рейса — в{" "}
-        <Link to={sales.operations} style={{ fontWeight: 600 }}>
-          кабинете продавца
-        </Link>{" "}
-        или в отчётах. Сводку отгрузок, продаж и уже учтённых недостач смотрите в{" "}
-        <Link to={reportsPath} style={{ fontWeight: 600 }}>
-          Отчёты по рейсу
-        </Link>
-        .
-      </p>
 
       {batchesQuery.data && (
         <datalist id="batch-suggestions">
@@ -157,11 +137,7 @@ export function OperationsPanel() {
       )}
 
       {distributionPayload ? (
-        <BirzhaDisclosure defaultOpen title="Отгрузить собранное из распределения" hint="переход из «Распределения»">
-          <p className="birzha-callout-info" style={{ marginTop: 0 }}>
-            После сохранения погрузочной в распределении можно отправить подбор сюда и одним действием отгрузить все строки в
-            выбранный рейс.
-          </p>
+        <BirzhaDisclosure defaultOpen title="Отгрузить собранное из распределения">
           <label htmlFor="op-sel-ship-trip-dist" className="birzha-form-label">
             Рейс *
           </label>
@@ -232,7 +208,6 @@ export function OperationsPanel() {
             </span>
           </span>
         }
-        hint="партия в пути, рейс, кг, причина"
       >
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
           Укажите ту же партию и рейс, что в отчёте; кг — не больше остатка «в пути» по строке. Проверка — в{" "}
@@ -306,7 +281,7 @@ export function OperationsPanel() {
       </BirzhaDisclosure>
 
       {!batchesQuery.isPending && batchesQuery.data && (
-        <BirzhaDisclosure title="Партии по закупочным накладным" hint="справочно: остатки и id" defaultOpen={false}>
+        <BirzhaDisclosure title="Партии по закупочным накладным" defaultOpen={false}>
           <BatchesByNakladnayaReference
             batches={batchesQuery.data.batches}
             isLoading={false}

@@ -11,12 +11,13 @@ import {
 } from "./components/CabinetShellLayout.js";
 import { LegacyChrome } from "./components/LegacyChrome.js";
 import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
+import { LoginPage } from "./components/LoginPage.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
-import { LoadingBlock, LoadingScreen } from "./ui/LoadingIndicator.js";
+import { LoadingScreen } from "./ui/LoadingIndicator.js";
 import { errorText, preJson } from "./ui/styles.js";
 
 const AccountingCabinetHome = lazy(() =>
@@ -66,7 +67,6 @@ const AdminTripsLogisticsPanel = lazy(() =>
 const InventoryAdminPanel = lazy(() =>
   import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
 );
-const LoginPage = lazy(() => import("./components/LoginPage.js").then((m) => ({ default: m.LoginPage })));
 const OperationsPanel = lazy(() =>
   import("./components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
 );
@@ -96,11 +96,7 @@ function isCabinetShellPath(pathname: string): boolean {
 function HomeRedirect() {
   const { ready, meta, user } = useAuth();
   if (!ready) {
-    return (
-      <div style={{ maxWidth: 400, margin: "2rem 1rem" }} role="status" aria-live="polite">
-        <LoadingBlock label="Инициализация…" minHeight={72} skeleton skeletonRows={4} />
-      </div>
-    );
+    return <LoadingScreen label="Инициализация…" />;
   }
   const to = meta?.authApi === "enabled" && user ? defaultRouteForUser(user) : ops.reports;
   return <Navigate to={to} replace />;

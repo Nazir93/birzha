@@ -65,7 +65,7 @@ function MassDistributionRing({
       className="birzha-admin-mass-ring"
       style={{ background: gradient }}
       role="img"
-      aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, на рейсе ${transitKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
+      aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, погружено ${transitKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
     >
       <div className="birzha-admin-mass-ring__hole" />
     </div>
@@ -108,7 +108,6 @@ export function AdminCabinetHome() {
     let warehouseKg = 0;
     let transitKg = 0;
     let soldKg = 0;
-    let pendingInboundKg = 0;
     let writtenOffKg = 0;
     const byWarehouseKg = new Map<string, number>();
     const byProductGroupKg = new Map<string, number>();
@@ -123,7 +122,6 @@ export function AdminCabinetHome() {
       if (b.soldKg > 0) {
         soldKg += b.soldKg;
       }
-      pendingInboundKg += b.pendingInboundKg ?? 0;
       writtenOffKg += b.writtenOffKg ?? 0;
 
       const wid = b.nakladnaya?.warehouseId ?? "";
@@ -165,7 +163,7 @@ export function AdminCabinetHome() {
         display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
       }));
 
-    /** Масса партий вне склада: на рейсе (inTransit) + уже проданная. */
+    /** Отгружено со склада = погружено в рейс (inTransit) + уже продано по партиям. */
     const dispatchedKg = transitKg + soldKg;
 
     return {
@@ -177,7 +175,6 @@ export function AdminCabinetHome() {
       transitKg,
       soldKg,
       dispatchedKg,
-      pendingInboundKg,
       writtenOffKg,
       warehouseCatalogCount: whQ.data?.warehouses.length ?? 0,
       warehouseBars,
@@ -221,7 +218,7 @@ export function AdminCabinetHome() {
         throw new Error("Рейс не найден в списке");
       }
       if (!tripListShowsSoldOut(t)) {
-        const ok = window.confirm("На рейсе ещё есть остаток. Закрыть рейс?");
+        const ok = window.confirm("Погруженный остаток в рейсе ещё не ноль. Закрыть рейс?");
         if (!ok) {
           return;
         }
@@ -264,7 +261,7 @@ export function AdminCabinetHome() {
                   <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--wh" /> На складе
                 </li>
                 <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--tr" /> На рейсе
+                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--tr" /> Погружено
                 </li>
                 <li>
                   <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--sl" /> Продано
@@ -285,9 +282,9 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.transitTrips}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--amber birzha-admin-stat--link"
-                title="Рейсы с остатком на рейсе"
+                title="Рейсы с погруженным остатком (в машине)"
               >
-                <span className="birzha-admin-stat__label">На рейсе</span>
+                <span className="birzha-admin-stat__label">Погружено</span>
                 <span className="birzha-admin-stat__value">
                   {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
                 </span>
@@ -305,17 +302,14 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.sellerDispatch}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="Не на складе: на рейсе + продано"
+                title="Отгружено со склада: погружено + продано (партии)"
               >
-                <span className="birzha-admin-stat__label">Не на складе</span>
+                <span className="birzha-admin-stat__label">Отгружено</span>
                 <span className="birzha-admin-stat__value">
                   {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
                 </span>
               </Link>
             </div>
-            <p className="birzha-text-muted" style={{ margin: "0.4rem 0 0", fontSize: "0.78rem", maxWidth: "40rem" }}>
-              «Не на складе» = «На рейсе» + «Продано (партии)». Пока по партиям ничего не продано, совпадает с «На рейсе».
-            </p>
           </header>
 
           <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Погрузка и отгрузка">
@@ -378,9 +372,9 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.transitTrips}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
-                title="Остаток партий на рейсе"
+                title="Погружено в рейс: остаток в машине (до продажи)"
               >
-                <div className="birzha-kpi-tile__label">На рейсе, кг</div>
+                <div className="birzha-kpi-tile__label">Погружено, кг</div>
                 <div className="birzha-kpi-tile__value">
                   {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                 </div>
@@ -388,9 +382,9 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.sellerDispatch}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Не на складе партий"
+                title="Отгружено со склада: погружено + продано"
               >
-                <div className="birzha-kpi-tile__label">Не на складе, кг</div>
+                <div className="birzha-kpi-tile__label">Отгружено, кг</div>
                 <div className="birzha-kpi-tile__value">
                   {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                 </div>
@@ -403,16 +397,6 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__label">Продано, кг</div>
                 <div className="birzha-kpi-tile__value">
                   {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                </div>
-              </Link>
-              <Link
-                to={adminRoutes.purchaseNakladnaya}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Закупка: накладные и ожидаемое поступление"
-              >
-                <div className="birzha-kpi-tile__label">Ожидает поступления</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.pendingInboundKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                 </div>
               </Link>
               <Link
@@ -489,7 +473,7 @@ export function AdminCabinetHome() {
             <BirzhaDisclosure title="Диаграммы" defaultOpen={false}>
             <div className="birzha-dashboard-row">
               <div className="birzha-chart-card birzha-chart-card--premium">
-                <h3>Масса: склад · на рейсе · продано</h3>
+                <h3>Масса: склад · погружено · продано</h3>
                 <MassBalanceStrip
                   warehouseKg={aggregates.warehouseKg}
                   transitKg={aggregates.transitKg}
@@ -558,7 +542,7 @@ export function AdminCabinetHome() {
                               className="birzha-text-muted birzha-ui-sm"
                               style={{ display: "block", marginTop: "0.2rem", fontWeight: 400 }}
                             >
-                              0 на рейсе
+                              0 погружено
                             </span>
                           ) : null}
                         </td>

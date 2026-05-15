@@ -83,6 +83,9 @@
         background: #18181b;
       }
       #birzha-app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
         min-height: 100vh;
         min-height: 100dvh;
         display: flex;
@@ -160,16 +163,15 @@
     </style>
   </head>
   <body>
-    <div id="root">
-      <div id="birzha-app-splash" role="status" aria-live="polite" aria-busy="true">
-        <div class="birzha-splash-card">
-          <div class="birzha-splash-mark" aria-hidden="true"></div>
-          <div class="birzha-splash-title">Биржа</div>
-          <div class="birzha-splash-bar" aria-hidden="true"><span></span></div>
-          <p class="birzha-splash-caption">Загрузка приложения…</p>
-        </div>
+    <div id="birzha-app-splash" role="status" aria-live="polite" aria-busy="true">
+      <div class="birzha-splash-card">
+        <div class="birzha-splash-mark" aria-hidden="true"></div>
+        <div class="birzha-splash-title">Биржа</div>
+        <div class="birzha-splash-bar" aria-hidden="true"><span></span></div>
+        <p class="birzha-splash-caption">Загрузка приложения…</p>
       </div>
     </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

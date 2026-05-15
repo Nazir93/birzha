@@ -310,7 +310,6 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
               </nav>
               <footer className="birzha-cabinet-drawer__footer">
                 <div className="birzha-cabinet-drawer__footer-block">
-                  <span className="birzha-cabinet-drawer__footer-caption">Тема оформления</span>
                   <ThemeToggle variant="labeled" />
                 </div>
                 {showUser ? (

@@ -306,7 +306,6 @@ export function InventoryAdminPanel() {
             <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Закупочные накладные (удаление)</span>
           </span>
         }
-        hint="удаление документов"
       >
       {nakladError && <p style={errorText}>{nakladError}</p>}
       {purchaseDocsQ.isError && <p style={errorText}>Не загрузились накладные: {String(purchaseDocsQ.error)}</p>}
@@ -374,7 +373,6 @@ export function InventoryAdminPanel() {
                 </span>
               </span>
             }
-            hint="куда везти в рейсе"
           >
           {destFormError && <p style={errorText}>{destFormError}</p>}
           {shipDestQ.isError && <p style={errorText}>Направления: {String(shipDestQ.error)}</p>}
@@ -486,7 +484,6 @@ export function InventoryAdminPanel() {
                 <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Оптовики (для «Опт» у продавца)</span>
               </span>
             }
-            hint="справочник имён"
           >
             {wholesalerFormError && <p style={errorText}>{wholesalerFormError}</p>}
             {wholesalersQ.isError && <p style={errorText}>Оптовики: {String(wholesalersQ.error)}</p>}
@@ -580,7 +577,6 @@ export function InventoryAdminPanel() {
             <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Склады</span>
           </span>
         }
-        hint="приёмка и удаление"
       >
       {warehousesQ.isError && (
         <p role="alert" style={errorText}>
@@ -664,7 +660,6 @@ export function InventoryAdminPanel() {
             <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Калибры (сорта)</span>
           </span>
         }
-        hint="калибры и группы"
       >
       {gradesQ.isError && (
         <p role="alert" style={errorText}>

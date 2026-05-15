@@ -120,7 +120,7 @@ export function AdminTripRegistryPage() {
       }
       if (!tripListShowsSoldOut(t)) {
         const ok = window.confirm(
-          "В рейсе по данным системы ещё есть остаток на рейсе. Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+          "По данным системы ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
         if (!ok) {
           return;
@@ -201,7 +201,6 @@ export function AdminTripRegistryPage() {
           <BirzhaDisclosure
             defaultOpen
             title={<span style={{ fontWeight: 600 }}>Список ({filtered.length})</span>}
-            hint="сортировка: дата выезда, затем номер"
           >
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={tableStyle} aria-label="Рейсы">

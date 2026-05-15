@@ -39,7 +39,7 @@ export const adminRoutes = {
   inventory: `${prefix.admin}/inventory`,
   /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
   tripRegistry: `${prefix.admin}/trip-registry`,
-  /** Рейсы с ненулевым остатком на рейсе (учёт). */
+  /** Рейсы с ненулевым погруженным остатком (учёт). */
   transitTrips: `${prefix.admin}/transit-trips`,
   /** Продажи по продавцам (поиск, даты рейсов). */
   soldBySeller: `${prefix.admin}/sold-by-seller`,

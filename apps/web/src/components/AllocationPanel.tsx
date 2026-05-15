@@ -473,7 +473,6 @@ export function AllocationPanel() {
           <BirzhaDisclosure
             defaultOpen
             title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Склад</span>}
-            hint="шаг 1"
           >
           <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
             <label
@@ -538,7 +537,6 @@ export function AllocationPanel() {
             <BirzhaDisclosure
               defaultOpen
               title={<span style={{ fontSize: "1rem", fontWeight: 600 }}>Отбор накладных и таблица партий</span>}
-              hint="погрузка"
             >
               {documentOptions.length === 0 && batchesInWh.length > 0 && (
                 <p className="birzha-callout-info" role="status">
@@ -590,7 +588,6 @@ export function AllocationPanel() {
                   Не вошло в отбор накладных — остаток на складе
                 </span>
               }
-              hint="хвост по другим документам"
             >
               <p className="birzha-callout-info">
                 Ниже партии по документам, которые вы <strong>сняли</strong> с галочек выше; на склад они по-прежнему
@@ -651,7 +648,6 @@ export function AllocationPanel() {
               defaultOpen
               className="birzha-inline-panel"
               title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Данные погрузочной накладной</span>}
-              hint="сохранение ПН"
             >
               <div className="birzha-form-grid">
                 <label>
@@ -726,7 +722,6 @@ export function AllocationPanel() {
                 defaultOpen
                 className="birzha-inline-panel"
                 title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Погрузочные накладные по этому складу</span>}
-                hint="после сохранения ПН"
               >
                 {manifestsListQuery.isPending ? (
                   <p className="birzha-text-muted" style={{ fontSize: "0.88rem", margin: 0 }}>

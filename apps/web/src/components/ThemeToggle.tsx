@@ -28,6 +28,16 @@ function MoonIcon() {
   );
 }
 
+/** Значок «тёмная тема» — залитый круг (читается как «чёрная» оформление). */
+function DarkThemeDiskIcon() {
+  return (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="7.25" fill="currentColor" />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.25" fill="none" opacity="0.28" />
+    </svg>
+  );
+}
+
 type ThemeToggleProps = {
   /** Компактная кнопка только с иконкой (шапка, узкие места). */
   variant?: "icon" | "labeled";
@@ -36,23 +46,42 @@ type ThemeToggleProps = {
 
 /**
  * Переключатель светлой / тёмной темы. Состояние в `localStorage`, до первого выбора — `prefers-color-scheme`.
+ *
+ * `variant="labeled"` — в футере drawer: два значка (солнце · тёмный круг), подписи «Светлая»/«Тёмная» не показываются.
  */
 export function ThemeToggle({ variant = "icon", className = "" }: ThemeToggleProps) {
-  const { mode, toggleMode } = useBirzhaTheme();
+  const { mode, setMode, toggleMode } = useBirzhaTheme();
 
   const label = mode === "dark" ? "Включить светлую тему" : "Включить тёмную тему";
 
   if (variant === "labeled") {
     return (
-      <button
-        type="button"
-        className={`birzha-theme-toggle birzha-theme-toggle--labeled ${className}`.trim()}
-        onClick={toggleMode}
-        aria-label={label}
+      <div
+        className={`birzha-theme-toggle-group ${className}`.trim()}
+        role="group"
+        aria-label="Тема оформления: светлая или тёмная"
       >
-        {mode === "dark" ? <SunIcon /> : <MoonIcon />}
-        <span className="birzha-theme-toggle__text">{mode === "dark" ? "Светлая" : "Тёмная"}</span>
-      </button>
+        <button
+          type="button"
+          className={`birzha-theme-toggle birzha-theme-toggle-segment${mode === "light" ? " birzha-theme-toggle-segment--active" : ""}`}
+          onClick={() => setMode("light")}
+          aria-pressed={mode === "light"}
+          aria-label="Светлая тема"
+          title="Светлая тема"
+        >
+          <SunIcon />
+        </button>
+        <button
+          type="button"
+          className={`birzha-theme-toggle birzha-theme-toggle-segment${mode === "dark" ? " birzha-theme-toggle-segment--active" : ""}`}
+          onClick={() => setMode("dark")}
+          aria-pressed={mode === "dark"}
+          aria-label="Тёмная тема"
+          title="Тёмная тема"
+        >
+          <DarkThemeDiskIcon />
+        </button>
+      </div>
     );
   }
 

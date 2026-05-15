@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
@@ -11,7 +11,6 @@ import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { TRIP_STATUS_CLOSED, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import { batchesByIdsQueryOptions, shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
-import { sales } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -56,8 +55,7 @@ function aggregateSalesByProductLine(
 }
 
 /**
- * Краткая сводка по одному рейсу на главной `/s`: выбор рейса, итоги, оплата, продажи по товару/калибру.
- * Полная таблица партий и клиентов — только в «Отчёты по рейсу» (`TripReportPanel`).
+ * Сводка по рейсу на главной `/s`: рейс, KPI, таблица по товару/калибру.
  */
 export function SellerCabinetOverview() {
   const { user } = useAuth();
@@ -188,11 +186,6 @@ export function SellerCabinetOverview() {
       <BirzhaEmptyState
         compact
         title={sellerHasOnlyClosedTrips ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
-        description={
-          sellerHasOnlyClosedTrips
-            ? "Закрытые рейсы не показываются здесь, чтобы не путаться с продажами. Итоги и история — в разделе «Отчёты по рейсу»."
-            : "Когда администратор закрепит за вами рейс, здесь появится выбор и сводка."
-        }
       />
     );
   }
@@ -200,17 +193,11 @@ export function SellerCabinetOverview() {
   return (
     <BirzhaDisclosure
       defaultOpen
-      title={
-        <span className="birzha-disclosure__title-stack">
-          <span className="birzha-section-heading__eyebrow">Сводка</span>
-          <span className="birzha-section-title birzha-section-title--sm">По выбранному рейсу</span>
-        </span>
-      }
-      hint="детали по партиям и клиентам — в «Отчёты по рейсу»"
+      title={<span className="birzha-section-title birzha-section-title--sm">Сводка</span>}
     >
       <div className="no-print" style={{ marginBottom: "0.75rem" }}>
-        <label htmlFor="seller-cabinet-trip-select" className="birzha-text-muted birzha-text-muted--lg" style={{ display: "block", marginBottom: "0.35rem" }}>
-          Выберите рейс
+        <label htmlFor="seller-cabinet-trip-select" className="birzha-sr-only">
+          Рейс
         </label>
         <select
           id="seller-cabinet-trip-select"
@@ -228,17 +215,10 @@ export function SellerCabinetOverview() {
             );
           })}
         </select>
-        {effectiveTripId ? (
-          <p className="birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-            <Link to={`${sales.reports}?trip=${encodeURIComponent(effectiveTripId)}`}>Полный отчёт по рейсу</Link>
-            {" — "}
-            партии, клиенты, CSV.
-          </p>
-        ) : null}
       </div>
 
       {!effectiveTripId ? (
-        <BirzhaEmptyState compact title="Выберите рейс" description="Краткая сводка появится после выбора в списке выше." />
+        <BirzhaEmptyState compact title="Выберите рейс" />
       ) : reportQuery.isPending ? (
         <LoadingBlock label="Загрузка отчёта…" minHeight={64} skeleton skeletonRows={3} />
       ) : reportQuery.isError ? (
@@ -298,11 +278,8 @@ export function SellerCabinetOverview() {
             </div>
           </div>
 
-          <h3 className="birzha-ui-sm" style={{ margin: "0 0 0.4rem", fontWeight: 600 }}>
-            Продано по товару и калибру
-          </h3>
           {caliberRows.length === 0 ? (
-            <BirzhaEmptyState compact title="Продаж по этому рейсу пока нет" description="После продаж строки появятся здесь; подробности — в отчёте по рейсу." />
+            <BirzhaEmptyState compact title="Продаж по этому рейсу пока нет" />
           ) : (
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Продажи по товару и калибру">

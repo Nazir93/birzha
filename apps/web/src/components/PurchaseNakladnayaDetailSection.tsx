@@ -108,9 +108,11 @@ export function PurchaseNakladnayaDetailSection() {
         title={
           <h3 id="nakl-detail-heading" style={{ margin: 0, fontSize: "1rem" }}>
             Накладная <strong>{doc.documentNumber}</strong>
+            <span className="birzha-text-muted birzha-ui-sm" style={{ marginLeft: "0.5rem", fontWeight: 500 }}>
+              {formatPurchaseDocDateRu(doc.docDate)}
+            </span>
           </h3>
         }
-        hint={formatPurchaseDocDateRu(doc.docDate)}
       >
       <div
         className="no-print"
@@ -136,18 +138,6 @@ export function PurchaseNakladnayaDetailSection() {
           Печать / PDF
         </button>
       </div>
-      <p style={{ margin: "0 0 0.75rem", fontSize: "1.05rem", fontWeight: 600 }}>
-        Дата документа: {formatPurchaseDocDateRu(doc.docDate)}
-      </p>
-      <p className="birzha-callout-info no-print" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem" }}>
-        ID в системе (поддержка): <code style={{ fontSize: "0.82rem" }}>{doc.id}</code>
-        {doc.createdAt ? (
-          <>
-            {" "}
-            · запись в системе: {new Date(doc.createdAt).toLocaleString("ru-RU")}
-          </>
-        ) : null}
-      </p>
 
       <div className="birzha-nakl-detail-meta">
         <div>

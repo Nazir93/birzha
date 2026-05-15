@@ -154,11 +154,6 @@ export function SellerDispatchPanel() {
   return (
     <div role="region" aria-label="Отгрузка">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Отгрузка</h2>
-      <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem" }}>
-        Какой продавец закреплён за каким рейсом и какой товар на рейсе по отчёту отгрузки. После привязки рейса к
-        погрузочной накладной в «Погрузке» тоннаж по строкам ПН переносится в рейс автоматически — у продавца
-        появляются калибры для продажи. Если рейс без ПН, отгрузку в рейс оформляет склад в «Операциях» / «Рейсах».
-      </p>
 
       {canAssignSeller ? (
         <BirzhaDisclosure
@@ -168,12 +163,7 @@ export function SellerDispatchPanel() {
               Привязка рейса к продавцу
             </h3>
           }
-          hint="только свободные рейсы в списке"
         >
-          <p className="birzha-callout-info" style={{ margin: "0 0 0.5rem" }}>
-            Новых продавцов создавайте в разделе «Сотрудники». Здесь только закрепление: один рейс — один продавец;
-            уже закреплённый рейс в этом списке не показывается.
-          </p>
           <label htmlFor="dispatch-seller" className="birzha-form-label birzha-form-label--block">
             Продавец *
           </label>
@@ -226,11 +216,7 @@ export function SellerDispatchPanel() {
             </p>
           ) : null}
           {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 ? (
-            <BirzhaEmptyState
-              compact
-              title="Нет активных продавцов"
-              description="Создайте учётные записи с ролью продавца в разделе «Сотрудники»."
-            />
+            <BirzhaEmptyState compact title="Нет активных продавцов" />
           ) : null}
 
           <button
@@ -262,11 +248,8 @@ export function SellerDispatchPanel() {
               Привязка рейса к продавцу
             </h3>
           }
-          hint="только просмотр"
         >
-          <p className="birzha-callout-info">
-            В бухгалтерии доступен просмотр. Назначение рейса делает администратор, руководитель, закупщик или логист.
-          </p>
+          {null}
         </BirzhaDisclosure>
       )}
 
@@ -277,7 +260,6 @@ export function SellerDispatchPanel() {
             Рейсы: продавец и товар
           </h3>
         }
-        hint="по всем рейсам; калибры из отгрузки"
       >
         {tripsQuery.isPending ? (
           <LoadingBlock label="Загрузка рейсов…" minHeight={64} skeleton skeletonRows={5} />

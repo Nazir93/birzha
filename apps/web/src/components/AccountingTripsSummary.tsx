@@ -105,9 +105,6 @@ export function AccountingTripsSummary() {
     return <BirzhaEmptyState compact title="Пока нет рейсов" />;
   }
 
-  const totalInDb = tripsQuery.data?.trips.length ?? 0;
-  const moreThanTable = totalInDb > MAX_TRIPS;
-
   return (
     <BirzhaDisclosure
       id="acc-trips"
@@ -120,13 +117,7 @@ export function AccountingTripsSummary() {
           </span>
         </span>
       }
-      hint={`до ${MAX_TRIPS} рейсов в сводке`}
     >
-      {moreThanTable ? (
-        <p className="birzha-callout-info" style={{ margin: "0 0 0.5rem" }}>
-          В сводке первые {MAX_TRIPS} из {totalInDb} рейсов.
-        </p>
-      ) : null}
       {revenueChartItems.length > 0 ? (
         <div className="birzha-chart-card birzha-chart-card--premium" style={{ marginBottom: "0.9rem" }}>
           <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 600 }}>Выручка по рейсам</h4>

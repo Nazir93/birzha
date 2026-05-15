@@ -132,7 +132,7 @@ export function AdminStockWarehousesPage() {
 
       {!loading && !warehousesQ.isError ? (
         <>
-          <BirzhaDisclosure defaultOpen title={<span style={{ fontWeight: 600 }}>Склады</span>} hint="справочник">
+          <BirzhaDisclosure defaultOpen title={<span style={{ fontWeight: 600 }}>Склады</span>}>
             <div className="birzha-inventory-inline-tools birzha-inventory-inline-tools--catalog" style={{ marginBottom: "0.65rem" }}>
               <input
                 value={newWarehouseName}
@@ -226,19 +226,8 @@ export function AdminStockWarehousesPage() {
           <BirzhaDisclosure
             defaultOpen
             title={<span style={{ fontWeight: 600 }}>Остатки по выбранному складу</span>}
-            hint={
-              selectedWarehouseId
-                ? gradeStockAggregates.length === 0
-                  ? "нет данных"
-                  : `${gradeStockAggregates.length} калибров`
-                : "выберите склад в таблице выше"
-            }
           >
-            {!selectedWarehouseId ? (
-              <p className="birzha-text-muted" style={{ margin: 0 }}>
-                Нажмите название склада в списке.
-              </p>
-            ) : (
+            {!selectedWarehouseId ? null : (
               <>
                 <label className="birzha-field-label" htmlFor="stock-grade-search">
                   Поиск по калибру и виду товара
@@ -251,11 +240,7 @@ export function AdminStockWarehousesPage() {
                   placeholder="Например №5 или помидоры"
                   autoComplete="off"
                 />
-                {gradeStockAggregates.length === 0 ? (
-                  <p style={{ margin: 0 }} className="birzha-text-muted">
-                    Нет данных по этому складу (или ничего не найдено по поиску).
-                  </p>
-                ) : (
+                {gradeStockAggregates.length === 0 ? null : (
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                     <table style={{ ...tableStyle, minWidth: 420 }}>
                       <thead>
@@ -263,7 +248,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>Калибр</th>
                           <th style={thHeadDense}>Вид</th>
                           <th style={thHeadDense}>На складе, кг</th>
-                          <th style={thHeadDense}>На рейсе, кг</th>
+                          <th style={thHeadDense}>Погружено, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
                         </tr>
                       </thead>

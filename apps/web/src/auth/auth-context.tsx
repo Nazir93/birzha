@@ -97,6 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [queryClient, state.ready, state.meta?.authApi, state.user?.id]);
 
+  /** Статический сплэш в `index.html` вне `#root`; убираем после bootstrap auth, чтобы не было двух слоёв загрузки. */
+  useLayoutEffect(() => {
+    if (!state.ready) {
+      return;
+    }
+    document.getElementById("birzha-app-splash")?.remove();
+  }, [state.ready]);
+
   /** Прогрев кеша списков после входа или при восстановлении сессии — быстрее первый заход в кабинеты. */
   useEffect(() => {
     if (!state.ready || !state.user || !state.meta || state.usingStaleMeta) {

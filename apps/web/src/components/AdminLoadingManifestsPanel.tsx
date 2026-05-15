@@ -278,21 +278,12 @@ export function AdminLoadingManifestsPanel() {
               </div>
 
               {!selectedWarehouse ? (
-                <BirzhaEmptyState
-                  compact
-                  title="Выберите склад"
-                  description="Погрузочные накладные, сводка и рейсы ниже отображаются по выбранному складу."
-                />
+                <BirzhaEmptyState compact title="Выберите склад" />
               ) : (
                 <>
                   <BirzhaDisclosure
                     defaultOpen
                     title="Погрузочные накладные"
-                    hint={
-                      displayManifests.length === 0
-                        ? "на этом складе пусто"
-                        : `${displayManifests.length} шт. — нажмите строку, чтобы открыть карточку и привязку к рейсу`
-                    }
                     bodyClassName="birzha-disclosure__body birzha-disclosure__body--stack"
                   >
                     {displayManifests.length === 0 ? (
@@ -317,15 +308,7 @@ export function AdminLoadingManifestsPanel() {
                     )}
                   </BirzhaDisclosure>
 
-                  <BirzhaDisclosure
-                    defaultOpen
-                    title="Общая сводка по погрузочным накладным на складе"
-                    hint={
-                      grandSummary.count === 0
-                        ? "нет документов"
-                        : `${grandSummary.count} док. · ${grandSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`
-                    }
-                  >
+                  <BirzhaDisclosure defaultOpen title="Общая сводка по погрузочным накладным на складе">
                     {grandSummary.count === 0 ? (
                       <BirzhaEmptyState compact title="Нет данных для сводки" />
                     ) : (

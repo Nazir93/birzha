@@ -365,7 +365,6 @@ export function AdminUsersPanel() {
               </div>
             </div>
           }
-          hint="логин и роль"
         >
         <p className="birzha-callout-info" style={{ fontSize: "0.82rem", marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
           Ввод по умолчанию скрыт звёздочками; кнопка «Показать» нужна, чтобы сверить символы перед сохранением. Ранее
@@ -470,7 +469,6 @@ export function AdminUsersPanel() {
               <p className="birzha-section-heading__note">Пароли и удаление — в строке сотрудника</p>
             </div>
           }
-          hint="таблица"
         >
         {listQ.isPending && (
           <LoadingBlock label="Загрузка списка…" minHeight={72} skeleton skeletonRows={6} />

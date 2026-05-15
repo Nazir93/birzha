@@ -151,10 +151,6 @@ export function AssignSellerPanel() {
       <header className="birzha-assign-seller__hero">
         <div>
           <h2 className="birzha-assign-seller__title">Продажи по продавцу</h2>
-          <p className="birzha-assign-seller__lead">
-            Сводка по закреплённым рейсам: масса, остаток на рейсе, выручка, наличные и продажи в долг по клиентам.
-            Закрепление рейса — раздел «Отгрузка».
-          </p>
         </div>
         <div className="birzha-assign-seller__pick">
           <label className="birzha-field-label" htmlFor="sales-seller">
@@ -184,7 +180,7 @@ export function AssignSellerPanel() {
       </header>
 
       {!assignSellerUserId ? (
-        <BirzhaEmptyState compact title="Выберите продавца" description="Сводка появится после выбора в поле выше." />
+        <BirzhaEmptyState compact title="Выберите продавца" />
       ) : (
         <>
           <p className="birzha-assign-seller__seller-line">
@@ -208,7 +204,6 @@ export function AssignSellerPanel() {
               nested
               defaultOpen
               title={<span style={{ fontWeight: 600 }}>Итого по продавцу</span>}
-              hint="кг · ₽"
             >
               <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
               <div className="birzha-assign-seller__kpi-card">
@@ -220,7 +215,7 @@ export function AssignSellerPanel() {
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.sold.toString())} кг</span>
               </div>
               <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--accent">
-                <span className="birzha-assign-seller__kpi-label">Остаток на рейсе</span>
+                <span className="birzha-assign-seller__kpi-label">Остаток погруженного</span>
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.netTransit.toString())} кг</span>
               </div>
               <div className="birzha-assign-seller__kpi-card">
@@ -255,18 +250,9 @@ export function AssignSellerPanel() {
                 Рейсы
               </h3>
             }
-            hint={
-              selectedSellerTrips.length === 0
-                ? "нет закреплённых"
-                : `${selectedSellerTrips.length.toLocaleString("ru-RU")} шт.`
-            }
           >
             {selectedSellerTrips.length === 0 ? (
-              <BirzhaEmptyState
-                compact
-                title="Нет закреплённых рейсов"
-                description="Назначьте рейс продавцу в разделе «Отгрузка»."
-              />
+              <BirzhaEmptyState compact title="Нет закреплённых рейсов" />
             ) : (
               <div className="birzha-assign-seller__trip-table-wrap birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-assign-seller__trip-table" style={tableStyle}>
@@ -281,7 +267,7 @@ export function AssignSellerPanel() {
                         Прод., кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
-                        На рейсе, кг
+                        Погружено, кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
                         Выручка
@@ -364,13 +350,7 @@ export function AssignSellerPanel() {
                   </span>
                 </h3>
               }
-              hint={formatTripSelectLabel(activeReport.trip)}
             >
-              <p className="birzha-assign-seller__detail-note">
-                Наличные и долг — по данным продаж в этом рейсе. Отдельный учёт погашения долга после продажи в интерфейсе не
-                отображается.
-              </p>
-
               <div className="birzha-assign-seller__detail-grid">
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По партиям (накладная · калибр)</h4>

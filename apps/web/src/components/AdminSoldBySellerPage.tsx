@@ -160,10 +160,6 @@ export function AdminSoldBySellerPage() {
           <h2 id="sold-by-seller-h" className="birzha-assign-seller__title">
             Продано по продавцам
           </h2>
-          <p className="birzha-assign-seller__lead">
-            Выберите продавца: сводка по закреплённым рейсам (кг, ₽). Даты — по выезду рейса. Поиск по логину продавца и по
-            рейсам ниже.
-          </p>
         </div>
       </header>
 
@@ -203,7 +199,7 @@ export function AdminSoldBySellerPage() {
       )}
 
       {!assignSellerUserId ? (
-        <BirzhaEmptyState compact title="Выберите продавца" description="Сводка появится после выбора в списке." />
+        <BirzhaEmptyState compact title="Выберите продавца" />
       ) : (
         <>
           <p className="birzha-assign-seller__seller-line">
@@ -257,7 +253,7 @@ export function AdminSoldBySellerPage() {
           ) : null}
 
           {!reportLoading && loadedReports.length > 0 ? (
-            <BirzhaDisclosure nested defaultOpen title={<span style={{ fontWeight: 600 }}>Итого по продавцу (в фильтре)</span>} hint="кг · ₽">
+            <BirzhaDisclosure nested defaultOpen title={<span style={{ fontWeight: 600 }}>Итого по продавцу (в фильтре)</span>}>
               <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
                 <div className="birzha-assign-seller__kpi-card">
                   <span className="birzha-assign-seller__kpi-label">Отгружено</span>
@@ -268,7 +264,7 @@ export function AdminSoldBySellerPage() {
                   <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.sold.toString())} кг</span>
                 </div>
                 <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--accent">
-                  <span className="birzha-assign-seller__kpi-label">Остаток на рейсе</span>
+                  <span className="birzha-assign-seller__kpi-label">Остаток погруженного</span>
                   <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.netTransit.toString())} кг</span>
                 </div>
                 <div className="birzha-assign-seller__kpi-card">
@@ -283,10 +279,9 @@ export function AdminSoldBySellerPage() {
             nested
             defaultOpen
             title={<h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>Рейсы продавца ({tripsForTable.length})</h3>}
-            hint="по фильтрам даты и поиска"
           >
             {tripsForTable.length === 0 ? (
-              <BirzhaEmptyState compact title="Нет рейсов в фильтре" description="Измените даты или поиск." />
+              <BirzhaEmptyState compact title="Нет рейсов в фильтре" />
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-assign-seller__trip-table" style={tableStyle}>

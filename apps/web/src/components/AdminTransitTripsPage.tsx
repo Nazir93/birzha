@@ -88,9 +88,6 @@ export function AdminTransitTripsPage() {
         <h2 id="transit-trips-h" style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
           Рейсы с остатком
         </h2>
-        <p style={{ margin: "0.35rem 0 0", fontSize: "0.88rem", color: "var(--color-muted)", maxWidth: 52 * 16 }}>
-          Открытые рейсы, у которых по учёту ещё есть масса на рейсе (не продана). Фильтр по дате выезда — по календарному дню (UTC-дата).
-        </p>
       </header>
 
       {tripsQ.isPending ? <LoadingBlock label="Загрузка рейсов…" minHeight={72} skeleton skeletonRows={4} /> : null}
@@ -145,7 +142,6 @@ export function AdminTransitTripsPage() {
           <BirzhaDisclosure
             defaultOpen
             title={<span style={{ fontWeight: 600 }}>Список ({rows.length})</span>}
-            hint="остаток на рейсе &gt; 0"
           >
             {rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: "0.9rem" }} className="birzha-text-muted">
@@ -153,7 +149,7 @@ export function AdminTransitTripsPage() {
               </p>
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={tableStyle} aria-label="Рейсы с остатком на рейсе">
+                <table style={tableStyle} aria-label="Рейсы с ненулевым погруженным остатком">
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>

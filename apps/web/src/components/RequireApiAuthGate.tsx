@@ -24,7 +24,12 @@ export function RequireApiAuthGate() {
   }
 
   if (!ready) {
-    return <LoadingScreen label="Проверяем вход и настройки…" />;
+    return (
+      <LoadingScreen
+        label="Проверяем вход и настройки…"
+        hint="Подготавливаем кабинет и актуальные данные."
+      />
+    );
   }
 
   if (meta?.requireApiAuth === "enabled" && !user) {

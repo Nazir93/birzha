@@ -18,11 +18,7 @@ import {
   estimateNetTransitPackageCount,
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
-import {
-  formatSellerCaliberGroupOptionLabel,
-  groupSellableRowsByCaliber,
-  type SellerCaliberGroup,
-} from "../format/seller-trip-caliber-groups.js";
+import { groupSellableRowsByCaliber, type SellerCaliberGroup } from "../format/seller-trip-caliber-groups.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
 import {
@@ -404,17 +400,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     [sellableOnTripRows, batchByIdForSell],
   );
 
-  const sellerCaliberGroupsFiltered = useMemo(() => {
-    const q = partyFilter.trim().toLowerCase();
-    if (!q) {
-      return sellerCaliberGroups;
-    }
-    return sellerCaliberGroups.filter((g) => {
-      const opt = formatSellerCaliberGroupOptionLabel(g, gramsBigIntToKgDecimalString).toLowerCase();
-      return opt.includes(q) || g.rows.some((r) => r.batchId.toLowerCase().includes(q));
-    });
-  }, [sellerCaliberGroups, partyFilter]);
-
   const sellBatchSelectDisabled = useMemo(
     () =>
       !sellTripIdTrim ||
@@ -526,7 +511,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     return w?.name ?? "";
   }, [wholesaleBuyerId, wholesalersQ.data?.wholesalers]);
 
-  const batchSuggestQuery = useQuery(batchesSearchQueryOptions(debouncedBatchIdSearch, 20));
+  const batchSuggestQuery = useQuery({
+    ...batchesSearchQueryOptions(debouncedBatchIdSearch, 20),
+    /** Подбор по фрагменту id — только в кабинете операций. */
+    enabled: !isSellerUx && debouncedBatchIdSearch.trim().length >= 2,
+  });
 
   /** Для продавца: список партий на рейсе загрузился и есть что продавать — технический fallback скрываем. */
   const sellerBatchListReady =
@@ -540,11 +529,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     !isSellerUx ||
     (Boolean(sellTripIdTrim) && !sellReportQuery.isPending && !sellerBatchListReady);
 
+  /** Фильтр списка партий — в кабинете продавца не показываем (выбор по плиткам калибра + прокрутка). */
   const showBatchListFilter =
+    !isSellerUx &&
     Boolean(sellTripIdTrim) &&
     sellReportQuery.isSuccess &&
-    sellableOnTripRows.length > 0 &&
-    (isSellerUx ? sellerCaliberGroups.length > 8 : true);
+    sellableOnTripRows.length > 0;
 
   const sellSelectionSummary = useMemo((): {
     line: string;
@@ -1122,9 +1112,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             </p>
           ) : (
             <>
-              {sellerCaliberGroupsFiltered.length === 0 ? (
+              {sellerCaliberGroups.length === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-                  {sellerCaliberGroups.length > 0 ? "Нет совпадений по поиску." : "Нет строк."}
+                  Нет строк.
                 </p>
               ) : (
                 <div
@@ -1133,7 +1123,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                   aria-label="Калибр и остаток в машине"
                   id={`${idPrefix}-sel-batch`}
                 >
-                  {sellerCaliberGroupsFiltered.map((g) => {
+                  {sellerCaliberGroups.map((g) => {
                     const selected = sellBatchId === g.primaryBatchId;
                     const dealG = sellerCaliberGroupDealGrams(g);
                     const kgLine = gramsBigIntToKgDecimalString(dealG);
@@ -1260,51 +1250,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 autoComplete="off"
                 placeholder="полный id партии"
               />
-              <label
-                htmlFor={`${idPrefix}-batch-id-search`}
-                className="birzha-form-label birzha-form-label--block birzha-form-label--push-sm"
-              >
-                Поиск партии по части id (от 2 символов)
-              </label>
-              <input
-                id={`${idPrefix}-batch-id-search`}
-                value={batchIdSearch}
-                onChange={(e) => setBatchIdSearch(e.target.value)}
-                className={sellerFieldClass}
-                style={isSellerUx ? sellerFieldMb : fieldStyle}
-                autoComplete="off"
-                placeholder="фрагмент id"
-              />
-              {batchSuggestQuery.data && batchSuggestQuery.data.batches.length > 0 && (
-                <ul
-                  className="birzha-scroll-panel"
-                  style={{ listStyle: "none", margin: "0.35rem 0 0", padding: "0.35rem 0.45rem" }}
-                  aria-label="Подходящие партии"
-                >
-                  {batchSuggestQuery.data.batches.map((b) => (
-                    <li key={b.id} style={{ marginBottom: "0.25rem" }}>
-                      <button
-                        type="button"
-                        style={{
-                          ...btnStyle,
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          fontSize: "0.86rem",
-                          padding: "0.4rem 0.55rem",
-                          wordBreak: "break-all",
-                        }}
-                        onClick={() => {
-                          setSellBatchId(b.id);
-                          setBatchIdSearch("");
-                        }}
-                      >
-                        {b.id}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </BirzhaDisclosure>
           ) : (
             <>

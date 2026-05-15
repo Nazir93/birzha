@@ -78,8 +78,7 @@ export function TripSearchPicker({
     <div className="birzha-trip-search-picker">
       {value && selectedTripOpen ? (
         <div style={{ marginBottom: "0.45rem" }}>
-          <p className="birzha-callout-info" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
-            {sellerWorkspace ? "Сейчас продаём с рейса: " : "Выбран рейс: "}
+          <p style={{ margin: "0 0 0.35rem", fontSize: "0.9rem", lineHeight: 1.45 }}>
             <strong>{formatTripSelectLabel(selectedTripOpen)}</strong>
           </p>
           <button
@@ -103,11 +102,6 @@ export function TripSearchPicker({
           >
             {sellerWorkspace ? "Мой рейс" : "Поиск по номеру рейса"}
           </label>
-          {sellerWorkspace && (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.35rem", lineHeight: 1.45 }}>
-              В списке только открытые рейсы, закреплённые за вами. Закрытые рейсы — в разделе «Отчёты по рейсу».
-            </p>
-          )}
           <input
             id={searchInputId}
             type="search"
@@ -161,15 +155,7 @@ export function TripSearchPicker({
             ))}
           </ul>
           {!pickerQuery.isPending && visibleTrips.length === 0 && (
-            <BirzhaEmptyState
-              compact
-              title="Нет рейсов"
-              description={
-                sellerWorkspace
-                  ? "За вами не закреплено ни одного рейса — обратитесь к администратору или измените поиск."
-                  : "Измените поиск или сбросьте фильтр."
-              }
-            />
+            <BirzhaEmptyState compact title="Нет рейсов" />
           )}
         </>
       )}

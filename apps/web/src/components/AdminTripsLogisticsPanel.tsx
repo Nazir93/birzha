@@ -124,7 +124,7 @@ export function AdminTripsLogisticsPanel() {
       }
       if (!tripListShowsSoldOut(t)) {
         const ok = window.confirm(
-          "В рейсе по данным системы ещё есть остаток на рейсе. Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
+          "По данным системы ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
         if (!ok) {
           return;
@@ -167,7 +167,6 @@ export function AdminTripsLogisticsPanel() {
             <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Рейсы</span>
           </span>
         }
-        hint="Создание и удаление пустых рейсов"
       >
         {tripError && <p style={errorText}>{tripError}</p>}
         <div className="birzha-inventory-logistics-form">
@@ -281,7 +280,7 @@ export function AdminTripsLogisticsPanel() {
                           className="birzha-text-muted"
                           style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}
                         >
-                          Остаток на рейсе 0
+                          Остаток погруженного 0
                         </span>
                       ) : null}
                     </td>

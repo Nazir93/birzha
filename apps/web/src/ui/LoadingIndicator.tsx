@@ -75,21 +75,23 @@ export function LoadingBlock({
   );
 }
 
-/** Центрированный экран ожидания для загрузки кабинета/сессии. */
-export function LoadingScreen({ label }: { label: string }) {
+/** Центрированный экран ожидания: один спиннер в марке (без дубля `LoadingIndicator`) + подпись. */
+export function LoadingScreen({
+  label,
+  hint,
+}: {
+  label: string;
+  /** Дополнительная строка под основной подписью. */
+  hint?: string | null;
+}) {
   return (
     <section className="birzha-loader-screen" role="status" aria-live="polite" aria-label={label}>
       <div className="birzha-loader-screen__card">
         <div className="birzha-loader-screen__mark" aria-hidden>
           <span className="birzha-loader-screen__pulse" />
         </div>
-        <LoadingIndicator label={label} size="md" />
-        <p className="birzha-loader-screen__note">Подготавливаем кабинет и актуальные данные.</p>
-        <div aria-hidden className="birzha-loader-screen__skeleton">
-          <div className="birzha-loader-block birzha-loader-block--skeleton" style={{ margin: 0 }}>
-            <BirzhaSkeletonPanel rows={4} minHeight={56} />
-          </div>
-        </div>
+        <p className="birzha-loader-screen__title">{label}</p>
+        {hint ? <p className="birzha-loader-screen__note">{hint}</p> : null}
       </div>
     </section>
   );

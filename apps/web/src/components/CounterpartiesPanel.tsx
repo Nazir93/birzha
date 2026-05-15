@@ -56,7 +56,6 @@ export function CounterpartiesPanel() {
         <BirzhaDisclosure
           defaultOpen
           title={<h2 style={{ margin: 0, fontSize: "1.1rem" }}>Контрагенты</h2>}
-          hint="недоступно"
         >
           <p className="birzha-callout-warning" role="status">
             Справочник контрагентов временно недоступен. Обратитесь к администратору.
@@ -75,7 +74,6 @@ export function CounterpartiesPanel() {
           nested
           defaultOpen
           title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Новый контрагент</span>}
-          hint="добавление в справочник"
         >
           <form
             style={{ marginBottom: 0 }}
@@ -119,11 +117,6 @@ export function CounterpartiesPanel() {
         nested
         defaultOpen
         title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Список контрагентов</span>}
-        hint={
-          listQ.data != null
-            ? `${listQ.data.counterparties.length.toLocaleString("ru-RU")} шт.`
-            : undefined
-        }
       >
         {listQ.isError && <p style={warnText}>Список не загрузился.</p>}
         {listQ.isPending && <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={5} />}
@@ -132,15 +125,7 @@ export function CounterpartiesPanel() {
         {deleteM.isError && <p style={errorText}>{(deleteM.error as Error).message}</p>}
 
         {listQ.data && listQ.data.counterparties.length === 0 && !listQ.isPending && (
-          <BirzhaEmptyState
-            compact
-            title="Список пуст"
-            description={
-              <>
-                Добавьте контрагента{canWrite ? " выше" : " в кабинете с правом записи"}.
-              </>
-            }
-          />
+          <BirzhaEmptyState compact title="Список пуст" />
         )}
 
         {listQ.data && listQ.data.counterparties.length > 0 && (
