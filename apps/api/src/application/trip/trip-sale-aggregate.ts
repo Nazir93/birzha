@@ -38,6 +38,12 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
   let wholesaleGrams = 0n;
   let retailRevenue = 0n;
   let wholesaleRevenue = 0n;
+  let retailCash = 0n;
+  let retailDebt = 0n;
+  let retailCard = 0n;
+  let wholesaleCash = 0n;
+  let wholesaleDebt = 0n;
+  let wholesaleCard = 0n;
 
   for (const r of rows) {
     const card = r.cardTransferKopecks ?? 0n;
@@ -51,9 +57,15 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
     if (isWholesale) {
       wholesaleGrams += r.grams;
       wholesaleRevenue += r.revenueKopecks;
+      wholesaleCash += r.cashKopecks;
+      wholesaleDebt += r.debtKopecks;
+      wholesaleCard += card;
     } else {
       retailGrams += r.grams;
       retailRevenue += r.revenueKopecks;
+      retailCash += r.cashKopecks;
+      retailDebt += r.debtKopecks;
+      retailCard += card;
     }
 
     byBatchGrams.set(r.batchId, (byBatchGrams.get(r.batchId) ?? 0n) + r.grams);
@@ -112,6 +124,12 @@ export function buildTripSaleAggregateFromRows(rows: TripSaleRowForAggregate[]):
     wholesaleGrams,
     retailRevenueKopecks: retailRevenue,
     wholesaleRevenueKopecks: wholesaleRevenue,
+    retailCashKopecks: retailCash,
+    retailDebtKopecks: retailDebt,
+    retailCardTransferKopecks: retailCard,
+    wholesaleCashKopecks: wholesaleCash,
+    wholesaleDebtKopecks: wholesaleDebt,
+    wholesaleCardTransferKopecks: wholesaleCard,
     byBatch,
     byClient,
   };

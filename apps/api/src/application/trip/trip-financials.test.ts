@@ -17,6 +17,12 @@ describe("computeTripFinancials", () => {
       wholesaleGrams: 0n,
       retailRevenueKopecks: 50_000n,
       wholesaleRevenueKopecks: 0n,
+      retailCashKopecks: 50_000n,
+      retailDebtKopecks: 0n,
+      retailCardTransferKopecks: 0n,
+      wholesaleCashKopecks: 0n,
+      wholesaleDebtKopecks: 0n,
+      wholesaleCardTransferKopecks: 0n,
       byBatch: [
         {
           batchId: "b1",

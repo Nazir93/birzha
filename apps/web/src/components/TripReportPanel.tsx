@@ -6,6 +6,7 @@ import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
+import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
@@ -302,7 +303,12 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
       {tripId && reportQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.75rem", marginBottom: 0 }} role="status" aria-live="polite">
-          <LoadingBlock label="Загрузка отчёта по рейсу (shipment-report)…" minHeight={72} skeleton skeletonRows={6} />
+          <LoadingBlock
+            label={fieldSellerSalesReport ? "Загрузка отчёта…" : "Загрузка отчёта по рейсу (shipment-report)…"}
+            minHeight={72}
+            skeleton
+            skeletonRows={fieldSellerSalesReport ? 4 : 6}
+          />
         </div>
       )}
       {tripId && reportQuery.isFetching && !reportQuery.isPending && (
@@ -316,7 +322,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
         </p>
       )}
 
-      {r && (
+      {r && fieldSellerSalesReport ? (
+        <FieldSellerTripReport report={r} batchById={batchById} />
+      ) : null}
+
+      {r && !fieldSellerSalesReport ? (
         <div style={{ marginTop: "1rem" }} role="region" aria-label={`Отчёт по рейсу ${r.trip.tripNumber}`}>
           <p
             style={{
@@ -588,8 +598,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </BirzhaDisclosure>
           )}
 
-          {!fieldSellerSalesReport ? (
-            <>
           <BirzhaDisclosure
             defaultOpen
             title={
@@ -718,10 +726,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </pre>
             </BirzhaDisclosure>
           </div>
-            </>
-          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

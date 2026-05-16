@@ -51,6 +51,12 @@ export type TripSaleAggregate = {
   wholesaleGrams: bigint;
   retailRevenueKopecks: bigint;
   wholesaleRevenueKopecks: bigint;
+  retailCashKopecks: bigint;
+  retailDebtKopecks: bigint;
+  retailCardTransferKopecks: bigint;
+  wholesaleCashKopecks: bigint;
+  wholesaleDebtKopecks: bigint;
+  wholesaleCardTransferKopecks: bigint;
   byBatch: TripSaleBatchLine[];
   byClient: TripSaleClientLine[];
 };

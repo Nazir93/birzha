@@ -26,6 +26,12 @@ const minimalReport = (id: string, tripNumber: string): ShipmentReportResponse =
     wholesaleGrams: "0",
     retailRevenueKopecks: "40000",
     wholesaleRevenueKopecks: "0",
+    retailCashKopecks: "25000",
+    retailDebtKopecks: "15000",
+    retailCardTransferKopecks: "0",
+    wholesaleCashKopecks: "0",
+    wholesaleDebtKopecks: "0",
+    wholesaleCardTransferKopecks: "0",
     byBatch: [
       {
         batchId: "b1",

@@ -262,6 +262,12 @@ export type SalesBlock = {
   wholesaleGrams: string;
   retailRevenueKopecks: string;
   wholesaleRevenueKopecks: string;
+  retailCashKopecks: string;
+  retailDebtKopecks: string;
+  retailCardTransferKopecks: string;
+  wholesaleCashKopecks: string;
+  wholesaleDebtKopecks: string;
+  wholesaleCardTransferKopecks: string;
   byBatch: {
     batchId: string;
     grams: string;

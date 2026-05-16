@@ -29,6 +29,12 @@ const baseReport = (): ShipmentReportResponse => ({
     wholesaleGrams: "0",
     retailRevenueKopecks: "50000",
     wholesaleRevenueKopecks: "0",
+    retailCashKopecks: "30000",
+    retailDebtKopecks: "20000",
+    retailCardTransferKopecks: "0",
+    wholesaleCashKopecks: "0",
+    wholesaleDebtKopecks: "0",
+    wholesaleCardTransferKopecks: "0",
     byBatch: [
       {
         batchId: "b1",

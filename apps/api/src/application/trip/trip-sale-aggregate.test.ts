@@ -72,6 +72,10 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(agg.wholesaleGrams).toBe(50n);
     expect(agg.retailRevenueKopecks).toBe(1000n);
     expect(agg.wholesaleRevenueKopecks).toBe(400n);
+    expect(agg.retailCashKopecks).toBe(1000n);
+    expect(agg.wholesaleCashKopecks).toBe(400n);
+    expect(agg.retailDebtKopecks).toBe(0n);
+    expect(agg.wholesaleDebtKopecks).toBe(0n);
     expect(agg.totalGrams).toBe(150n);
   });
 });

@@ -19,7 +19,6 @@ import {
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
-import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { useNavigatorOnLine } from "../hooks/useNavigatorOnLine.js";
 import {
   batchesByIdsQueryOptions,
@@ -85,7 +84,7 @@ export type SellFromTripVariant = "seller" | "operations";
  * Используется в кабинете продавца (/s) и в общих операциях (/o/operations).
  */
 export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
-  const { meta, user } = useAuth();
+  const { meta } = useAuth();
   const online = useNavigatorOnLine();
   const isSellerUx = variant === "seller";
   const queryClient = useQueryClient();
@@ -604,7 +603,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           return "Нет активных оптовиков — администратор должен добавить их в справочник";
         }
         if (wholesalersQ.isSuccess && wholesalerSearchDebounced.trim().length < WHOLESALER_SELLER_SEARCH_MIN_CHARS) {
-          return `Введите в поиске минимум ${WHOLESALER_SELLER_SEARCH_MIN_CHARS} символа названия оптовика`;
+          return "Выберите оптовика из списка";
         }
         return "Выберите оптовика из списка ниже";
       }
@@ -892,23 +891,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 onChange={(e) => setWholesalerSearch(e.target.value)}
                 className={sellerFieldClass}
                 style={{ ...sellerFieldMb, maxWidth: "100%" }}
-                placeholder={
-                  isSellerUx
-                    ? `Минимум ${WHOLESALER_SELLER_SEARCH_MIN_CHARS} символа названия…`
-                    : "Найти по названию…"
-                }
+                placeholder={isSellerUx ? "Название оптовика…" : "Найти по названию…"}
                 autoComplete="off"
                 aria-label="Поиск оптовика"
               />
               {isSellerUx && wholesalerSearch.trim() !== wholesalerSearchDebounced.trim() ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.25rem 0 0" }} role="status">
                   Подождите, ищем…
-                </p>
-              ) : null}
-              {isSellerUx ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.25rem 0 0", lineHeight: 1.45 }}>
-                  Список с прокруткой. Полный справочник не показываем — введите часть названия (от{" "}
-                  {WHOLESALER_SELLER_SEARCH_MIN_CHARS} символов).
                 </p>
               ) : null}
               {wholesalersQ.isPending ? (
@@ -922,13 +911,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               ) : (
                 <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
                   {wholesaleRowsFiltered.length === 0 ? (
+                    isSellerUx && wholesalerSellerPickMeta?.waitingForChars && !wholesaleBuyerId ? null : (
                     <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
                       {(wholesalersQ.data?.wholesalers ?? []).filter((w) => w.isActive).length === 0
                         ? "Активных оптовиков нет — их добавляет администратор в справочнике."
-                        : isSellerUx && wholesalerSellerPickMeta?.waitingForChars && !wholesaleBuyerId
-                          ? `Введите минимум ${WHOLESALER_SELLER_SEARCH_MIN_CHARS} символа названия — здесь появятся подходящие оптовики.`
-                          : "Нет совпадений по поиску — измените запрос."}
+                        : "Нет совпадений по поиску — измените запрос."}
                     </li>
+                    )
                   ) : (
                     wholesaleRowsFiltered.map((w) => (
                       <li key={w.id} className="birzha-seller-wholesaler-list__item">
@@ -986,10 +975,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 compact
                 title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
                 description={
-                  sellerHasAssignedClosedOnly
-                    ? user && isFieldSellerOnly(user)
-                      ? "Закрытые рейсы здесь не выбираются. По итогам рейса обратитесь к администратору."
-                      : "Закрытые рейсы здесь не выбираются. Итоги и история — в разделе «Отчёты по рейсу»."
+                  sellerHasAssignedClosedOnly && !isSellerUx
+                    ? "Закрытые рейсы здесь не выбираются. Итоги и история — в разделе «Отчёты по рейсу»."
                     : undefined
                 }
               />

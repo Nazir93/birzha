@@ -16,6 +16,12 @@ function emptySales() {
     wholesaleGrams: 0n,
     retailRevenueKopecks: 0n,
     wholesaleRevenueKopecks: 0n,
+    retailCashKopecks: 0n,
+    retailDebtKopecks: 0n,
+    retailCardTransferKopecks: 0n,
+    wholesaleCashKopecks: 0n,
+    wholesaleDebtKopecks: 0n,
+    wholesaleCardTransferKopecks: 0n,
     byBatch: [] as { batchId: string; grams: bigint; revenueKopecks: bigint; cashKopecks: bigint; debtKopecks: bigint; cardTransferKopecks: bigint }[],
     byClient: [],
   };

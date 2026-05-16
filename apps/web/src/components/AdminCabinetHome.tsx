@@ -163,8 +163,8 @@ export function AdminCabinetHome() {
         display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
       }));
 
-    /** Отгружено со склада = погружено в рейс (inTransit) + уже продано по партиям. */
-    const dispatchedKg = transitKg + soldKg;
+    /** Отгружено в сводке = масса в рейсе, ещё не продана (inTransit). После продажи уходит в «Продано», здесь → 0. */
+    const dispatchedKg = transitKg;
 
     return {
       tripCount: trips.length,
@@ -300,9 +300,9 @@ export function AdminCabinetHome() {
                 </span>
               </Link>
               <Link
-                to={adminRoutes.sellerDispatch}
+                to={adminRoutes.transitTrips}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="Отгружено со склада: погружено + продано (партии)"
+                title="В рейсе, ещё не продано (остаток в пути)"
               >
                 <span className="birzha-admin-stat__label">Отгружено</span>
                 <span className="birzha-admin-stat__value">
@@ -380,9 +380,9 @@ export function AdminCabinetHome() {
                 </div>
               </Link>
               <Link
-                to={adminRoutes.sellerDispatch}
+                to={adminRoutes.transitTrips}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Отгружено со склада: погружено + продано"
+                title="В рейсе, ещё не продано"
               >
                 <div className="birzha-kpi-tile__label">Отгружено, кг</div>
                 <div className="birzha-kpi-tile__value">
