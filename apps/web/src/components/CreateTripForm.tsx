@@ -22,7 +22,6 @@ export function CreateTripForm({
     enabled: showAssignedSeller,
   });
   const [tripNumber, setTripNumber] = useState("");
-  const [tripId, setTripId] = useState("");
   const [vehicleLabel, setVehicleLabel] = useState("");
   const [driverName, setDriverName] = useState("");
   const [departedAtLocal, setDepartedAtLocal] = useState("");
@@ -31,7 +30,7 @@ export function CreateTripForm({
   const mutation = useMutation({
     mutationFn: async () => {
       const body = parseCreateTripForm(
-        tripId,
+        "",
         tripNumber,
         vehicleLabel,
         driverName,
@@ -43,7 +42,6 @@ export function CreateTripForm({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       setTripNumber("");
-      setTripId("");
       setVehicleLabel("");
       setDriverName("");
       setDepartedAtLocal("");
@@ -53,7 +51,7 @@ export function CreateTripForm({
 
   useEffect(() => {
     mutation.reset();
-  }, [tripNumber, tripId, vehicleLabel, driverName, departedAtLocal, assignedSellerUserId, mutation]);
+  }, [tripNumber, vehicleLabel, driverName, departedAtLocal, assignedSellerUserId, mutation]);
 
   return (
     <BirzhaDisclosure
@@ -68,20 +66,6 @@ export function CreateTripForm({
         value={tripNumber}
         onChange={(e) => setTripNumber(e.target.value)}
         placeholder="например Ф-2026-001"
-        style={fieldStyleCompact}
-        autoComplete="off"
-      />
-      <label
-        htmlFor="ct-trip-id"
-        className="birzha-form-label birzha-form-label--block birzha-form-label--push-lg"
-      >
-        Идентификатор рейса (опционально)
-      </label>
-      <input
-        id="ct-trip-id"
-        value={tripId}
-        onChange={(e) => setTripId(e.target.value)}
-        placeholder="пусто = создать автоматически"
         style={fieldStyleCompact}
         autoComplete="off"
       />

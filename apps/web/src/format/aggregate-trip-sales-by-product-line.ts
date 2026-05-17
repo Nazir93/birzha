@@ -1,5 +1,5 @@
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
-import { formatNakladLineLabel, formatShortBatchId } from "./batch-label.js";
+import { formatNakladLineLabel } from "./batch-label.js";
 
 function bi(x: string | undefined): bigint {
   if (x === undefined || x === "") {
@@ -29,7 +29,7 @@ export function aggregateTripSalesByProductLine(
       continue;
     }
     const b = batchById.get(s.batchId);
-    const lineLabel = b ? formatNakladLineLabel(b) : `партия ${formatShortBatchId(s.batchId)}`;
+    const lineLabel = b ? formatNakladLineLabel(b) : "партия без накладной";
     let row = m.get(lineLabel);
     if (!row) {
       row = { lineLabel, grams: 0n, revenue: 0n, cash: 0n, debt: 0n, card: 0n };

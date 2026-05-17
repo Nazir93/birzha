@@ -23,11 +23,13 @@ import {
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { splitPurchaseDocumentsBySoldStatus } from "../format/purchase-nakladnaya-list-status.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
+  batchesFullListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   warehousesFullListQueryOptions,
@@ -91,6 +93,7 @@ export function PurchaseNakladnayaSection() {
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
   const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
+  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
 
   const [documentNumber, setDocumentNumber] = useState("");
   const [docDate, setDocDate] = useState(todayIsoDate);
@@ -150,17 +153,24 @@ export function PurchaseNakladnayaSection() {
     });
   }, [listQ.data?.purchaseDocuments]);
 
-  const nakladPageCount = Math.max(1, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+  const activePurchaseDocs = useMemo(() => {
+    if (!batchesQ.isSuccess) {
+      return [];
+    }
+    return splitPurchaseDocumentsBySoldStatus(sortedPurchaseDocs, batchesQ.data.batches).active;
+  }, [sortedPurchaseDocs, batchesQ.isSuccess, batchesQ.data?.batches]);
+
+  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
     setNakladListPage((p) => Math.min(p, maxPage));
-  }, [sortedPurchaseDocs.length]);
+  }, [activePurchaseDocs.length]);
 
   const nakladPageSlice = useMemo(() => {
     const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return sortedPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [sortedPurchaseDocs, nakladListPage]);
+    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [activePurchaseDocs, nakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -608,23 +618,41 @@ export function PurchaseNakladnayaSection() {
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
           <h4 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
-            Сохранённые накладные
-            <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
-              {" "}
-              ({sortedPurchaseDocs.length})
-            </span>
+            В работе
+            {batchesQ.isSuccess ? (
+              <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
+                {" "}
+                ({activePurchaseDocs.length})
+              </span>
+            ) : null}
           </h4>
-          <PurchaseNakladnayaDocTable
-            docs={nakladPageSlice}
-            pathname={pathname}
-            warehouses={warehousesQ.data?.warehouses ?? []}
-          />
-          <BirzhaPagination
-            pageIndex={nakladListPage}
-            pageCount={nakladPageCount}
-            itemLabel="накладных"
-            onPageChange={setNakladListPage}
-          />
+          {batchesQ.isPending && (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+              Уточняем остатки по партиям…
+            </p>
+          )}
+          {batchesQ.isSuccess && activePurchaseDocs.length === 0 ? (
+            <BirzhaEmptyState
+              compact
+              title="Нет накладных в работе"
+              description="Документы без остатка по партиям здесь не показываются — они учтены в разделе продаж."
+            />
+          ) : null}
+          {batchesQ.isSuccess && activePurchaseDocs.length > 0 ? (
+            <>
+              <PurchaseNakladnayaDocTable
+                docs={nakladPageSlice}
+                pathname={pathname}
+                warehouses={warehousesQ.data?.warehouses ?? []}
+              />
+              <BirzhaPagination
+                pageIndex={nakladListPage}
+                pageCount={nakladPageCount}
+                itemLabel="накладных"
+                onPageChange={setNakladListPage}
+              />
+            </>
+          ) : null}
         </div>
       )}
       </BirzhaDisclosure>

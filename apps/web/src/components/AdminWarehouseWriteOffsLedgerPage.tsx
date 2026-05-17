@@ -107,7 +107,6 @@ export function AdminWarehouseWriteOffsLedgerPage() {
                   <th style={thHead}>Склад</th>
                   <th style={thHead}>Накладная</th>
                   <th style={thHead}>Калибр</th>
-                  <th style={thHead}>Партия</th>
                   <th style={{ ...thHead, textAlign: "right" }}>Списано, кг</th>
                 </tr>
               </thead>
@@ -129,9 +128,6 @@ export function AdminWarehouseWriteOffsLedgerPage() {
                       </Link>
                     </td>
                     <td style={thtd}>{r.productGradeCode ?? "—"}</td>
-                    <td style={thtd}>
-                      <span className="birzha-text-muted birzha-text-muted--md">{r.batchId.slice(0, 8)}…</span>
-                    </td>
                     <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
                       {r.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                     </td>

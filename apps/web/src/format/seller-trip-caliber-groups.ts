@@ -1,5 +1,5 @@
 import type { BatchListItem } from "../api/types.js";
-import { formatNakladLineLabel, formatShortBatchId } from "./batch-label.js";
+import { formatNakladLineLabel } from "./batch-label.js";
 import type { TripBatchTableRow } from "./trip-report-rows.js";
 
 /** Одна строка списка «калибр на рейсе» для продавца (может объединять несколько партий). */
@@ -13,6 +13,11 @@ export type SellerCaliberGroup = {
   primaryBatchId: string;
   primaryRow: TripBatchTableRow;
 };
+
+/** Ключ группы (товар + калибр); для выбранной плитки продавца. */
+export function sellerCaliberGroupKey(batch: BatchListItem | undefined, row: TripBatchTableRow): string {
+  return caliberGroupKey(batch, row);
+}
 
 function caliberGroupKey(batch: BatchListItem | undefined, row: TripBatchTableRow): string {
   if (!batch) {
@@ -28,7 +33,7 @@ function caliberGroupKey(batch: BatchListItem | undefined, row: TripBatchTableRo
 
 function lineLabelForRow(batch: BatchListItem | undefined, row: TripBatchTableRow): string {
   if (!batch) {
-    return `партия ${formatShortBatchId(row.batchId)}`;
+    return "партия без накладной";
   }
   return formatNakladLineLabel(batch);
 }
@@ -98,4 +103,113 @@ export function formatSellerCaliberGroupOptionLabel(
     return `${g.lineLabel} · ${kg} кг`;
   }
   return `${g.lineLabel} · ${kg} кг · ${g.rows.length} партии`;
+}
+
+/** Подпись под плиткой, если калибр объединяет несколько партий. */
+export function sellerCaliberGroupSubline(
+  group: SellerCaliberGroup,
+  batchById: Map<string, BatchListItem>,
+): string | null {
+  if (group.rows.length <= 1) {
+    return null;
+  }
+  const docs = [
+    ...new Set(
+      group.rows
+        .map((r) => batchById.get(r.batchId)?.nakladnaya?.documentNumber?.trim())
+        .filter((d): d is string => Boolean(d)),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "ru"));
+  if (docs.length === 0) {
+    return `${group.rows.length} партии`;
+  }
+  if (docs.length === 1) {
+    return `накл. № ${docs[0]} · ${group.rows.length} партии`;
+  }
+  return `накл. № ${docs.join(", ")} · ${group.rows.length} партии`;
+}
+
+export function kgNumberToGramsBigInt(kg: number): bigint {
+  if (!Number.isFinite(kg)) {
+    return 0n;
+  }
+  return BigInt(Math.round(kg * 1000));
+}
+
+export function gramsBigIntToKgNumber(g: bigint): number {
+  return Number(g) / 1000;
+}
+
+/** Раскладка продажи по граммам (как `kgToGrams` на API). */
+export function allocateSellGramsAcrossTripRows(
+  rows: TripBatchTableRow[],
+  requestedGrams: bigint,
+): { batchId: string; grams: bigint }[] {
+  let remaining = requestedGrams;
+  if (remaining <= 0n || rows.length === 0) {
+    return [];
+  }
+  const sorted = rows.slice().sort((a, b) => {
+    if (a.netTransitG < b.netTransitG) {
+      return 1;
+    }
+    if (a.netTransitG > b.netTransitG) {
+      return -1;
+    }
+    return a.batchId.localeCompare(b.batchId);
+  });
+  const out: { batchId: string; grams: bigint }[] = [];
+  for (const row of sorted) {
+    if (remaining <= 0n) {
+      break;
+    }
+    if (row.netTransitG <= 0n) {
+      continue;
+    }
+    const take = remaining < row.netTransitG ? remaining : row.netTransitG;
+    out.push({ batchId: row.batchId, grams: take });
+    remaining -= take;
+  }
+  return out;
+}
+
+/**
+ * Раскладывает кг продажи по партиям группы (сначала с большим остатком «в машине»).
+ */
+export function allocateSellKgAcrossTripRows(
+  rows: TripBatchTableRow[],
+  kg: number,
+): { batchId: string; kg: number }[] {
+  const requested = kgNumberToGramsBigInt(kg);
+  return allocateSellGramsAcrossTripRows(rows, requested).map((p) => ({
+    batchId: p.batchId,
+    kg: gramsBigIntToKgNumber(p.grams),
+  }));
+}
+
+/** Максимум «в машине» по выбранному калибру (группа или одна партия). */
+export function maxSellableGramsForBatch(
+  sellBatchId: string,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+): bigint {
+  const group = findSellerCaliberGroupForBatch(sellBatchId, sellableRows, batchById);
+  if (group) {
+    return group.totalNetG;
+  }
+  const row = sellableRows.find((r) => r.batchId === sellBatchId);
+  return row?.netTransitG ?? 0n;
+}
+
+/** Группа, в которую входит выбранная партия (для продавца). */
+export function findSellerCaliberGroupForBatch(
+  sellBatchId: string,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+): SellerCaliberGroup | undefined {
+  if (!sellBatchId.trim()) {
+    return undefined;
+  }
+  const groups = groupSellableRowsByCaliber(sellableRows, batchById);
+  return groups.find((g) => g.rows.some((r) => r.batchId === sellBatchId));
 }

@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { apiPostJson } from "../api/fetch-api.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
+import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
@@ -120,16 +121,6 @@ export function OperationsPanel() {
     <div role="region" aria-label="Недостача по рейсу и справочно партии">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Недостача по рейсу</h2>
 
-      {batchesQuery.data && (
-        <datalist id="batch-suggestions">
-          {batchesQuery.data.batches
-            .filter(isFromPurchaseNakladnaya)
-            .map((b) => (
-              <option key={b.id} value={b.id} />
-            ))}
-        </datalist>
-      )}
-
       {batchesQuery.isError && <p style={warnText}>Список партий не загрузился. Проверьте связь и повторите.</p>}
       <StaleDataNotice show={batchesQuery.isFetching && !batchesQuery.isPending} label="Обновление списка партий…" />
       {batchesQuery.isPending && (
@@ -216,14 +207,22 @@ export function OperationsPanel() {
         <label htmlFor="op-in-short-batch" className="birzha-form-label">
           Партия *
         </label>
-        <input
+        <select
           id="op-in-short-batch"
           value={shortBatchId}
           onChange={(e) => setShortBatchId(e.target.value)}
-          style={fieldStyle}
-          list="batch-suggestions"
-          autoComplete="off"
-        />
+          style={selectWide}
+          disabled={batchesQuery.isPending}
+        >
+          <option value="">{batchesQuery.isPending ? "— загрузка —" : "— выберите партию —"}</option>
+          {(batchesQuery.data?.batches ?? [])
+            .filter(isFromPurchaseNakladnaya)
+            .map((b) => (
+              <option key={b.id} value={b.id}>
+                {formatBatchPartyCaption(b)}
+              </option>
+            ))}
+        </select>
         <label htmlFor="op-sel-short-trip" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Рейс *
         </label>

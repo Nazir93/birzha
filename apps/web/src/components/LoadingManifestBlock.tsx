@@ -171,7 +171,7 @@ export function LoadingManifestBlock({
           {uniqueDocuments.map((d) => (
             <span key={d.id} style={{ marginRight: 10 }}>
               <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontSize: "0.9rem" }}>
-                № {d.number} · {d.id.slice(0, 6)}…
+                № {d.number}
               </Link>
             </span>
           ))}

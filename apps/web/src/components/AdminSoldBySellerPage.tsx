@@ -7,6 +7,7 @@ import type { ShipmentReportResponse } from "../api/types.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { aggregateSellerShipmentReports, tripLedgerMetrics } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
+import { resolveUserLogin } from "../format/user-display.js";
 import {
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
@@ -80,11 +81,6 @@ export function AdminSoldBySellerPage() {
     for (const s of fieldSellersQuery.data?.fieldSellers ?? []) {
       m.set(s.id, s.login);
     }
-    for (const t of tripSelectOptions) {
-      if (t.assignedSellerUserId && !m.has(t.assignedSellerUserId)) {
-        m.set(t.assignedSellerUserId, t.assignedSellerUserId);
-      }
-    }
     return m;
   }, [fieldSellersQuery.data?.fieldSellers, sellerUsersQuery.data, tripSelectOptions]);
 
@@ -146,7 +142,7 @@ export function AdminSoldBySellerPage() {
 
   const sellerTotals = useMemo(() => aggregateSellerShipmentReports(loadedReports), [loadedReports]);
 
-  const sellerLabel = assignSellerUserId ? sellerLoginById.get(assignSellerUserId) ?? assignSellerUserId : "";
+  const sellerLabel = resolveUserLogin(sellerLoginById, assignSellerUserId);
 
   return (
     <div className="birzha-assign-seller" role="region" aria-labelledby="sold-by-seller-h">

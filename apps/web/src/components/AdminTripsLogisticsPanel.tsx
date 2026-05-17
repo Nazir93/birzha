@@ -11,6 +11,7 @@ import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { randomUuid } from "../lib/random-uuid.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
 const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
@@ -34,7 +35,6 @@ export function AdminTripsLogisticsPanel() {
   const showCloseTrip = canTripWrite(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
-  const [newTripId, setNewTripId] = useState("");
   const [newTripNumber, setNewTripNumber] = useState("");
   const [newTripVehicle, setNewTripVehicle] = useState("");
   const [newTripDriver, setNewTripDriver] = useState("");
@@ -56,10 +56,10 @@ export function AdminTripsLogisticsPanel() {
   const createTrip = useMutation({
     mutationFn: async () => {
       setTripError(null);
-      const id = newTripId.trim();
+      const id = randomUuid();
       const tripNumber = newTripNumber.trim();
-      if (!id || !tripNumber) {
-        throw new Error("Id рейса (технический) и отображаемый номер обязательны");
+      if (!tripNumber) {
+        throw new Error("Укажите номер рейса");
       }
       const body: {
         id: string;
@@ -90,7 +90,6 @@ export function AdminTripsLogisticsPanel() {
       );
     },
     onSuccess: () => {
-      setNewTripId("");
       setNewTripNumber("");
       setNewTripVehicle("");
       setNewTripDriver("");
@@ -170,30 +169,6 @@ export function AdminTripsLogisticsPanel() {
       >
         {tripError && <p style={errorText}>{tripError}</p>}
         <div className="birzha-inventory-logistics-form">
-          <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--wide">
-            <label className="birzha-field-label">Идентификатор</label>
-            <div className="birzha-inventory-trip-id-row">
-              <input
-                value={newTripId}
-                onChange={(e) => setNewTripId(e.target.value)}
-                style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-                placeholder="можно оставить пустым"
-                autoComplete="off"
-              />
-              <button
-                type="button"
-                className="birzha-inventory-trip-id-row__gen"
-                style={{ ...btnStyle, fontSize: "0.82rem" }}
-                onClick={() => {
-                  if (globalThis.crypto?.randomUUID) {
-                    setNewTripId(globalThis.crypto.randomUUID());
-                  }
-                }}
-              >
-                Сгенерировать
-              </button>
-            </div>
-          </div>
           <div className="birzha-inventory-logistics-form__field">
             <label className="birzha-field-label">№ рейса</label>
             <input
@@ -260,7 +235,6 @@ export function AdminTripsLogisticsPanel() {
                   <th style={thHeadDense}>Статус</th>
                   <th style={thHeadDense}>ТС</th>
                   <th style={thHeadDense}>Водитель</th>
-                  <th style={thHeadDense}>id</th>
                   <th style={thHeadDense}>Действия</th>
                 </tr>
               </thead>
@@ -286,11 +260,6 @@ export function AdminTripsLogisticsPanel() {
                     </td>
                     <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
                     <td style={thtdDense}>{t.driverName ?? "—"}</td>
-                    <td style={thtdDense}>
-                      <code style={{ fontSize: "0.75rem" }} title={t.id}>
-                        {t.id.slice(0, 8)}…
-                      </code>
-                    </td>
                     <td style={thtdDense}>
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
                         {showCloseTrip && t.status === "open" ? (

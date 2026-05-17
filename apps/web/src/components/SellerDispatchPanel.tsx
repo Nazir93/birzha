@@ -8,6 +8,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
+import { resolveUserLogin } from "../format/user-display.js";
 import {
   batchesFullListQueryOptions,
   queryRoots,
@@ -100,11 +101,6 @@ export function SellerDispatchPanel() {
     }
     for (const s of fieldSellersQuery.data?.fieldSellers ?? []) {
       m.set(s.id, s.login);
-    }
-    for (const t of tripSelectOptions) {
-      if (t.assignedSellerUserId && !m.has(t.assignedSellerUserId)) {
-        m.set(t.assignedSellerUserId, t.assignedSellerUserId);
-      }
     }
     return m;
   }, [fieldSellersQuery.data?.fieldSellers, sellerUsersQuery.data, tripSelectOptions]);
@@ -292,10 +288,7 @@ export function SellerDispatchPanel() {
                 ) : (
                   tripSelectOptions.map((t, i) => {
                     const rq = overviewReports[i];
-                    const seller =
-                      t.assignedSellerUserId != null
-                        ? (sellerLoginById.get(t.assignedSellerUserId) ?? t.assignedSellerUserId)
-                        : "—";
+                    const seller = resolveUserLogin(sellerLoginById, t.assignedSellerUserId);
                     const product = shipmentProductLabel(rq?.data, batchById, rq?.isPending ?? false);
                     return (
                       <tr key={t.id}>

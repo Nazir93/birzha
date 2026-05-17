@@ -8,6 +8,7 @@ import { canCreateTrip } from "../auth/role-panels.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
+import { resolveUserLogin } from "../format/user-display.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import {
   aggregateSellerShipmentReports,
@@ -70,9 +71,6 @@ export function AssignSellerPanel() {
       m.set(s.id, s.login);
     }
     for (const t of tripSelectOptions) {
-      if (t.assignedSellerUserId && !m.has(t.assignedSellerUserId)) {
-        m.set(t.assignedSellerUserId, t.assignedSellerUserId);
-      }
     }
     return m;
   }, [fieldSellersQuery.data?.fieldSellers, sellerUsersQuery.data, tripSelectOptions]);
@@ -169,7 +167,7 @@ export function AssignSellerPanel() {
     },
   });
 
-  const sellerLabel = assignSellerUserId ? sellerLoginById.get(assignSellerUserId) ?? assignSellerUserId : "";
+  const sellerLabel = resolveUserLogin(sellerLoginById, assignSellerUserId);
 
   return (
     <div className="birzha-assign-seller" role="region" aria-label="Продажи по продавцу">
@@ -441,7 +439,7 @@ export function AssignSellerPanel() {
                             return (
                               <tr key={`${activeReport.trip.id}-${row.batchId}`}>
                                 <td style={thtd}>{b?.nakladnaya?.productGradeCode ?? "—"}</td>
-                                <td style={thtd} title={`id партии: ${row.batchId}`}>
+                                <td style={thtd}>
                                   {formatBatchPartyCaption(b, row.batchId)}
                                 </td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams)}</td>

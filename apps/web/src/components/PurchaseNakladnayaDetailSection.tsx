@@ -65,7 +65,7 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   if (!id) {
-    return <p style={errorText}>Не указан ID документа.</p>;
+    return <p style={errorText}>Не удалось открыть накладную.</p>;
   }
 
   if (docQ.isPending) {
@@ -145,7 +145,7 @@ export function PurchaseNakladnayaDetailSection() {
           {warehousesQ.isPending ? (
             <LoadingIndicator size="sm" label="Загрузка склада…" />
           ) : warehousesQ.isError ? (
-            <code style={{ fontSize: "0.82rem" }}>{doc.warehouseId}</code>
+            <span className="birzha-text-muted">склад не загрузился</span>
           ) : (
             warehouseLabel(doc.warehouseId)
           )}
@@ -182,7 +182,7 @@ export function PurchaseNakladnayaDetailSection() {
           </thead>
           <tbody>
             {doc.lines.map((line) => (
-              <tr key={`${line.lineNo}-${line.batchId}`} title={`Технический id партии: ${line.batchId}`}>
+              <tr key={`${line.lineNo}-${line.batchId}`}>
                 <td style={thtdDense}>{line.lineNo}</td>
                 <td style={thtdDense}>{line.productGradeCode}</td>
                 <td style={thtdDense}>{line.totalKg}</td>

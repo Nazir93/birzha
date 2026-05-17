@@ -129,7 +129,7 @@ export function AdminCabinetHome() {
       writtenOffKg += b.writtenOffKg ?? 0;
 
       const wid = b.nakladnaya?.warehouseId ?? "";
-      const whLabel = wid ? whById.get(wid) ?? wid.slice(0, 8) : "Без склада";
+      const whLabel = wid ? whById.get(wid) ?? "Без названия" : "Без склада";
       byWarehouseKg.set(whLabel, (byWarehouseKg.get(whLabel) ?? 0) + b.onWarehouseKg);
 
       const g = (b.nakladnaya?.productGroup ?? "").trim() || "Без вида";

@@ -77,28 +77,40 @@ function groupBatchesByWarehouse(stock: BatchListItem[]): {
 function documentOptionsForAllocation(
   batches: BatchListItem[],
 ): { id: string; number: string; checkboxLabel: string }[] {
-  const m = new Map<string, string>();
+  const byDoc = new Map<string, { number: string; grades: Set<string> }>();
   for (const b of batches) {
     const d = b.nakladnaya?.documentId;
-    if (d) {
-      m.set(d, b.nakladnaya?.documentNumber?.trim() || d);
+    if (!d) {
+      continue;
+    }
+    let entry = byDoc.get(d);
+    if (!entry) {
+      entry = {
+        number: b.nakladnaya?.documentNumber?.trim() || "без номера",
+        grades: new Set(),
+      };
+      byDoc.set(d, entry);
+    }
+    const code = b.nakladnaya?.productGradeCode?.trim();
+    if (code) {
+      entry.grades.add(code);
     }
   }
-  const base = [...m.entries()]
-    .map(([id, number]) => ({ id, number }))
+  const base = [...byDoc.entries()]
+    .map(([id, { number, grades }]) => ({ id, number, grades }))
     .sort((a, b) => a.number.localeCompare(b.number, "ru"));
   const byNumberCount = new Map<string, number>();
   for (const o of base) {
     byNumberCount.set(o.number, (byNumberCount.get(o.number) ?? 0) + 1);
   }
-  return base.map((o) => ({
-    id: o.id,
-    number: o.number,
-    checkboxLabel:
-      (byNumberCount.get(o.number) ?? 0) > 1
-        ? `№ ${o.number} (id ${o.id.slice(0, 6)}…)`
-        : `№ ${o.number}`,
-  }));
+  return base.map((o) => {
+    const dup = (byNumberCount.get(o.number) ?? 0) > 1;
+    const gradeHint = [...o.grades].sort((a, b) => a.localeCompare(b, "ru")).join(", ");
+    const checkboxLabel = dup && gradeHint
+      ? `№ ${o.number} · ${gradeHint}`
+      : `№ ${o.number}`;
+    return { id: o.id, number: o.number, checkboxLabel };
+  });
 }
 
 function sumOnWarehouseKg(batches: BatchListItem[]): number {
@@ -449,7 +461,7 @@ export function AllocationPanel() {
       )}
       {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 && (
         <p style={warnText} role="status">
-          Остатки с оформленной <strong>закупкой товара</strong> (id документа и склад в строке) здесь не найдены — на отбор не
+          Остатки с оформленной <strong>закупкой товара</strong> (номер накладной и склад в строке) здесь не найдены — на отбор не
           попадут «ручные»/старые партии без накладной. Оформите приём в{" "}
           <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
         </p>

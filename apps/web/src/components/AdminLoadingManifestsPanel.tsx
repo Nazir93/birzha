@@ -473,7 +473,7 @@ function ManifestAccordionBlock({
                 Привязка к рейсу
                 <span className="birzha-disclosure__hint">
                   {detail.tripId
-                    ? `рейс: ${tripNumberById.get(detail.tripId) ?? detail.tripId}`
+                    ? `рейс: ${tripNumberById.get(detail.tripId) ?? "—"}`
                     : "не назначен"}
                 </span>
               </summary>
@@ -634,7 +634,7 @@ function ManifestAccordionBlock({
                     </thead>
                     <tbody>
                       {detail.lines.map((line) => (
-                        <tr key={line.batchId} title={`Партия: ${line.batchId}`}>
+                        <tr key={line.batchId}>
                           <td style={thtd}>{line.lineNo}</td>
                           <td style={thtd}>{line.purchaseDocumentNumber ?? "—"}</td>
                           <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>

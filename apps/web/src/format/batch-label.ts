@@ -1,8 +1,8 @@
 import type { BatchListItem } from "../api/types.js";
 
-/** Короткая подпись UUID для таблиц. */
-export function formatShortBatchId(id: string): string {
-  return id.length <= 16 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`;
+/** Запасная подпись партии без данных накладной (UUID в UI не показываем). */
+export function formatShortBatchId(_id: string): string {
+  return "партия без накладной";
 }
 
 /** Товар и калибр по данным накладной в списке партий. */
@@ -21,11 +21,11 @@ export function formatNakladLineLabel(b: BatchListItem): string {
 
 /**
  * Человекочитаемая строка для отчётов: номер накладной + товар/калибр;
- * если нет данных накладной — короткий id (технический запасной вариант).
+ * если нет данных накладной — нейтральная подпись без UUID.
  */
-export function formatBatchPartyCaption(b: BatchListItem | undefined, batchId: string): string {
+export function formatBatchPartyCaption(b: BatchListItem | undefined, _batchId?: string): string {
   if (!b) {
-    return formatShortBatchId(batchId);
+    return "партия без накладной";
   }
   const doc = b.nakladnaya?.documentNumber?.trim();
   const line = formatNakladLineLabel(b);
@@ -35,5 +35,5 @@ export function formatBatchPartyCaption(b: BatchListItem | undefined, batchId: s
   if (line !== "—") {
     return line;
   }
-  return formatShortBatchId(batchId);
+  return "партия без накладной";
 }

@@ -63,14 +63,11 @@ export function formatTripStatusLabel(status: string): string {
 
 /** Опции подписи рейса в `<select>` и списках. */
 export type FormatTripSelectLabelOptions = {
-  /**
-   * Показывать технический id в конце строки (для операций и сверки).
-   * @default true
-   */
+  /** Показывать технический id в конце (только для отладки; в UI не используем). */
   includeTechnicalId?: boolean;
 };
 
-/** Подпись рейса в селекторах: номер, статус, дата выезда (если есть), ТС/водитель; по умолчанию — id. */
+/** Подпись рейса в селекторах: номер, статус, дата выезда (если есть), ТС/водитель. */
 export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
   const bits: string[] = [t.tripNumber, `(${formatTripListStatusLabel(t)})`];
   if (t.departedAt) {
@@ -92,8 +89,8 @@ export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelO
     bits.push(t.driverName);
   }
   const head = bits.join(" ");
-  if (opts?.includeTechnicalId === false) {
-    return head;
+  if (opts?.includeTechnicalId === true) {
+    return `${head} — ${t.id}`;
   }
-  return `${head} — ${t.id}`;
+  return head;
 }

@@ -213,7 +213,7 @@ export function BatchesByNakladnayaReference({
           >
             <table
               style={tableStyleDense}
-              aria-label={`Партии по накладной ${grp.documentNumber ?? grp.documentId}`}
+              aria-label={`Партии по накладной ${grp.documentNumber ?? "без номера"}`}
             >
               <thead>
                 <tr>
@@ -236,7 +236,7 @@ export function BatchesByNakladnayaReference({
               </thead>
               <tbody>
                 {grp.batches.map((b) => (
-                  <tr key={b.id} title={`Технический id партии (поддержка): ${b.id}`}>
+                  <tr key={b.id}>
                     <td style={thtdDense}>{formatNakladLineLabel(b)}</td>
                     <td style={thtdDense}>{b.onWarehouseKg}</td>
                     <td style={thtdDense}>{b.inTransitKg}</td>

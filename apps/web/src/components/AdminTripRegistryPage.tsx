@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary, TripJson } from "../api/types.js";
-import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
+import { formatTripListStatusLabel, formatTripSelectLabel, tripListFullySold } from "../format/trip-label.js";
 import { loadingManifestsListQueryOptions, queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -320,7 +320,12 @@ export function AdminTripRegistryPage() {
               >
                 <p style={{ margin: "0 0 0.5rem", fontWeight: 600 }}>
                   Погрузочные накладные рейса{" "}
-                  <strong>{sortedTrips.find((x) => x.id === expandedTripId)?.tripNumber ?? expandedTripId}</strong>
+                  <strong>
+                    {(() => {
+                      const trip = sortedTrips.find((x) => x.id === expandedTripId);
+                      return trip ? formatTripSelectLabel(trip) : "рейс";
+                    })()}
+                  </strong>
                 </p>
                 {(manifestsByTripId.get(expandedTripId) ?? []).length === 0 ? (
                   <p style={{ margin: 0, fontSize: "0.88rem" }} className="birzha-text-muted">

@@ -257,9 +257,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
             {tripsForSelect.map((t) => {
-              const label = formatTripSelectLabel(t, {
-                includeTechnicalId: !fieldSellerSalesReport,
-              });
+              const label = formatTripSelectLabel(t);
               return (
                 <option key={t.id} value={t.id}>
                   {label.length > 120 ? `${label.slice(0, 117)}…` : label}
@@ -664,7 +662,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     const caption = formatBatchPartyCaption(batchMeta, row.batchId);
                     return (
                     <tr key={row.batchId}>
-                      <td style={thtd} title={`Технический id партии: ${row.batchId}`}>
+                      <td style={thtd}>
                         <div style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.35 }}>{caption}</div>
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>

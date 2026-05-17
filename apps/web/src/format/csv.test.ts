@@ -30,10 +30,11 @@ describe("tripBatchRowsToCsv", () => {
         debtK: 0n,
       },
     ];
-    const csv = tripBatchRowsToCsv(rows, { tripNumber: "Т-1", tripId: "tid" });
+    const csv = tripBatchRowsToCsv(rows, { tripNumber: "Т-1" });
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Рейс;Т-1");
-    expect(csv).toContain("b-1;1000;2");
+    expect(csv).not.toContain("b-1");
+    expect(csv).toContain("1000;2");
   });
 
   it("добавляет колонку Товар_калибр при batchCaption", () => {
@@ -57,6 +58,7 @@ describe("tripBatchRowsToCsv", () => {
       batchCaption: () => "№ 12 · Помидоры · 6+",
     });
     expect(csv).toContain("Товар_калибр");
-    expect(csv).toContain("b-1;№ 12 · Помидоры · 6+;1000");
+    expect(csv).toContain("№ 12 · Помидоры · 6+;1000");
+    expect(csv).not.toContain("b-1");
   });
 });

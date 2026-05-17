@@ -10,8 +10,7 @@ export function escapeCsvField(value: string): string {
 
 export type TripBatchCsvOptions = {
   tripNumber: string;
-  tripId: string;
-  /** Накладная · товар · калибр (если задано — добавляется колонка в CSV). */
+  /** Накладная · товар · калибр (если задано — в CSV только человекочитаемые колонки). */
   batchCaption?: (batchId: string) => string;
 };
 
@@ -22,11 +21,9 @@ export type TripBatchCsvOptions = {
 export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatchCsvOptions): string {
   const lines: string[] = [];
   lines.push(`Рейс;${escapeCsvField(options.tripNumber)}`);
-  lines.push(`ID рейса;${escapeCsvField(options.tripId)}`);
   lines.push("");
   const header = [
-    "Партия_id",
-    ...(options.batchCaption ? (["Товар_калибр"] as const) : []),
+    ...(options.batchCaption ? (["Товар_калибр"] as const) : ["Партия"]),
     "Отгружено_г",
     "Отгружено_ящ",
     "Продано_г",
@@ -41,8 +38,7 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
   for (const row of rows) {
     const cap = options.batchCaption?.(row.batchId) ?? "";
     const cells = [
-      escapeCsvField(row.batchId),
-      ...(options.batchCaption ? [escapeCsvField(cap)] : []),
+      ...(options.batchCaption ? [escapeCsvField(cap)] : [escapeCsvField(cap || "—")]),
       row.shippedG.toString(),
       row.shippedPackages.toString(),
       row.soldG.toString(),
