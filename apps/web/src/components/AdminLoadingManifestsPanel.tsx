@@ -9,6 +9,10 @@ import {
   loadingManifestRoadCsvContent,
 } from "../format/loading-manifest.js";
 import {
+  loadingManifestTripAssignLockFromDetail,
+  loadingManifestTripAssignLockMessage,
+} from "../format/loading-manifest-trip-assign-lock.js";
+import {
   loadingManifestDetailQueryOptions,
   loadingManifestsListQueryOptions,
   queryRoots,
@@ -418,6 +422,7 @@ function ManifestAccordionBlock({
     [detail],
   );
   const roadTripLabel = detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : "";
+  const tripAssignLock = detail ? loadingManifestTripAssignLockFromDetail(detail) : { locked: false as const };
   const [partyLinesOpen, setPartyLinesOpen] = useState(true);
   useEffect(() => {
     if (detail) {
@@ -463,36 +468,56 @@ function ManifestAccordionBlock({
 
         {detail ? (
           <>
-            <details className="birzha-disclosure birzha-disclosure--nested" open>
+            <details className="birzha-disclosure birzha-disclosure--nested" open={!tripAssignLock.locked}>
               <summary className="birzha-disclosure__summary">
                 Привязка к рейсу
                 <span className="birzha-disclosure__hint">
-                  сейчас: {detail.tripId ? tripNumberById.get(detail.tripId) ?? detail.tripId : "не назначен"}
+                  {detail.tripId
+                    ? `рейс: ${tripNumberById.get(detail.tripId) ?? detail.tripId}`
+                    : "не назначен"}
                 </span>
               </summary>
               <div className="birzha-disclosure__body">
-                <div className="no-print" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                  <select
-                    value={assignTripId}
-                    onChange={(e) => setAssignTripId(e.target.value)}
-                    style={{ minWidth: "16rem" }}
-                  >
-                    <option value="">— выбрать рейс —</option>
-                    {trips.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.tripNumber} · {t.status}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="button" style={btnStyle} disabled={assignTrip.isPending || !assignTripId} onClick={() => assignTrip.mutate()}>
-                    {assignTrip.isPending ? "Привязка…" : "Привязать к рейсу"}
-                  </button>
-                </div>
-                {assignTrip.isError ? (
-                  <p style={errorText} role="alert">
-                    {assignTrip.error instanceof Error ? assignTrip.error.message : String(assignTrip.error ?? "")}
+                {tripAssignLock.locked ? (
+                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
+                    {tripAssignLock.code
+                      ? loadingManifestTripAssignLockMessage(tripAssignLock.code)
+                      : loadingManifestTripAssignLockMessage("already_assigned")}
                   </p>
-                ) : null}
+                ) : (
+                  <>
+                    <div
+                      className="no-print"
+                      style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}
+                    >
+                      <select
+                        value={assignTripId}
+                        onChange={(e) => setAssignTripId(e.target.value)}
+                        style={{ minWidth: "16rem" }}
+                      >
+                        <option value="">— выбрать рейс —</option>
+                        {trips.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.tripNumber} · {t.status}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        style={btnStyle}
+                        disabled={assignTrip.isPending || !assignTripId}
+                        onClick={() => assignTrip.mutate()}
+                      >
+                        {assignTrip.isPending ? "Привязка…" : "Привязать к рейсу"}
+                      </button>
+                    </div>
+                    {assignTrip.isError ? (
+                      <p style={errorText} role="alert">
+                        {assignTrip.error instanceof Error ? assignTrip.error.message : String(assignTrip.error ?? "")}
+                      </p>
+                    ) : null}
+                  </>
+                )}
               </div>
             </details>
 

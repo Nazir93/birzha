@@ -163,6 +163,9 @@ export type LoadingManifestDetail = {
   destinationCode: string;
   destinationName: string;
   tripId: string | null;
+  /** После привязки или отгрузки партий — форма assign-trip скрыта (GET /loading-manifests/:id). */
+  tripAssignLocked?: boolean;
+  tripAssignLockedReason?: "already_assigned" | "already_shipped" | "no_stock" | null;
   createdAt: string;
   lines: {
     lineNo: number;

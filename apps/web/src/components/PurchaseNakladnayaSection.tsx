@@ -23,18 +23,16 @@ import {
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
-import { splitPurchaseDocumentsBySoldStatus } from "../format/purchase-nakladnaya-list-status.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
-  batchesFullListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
-  queryRoots,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
+import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { adminRoutes, login, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -93,7 +91,6 @@ export function PurchaseNakladnayaSection() {
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
   const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
-  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
 
   const [documentNumber, setDocumentNumber] = useState("");
   const [docDate, setDocDate] = useState(todayIsoDate);
@@ -103,12 +100,10 @@ export function PurchaseNakladnayaSection() {
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
   const [nakladListPage, setNakladListPage] = useState(0);
-  const [soldNakladListPage, setSoldNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
-  const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
+  const refreshLists = useCallback(async () => {
+    await refreshPurchaseAndBatchLists(queryClient);
   }, [queryClient]);
 
   const submit = useMutation({
@@ -126,8 +121,8 @@ export function PurchaseNakladnayaSection() {
       });
       return apiPostJson("/api/purchase-documents", body) as Promise<CreatePurchaseDocumentResponse>;
     },
-    onSuccess: (data) => {
-      setLastOk(`Создан документ: ${data.documentId}. Форма очищена — можно ввести новую накладную.`);
+    onSuccess: async () => {
+      setLastOk("Накладная сохранена.");
       setFormError(null);
       setDocumentNumber("");
       setDocDate(todayIsoDate());
@@ -136,7 +131,7 @@ export function PurchaseNakladnayaSection() {
       setBuyerLabel("");
       setExtraCostKopecks("0");
       setLines([emptyLine()]);
-      invalidate();
+      await refreshLists();
     },
     onError: (e: Error) => {
       setFormError(e.message);
@@ -155,36 +150,17 @@ export function PurchaseNakladnayaSection() {
     });
   }, [listQ.data?.purchaseDocuments]);
 
-  const { activePurchaseDocs, soldPurchaseDocs } = useMemo(() => {
-    if (!batchesQ.isSuccess) {
-      return { activePurchaseDocs: sortedPurchaseDocs, soldPurchaseDocs: [] as PurchaseDocumentSummary[] };
-    }
-    const split = splitPurchaseDocumentsBySoldStatus(sortedPurchaseDocs, batchesQ.data.batches);
-    return { activePurchaseDocs: split.active, soldPurchaseDocs: split.sold };
-  }, [sortedPurchaseDocs, batchesQ.isSuccess, batchesQ.data?.batches]);
-
-  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
-  const soldNakladPageCount = Math.max(1, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+  const nakladPageCount = Math.max(1, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    const maxPage = Math.max(0, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
     setNakladListPage((p) => Math.min(p, maxPage));
-  }, [activePurchaseDocs.length]);
-
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
-    setSoldNakladListPage((p) => Math.min(p, maxPage));
-  }, [soldPurchaseDocs.length]);
+  }, [sortedPurchaseDocs.length]);
 
   const nakladPageSlice = useMemo(() => {
     const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [activePurchaseDocs, nakladListPage]);
-
-  const soldNakladPageSlice = useMemo(() => {
-    const start = soldNakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return soldPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [soldPurchaseDocs, soldNakladListPage]);
+    return sortedPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [sortedPurchaseDocs, nakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -632,65 +608,23 @@ export function PurchaseNakladnayaSection() {
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
           <h4 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
-            В работе
-            {batchesQ.isSuccess ? (
-              <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
-                {" "}
-                ({activePurchaseDocs.length})
-              </span>
-            ) : null}
+            Сохранённые накладные
+            <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
+              {" "}
+              ({sortedPurchaseDocs.length})
+            </span>
           </h4>
-          {batchesQ.isPending && (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              Уточняем остатки по партиям…
-            </p>
-          )}
-          {activePurchaseDocs.length === 0 ? (
-            <BirzhaEmptyState
-              compact
-              title="Нет накладных в работе"
-              description="Все сохранённые накладные уже без остатка — см. раздел «Продано»."
-            />
-          ) : (
-            <>
-              <PurchaseNakladnayaDocTable
-                docs={nakladPageSlice}
-                pathname={pathname}
-                warehouses={warehousesQ.data?.warehouses ?? []}
-              />
-              <BirzhaPagination
-                pageIndex={nakladListPage}
-                pageCount={nakladPageCount}
-                itemLabel="накладных"
-                onPageChange={setNakladListPage}
-              />
-            </>
-          )}
-          {batchesQ.isSuccess && soldPurchaseDocs.length > 0 ? (
-            <BirzhaDisclosure
-              nested
-              defaultOpen={false}
-              className="birzha-nakl-sold-block"
-              title={
-                <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>
-                  Продано ({soldPurchaseDocs.length})
-                </span>
-              }
-              bodyStyle={{ marginTop: "0.5rem" }}
-            >
-              <PurchaseNakladnayaDocTable
-                docs={soldNakladPageSlice}
-                pathname={pathname}
-                warehouses={warehousesQ.data?.warehouses ?? []}
-              />
-              <BirzhaPagination
-                pageIndex={soldNakladListPage}
-                pageCount={soldNakladPageCount}
-                itemLabel="накладных"
-                onPageChange={setSoldNakladListPage}
-              />
-            </BirzhaDisclosure>
-          ) : null}
+          <PurchaseNakladnayaDocTable
+            docs={nakladPageSlice}
+            pathname={pathname}
+            warehouses={warehousesQ.data?.warehouses ?? []}
+          />
+          <BirzhaPagination
+            pageIndex={nakladListPage}
+            pageCount={nakladPageCount}
+            itemLabel="накладных"
+            onPageChange={setNakladListPage}
+          />
         </div>
       )}
       </BirzhaDisclosure>

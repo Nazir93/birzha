@@ -28,7 +28,10 @@ export function AdminStockWarehousesPage() {
   };
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
-  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const batchesQ = useQuery({
+    ...batchesFullListQueryOptions(),
+    refetchOnMount: "always",
+  });
 
   const createWarehouse = useMutation({
     mutationFn: async () => {

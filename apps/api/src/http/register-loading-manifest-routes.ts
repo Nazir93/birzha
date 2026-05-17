@@ -12,6 +12,10 @@ import { z } from "zod";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
+import {
+  loadingManifestTripAssignLock,
+  loadingManifestTripAssignLockMessage,
+} from "../application/trip/loading-manifest-trip-assign-lock.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
 import {
@@ -248,6 +252,8 @@ export function registerLoadingManifestRoutes(
           warehouseCode: warehouses.code,
           destinationName: shipDestinations.displayName,
           line: loadingManifestLines,
+          onWarehouseGrams: batches.onWarehouseGrams,
+          inTransitGrams: batches.inTransitGrams,
           purchaseDocumentNumber: purchaseDocuments.documentNumber,
           productGradeCode: productGrades.code,
           productGroup: productGrades.productGroup,
@@ -266,6 +272,14 @@ export function registerLoadingManifestRoutes(
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
       const h = rows[0]!;
+      const lineMasses = rows.map((r) => ({
+        onWarehouseGrams: r.onWarehouseGrams,
+        inTransitGrams: r.inTransitGrams,
+      }));
+      const assignLock = loadingManifestTripAssignLock({
+        tripId: h.manifest.tripId,
+        lineMasses,
+      });
       return reply.send({
         manifest: {
           id: h.manifest.id,
@@ -278,6 +292,8 @@ export function registerLoadingManifestRoutes(
           destinationName: h.destinationName,
           tripId: h.manifest.tripId,
           createdAt: h.manifest.createdAt.toISOString(),
+          tripAssignLocked: assignLock.locked,
+          tripAssignLockedReason: assignLock.code ?? null,
           lines: rows
             .map((r) => ({
               lineNo: r.line.lineNo,
@@ -311,10 +327,28 @@ export function registerLoadingManifestRoutes(
       if (!existing) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
-      if (existing.tripId && existing.tripId !== body.tripId) {
+
+      const lineMassRows = await db
+        .select({
+          onWarehouseGrams: batches.onWarehouseGrams,
+          inTransitGrams: batches.inTransitGrams,
+        })
+        .from(loadingManifestLines)
+        .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+        .where(eq(loadingManifestLines.manifestId, manifestId));
+
+      const assignLock = loadingManifestTripAssignLock({
+        tripId: existing.tripId,
+        lineMasses: lineMassRows,
+      });
+      if (assignLock.locked) {
+        const code = assignLock.code ?? "already_assigned";
         return reply.code(400).send({
-          error: "loading_manifest_trip_change_forbidden",
-          message: "Смена рейса у уже привязанной погрузочной накладной не поддерживается.",
+          error:
+            code === "already_assigned" && existing.tripId && existing.tripId !== body.tripId
+              ? "loading_manifest_trip_change_forbidden"
+              : "loading_manifest_trip_assign_forbidden",
+          message: loadingManifestTripAssignLockMessage(code),
         });
       }
 

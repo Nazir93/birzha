@@ -509,23 +509,11 @@ export function AllocationPanel() {
                 role="status"
                 aria-live="polite"
               >
-                <p style={{ margin: "0 0 0.35rem" }}>
+                <p style={{ margin: 0 }}>
                   <strong>Остаток на этом складе:</strong>{" "}
                   {whSummary.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг &nbsp;·&nbsp;{" "}
                   {whSummary.batches} парт. &nbsp;·&nbsp;{" "}
                   {whSummary.docCount > 0 ? <>{whSummary.docCount} закуп.</> : "закупка товара в данных не указана"}
-                </p>
-                <p style={{ margin: 0 }}>
-                  <strong>Ящики (оценка):</strong>{" "}
-                  {whSummary.linesWithBoxData > 0 ? (
-                    <>
-                      ≈ {whSummary.packageEstimate.toLocaleString("ru-RU")} шт. на остатке (по {whSummary.linesWithBoxData}{" "}
-                      {whSummary.linesWithBoxData === 1 ? "строке" : "строкам"} с числом ящиков в накладной; пропорция к кг
-                      остатка)
-                    </>
-                  ) : (
-                    <>в строках накладных не указаны — смотрите только кг в таблице</>
-                  )}
                 </p>
               </div>
             )}
@@ -816,9 +804,6 @@ export function AllocationPanel() {
 
           {selectedWarehouse && tableRows.length > 0 && (
             <div className="no-print" style={{ marginTop: "0.35rem" }}>
-              <p style={{ margin: "0 0 0.5rem", fontSize: "0.9rem", lineHeight: 1.45 }} className="birzha-callout-info">
-                Привязку погрузочной накладной к рейсу выполняют в разделе <strong>Погрузка</strong>, а не здесь.
-              </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
                 <Link
                   to={

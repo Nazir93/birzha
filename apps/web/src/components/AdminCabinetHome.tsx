@@ -81,7 +81,11 @@ export function AdminCabinetHome() {
   const showCloseTrip = canTripWrite(user ?? null);
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
-  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const batchesQ = useQuery({
+    ...batchesFullListQueryOptions(),
+    /** Сводка должна видеть свежие остатки после накладной на другой вкладке / из кэша localStorage. */
+    refetchOnMount: "always",
+  });
   const whQ = useQuery(warehousesFullListQueryOptions());
   const gradesQ = useQuery(productGradesFullListQueryOptions());
 
