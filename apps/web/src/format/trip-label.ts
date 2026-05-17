@@ -2,11 +2,8 @@ import type { ShipmentReportResponse, TripJson } from "../api/types.js";
 
 import { buildTripBatchRows } from "./trip-report-rows.js";
 
-/** По данным отчёта: открытый рейс, отгрузка была, остатка «в пути» нет. */
-export function tripReportShowsSoldOut(r: ShipmentReportResponse): boolean {
-  if (r.trip.status !== "open") {
-    return false;
-  }
+/** По отчёту: была отгрузка и погруженный остаток в рейсе нулевой. */
+export function tripReportFullySold(r: ShipmentReportResponse): boolean {
   const rows = buildTripBatchRows(r);
   if (!rows.some((x) => x.shippedG > 0n)) {
     return false;
@@ -14,32 +11,40 @@ export function tripReportShowsSoldOut(r: ShipmentReportResponse): boolean {
   return !rows.some((x) => x.netTransitG > 0n);
 }
 
-/** Статус рейса в шапке отчёта (отличает «ноль в машине» от учётного «Закрыт»). */
+/** Открытый рейс с нулём в машине (ещё не закрыт в учёте). */
+export function tripReportShowsSoldOut(r: ShipmentReportResponse): boolean {
+  return r.trip.status === "open" && tripReportFullySold(r);
+}
+
+/** Статус рейса в шапке отчёта. */
 export function formatTripReportStatusLabel(r: ShipmentReportResponse): string {
+  const soldOut = tripReportFullySold(r);
   if (r.trip.status === "closed") {
-    return "Закрыт";
+    return soldOut ? "Закрыт · Продан" : "Закрыт";
   }
-  if (tripReportShowsSoldOut(r)) {
+  if (soldOut) {
     return "Продан";
   }
   return formatTripStatusLabel(r.trip.status);
 }
 
-/** Полный список рейсов: «всё продано с машины», но рейс ещё не закрыт в учёте. */
-export function tripListShowsSoldOut(t: TripJson): boolean {
-  return (
-    t.status === "open" &&
-    t.hasShipmentToTrip === true &&
-    t.transitRemainingGrams === "0"
-  );
+/** Сводка списка рейсов: отгрузка была, остатка в рейсе нет. */
+export function tripListFullySold(t: TripJson): boolean {
+  return t.hasShipmentToTrip === true && t.transitRemainingGrams === "0";
 }
 
-/** Подпись статуса в списках админки / отчётах (ноль в машине ≠ закрытие рейса в БД). */
+/** Открытый рейс, всё продано с машины, но в БД ещё «open». */
+export function tripListShowsSoldOut(t: TripJson): boolean {
+  return t.status === "open" && tripListFullySold(t);
+}
+
+/** Подпись статуса в списках админки. */
 export function formatTripListStatusLabel(t: TripJson): string {
+  const soldOut = tripListFullySold(t);
   if (t.status === "closed") {
-    return "Закрыт";
+    return soldOut ? "Закрыт · Продан" : "Закрыт";
   }
-  if (tripListShowsSoldOut(t)) {
+  if (soldOut) {
     return "Продан";
   }
   return formatTripStatusLabel(t.status);

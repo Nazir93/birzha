@@ -78,4 +78,36 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(agg.wholesaleDebtKopecks).toBe(0n);
     expect(agg.totalGrams).toBe(150n);
   });
+
+  it("суммирует карту и долг по каналу отдельно", () => {
+    const agg = buildTripSaleAggregateFromRows([
+      {
+        batchId: "b1",
+        grams: 60n,
+        revenueKopecks: 600n,
+        cashKopecks: 100n,
+        debtKopecks: 200n,
+        cardTransferKopecks: 300n,
+        clientLabel: "",
+        saleChannel: "retail",
+      },
+      {
+        batchId: "b2",
+        grams: 40n,
+        revenueKopecks: 400n,
+        cashKopecks: 0n,
+        debtKopecks: 400n,
+        cardTransferKopecks: 0n,
+        clientLabel: "ООО Опт",
+        saleChannel: "wholesale",
+      },
+    ]);
+    expect(agg.retailCashKopecks).toBe(100n);
+    expect(agg.retailDebtKopecks).toBe(200n);
+    expect(agg.retailCardTransferKopecks).toBe(300n);
+    expect(agg.wholesaleDebtKopecks).toBe(400n);
+    expect(agg.totalCashKopecks).toBe(100n);
+    expect(agg.totalDebtKopecks).toBe(600n);
+    expect(agg.totalCardTransferKopecks).toBe(300n);
+  });
 });

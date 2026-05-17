@@ -32,6 +32,28 @@ describe("trip-label", () => {
     expect(formatTripListStatusLabel({ ...baseTrip })).toBe("Открыт");
   });
 
+  it("в списке: закрыт и всё продано → «Закрыт · Продан»", () => {
+    expect(
+      formatTripListStatusLabel({
+        ...baseTrip,
+        status: "closed",
+        hasShipmentToTrip: true,
+        transitRemainingGrams: "0",
+      }),
+    ).toBe("Закрыт · Продан");
+  });
+
+  it("в списке: закрыт с остатком в рейсе → только «Закрыт»", () => {
+    expect(
+      formatTripListStatusLabel({
+        ...baseTrip,
+        status: "closed",
+        hasShipmentToTrip: true,
+        transitRemainingGrams: "5000",
+      }),
+    ).toBe("Закрыт");
+  });
+
   it("не показывает open в подписи рейса", () => {
     const label = formatTripSelectLabel({
       ...baseTrip,
@@ -61,6 +83,11 @@ describe("trip-label", () => {
     expect(label).toContain("10.05.2026");
     expect(label).toContain("Иванов");
     expect(label).toContain("— trip-1");
+  });
+
+  it("по умолчанию в конце — технический id (операции и сверка)", () => {
+    const label = formatTripSelectLabel({ ...baseTrip, tripNumber: "Р-1" });
+    expect(label.endsWith("— trip-1")).toBe(true);
   });
 
   it("без технического id — только номер, статус и реквизиты (кабинет продавца)", () => {

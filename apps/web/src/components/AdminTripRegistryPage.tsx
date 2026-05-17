@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary, TripJson } from "../api/types.js";
-import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
+import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { loadingManifestsListQueryOptions, queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -118,7 +118,7 @@ export function AdminTripRegistryPage() {
       if (!t) {
         throw new Error("Рейс не найден в списке");
       }
-      if (!tripListShowsSoldOut(t)) {
+      if (!tripListFullySold(t)) {
         const ok = window.confirm(
           "По данным системы ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
@@ -238,7 +238,12 @@ export function AdminTripRegistryPage() {
                     return (
                       <tr key={t.id}>
                         <th scope="row" style={thtd}>
-                          <strong>{t.tripNumber}</strong>
+                          <Link
+                            to={`${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}
+                            style={{ fontWeight: 700, textDecoration: "none" }}
+                          >
+                            {t.tripNumber}
+                          </Link>
                         </th>
                         <td style={thtd}>
                           <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>

@@ -3,7 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import type { CreatePurchaseDocumentResponse, ProductGradeJson } from "../api/types.js";
+import type {
+  CreatePurchaseDocumentResponse,
+  ProductGradeJson,
+  PurchaseDocumentSummary,
+  WarehouseJson,
+} from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
@@ -18,11 +23,13 @@ import {
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { splitPurchaseDocumentsBySoldStatus } from "../format/purchase-nakladnaya-list-status.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
+  batchesFullListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
@@ -86,6 +93,7 @@ export function PurchaseNakladnayaSection() {
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
   const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
+  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
 
   const [documentNumber, setDocumentNumber] = useState("");
   const [docDate, setDocDate] = useState(todayIsoDate);
@@ -95,6 +103,7 @@ export function PurchaseNakladnayaSection() {
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
   const [nakladListPage, setNakladListPage] = useState(0);
+  const [soldNakladListPage, setSoldNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const invalidate = useCallback(() => {
@@ -146,17 +155,36 @@ export function PurchaseNakladnayaSection() {
     });
   }, [listQ.data?.purchaseDocuments]);
 
-  const nakladPageCount = Math.max(1, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+  const { activePurchaseDocs, soldPurchaseDocs } = useMemo(() => {
+    if (!batchesQ.isSuccess) {
+      return { activePurchaseDocs: sortedPurchaseDocs, soldPurchaseDocs: [] as PurchaseDocumentSummary[] };
+    }
+    const split = splitPurchaseDocumentsBySoldStatus(sortedPurchaseDocs, batchesQ.data.batches);
+    return { activePurchaseDocs: split.active, soldPurchaseDocs: split.sold };
+  }, [sortedPurchaseDocs, batchesQ.isSuccess, batchesQ.data?.batches]);
+
+  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+  const soldNakladPageCount = Math.max(1, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
     setNakladListPage((p) => Math.min(p, maxPage));
-  }, [sortedPurchaseDocs.length]);
+  }, [activePurchaseDocs.length]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    setSoldNakladListPage((p) => Math.min(p, maxPage));
+  }, [soldPurchaseDocs.length]);
 
   const nakladPageSlice = useMemo(() => {
     const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return sortedPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [sortedPurchaseDocs, nakladListPage]);
+    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [activePurchaseDocs, nakladListPage]);
+
+  const soldNakladPageSlice = useMemo(() => {
+    const start = soldNakladListPage * NAKLAD_LIST_PAGE_SIZE;
+    return soldPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [soldPurchaseDocs, soldNakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -603,52 +631,119 @@ export function PurchaseNakladnayaSection() {
 
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
         <div style={{ marginTop: "0.75rem" }}>
-          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-            <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
-              <thead>
-                <tr>
-                  <th style={thHeadDense}>Номер</th>
-                  <th style={thHeadDense}>Дата</th>
-                  <th style={thHeadDense}>Склад</th>
-                  <th style={thHeadDense}>Строк</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nakladPageSlice.map((d) => {
-                  const wh = warehousesQ.data?.warehouses.find((w) => w.id === d.warehouseId);
-                  return (
-                    <tr key={d.id}>
-                      <td style={thtdDense}>
-                        <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
-                          {d.documentNumber}
-                        </Link>
-                      </td>
-                      <td style={{ ...thtdDense, fontWeight: 600 }}>{formatPurchaseDocDateRu(d.docDate)}</td>
-                      <td style={thtdDense}>
-                        {wh ? (
-                          <>
-                            {wh.name} <span className="birzha-text-muted">({wh.code})</span>
-                          </>
-                        ) : (
-                          <code style={{ fontSize: "0.75rem" }}>{d.warehouseId}</code>
-                        )}
-                      </td>
-                      <td style={thtdDense}>{d.lineCount}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <BirzhaPagination
-            pageIndex={nakladListPage}
-            pageCount={nakladPageCount}
-            itemLabel="накладных"
-            onPageChange={setNakladListPage}
-          />
+          <h4 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
+            В работе
+            {batchesQ.isSuccess ? (
+              <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
+                {" "}
+                ({activePurchaseDocs.length})
+              </span>
+            ) : null}
+          </h4>
+          {batchesQ.isPending && (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+              Уточняем остатки по партиям…
+            </p>
+          )}
+          {activePurchaseDocs.length === 0 ? (
+            <BirzhaEmptyState
+              compact
+              title="Нет накладных в работе"
+              description="Все сохранённые накладные уже без остатка — см. раздел «Продано»."
+            />
+          ) : (
+            <>
+              <PurchaseNakladnayaDocTable
+                docs={nakladPageSlice}
+                pathname={pathname}
+                warehouses={warehousesQ.data?.warehouses ?? []}
+              />
+              <BirzhaPagination
+                pageIndex={nakladListPage}
+                pageCount={nakladPageCount}
+                itemLabel="накладных"
+                onPageChange={setNakladListPage}
+              />
+            </>
+          )}
+          {batchesQ.isSuccess && soldPurchaseDocs.length > 0 ? (
+            <BirzhaDisclosure
+              nested
+              defaultOpen={false}
+              className="birzha-nakl-sold-block"
+              title={
+                <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>
+                  Продано ({soldPurchaseDocs.length})
+                </span>
+              }
+              bodyStyle={{ marginTop: "0.5rem" }}
+            >
+              <PurchaseNakladnayaDocTable
+                docs={soldNakladPageSlice}
+                pathname={pathname}
+                warehouses={warehousesQ.data?.warehouses ?? []}
+              />
+              <BirzhaPagination
+                pageIndex={soldNakladListPage}
+                pageCount={soldNakladPageCount}
+                itemLabel="накладных"
+                onPageChange={setSoldNakladListPage}
+              />
+            </BirzhaDisclosure>
+          ) : null}
         </div>
       )}
       </BirzhaDisclosure>
     </section>
+  );
+}
+
+function PurchaseNakladnayaDocTable({
+  docs,
+  pathname,
+  warehouses,
+}: {
+  docs: PurchaseDocumentSummary[];
+  pathname: string;
+  warehouses: WarehouseJson[];
+}) {
+  return (
+    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+      <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
+        <thead>
+          <tr>
+            <th style={thHeadDense}>Номер</th>
+            <th style={thHeadDense}>Дата</th>
+            <th style={thHeadDense}>Склад</th>
+            <th style={thHeadDense}>Строк</th>
+          </tr>
+        </thead>
+        <tbody>
+          {docs.map((d) => {
+            const wh = warehouses.find((w) => w.id === d.warehouseId);
+            return (
+              <tr key={d.id}>
+                <td style={thtdDense}>
+                  <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
+                    {d.documentNumber}
+                  </Link>
+                </td>
+                <td style={{ ...thtdDense, fontWeight: 600 }}>{formatPurchaseDocDateRu(d.docDate)}</td>
+                <td style={thtdDense}>
+                  {wh ? (
+                    <>
+                      {wh.name} <span className="birzha-text-muted">({wh.code})</span>
+                    </>
+                  ) : (
+                    <span className="birzha-text-muted">—</span>
+                  )}
+                </td>
+                <td style={thtdDense}>{d.lineCount}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

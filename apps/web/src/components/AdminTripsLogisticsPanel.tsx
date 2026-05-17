@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
-import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
+import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -122,7 +122,7 @@ export function AdminTripsLogisticsPanel() {
       if (!t) {
         throw new Error("Рейс не найден");
       }
-      if (!tripListShowsSoldOut(t)) {
+      if (!tripListFullySold(t)) {
         const ok = window.confirm(
           "По данным системы ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
@@ -275,7 +275,7 @@ export function AdminTripsLogisticsPanel() {
                     </td>
                     <td style={thtdDense}>
                       <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                      {tripListShowsSoldOut(t) ? (
+                      {tripListFullySold(t) ? (
                         <span
                           className="birzha-text-muted"
                           style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}

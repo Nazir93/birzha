@@ -87,7 +87,8 @@ export function registerTripRoutes(
         list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
       }
       const toJson = async (trip: (typeof list)[number]) => {
-        if (isPicker || trip.getStatus() === "closed") {
+        /** В подборщике закрытые рейсы без тяжёлой сводки; полный список — всегда с остатком в рейсе. */
+        if (isPicker && trip.getStatus() === "closed") {
           return tripToJson(trip);
         }
         const tripId = trip.getId();

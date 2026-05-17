@@ -13,7 +13,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { formatTripListStatusLabel, tripListShowsSoldOut } from "../format/trip-label.js";
+import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
@@ -217,7 +217,7 @@ export function AdminCabinetHome() {
       if (!t) {
         throw new Error("Рейс не найден в списке");
       }
-      if (!tripListShowsSoldOut(t)) {
+      if (!tripListFullySold(t)) {
         const ok = window.confirm("Погруженный остаток в рейсе ещё не ноль. Закрыть рейс?");
         if (!ok) {
           return;
@@ -530,19 +530,23 @@ export function AdminCabinetHome() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tripsPageSlice.map((t) => (
+                    {tripsPageSlice.map((t) => {
+                      const reportTo = `${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`;
+                      return (
                       <tr key={t.id}>
                         <th scope="row" style={thtd}>
-                          <strong>{t.tripNumber}</strong>
+                          <Link to={reportTo} style={{ fontWeight: 700, textDecoration: "none" }}>
+                            {t.tripNumber}
+                          </Link>
                         </th>
                         <td style={thtd}>
                           <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                          {tripListShowsSoldOut(t) ? (
+                          {tripListFullySold(t) ? (
                             <span
                               className="birzha-text-muted birzha-ui-sm"
                               style={{ display: "block", marginTop: "0.2rem", fontWeight: 400 }}
                             >
-                              0 погружено
+                              {t.status === "closed" ? "всё продано" : "0 в машине"}
                             </span>
                           ) : null}
                         </td>
@@ -550,10 +554,7 @@ export function AdminCabinetHome() {
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
                         <td style={{ ...thtd, textAlign: "right" }}>
-                          <Link
-                            to={`${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}
-                            style={{ fontWeight: 600 }}
-                          >
+                          <Link to={reportTo} style={{ fontWeight: 600 }}>
                             Открыть
                           </Link>
                         </td>
@@ -575,7 +576,8 @@ export function AdminCabinetHome() {
                           </td>
                         ) : null}
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
