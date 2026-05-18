@@ -60,6 +60,10 @@
   --birzha-btn-outline-bg: #ffffff;
   --birzha-btn-outline-border: #cbd5e1;
   --birzha-btn-outline-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  /* Текстовые ссылки в контенте (не навигация / плитки) */
+  --birzha-link: #1d4ed8;
+  --birzha-link-hover: #2563eb;
+  --birzha-link-visited: #4338ca;
 }
 
 html,
@@ -107,6 +111,10 @@ html[data-birzha-theme="dark"] {
   --birzha-btn-outline-bg: #52525b;
   --birzha-btn-outline-border: #d4d4d8;
   --birzha-btn-outline-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  /* На тёмном фоне — светлые ссылки, не синий/фиолетовый браузера */
+  --birzha-link: #93c5fd;
+  --birzha-link-hover: #e0f2fe;
+  --birzha-link-visited: #c4b5fd;
 }
 
 html[data-birzha-theme="dark"] .birzha-cabinet-main {
@@ -163,16 +171,6 @@ html[data-birzha-theme="dark"] .birzha-admin-stat--blue .birzha-admin-stat__valu
 html[data-birzha-theme="dark"] .birzha-admin-mass-ring__hole {
   background: #3f3f46;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-
-html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium {
-  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
-  border-color: rgba(161, 161, 170, 0.35);
-}
-
-html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__label,
-html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__value {
-  color: #fafafa;
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--accent {
@@ -339,6 +337,86 @@ body {
 ::selection {
   background: var(--birzha-accent-soft);
   color: var(--color-text);
+}
+
+/**
+ * Ссылки в контенте: единый цвет вместо синего/фиолетового браузера.
+ * Навигация, KPI-плитки и карточки-кнопки — свои стили ниже.
+ */
+#root a[href] {
+  color: var(--birzha-link);
+  text-decoration-skip-ink: auto;
+}
+
+#root a[href]:visited {
+  color: var(--birzha-link-visited);
+}
+
+#root a[href]:hover {
+  color: var(--birzha-link-hover);
+}
+
+#root a[href]:focus-visible {
+  outline-color: var(--birzha-link-hover);
+}
+
+.birzha-cabinet-main a[href]:where(
+    :not(.birzha-home-action):not(.birzha-kpi-tile--link):not(.birzha-admin-stat--link):not(
+        .birzha-admin-dash__hero-ring--link
+      )
+  ),
+main.app-shell:not(.app-shell--cabinet) a[href] {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.birzha-cabinet-main a[href]:where(
+    :not(.birzha-home-action):not(.birzha-kpi-tile--link):not(.birzha-admin-stat--link):not(
+        .birzha-admin-dash__hero-ring--link
+      )
+  ):hover,
+main.app-shell:not(.app-shell--cabinet) a[href]:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Приглушённые подписи-ссылки на тёмной теме — тот же читаемый акцент */
+html[data-birzha-theme="dark"] .birzha-cabinet-main a.birzha-text-muted[href],
+html[data-birzha-theme="dark"] main.app-shell a.birzha-text-muted[href] {
+  color: var(--birzha-link);
+}
+
+html[data-birzha-theme="dark"] .birzha-cabinet-main a.birzha-text-muted[href]:visited,
+html[data-birzha-theme="dark"] main.app-shell a.birzha-text-muted[href]:visited {
+  color: var(--birzha-link-visited);
+}
+
+#root a.birzha-cabinet-sidebar__link,
+#root a.birzha-nav__link,
+#root a.birzha-nav-drawer__link,
+#root a.birzha-home-action,
+#root a.birzha-kpi-tile--link,
+#root a.birzha-admin-stat--link,
+#root a.birzha-admin-dash__hero-ring--link {
+  color: inherit;
+  text-decoration: none;
+}
+
+html[data-birzha-theme="dark"] a.birzha-kpi-tile--link:hover {
+  border-color: rgba(147, 197, 253, 0.45);
+  box-shadow: 0 10px 28px -22px rgba(0, 0, 0, 0.55);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__quick-nav a {
+  color: var(--birzha-link);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__quick-nav a:hover {
+  color: var(--birzha-link-hover);
+}
+
+html[data-birzha-theme="dark"] .birzha-callout-info a {
+  color: var(--birzha-link-hover);
 }
 
 /* Корневой layout: контент на светлой подложке страницы */
@@ -1338,6 +1416,7 @@ a.birzha-kpi-tile--link:focus-visible {
 
 .birzha-callout-info a {
   font-weight: 600;
+  color: var(--birzha-link);
 }
 
 /** Карточка реквизитов на экране закупочной накладной */
@@ -3168,43 +3247,63 @@ a.birzha-admin-stat--link:focus-visible {
   margin-top: 0;
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--premium {
+/* Сводка админки: светлые KPI только в светлой теме (иначе белые плитки + светлый текст). */
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--premium {
   background: linear-gradient(180deg, #ffffff 0%, #fbfbfc 100%);
   border-color: rgba(148, 163, 184, 0.24);
   box-shadow: 0 12px 30px -26px rgba(15, 23, 42, 0.42);
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--accent {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--accent {
   background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
   border-color: rgba(22, 163, 74, 0.22);
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label,
-.birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__value {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label,
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__value {
   color: #166534;
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--amber {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--amber {
   background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
   border-color: rgba(245, 158, 11, 0.28);
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label,
-.birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__value {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label,
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__value {
   color: #92400e;
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--blue {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--blue {
   background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
   border-color: rgba(37, 99, 235, 0.24);
 }
 
-.birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label,
-.birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__value {
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label,
+html:not([data-birzha-theme="dark"]) .birzha-admin-dash__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__value {
   color: #1d4ed8;
 }
 
-.birzha-chart-card--premium {
+/* Тёмная тема: KPI сводки админки — контрастные подписи и цифры */
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium {
+  background: linear-gradient(180deg, #52525b 0%, #3f3f46 100%);
+  border-color: rgba(161, 161, 170, 0.45);
+  box-shadow: 0 8px 24px -18px rgba(0, 0, 0, 0.55);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__label {
+  color: #e4e4e7;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi .birzha-kpi-tile--premium .birzha-kpi-tile__value {
+  color: #fafafa;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash__kpi a.birzha-kpi-tile--link {
+  color: inherit;
+}
+
+html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 100%);
   border-color: rgba(148, 163, 184, 0.26);

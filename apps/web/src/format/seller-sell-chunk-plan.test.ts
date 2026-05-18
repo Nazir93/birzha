@@ -89,6 +89,34 @@ describe("buildSellerSellChunks", () => {
     expect(sumCash).toBe(50_000n);
   });
 
+  it("card_transfer — сумма перевода по чанкам = введённой", () => {
+    const chunks = buildSellerSellChunks({
+      sellBatchId: "b-big",
+      sellableRows: rows,
+      batchById,
+      kg: 22,
+      pricePerKg: 100,
+      paymentKind: "card_transfer",
+      cardTransferKopecks: "120000",
+    });
+    expect(chunks).toHaveLength(2);
+    const sumCard = chunks.reduce((s, c) => s + BigInt(c.cardTransferKopecks ?? "0"), 0n);
+    expect(sumCard).toBe(120_000n);
+  });
+
+  it("debt — без полей оплаты в чанках", () => {
+    const chunks = buildSellerSellChunks({
+      sellBatchId: "b-big",
+      sellableRows: rows,
+      batchById,
+      kg: 15,
+      pricePerKg: 50,
+      paymentKind: "debt",
+    });
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toEqual({ batchId: "b-big", kg: 15 });
+  });
+
   it("отклоняет кг больше суммарного остатка группы", () => {
     expect(() =>
       buildSellerSellChunks({

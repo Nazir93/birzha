@@ -16,7 +16,6 @@ import {
   kgNumberToGramsBigInt,
   maxSellableGramsForBatch,
   sellerCaliberGroupKey,
-  sellerCaliberGroupSubline,
 } from "../format/seller-trip-caliber-groups.js";
 import { buildSellerSellChunks } from "../format/seller-sell-chunk-plan.js";
 import { randomUuid } from "../lib/random-uuid.js";
@@ -400,7 +399,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         key,
         group,
         headline: group.lineLabel,
-        subLine: sellerCaliberGroupSubline(group, batchByIdForSell),
         totalNetG: group.totalNetG,
       };
     });
@@ -411,10 +409,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     if (!q) {
       return sellerTripSellTiles;
     }
-    return sellerTripSellTiles.filter((t) => {
-      const hay = `${t.headline} ${t.subLine ?? ""}`.toLowerCase();
-      return hay.includes(q);
-    });
+    return sellerTripSellTiles.filter((t) => t.headline.toLowerCase().includes(q));
   }, [sellerTripSellTiles, partyFilter]);
 
   const selectedSellerCaliberGroup = useMemo(
@@ -444,6 +439,23 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellCaliberKey(tile.key);
     setSellBatchId(tile.group.primaryBatchId);
     setSellKg(gramsBigIntToKgDecimalString(tile.group.totalNetG));
+  }, []);
+
+  const clearSellerSaleInputs = useCallback(() => {
+    setSellBatchId("");
+    setSellCaliberKey(null);
+    setSellKg("");
+    setSellPrice("");
+    setSaleId("");
+    setCashMixed("");
+    setCardTransferKopecks("");
+    setSellClientLabel("");
+    setSellCounterpartyId("");
+    setNewCounterpartyName("");
+    setWholesaleBuyerId("");
+    setWholesalerSearch("");
+    setSaleChannel("retail");
+    setPaymentKind("cash");
   }, []);
 
   const sellerCaliberGridStatusMessage = useMemo(() => {
@@ -614,6 +626,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       const totalK = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, { kgMaxFrac: 6, priceMaxFrac: 4 });
       if (Number.isFinite(totalK) && totalK >= 0) {
         const cardK = Math.round(rub * 100);
+        if (cardK <= 0) {
+          return "Сумма перевода на карту должна быть больше нуля";
+        }
         if (cardK > totalK) {
           return "Сумма перевода не больше выручки по строке (кг × цена)";
         }
@@ -684,20 +699,30 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     batchByIdForSell,
   ]);
 
-  const sellerCardTransferRubPreview = useMemo(() => {
+  const { sellerCardTransferRubPreview, sellerCardTransferCashPreviewRub } = useMemo(() => {
     if (!isSellerUx || paymentKind !== "card_transfer") {
-      return null;
+      return { sellerCardTransferRubPreview: null as string | null, sellerCardTransferCashPreviewRub: null as string | null };
     }
     const raw = cardTransferKopecks.trim();
     if (!raw) {
-      return null;
+      return { sellerCardTransferRubPreview: null, sellerCardTransferCashPreviewRub: null };
     }
     const rub = nonnegativeDecimalStringToNumber(raw, 2);
     if (!Number.isFinite(rub) || rub < 0) {
-      return null;
+      return { sellerCardTransferRubPreview: null, sellerCardTransferCashPreviewRub: null };
     }
-    return kopecksToRubLabel(String(Math.round(rub * 100)));
-  }, [isSellerUx, paymentKind, cardTransferKopecks]);
+    const cardK = Math.round(rub * 100);
+    const cardLabel = kopecksToRubLabel(String(cardK));
+    const totalK = purchaseLineAmountKopecksFromDecimalStrings(sellKg, sellPrice, { kgMaxFrac: 6, priceMaxFrac: 4 });
+    if (!Number.isFinite(totalK) || totalK < 0 || cardK > totalK) {
+      return { sellerCardTransferRubPreview: cardLabel, sellerCardTransferCashPreviewRub: null };
+    }
+    const cashK = totalK - cardK;
+    return {
+      sellerCardTransferRubPreview: cardLabel,
+      sellerCardTransferCashPreviewRub: kopecksToRubLabel(String(cashK)),
+    };
+  }, [isSellerUx, paymentKind, cardTransferKopecks, sellKg, sellPrice]);
 
   /** Превью суммы наличными и остатка в долг при смешанной оплате (кабинет продавца, рубли). */
   const { sellerCashMixedRubPreview, sellerCashMixedDebtPreviewRub } = useMemo(() => {
@@ -770,9 +795,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             batchById: batchByIdForSell,
             kg: body.kg,
             pricePerKg: body.pricePerKg,
-            paymentKind: body.paymentKind,
-            cashKopecksMixed: body.cashKopecksMixed,
-            cardTransferKopecks: body.cardTransferKopecks,
+            paymentKind: body.paymentKind ?? "cash",
+            cashKopecksMixed:
+              body.cashKopecksMixed != null ? String(body.cashKopecksMixed) : undefined,
+            cardTransferKopecks:
+              body.cardTransferKopecks != null ? String(body.cardTransferKopecks) : undefined,
           })
         : [{ batchId, kg: body.kg }];
       if (chunks.length === 0) {
@@ -831,6 +858,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     onSuccess: (data) => {
       invalidateDomain();
       if (isSellerUx) {
+        clearSellerSaleInputs();
         setSellerSaleFlash({ ...data });
         requestAnimationFrame(() => {
           document.getElementById(sellerFlashDomId)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1022,8 +1050,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 compact
                 title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
                 description={
-                  sellerHasAssignedClosedOnly && !isSellerUx
-                    ? "Закрытые рейсы здесь не выбираются. Итоги и история — в разделе «Отчёты по рейсу»."
+                  sellerHasAssignedClosedOnly
+                    ? "Активных рейсов нет. Итоги по проданным и закрытым — в разделе «Отчёт по рейсу» (кнопка «Итоги» на главной)."
                     : undefined
                 }
               />
@@ -1164,9 +1192,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                         onClick={() => applySellerCaliberTile(t)}
                       >
                         <span className="birzha-seller-caliber-tile__line">{t.headline}</span>
-                        {t.subLine ? (
-                          <span className="birzha-seller-caliber-tile__meta">{t.subLine}</span>
-                        ) : null}
                         <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
                       </button>
                     );
@@ -1545,6 +1570,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           {isSellerUx && sellerCardTransferRubPreview ? (
             <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "-0.35rem 0 0.35rem", lineHeight: 1.45 }}>
               В учёт уйдёт переводом: <strong>{sellerCardTransferRubPreview} ₽</strong>
+              {sellerCardTransferCashPreviewRub ? (
+                <>
+                  {" "}
+                  · наличными: <strong>{sellerCardTransferCashPreviewRub} ₽</strong>
+                </>
+              ) : null}
             </p>
           ) : null}
           {isSellerUx ? (

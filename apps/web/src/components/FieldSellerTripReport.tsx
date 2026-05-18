@@ -3,7 +3,7 @@ import {
   aggregateTripSalesByProductLine,
   type TripSalesByProductLineRow,
 } from "../format/aggregate-trip-sales-by-product-line.js";
-import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { gramsToKgLabel, kopecksToRubLabel, kopecksToRubLabelSafe } from "../format/money.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -31,13 +31,13 @@ function PaymentCells({
   debtKopecks: string | bigint;
 }) {
   const cash = typeof cashKopecks === "bigint" ? cashKopecks.toString() : cashKopecks;
-  const card = typeof cardKopecks === "bigint" ? cardKopecks.toString() : cardKopecks || "0";
+  const card = typeof cardKopecks === "bigint" ? cardKopecks.toString() : cardKopecks;
   const debt = typeof debtKopecks === "bigint" ? debtKopecks.toString() : debtKopecks;
   return (
     <>
-      <td style={thtd}>{kopecksToRubLabel(cash)} ₽</td>
-      <td style={thtd}>{kopecksToRubLabel(card)} ₽</td>
-      <td style={thtd}>{kopecksToRubLabel(debt)} ₽</td>
+      <td style={thtd}>{kopecksToRubLabelSafe(cash)} ₽</td>
+      <td style={thtd}>{kopecksToRubLabelSafe(card)} ₽</td>
+      <td style={thtd}>{kopecksToRubLabelSafe(debt)} ₽</td>
     </>
   );
 }

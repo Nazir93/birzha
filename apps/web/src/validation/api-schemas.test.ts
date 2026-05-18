@@ -195,4 +195,51 @@ describe("parseSellFromTripForm", () => {
     });
     expect(r.body.cashKopecksMixed).toBe("10050");
   });
+
+  it("cash — без дополнительных полей оплаты", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "3",
+      saleId: "s1",
+      pricePerKg: "40",
+      paymentKind: "cash",
+      cashMixed: "",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.paymentKind).toBe("cash");
+    expect(r.body.cashKopecksMixed).toBeUndefined();
+    expect(r.body.cardTransferKopecks).toBeUndefined();
+  });
+
+  it("debt — без дополнительных полей оплаты", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "1",
+      saleId: "s1",
+      pricePerKg: "100",
+      paymentKind: "debt",
+      cashMixed: "",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.paymentKind).toBe("debt");
+    expect(r.body.cashKopecksMixed).toBeUndefined();
+    expect(r.body.cardTransferKopecks).toBeUndefined();
+  });
+
+  it("sellerMoneyInRubles: card_transfer на всю выручку", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "10",
+      saleId: "s1",
+      pricePerKg: "100",
+      paymentKind: "card_transfer",
+      cashMixed: "",
+      cardTransferKopecks: "1000",
+      sellerMoneyInRubles: true,
+    });
+    expect(r.body.cardTransferKopecks).toBe("100000");
+  });
 });

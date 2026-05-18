@@ -1,3 +1,11 @@
+/** Безопасно для полей API, которые могут отсутствовать в старых ответах. */
+export function kopecksToRubLabelSafe(kopecks: string | null | undefined): string {
+  if (kopecks == null || kopecks === "") {
+    return kopecksToRubLabel("0");
+  }
+  return kopecksToRubLabel(kopecks);
+}
+
 /** Строка целых копеек из API → отображение «руб, коп». */
 export function kopecksToRubLabel(kopecks: string): string {
   const n = BigInt(kopecks);

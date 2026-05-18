@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { closeTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary, TripJson } from "../api/types.js";
 import { formatTripListStatusLabel, formatTripSelectLabel, tripListFullySold } from "../format/trip-label.js";
+import { sortTripsByDepartedDesc, splitTripsByStatus } from "../format/trip-sort.js";
 import { loadingManifestsListQueryOptions, queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -26,10 +27,10 @@ function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scop
 type StatusFilter = "all" | "open" | "closed";
 
 function parseStatus(v: string | null): StatusFilter {
-  if (v === "open" || v === "closed") {
+  if (v === "open" || v === "closed" || v === "all") {
     return v;
   }
-  return "all";
+  return "open";
 }
 
 function tripMatchesSearch(t: TripJson, q: string): boolean {
@@ -74,18 +75,15 @@ export function AdminTripRegistryPage() {
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const manQ = useQuery(loadingManifestsListQueryOptions());
 
-  const sortedTrips = useMemo(() => {
-    const list = [...(tripsQ.data?.trips ?? [])];
-    list.sort((a, b) => {
-      const da = a.departedAt ? Date.parse(a.departedAt) : 0;
-      const db = b.departedAt ? Date.parse(b.departedAt) : 0;
-      if (db !== da) {
-        return db - da;
-      }
-      return b.tripNumber.localeCompare(a.tripNumber, "ru");
-    });
-    return list;
-  }, [tripsQ.data?.trips]);
+  const sortedTrips = useMemo(
+    () => sortTripsByDepartedDesc(tripsQ.data?.trips ?? []),
+    [tripsQ.data?.trips],
+  );
+
+  const tripStatusCounts = useMemo(() => {
+    const { open, closed } = splitTripsByStatus(sortedTrips);
+    return { open: open.length, closed: closed.length, all: sortedTrips.length };
+  }, [sortedTrips]);
 
   const filtered = useMemo(() => filterTrips(sortedTrips, status, queryText), [sortedTrips, status, queryText]);
 
@@ -166,11 +164,11 @@ export function AdminTripRegistryPage() {
             <span style={{ fontSize: "0.82rem", fontWeight: 600, marginRight: "0.25rem" }}>Статус:</span>
             {(
               [
-                ["all", "Все"],
-                ["open", "Открытые"],
-                ["closed", "Закрытые"],
+                ["open", "В работе", tripStatusCounts.open],
+                ["closed", "Закрытые", tripStatusCounts.closed],
+                ["all", "Все", tripStatusCounts.all],
               ] as const
-            ).map(([key, label]) => (
+            ).map(([key, label, count]) => (
               <button
                 key={key}
                 type="button"
@@ -182,7 +180,7 @@ export function AdminTripRegistryPage() {
                 }}
                 onClick={() => setStatus(key)}
               >
-                {label}
+                {label} ({count})
               </button>
             ))}
           </div>
@@ -198,9 +196,23 @@ export function AdminTripRegistryPage() {
             autoComplete="off"
           />
 
+          {filtered.length === 0 ? (
+            <p className="birzha-text-muted" style={{ margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
+              {status === "open"
+                ? "Нет рейсов в работе. Закрытые — вкладка «Закрытые»."
+                : status === "closed"
+                  ? "Нет закрытых рейсов."
+                  : "Нет рейсов по фильтру."}
+            </p>
+          ) : null}
+
           <BirzhaDisclosure
             defaultOpen
-            title={<span style={{ fontWeight: 600 }}>Список ({filtered.length})</span>}
+            title={
+              <span style={{ fontWeight: 600 }}>
+                {status === "open" ? "В работе" : status === "closed" ? "Закрытые" : "Список"} ({filtered.length})
+              </span>
+            }
           >
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={tableStyle} aria-label="Рейсы">

@@ -1,10 +1,5 @@
 import type { BatchListItem } from "../api/types.js";
 
-/** Запасная подпись партии без данных накладной (UUID в UI не показываем). */
-export function formatShortBatchId(_id: string): string {
-  return "партия без накладной";
-}
-
 /** Товар и калибр по данным накладной в списке партий. */
 export function formatNakladLineLabel(b: BatchListItem): string {
   const n = b.nakladnaya;

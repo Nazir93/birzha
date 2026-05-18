@@ -103,6 +103,7 @@ export function PurchaseNakladnayaSection() {
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
   const [nakladListPage, setNakladListPage] = useState(0);
+  const [soldNakladListPage, setSoldNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const refreshLists = useCallback(async () => {
@@ -153,12 +154,15 @@ export function PurchaseNakladnayaSection() {
     });
   }, [listQ.data?.purchaseDocuments]);
 
-  const activePurchaseDocs = useMemo(() => {
+  const purchaseDocsBySoldStatus = useMemo(() => {
     if (!batchesQ.isSuccess) {
-      return [];
+      return { active: [] as PurchaseDocumentSummary[], sold: [] as PurchaseDocumentSummary[] };
     }
-    return splitPurchaseDocumentsBySoldStatus(sortedPurchaseDocs, batchesQ.data.batches).active;
+    return splitPurchaseDocumentsBySoldStatus(sortedPurchaseDocs, batchesQ.data.batches);
   }, [sortedPurchaseDocs, batchesQ.isSuccess, batchesQ.data?.batches]);
+
+  const activePurchaseDocs = purchaseDocsBySoldStatus.active;
+  const soldPurchaseDocs = purchaseDocsBySoldStatus.sold;
 
   const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
 
@@ -171,6 +175,18 @@ export function PurchaseNakladnayaSection() {
     const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
     return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
   }, [activePurchaseDocs, nakladListPage]);
+
+  const soldNakladPageCount = Math.max(1, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(soldPurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    setSoldNakladListPage((p) => Math.min(p, maxPage));
+  }, [soldPurchaseDocs.length]);
+
+  const soldNakladPageSlice = useMemo(() => {
+    const start = soldNakladListPage * NAKLAD_LIST_PAGE_SIZE;
+    return soldPurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [soldPurchaseDocs, soldNakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -652,6 +668,36 @@ export function PurchaseNakladnayaSection() {
                 onPageChange={setNakladListPage}
               />
             </>
+          ) : null}
+
+          {batchesQ.isSuccess && soldPurchaseDocs.length > 0 ? (
+            <BirzhaDisclosure
+              defaultOpen={false}
+              title={
+                <span style={{ fontSize: "0.92rem" }}>
+                  Продано / архив
+                  <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
+                    {" "}
+                    ({soldPurchaseDocs.length})
+                  </span>
+                </span>
+              }
+            >
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
+                Накладные без остатка по партиям — для истории и сверки.
+              </p>
+              <PurchaseNakladnayaDocTable
+                docs={soldNakladPageSlice}
+                pathname={pathname}
+                warehouses={warehousesQ.data?.warehouses ?? []}
+              />
+              <BirzhaPagination
+                pageIndex={soldNakladListPage}
+                pageCount={soldNakladPageCount}
+                itemLabel="накладных"
+                onPageChange={setSoldNakladListPage}
+              />
+            </BirzhaDisclosure>
           ) : null}
         </div>
       )}

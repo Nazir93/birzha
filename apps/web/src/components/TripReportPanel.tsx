@@ -7,6 +7,10 @@ import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
+import {
+  filterTripsAssignedToSellerForReports,
+  isTripOpenForSellerWorkspace,
+} from "../format/seller-workspace-trips.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
@@ -79,34 +83,46 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const fieldSellerSalesReport = viewContext === "sales" && Boolean(user && isFieldSellerOnly(user));
 
   const tripsForSelect = useMemo(() => {
-    if (!fieldSellerSalesReport || !user) {
+    if (!fieldSellerSalesReport) {
       return sortedTrips;
     }
-    return sortedTrips.filter((t) => t.assignedSellerUserId === user.id);
+    if (!user) {
+      return [];
+    }
+    return filterTripsAssignedToSellerForReports(sortedTrips, user.id);
   }, [sortedTrips, fieldSellerSalesReport, user]);
+
+  const sellerTripsOpen = useMemo(
+    () => tripsForSelect.filter(isTripOpenForSellerWorkspace),
+    [tripsForSelect],
+  );
+  const sellerTripsClosed = useMemo(
+    () => tripsForSelect.filter((t) => !isTripOpenForSellerWorkspace(t)),
+    [tripsForSelect],
+  );
 
   useEffect(() => {
     if (initialTripFromUrl.current) {
       return;
     }
     const p = searchParams.get("trip")?.trim() ?? "";
-    if (!p || tripsForSelect.length === 0) {
+    if (!p || !tripsQuery.data) {
       return;
     }
     if (tripsForSelect.some((t) => t.id === p)) {
       setTripId(p);
       initialTripFromUrl.current = true;
     }
-  }, [searchParams, tripsForSelect]);
+  }, [searchParams, tripsForSelect, tripsQuery.data]);
 
   useEffect(() => {
-    if (!fieldSellerSalesReport || !tripId) {
+    if (!fieldSellerSalesReport || !tripId || !user || !tripsQuery.data) {
       return;
     }
     if (!tripsForSelect.some((t) => t.id === tripId)) {
       setTripId("");
     }
-  }, [fieldSellerSalesReport, tripsForSelect, tripId]);
+  }, [fieldSellerSalesReport, tripsQuery.data, tripsForSelect, tripId, user]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),
@@ -204,7 +220,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     }
     const csv = tripBatchRowsToCsv(batchRows, {
       tripNumber: r.trip.tripNumber,
-      tripId: r.trip.id,
       batchCaption: (batchId) => formatBatchPartyCaption(batchById.get(batchId), batchId),
     });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -256,14 +271,40 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           </label>
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
-            {tripsForSelect.map((t) => {
-              const label = formatTripSelectLabel(t);
-              return (
-                <option key={t.id} value={t.id}>
-                  {label.length > 120 ? `${label.slice(0, 117)}…` : label}
-                </option>
-              );
-            })}
+            {fieldSellerSalesReport && sellerTripsOpen.length > 0 ? (
+              <optgroup label="В работе">
+                {sellerTripsOpen.map((t) => {
+                  const label = formatTripSelectLabel(t);
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            ) : null}
+            {fieldSellerSalesReport && sellerTripsClosed.length > 0 ? (
+              <optgroup label="Завершённые (проданы / закрыты)">
+                {sellerTripsClosed.map((t) => {
+                  const label = formatTripSelectLabel(t);
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            ) : null}
+            {!fieldSellerSalesReport
+              ? tripsForSelect.map((t) => {
+                  const label = formatTripSelectLabel(t);
+                  return (
+                    <option key={t.id} value={t.id}>
+                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
+                    </option>
+                  );
+                })
+              : null}
           </select>
           {tripId && r && canDeleteTrip && canTripWrite && (
             <div style={{ marginTop: "0.5rem" }}>
@@ -316,7 +357,14 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       )}
       {tripId && reportQuery.isError && (
         <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
-          Отчёт недоступен: рейс не найден или сервер временно не отвечает.
+          {fieldSellerSalesReport
+            ? "Не удалось открыть отчёт по этому рейсу. Убедитесь, что рейс закреплён за вами; если ошибка повторяется — сообщите администратору."
+            : "Отчёт недоступен: рейс не найден или сервер временно не отвечает."}
+          {(reportQuery.error as Error)?.message ? (
+            <span className="birzha-ui-sm" style={{ display: "block", marginTop: "0.35rem", fontWeight: 400 }}>
+              {(reportQuery.error as Error).message}
+            </span>
+          ) : null}
         </p>
       )}
 

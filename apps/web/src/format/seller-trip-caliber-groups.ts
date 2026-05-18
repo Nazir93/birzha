@@ -31,7 +31,7 @@ function caliberGroupKey(batch: BatchListItem | undefined, row: TripBatchTableRo
   return `\0${g}\0${c}`;
 }
 
-function lineLabelForRow(batch: BatchListItem | undefined, row: TripBatchTableRow): string {
+function lineLabelForRow(batch: BatchListItem | undefined): string {
   if (!batch) {
     return "партия без накладной";
   }
@@ -53,7 +53,7 @@ export function groupSellableRowsByCaliber(
     const key = caliberGroupKey(b, row);
     let acc = m.get(key);
     if (!acc) {
-      acc = { rows: [], lineLabel: lineLabelForRow(b, row) };
+      acc = { rows: [], lineLabel: lineLabelForRow(b) };
       m.set(key, acc);
     }
     acc.rows.push(row);
@@ -103,30 +103,6 @@ export function formatSellerCaliberGroupOptionLabel(
     return `${g.lineLabel} · ${kg} кг`;
   }
   return `${g.lineLabel} · ${kg} кг · ${g.rows.length} партии`;
-}
-
-/** Подпись под плиткой, если калибр объединяет несколько партий. */
-export function sellerCaliberGroupSubline(
-  group: SellerCaliberGroup,
-  batchById: Map<string, BatchListItem>,
-): string | null {
-  if (group.rows.length <= 1) {
-    return null;
-  }
-  const docs = [
-    ...new Set(
-      group.rows
-        .map((r) => batchById.get(r.batchId)?.nakladnaya?.documentNumber?.trim())
-        .filter((d): d is string => Boolean(d)),
-    ),
-  ].sort((a, b) => a.localeCompare(b, "ru"));
-  if (docs.length === 0) {
-    return `${group.rows.length} партии`;
-  }
-  if (docs.length === 1) {
-    return `накл. № ${docs[0]} · ${group.rows.length} партии`;
-  }
-  return `накл. № ${docs.join(", ")} · ${group.rows.length} партии`;
 }
 
 export function kgNumberToGramsBigInt(kg: number): bigint {

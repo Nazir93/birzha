@@ -70,10 +70,8 @@ export function AssignSellerPanel() {
     for (const s of fieldSellersQuery.data?.fieldSellers ?? []) {
       m.set(s.id, s.login);
     }
-    for (const t of tripSelectOptions) {
-    }
     return m;
-  }, [fieldSellersQuery.data?.fieldSellers, sellerUsersQuery.data, tripSelectOptions]);
+  }, [fieldSellersQuery.data?.fieldSellers, sellerUsersQuery.data]);
 
   const sellerOptions = useMemo(() => {
     return [...sellerLoginById.entries()]
