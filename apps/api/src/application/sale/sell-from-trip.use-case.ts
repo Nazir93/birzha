@@ -15,6 +15,7 @@ import type { TripShipmentRepository } from "../ports/trip-shipment-repository.p
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
 import { loadBatchOrThrow } from "../load-batch.js";
+import { estimateTripBatchPackagesInTransit } from "../trip/trip-package-estimate.js";
 import { kgToGrams } from "../units/kg-grams.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../units/rub-kopecks.js";
 
@@ -41,6 +42,8 @@ export type SellFromTripInput = {
   wholesaleBuyerId?: string | null;
   /** Id пользователя (JWT `sub`); пишется в продажу для отчёта в разрезе «только мои» у продавца. */
   recordedByUserId?: string | null;
+  /** Ящики в этой продаже (если в отгрузке учитывались ящики). */
+  packageCount?: number;
 };
 
 export type SellFromTripTransactionRunner = (
@@ -145,6 +148,40 @@ export class SellFromTripUseCase {
       throw new InsufficientStockForTripError(input.tripId, input.batchId, available, requested);
     }
 
+    const shipmentAgg = await this.shipments.aggregateByTripId(input.tripId);
+    const shipLine = shipmentAgg.byBatch.find((l) => l.batchId === input.batchId);
+    const shippedG = shipLine?.grams ?? 0n;
+    const shippedPackages = shipLine?.packageCount ?? 0n;
+
+    let salePackageCount: bigint | null = null;
+    if (input.packageCount !== undefined) {
+      if (!Number.isFinite(input.packageCount) || input.packageCount < 0) {
+        throw new Error("Ящики: укажите целое неотрицательное число");
+      }
+      salePackageCount = BigInt(Math.floor(input.packageCount));
+    }
+    if (shippedPackages > 0n) {
+      if (salePackageCount === null) {
+        throw new Error("Укажите количество ящиков в продаже");
+      }
+      if (salePackageCount <= 0n) {
+        throw new Error("Количество ящиков должно быть больше нуля");
+      }
+      const maxPkg = estimateTripBatchPackagesInTransit(
+        shippedG,
+        shippedPackages,
+        soldBefore,
+        shortageBefore,
+      );
+      if (salePackageCount > maxPkg) {
+        throw new Error(
+          `Не больше ${maxPkg.toString()} ящ. в машине по этой партии (по отгрузке и уже проданному)`,
+        );
+      }
+    } else if (salePackageCount !== null && salePackageCount > 0n) {
+      throw new Error("По этой партии в рейсе ящики при отгрузке не указаны — поле ящиков оставьте пустым");
+    }
+
     const saleLineId = randomUUID();
     const pricePerKgKopecks = rubPerKgToKopecksPerKg(input.pricePerKg);
     const revenueKopecks = revenueKopecksFromGramsAndPricePerKg(requested, pricePerKgKopecks);
@@ -178,6 +215,7 @@ export class SellFromTripUseCase {
         counterpartyId,
         wholesaleBuyerId,
         recordedByUserId: input.recordedByUserId?.trim() || null,
+        packageCount: salePackageCount,
       });
     };
 

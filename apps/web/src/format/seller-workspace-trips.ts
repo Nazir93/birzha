@@ -3,7 +3,7 @@ import type { TripJson } from "../api/types.js";
 /** Как в API (`tripToJson` / домен рейса). */
 export const TRIP_STATUS_CLOSED = "closed" as const;
 
-/** Рейс закрыт в админке — в «рабочем» кабинете продавца не показываем (остаётся в отчётах). */
+/** Рейс закрыт в админке — только в «Архив», не в продажах и отчётах продавца. */
 export function isTripOpenForSellerWorkspace(t: { status: string }): boolean {
   return t.status !== TRIP_STATUS_CLOSED;
 }
@@ -13,10 +13,7 @@ export function isTripAssignedToSeller(t: TripJson, sellerUserId: string): boole
   return t.assignedSellerUserId === sellerUserId;
 }
 
-/**
- * Рейсы для «Отчёт по рейсу»: все закреплённые (открытые и закрытые / проданные).
- * В форме продажи закрытые не выбираются — итоги смотрят здесь.
- */
+/** Все закреплённые рейсы продавца (для архива и подсчёта закрытых). */
 export function filterTripsAssignedToSellerForReports(
   trips: readonly TripJson[],
   sellerUserId: string,

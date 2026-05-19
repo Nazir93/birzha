@@ -5,6 +5,7 @@ import { apiPostJson } from "../api/fetch-api.js";
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { filterTripsInWork } from "../format/archive.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
@@ -84,7 +85,7 @@ export function SellerDispatchPanel() {
   });
 
   const tripSelectOptions = useMemo(
-    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    () => sortTripsByTripNumberAsc(filterTripsInWork(tripsQuery.data?.trips ?? [])),
     [tripsQuery.data?.trips],
   );
 

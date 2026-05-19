@@ -14,7 +14,8 @@ import {
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
-import { sortTripsByDepartedDesc, splitTripsByStatus } from "../format/trip-sort.js";
+import { filterTripsInWork } from "../format/archive.js";
+import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
@@ -187,15 +188,10 @@ export function AdminCabinetHome() {
     };
   }, [batchesQ.data?.batches, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
 
-  const sortedTripsOpen = useMemo(() => {
-    const { open } = splitTripsByStatus(tripsQ.data?.trips ?? []);
-    return sortTripsByDepartedDesc(open);
-  }, [tripsQ.data?.trips]);
-
-  const sortedTripsClosed = useMemo(() => {
-    const { closed } = splitTripsByStatus(tripsQ.data?.trips ?? []);
-    return sortTripsByDepartedDesc(closed);
-  }, [tripsQ.data?.trips]);
+  const sortedTripsOpen = useMemo(
+    () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
+    [tripsQ.data?.trips],
+  );
 
   const [tripsPage, setTripsPage] = useState(0);
   const tripsPageCount = Math.max(1, Math.ceil(sortedTripsOpen.length / ADMIN_TRIPS_PAGE_SIZE));
@@ -209,19 +205,6 @@ export function AdminCabinetHome() {
     const start = tripsPage * ADMIN_TRIPS_PAGE_SIZE;
     return sortedTripsOpen.slice(start, start + ADMIN_TRIPS_PAGE_SIZE);
   }, [sortedTripsOpen, tripsPage]);
-
-  const [closedTripsPage, setClosedTripsPage] = useState(0);
-  const closedTripsPageCount = Math.max(1, Math.ceil(sortedTripsClosed.length / ADMIN_TRIPS_PAGE_SIZE));
-
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedTripsClosed.length / ADMIN_TRIPS_PAGE_SIZE) - 1);
-    setClosedTripsPage((p) => Math.min(p, maxPage));
-  }, [sortedTripsClosed.length]);
-
-  const closedTripsPageSlice = useMemo(() => {
-    const start = closedTripsPage * ADMIN_TRIPS_PAGE_SIZE;
-    return sortedTripsClosed.slice(start, start + ADMIN_TRIPS_PAGE_SIZE);
-  }, [sortedTripsClosed, closedTripsPage]);
 
   const loading = tripsQ.isPending || batchesQ.isPending || whQ.isPending;
   const err = tripsQ.isError || batchesQ.isError || whQ.isError;
@@ -359,7 +342,7 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__value">{aggregates.tripsOpen}</div>
               </Link>
               <Link
-                to={`${adminRoutes.tripRegistry}?status=closed`}
+                to={adminRoutes.archive}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
                 title="Закрытые рейсы"
               >
@@ -520,19 +503,19 @@ export function AdminCabinetHome() {
                 <Link to={`${adminRoutes.tripRegistry}?status=open`} style={{ fontWeight: 600 }}>
                   Реестр рейсов
                 </Link>
-                {sortedTripsClosed.length > 0 ? (
+                {aggregates.tripsClosed > 0 ? (
                   <>
                     {" "}
                     ·{" "}
-                    <Link to={`${adminRoutes.tripRegistry}?status=closed`} className="birzha-text-muted">
-                      закрытые ({sortedTripsClosed.length})
+                    <Link to={adminRoutes.archive} className="birzha-text-muted">
+                      архив ({aggregates.tripsClosed})
                     </Link>
                   </>
                 ) : null}
               </p>
               {sortedTripsOpen.length === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-                  Нет открытых рейсов. Закрытые — ниже или в реестре.
+                  Нет открытых рейсов. Закрытые — в разделе <Link to={adminRoutes.archive}>«Архив»</Link>.
                 </p>
               ) : null}
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
@@ -625,62 +608,6 @@ export function AdminCabinetHome() {
               ) : null}
             </div>
             </BirzhaDisclosure>
-
-            {sortedTripsClosed.length > 0 ? (
-              <BirzhaDisclosure title={`Закрытые рейсы (${sortedTripsClosed.length})`} defaultOpen={false}>
-                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                  <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Закрытые рейсы">
-                    <thead>
-                      <tr>
-                        <th scope="col" style={thHead}>
-                          №
-                        </th>
-                        <th scope="col" style={thHead}>
-                          Статус
-                        </th>
-                        <th scope="col" style={thHead}>
-                          ТС / водитель
-                        </th>
-                        <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                          Отчёт
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {closedTripsPageSlice.map((t) => {
-                        const reportTo = `${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`;
-                        return (
-                          <tr key={t.id}>
-                            <th scope="row" style={thtd}>
-                              <Link to={reportTo} style={{ fontWeight: 700, textDecoration: "none" }}>
-                                {t.tripNumber}
-                              </Link>
-                            </th>
-                            <td style={thtd}>
-                              <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                            </td>
-                            <td className="birzha-text-muted birzha-text-muted--lg" style={thtd}>
-                              {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
-                            </td>
-                            <td style={{ ...thtd, textAlign: "right" }}>
-                              <Link to={reportTo} style={{ fontWeight: 600 }}>
-                                Открыть
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <BirzhaPagination
-                  pageIndex={closedTripsPage}
-                  pageCount={closedTripsPageCount}
-                  itemLabel="закрытых рейсов"
-                  onPageChange={setClosedTripsPage}
-                />
-              </BirzhaDisclosure>
-            ) : null}
           </div>
         </>
       )}

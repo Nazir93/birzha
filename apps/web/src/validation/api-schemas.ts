@@ -12,6 +12,7 @@ import {
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
+  updateTripSaleBodySchema,
 } from "@birzha/contracts";
 import type { CreatePurchaseDocumentBody } from "@birzha/contracts";
 import { z, ZodError } from "zod";
@@ -40,6 +41,7 @@ export {
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
+  updateTripSaleBodySchema,
 };
 export type { CreatePurchaseDocumentBody };
 
@@ -130,6 +132,9 @@ export function parseSellFromTripForm(input: {
    * Операции и прежние тесты — в **копейках** целым числом в строке.
    */
   sellerMoneyInRubles?: boolean;
+  packageCountRaw?: string;
+  /** Если true — ящики обязательны (кабинет продавца при учёте ящиков в отгрузке). */
+  requirePackageCount?: boolean;
 }) {
   return mapZod(() => {
     const batchId = batchIdParam.parse(input.batchId.trim());
@@ -181,7 +186,88 @@ export function parseSellFromTripForm(input: {
         }
       }
     }
+    const pkgTrimmed = input.packageCountRaw?.trim() ?? "";
+    if (input.requirePackageCount && pkgTrimmed === "") {
+      throw new Error("Укажите количество ящиков в продаже");
+    }
+    if (pkgTrimmed !== "") {
+      const n = Number.parseInt(pkgTrimmed, 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error("Ящики: укажите целое неотрицательное число");
+      }
+      if (input.requirePackageCount && n <= 0) {
+        throw new Error("Количество ящиков должно быть больше нуля");
+      }
+      if (n > 0) {
+        base.packageCount = n;
+      }
+    }
     return { batchId, body: sellFromTripBodySchema.parse(base) };
+  });
+}
+
+export function parseUpdateTripSaleForm(input: {
+  kg: string;
+  pricePerKg: string;
+  saleChannel?: "retail" | "wholesale";
+  wholesaleBuyerId?: string;
+  paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
+  cashMixed: string;
+  cardTransferKopecks?: string;
+  packageCountRaw?: string;
+  requirePackageCount?: boolean;
+  sellerMoneyInRubles?: boolean;
+}) {
+  return mapZod(() => {
+    const kg = parseDecimalKg(input.kg);
+    const pricePerKg = parseDecimalKg(input.pricePerKg);
+    const saleCh = input.saleChannel ?? "retail";
+    const rublesMode = Boolean(input.sellerMoneyInRubles);
+    const base: z.infer<typeof updateTripSaleBodySchema> = {
+      kg,
+      pricePerKg,
+      saleChannel: saleCh,
+      paymentKind: input.paymentKind,
+    };
+    if (saleCh === "wholesale") {
+      const wb = input.wholesaleBuyerId?.trim();
+      if (wb) {
+        base.wholesaleBuyerId = wb;
+      }
+    }
+    if (input.paymentKind === "mixed") {
+      const cm = input.cashMixed.trim();
+      if (rublesMode && cm) {
+        base.cashKopecksMixed = sellerRublesAmountToKopecksDigits(cm);
+      } else {
+        base.cashKopecksMixed = cm || undefined;
+      }
+    }
+    if (input.paymentKind === "card_transfer") {
+      const ct = input.cardTransferKopecks?.trim() ?? "";
+      if (rublesMode && ct) {
+        base.cardTransferKopecks = sellerRublesAmountToKopecksDigits(ct);
+      } else {
+        base.cardTransferKopecks = ct || undefined;
+      }
+    }
+    const pkgTrimmed = input.packageCountRaw?.trim() ?? "";
+    if (input.requirePackageCount && pkgTrimmed === "") {
+      throw new Error("Укажите количество ящиков в продаже");
+    }
+    if (pkgTrimmed !== "") {
+      const n = Number.parseInt(pkgTrimmed, 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error("Ящики: укажите целое неотрицательное число");
+      }
+      if (input.requirePackageCount && n <= 0) {
+        throw new Error("Количество ящиков должно быть больше нуля");
+      }
+      if (n > 0) {
+        base.packageCount = n;
+      }
+    }
+    return updateTripSaleBodySchema.parse(base);
   });
 }
 

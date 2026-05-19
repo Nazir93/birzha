@@ -8,6 +8,7 @@ function emptyShipment() {
 function emptySales() {
   return {
     totalGrams: 0n,
+    totalPackageCount: 0n,
     totalRevenueKopecks: 0n,
     totalCashKopecks: 0n,
     totalDebtKopecks: 0n,
@@ -22,8 +23,20 @@ function emptySales() {
     wholesaleCashKopecks: 0n,
     wholesaleDebtKopecks: 0n,
     wholesaleCardTransferKopecks: 0n,
-    byBatch: [] as { batchId: string; grams: bigint; revenueKopecks: bigint; cashKopecks: bigint; debtKopecks: bigint; cardTransferKopecks: bigint }[],
+    byBatch: [] as {
+      batchId: string;
+      grams: bigint;
+      packageCount: bigint;
+      revenueKopecks: bigint;
+      cashKopecks: bigint;
+      debtKopecks: bigint;
+      cardTransferKopecks: bigint;
+    }[],
     byClient: [],
+    retailByBatch: [],
+    wholesaleByBatch: [],
+    retailByClient: [],
+    wholesaleByClient: [],
   };
 }
 function emptyShortage() {

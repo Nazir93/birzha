@@ -13,9 +13,32 @@ import {
 export type SellerSellChunk = {
   batchId: string;
   kg: number;
+  packageCount?: number;
   cashKopecksMixed?: string;
   cardTransferKopecks?: string;
 };
+
+function splitPackagesProRata(totalPackages: number, gramParts: { batchId: string; grams: bigint }[]): number[] {
+  if (gramParts.length === 0) {
+    return [];
+  }
+  const totalG = gramParts.reduce((s, p) => s + p.grams, 0n);
+  if (totalG <= 0n || totalPackages <= 0) {
+    return gramParts.map(() => 0);
+  }
+  let assigned = 0;
+  const out: number[] = [];
+  for (let i = 0; i < gramParts.length; i++) {
+    if (i === gramParts.length - 1) {
+      out.push(totalPackages - assigned);
+    } else {
+      const part = Number((BigInt(totalPackages) * gramParts[i]!.grams) / totalG);
+      out.push(part);
+      assigned += part;
+    }
+  }
+  return out;
+}
 
 function splitKopecksProRata(totalKopecks: bigint, chunkRevenues: bigint[]): bigint[] {
   if (chunkRevenues.length === 0) {
@@ -68,6 +91,7 @@ export function buildSellerSellChunks(input: {
   paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
   cashKopecksMixed?: string;
   cardTransferKopecks?: string;
+  packageCount?: number;
 }): SellerSellChunk[] {
   const requestedG = kgNumberToGramsBigInt(input.kg);
   if (requestedG <= 0n) {
@@ -97,6 +121,15 @@ export function buildSellerSellChunks(input: {
     batchId: p.batchId,
     kg: gramsBigIntToKgNumber(p.grams),
   }));
+
+  if (input.packageCount !== undefined && input.packageCount > 0) {
+    const pkgParts = splitPackagesProRata(input.packageCount, gramParts);
+    pkgParts.forEach((n, i) => {
+      if (n > 0) {
+        chunks[i]!.packageCount = n;
+      }
+    });
+  }
 
   if (chunks.length === 1) {
     const only = chunks[0]!;

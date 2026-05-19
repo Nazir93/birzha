@@ -9,6 +9,7 @@ describe("computeTripFinancials", () => {
   it("валовая прибыль = выручка − себестоимость продаж − себестоимость недостачи", () => {
     const sales: TripSaleAggregate = {
       totalGrams: 1000n,
+      totalPackageCount: 0n,
       totalRevenueKopecks: 50_000n,
       totalCashKopecks: 50_000n,
       totalDebtKopecks: 0n,
@@ -27,12 +28,17 @@ describe("computeTripFinancials", () => {
         {
           batchId: "b1",
           grams: 1000n,
+          packageCount: 0n,
           revenueKopecks: 50_000n,
           cashKopecks: 50_000n,
           debtKopecks: 0n,
           cardTransferKopecks: 0n,
         },
       ],
+      retailByBatch: [],
+      wholesaleByBatch: [],
+      retailByClient: [],
+      wholesaleByClient: [],
       byClient: [
         {
           clientLabel: "",

@@ -1,6 +1,6 @@
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
-import type { TripBatchTableRow } from "./trip-report-rows.js";
+import { maxSellablePackageCountForRow, type TripBatchTableRow } from "./trip-report-rows.js";
 
 /** Одна строка списка «калибр на рейсе» для продавца (может объединять несколько партий). */
 export type SellerCaliberGroup = {
@@ -175,6 +175,21 @@ export function maxSellableGramsForBatch(
   }
   const row = sellableRows.find((r) => r.batchId === sellBatchId);
   return row?.netTransitG ?? 0n;
+}
+
+/** Максимум ящиков к продаже по выбранному калибру (сумма по партиям группы). */
+export function maxSellablePackagesForBatch(
+  sellBatchId: string,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+): bigint {
+  const group = findSellerCaliberGroupForBatch(sellBatchId, sellableRows, batchById);
+  const rows = group?.rows ?? sellableRows.filter((r) => r.batchId === sellBatchId);
+  let sum = 0n;
+  for (const row of rows) {
+    sum += maxSellablePackageCountForRow(row);
+  }
+  return sum;
 }
 
 /** Группа, в которую входит выбранная партия (для продавца). */

@@ -169,6 +169,13 @@
       "when": 1777600000000,
       "tag": "0023_wholesalers",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777700000000,
+      "tag": "0024_trip_sale_package_count",
+      "breakpoints": true
     }
   ]
 }

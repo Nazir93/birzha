@@ -110,4 +110,32 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(agg.totalDebtKopecks).toBe(600n);
     expect(agg.totalCardTransferKopecks).toBe(300n);
   });
+
+  it("разделяет byBatch и byClient по каналу", () => {
+    const agg = buildTripSaleAggregateFromRows([
+      {
+        batchId: "b1",
+        grams: 100n,
+        revenueKopecks: 1000n,
+        cashKopecks: 1000n,
+        debtKopecks: 0n,
+        clientLabel: "Розн",
+        saleChannel: "retail",
+      },
+      {
+        batchId: "b2",
+        grams: 50n,
+        revenueKopecks: 400n,
+        cashKopecks: 400n,
+        debtKopecks: 0n,
+        clientLabel: "Оптик",
+        saleChannel: "wholesale",
+      },
+    ]);
+    expect(agg.retailByBatch).toHaveLength(1);
+    expect(agg.retailByBatch[0]!.batchId).toBe("b1");
+    expect(agg.wholesaleByBatch[0]!.batchId).toBe("b2");
+    expect(agg.retailByClient.find((c) => c.clientLabel === "Розн")!.grams).toBe(100n);
+    expect(agg.wholesaleByClient.find((c) => c.clientLabel === "Оптик")!.grams).toBe(50n);
+  });
 });

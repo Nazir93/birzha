@@ -1,22 +1,45 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
-/** Проверка новой сборки SW в фоне (иначе баннер «Обновить» появляется только при следующем «холодном» заходе). */
-const SW_VERSION_CHECK_MS = 30 * 60 * 1000;
+/** Периодический опрос новой сборки SW (полевые продавцы держат PWA открытой часами). */
+const SW_VERSION_CHECK_MS = 3 * 60 * 1000;
+
+function checkForSwUpdate(registration: ServiceWorkerRegistration) {
+  void registration.update();
+}
 
 /**
  * Уведомление о новой версии после деплоя (registerType: prompt в vite-plugin-pwa).
  * «Офлайн готов» показываем коротко один раз — без навязчивости.
  */
 export function PwaUpdateBanner() {
+  const swRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const swCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    const onAppForeground = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      const r = swRegistrationRef.current;
+      if (r) {
+        checkForSwUpdate(r);
+      }
+    };
+
+    document.addEventListener("visibilitychange", onAppForeground);
+    window.addEventListener("focus", onAppForeground);
+    window.addEventListener("pageshow", onAppForeground);
+
     return () => {
       if (swCheckIntervalRef.current != null) {
         clearInterval(swCheckIntervalRef.current);
         swCheckIntervalRef.current = null;
       }
+      swRegistrationRef.current = null;
+      document.removeEventListener("visibilitychange", onAppForeground);
+      window.removeEventListener("focus", onAppForeground);
+      window.removeEventListener("pageshow", onAppForeground);
     };
   }, []);
 
@@ -27,12 +50,12 @@ export function PwaUpdateBanner() {
         if (!r) {
           return;
         }
+        swRegistrationRef.current = r;
+        checkForSwUpdate(r);
         if (swCheckIntervalRef.current != null) {
           clearInterval(swCheckIntervalRef.current);
         }
-        swCheckIntervalRef.current = setInterval(() => {
-          void r.update();
-        }, SW_VERSION_CHECK_MS);
+        swCheckIntervalRef.current = setInterval(() => checkForSwUpdate(r), SW_VERSION_CHECK_MS);
       },
     }),
     [],

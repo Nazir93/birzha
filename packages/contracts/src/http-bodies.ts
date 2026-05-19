@@ -39,6 +39,8 @@ const sellFromTripBodyBase = z.object({
   clientLabel: z.string().max(120).optional(),
   /** При `saleChannel=wholesale` — id из GET /wholesalers (активный оптовик). */
   wholesaleBuyerId: z.string().min(1).max(64).optional(),
+  /** Ящики в этой продаже (опционально); целое неотрицательное. */
+  packageCount: z.number().int().nonnegative().optional(),
 });
 
 function refineWholesaleBuyer(
@@ -79,6 +81,14 @@ function refineCardTransferSalePayment(
 
 /** POST /batches/:id/sell-from-trip */
 export const sellFromTripBodySchema = sellFromTripBodyBase
+  .superRefine(refineMixedSalePayment)
+  .superRefine(refineCardTransferSalePayment)
+  .superRefine(refineWholesaleBuyer);
+
+const tripSaleCorrectionBodyBase = sellFromTripBodyBase.omit({ tripId: true, saleId: true });
+
+/** PATCH /trip-sales/:lineId — правка продажи, пока рейс открыт. */
+export const updateTripSaleBodySchema = tripSaleCorrectionBodyBase
   .superRefine(refineMixedSalePayment)
   .superRefine(refineCardTransferSalePayment)
   .superRefine(refineWholesaleBuyer);

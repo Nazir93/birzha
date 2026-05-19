@@ -4,7 +4,8 @@ import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
-import { sortTripsByTripNumberNumericAsc, splitTripsByStatus } from "../format/trip-sort.js";
+import { filterTripsInWork } from "../format/archive.js";
+import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
@@ -53,13 +54,11 @@ export function AdminTripsLogisticsPanel() {
     enabled: tripsApiEnabled,
   });
 
-  const { openTrips, closedTrips } = useMemo(() => {
-    const { open, closed } = splitTripsByStatus(tripsQ.data?.trips ?? []);
-    return {
-      openTrips: sortTripsByTripNumberNumericAsc(open),
-      closedTrips: sortTripsByTripNumberNumericAsc(closed),
-    };
-  }, [tripsQ.data?.trips]);
+  const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
+  const openTrips = useMemo(
+    () => sortTripsByTripNumberNumericAsc(filterTripsInWork(tripsQ.data?.trips ?? [])),
+    [tripsQ.data?.trips],
+  );
 
   const createTrip = useMutation({
     mutationFn: async () => {
@@ -314,58 +313,9 @@ export function AdminTripsLogisticsPanel() {
               </tbody>
             </table>
           </div>
-          {closedTrips.length > 0 ? (
-            <BirzhaDisclosure title={`Закрытые рейсы (${closedTrips.length})`} defaultOpen={false}>
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.5rem" }}>
-                <table style={{ ...tableStyle, minWidth: 720 }}>
-                  <thead>
-                    <tr>
-                      <th style={thHeadDense}>№ (борт)</th>
-                      <th style={thHeadDense}>Статус</th>
-                      <th style={thHeadDense}>ТС</th>
-                      <th style={thHeadDense}>Водитель</th>
-                      <th style={thHeadDense}>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {closedTrips.map((t) => (
-                      <tr key={t.id}>
-                        <td style={thtdDense}>
-                          <strong>№ {t.tripNumber}</strong>{" "}
-                          <Link to={operationsPath} style={{ fontSize: "0.8rem" }}>
-                            к операциям
-                          </Link>
-                        </td>
-                        <td style={thtdDense}>
-                          <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                        </td>
-                        <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
-                        <td style={thtdDense}>{t.driverName ?? "—"}</td>
-                        <td style={thtdDense}>
-                          <button
-                            type="button"
-                            className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                            disabled={deleteTrip.isPending}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
-                                )
-                              ) {
-                                void deleteTrip.mutate(t.id);
-                              }
-                            }}
-                          >
-                            Удалить
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </BirzhaDisclosure>
-          ) : null}
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
+            Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
+          </p>
           </>
         )}
       </BirzhaDisclosure>

@@ -21,6 +21,8 @@ export const ops = {
   operations: `${prefix.operations}/operations`,
   sellerDispatch: `${prefix.operations}/seller-dispatch`,
   assignSeller: `${prefix.operations}/assign-seller`,
+  /** Архив: закрытые рейсы, проданные накладные, погрузочные по закрытым рейсам. */
+  archive: `${prefix.operations}/archive`,
 } as const;
 
 /** Справочники (склады, калибры) и meta — узкий круг. */
@@ -49,12 +51,14 @@ export const adminRoutes = {
   warehouseWriteOffsLedger: `${prefix.admin}/warehouse-write-offs`,
   users: `${prefix.admin}/users`,
   service: `${prefix.admin}/service`,
+  archive: `${prefix.admin}/archive`,
 } as const;
 
 export const sales = {
   home: prefix.sales,
   reports: `${prefix.sales}/reports`,
   operations: `${prefix.sales}/operations`,
+  archive: `${prefix.sales}/archive`,
 } as const;
 
 export const accounting = {

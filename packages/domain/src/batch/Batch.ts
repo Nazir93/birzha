@@ -94,6 +94,28 @@ export class Batch {
     this.assertInvariant();
   }
 
+  /** Отмена учтённой продажи с рейса (возврат массы «в путь»). */
+  reverseTripSale(kg: number): void {
+    Batch.assertPositiveFinite(kg, "kg");
+    if (kg > this.soldKg) {
+      throw new InsufficientStockError("sold", this.soldKg, kg);
+    }
+    this.soldKg -= kg;
+    this.inTransitKg += kg;
+    this.assertInvariant();
+  }
+
+  /** Исправление кг по уже учтённой продаже с рейса. */
+  adjustTripSaleKg(previousKg: number, newKg: number): void {
+    Batch.assertPositiveFinite(previousKg, "previousKg");
+    Batch.assertPositiveFinite(newKg, "newKg");
+    if (previousKg === newKg) {
+      return;
+    }
+    this.reverseTripSale(previousKg);
+    this.sellFromTrip(newKg, "correction");
+  }
+
   /**
    * Недостача / потеря массы в пути (приёмка рейса): списание из рейса в списанное без продажи.
    */

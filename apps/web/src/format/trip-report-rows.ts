@@ -5,6 +5,8 @@ export type TripBatchTableRow = {
   shippedG: bigint;
   /** Ящики по отгрузке в рейс (сумма по строкам), если в отчёте есть поля. */
   shippedPackages: bigint;
+  /** Продано ящиков (если указаны при продаже). */
+  soldPackages: bigint;
   soldG: bigint;
   shortageG: bigint;
   /** Отгружено − продано − недостача (граммы). */
@@ -47,8 +49,10 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   }
 
   const soldG = new Map<string, bigint>();
+  const soldPkg = new Map<string, bigint>();
   for (const b of salesStock.byBatch) {
     soldG.set(b.batchId, bi(b.grams));
+    soldPkg.set(b.batchId, bi(b.packageCount ?? "0"));
   }
   const revenue = new Map<string, bigint>();
   const cash = new Map<string, bigint>();
@@ -76,6 +80,7 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
       batchId,
       shippedG: sg,
       shippedPackages: shipPkg.get(batchId) ?? 0n,
+      soldPackages: soldPkg.get(batchId) ?? 0n,
       soldG: sold,
       shortageG: sh,
       netTransitG: sg - sold - sh,
@@ -88,14 +93,34 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
 }
 
 /**
- * Оценка ящиков, оставшихся «в пути» по рейсу: ящики отгрузки × (остаток в пути / отгружено в г).
- * Продажи в учёте только в кг — ящиков в продаже нет; оценка совпадает с линейным списанием по массе.
+ * Ящики «в пути»: при учёте продаж в ящиках — отгрузка минус продано; иначе доля по кг.
  */
 export function estimateNetTransitPackageCount(r: TripBatchTableRow): bigint {
   if (r.shippedG <= 0n || r.shippedPackages <= 0n || r.netTransitG <= 0n) {
     return 0n;
   }
+  if (r.soldPackages > 0n || r.soldG === 0n) {
+    const byLedger = r.shippedPackages - r.soldPackages;
+    if (byLedger <= 0n) {
+      return 0n;
+    }
+    const byKg = (r.shippedPackages * r.netTransitG) / r.shippedG;
+    return byLedger < byKg ? byLedger : byKg;
+  }
   return (r.shippedPackages * r.netTransitG) / r.shippedG;
+}
+
+/** Максимум ящиков к продаже по одной строке отчёта (как `estimateNetTransitPackageCount` до сделки). */
+export function maxSellablePackageCountForRow(r: TripBatchTableRow): bigint {
+  if (r.shippedPackages <= 0n) {
+    return 0n;
+  }
+  return estimateNetTransitPackageCount({
+    ...r,
+    netTransitG: r.netTransitG,
+    soldG: r.soldG,
+    soldPackages: r.soldPackages,
+  });
 }
 
 /** Суммы по колонкам таблицы партий (для подвала и сверки с API). */

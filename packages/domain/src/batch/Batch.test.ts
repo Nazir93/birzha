@@ -64,6 +64,36 @@ describe("Batch", () => {
     expect(batch.totalProcessedKg()).toBe(100);
   });
 
+  it("reverseTripSale возвращает кг в путь", () => {
+    const batch = Batch.create({
+      id: "b-5r",
+      purchaseId: "p-5r",
+      totalKg: 400,
+      pricePerKg: 8,
+      distribution: "on_hand",
+    });
+    batch.shipToTrip(150, "t-2");
+    batch.sellFromTrip(100, "s-1");
+    batch.reverseTripSale(100);
+    expect(batch.remainingKg()).toBe(400);
+    expect(batch.totalProcessedKg()).toBe(0);
+  });
+
+  it("adjustTripSaleKg меняет объём продажи", () => {
+    const batch = Batch.create({
+      id: "b-5a",
+      purchaseId: "p-5a",
+      totalKg: 400,
+      pricePerKg: 8,
+      distribution: "on_hand",
+    });
+    batch.shipToTrip(150, "t-2");
+    batch.sellFromTrip(100, "s-1");
+    batch.adjustTripSaleKg(100, 80);
+    expect(batch.remainingKg()).toBe(320);
+    expect(batch.totalProcessedKg()).toBe(80);
+  });
+
   it("выбрасывает при отгрузке больше, чем на складе", () => {
     const batch = Batch.create({
       id: "b-6",

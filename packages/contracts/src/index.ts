@@ -42,6 +42,7 @@ export {
   recordTripShortageSyncPayloadSchema,
   sellFromTripBodySchema,
   sellFromTripSyncPayloadSchema,
+  updateTripSaleBodySchema,
   shipBodySchema,
   shipToTripSyncPayloadSchema,
 } from "./http-bodies.js";

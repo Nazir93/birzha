@@ -87,6 +87,9 @@ const SellerSalesOperationsRedirect = lazy(() =>
 const TripReportPanel = lazy(() =>
   import("./components/TripReportPanel.js").then((m) => ({ default: m.TripReportPanel })),
 );
+const ArchivePage = lazy(() =>
+  import("./components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })),
+);
 
 function isCabinetShellPath(pathname: string): boolean {
   const roots = [prefix.admin, prefix.operations, prefix.sales, prefix.accounting] as const;
@@ -200,6 +203,14 @@ export function App() {
               }
             />
             <Route
+              path="archive"
+              element={
+                <RequirePanel panel="archive">
+                  <ArchivePage />
+                </RequirePanel>
+              }
+            />
+            <Route
               path="operations"
               element={
                 <RequirePanel panel="operations">
@@ -294,6 +305,14 @@ export function App() {
               element={
                 <RequirePanel panel="trips">
                   <AdminTripsLogisticsPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="archive"
+              element={
+                <RequirePanel panel="archive">
+                  <ArchivePage />
                 </RequirePanel>
               }
             />
@@ -448,6 +467,14 @@ export function App() {
               }
             />
             <Route path="operations" element={<SellerSalesOperationsRedirect />} />
+            <Route
+              path="archive"
+              element={
+                <RequirePanel panel="archive">
+                  <ArchivePage />
+                </RequirePanel>
+              }
+            />
             <Route
               index
               element={

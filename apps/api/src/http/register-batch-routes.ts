@@ -7,6 +7,7 @@ import {
   receiveBodySchema,
   recordTripShortageBodySchema,
   sellFromTripBodySchema,
+  updateTripSaleBodySchema,
   shipBodySchema,
   postWarehouseWriteOffBodySchema,
   updateBatchAllocationBodySchema,
@@ -26,7 +27,9 @@ import {
 import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
 
 import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.use-case.js";
+import { DeleteTripSaleLineUseCase } from "../application/sale/delete-trip-sale-line.use-case.js";
 import { SellFromTripUseCase } from "../application/sale/sell-from-trip.use-case.js";
+import { UpdateTripSaleLineUseCase } from "../application/sale/update-trip-sale-line.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import { ReceiveOnWarehouseUseCase } from "../application/warehouse/receive-on-warehouse.use-case.js";
 import type { BatchListFilter, BatchRepository } from "../application/ports/batch-repository.port.js";
@@ -47,6 +50,7 @@ import { filterBatchJsonByWarehouseScope } from "./batch-json-warehouse-filter.j
 import { listBatchesForHttp } from "./batch-list-http.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
+import { tripSaleLineToJson } from "./trip-sale-line-serialize.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
 type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
@@ -88,6 +92,17 @@ export function registerBatchRoutes(
     wholesalers,
     runSellInTransaction,
   );
+  const updateTripSale = new UpdateTripSaleLineUseCase(
+    batches,
+    trips,
+    shipments,
+    sales,
+    shortages,
+    counterparties,
+    wholesalers,
+    runSellInTransaction,
+  );
+  const deleteTripSale = new DeleteTripSaleLineUseCase(batches, trips, sales, runSellInTransaction);
   const recordShortage = new RecordTripShortageUseCase(
     batches,
     trips,
@@ -193,6 +208,84 @@ export function registerBatchRoutes(
     }
   });
 
+  app.get("/trips/:tripId/sale-lines", { ...withPreHandlers(routeAuth.sell) }, async (req, reply) => {
+    try {
+      const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      const trip = await trips.findById(tripId);
+      if (!trip) {
+        return reply.code(404).send({ error: "trip_not_found", tripId });
+      }
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles) && !tripVisibleToFieldSeller(trip, u.sub)) {
+        return reply.code(403).send({ error: "forbidden" });
+      }
+      const onlyMine = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
+      const lines = await sales.listLinesByTripId(
+        tripId,
+        onlyMine ? { onlyRecordedByUserId: onlyMine } : undefined,
+      );
+      return reply.send({
+        trip: { id: trip.getId(), status: trip.getStatus() },
+        lines: lines.map(tripSaleLineToJson),
+      });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.patch("/trip-sales/:lineId", { ...withPreHandlers(routeAuth.sell) }, async (req, reply) => {
+    try {
+      const { lineId } = z.object({ lineId: z.string().min(1) }).parse(req.params);
+      const body = updateTripSaleBodySchema.parse(req.body);
+      const cashKopecksMixed =
+        body.cashKopecksMixed === undefined
+          ? undefined
+          : typeof body.cashKopecksMixed === "string"
+            ? BigInt(body.cashKopecksMixed)
+            : BigInt(body.cashKopecksMixed);
+      const cardTransferKopecks =
+        body.cardTransferKopecks === undefined
+          ? undefined
+          : typeof body.cardTransferKopecks === "string"
+            ? BigInt(body.cardTransferKopecks)
+            : BigInt(body.cardTransferKopecks);
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      await updateTripSale.execute({
+        lineId,
+        kg: body.kg,
+        pricePerKg: body.pricePerKg,
+        saleChannel: body.saleChannel,
+        paymentKind: body.paymentKind,
+        cashKopecksMixed,
+        cardTransferKopecks,
+        clientLabel: body.clientLabel,
+        counterpartyId: body.counterpartyId,
+        wholesaleBuyerId: body.wholesaleBuyerId,
+        packageCount: body.packageCount,
+        editorUserId: u?.sub,
+        editorRoles: u?.roles,
+      });
+      return reply.code(200).send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.delete("/trip-sales/:lineId", { ...withPreHandlers(routeAuth.sell) }, async (req, reply) => {
+    try {
+      const { lineId } = z.object({ lineId: z.string().min(1) }).parse(req.params);
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      await deleteTripSale.execute({
+        lineId,
+        editorUserId: u?.sub,
+        editorRoles: u?.roles,
+      });
+      return reply.code(200).send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
   app.post("/batches/:batchId/sell-from-trip", { ...withPreHandlers(routeAuth.sell) }, async (req, reply) => {
     try {
       const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
@@ -233,6 +326,7 @@ export function registerBatchRoutes(
         counterpartyId: body.counterpartyId,
         wholesaleBuyerId: body.wholesaleBuyerId,
         recordedByUserId: u?.sub,
+        packageCount: body.packageCount,
       });
       return reply.code(200).send({ ok: true });
     } catch (error) {

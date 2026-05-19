@@ -88,7 +88,7 @@ describe("role-panels", () => {
   });
 
   it("operationsPanelOrder: только seller — отчёт по рейсу в кабинете продаж", () => {
-    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports"]);
+    expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports", "archive"]);
   });
 
   it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {

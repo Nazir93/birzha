@@ -14,6 +14,7 @@ import type {
   ShipmentReportResponse,
   ShipDestinationsListResponse,
   TripJson,
+  TripSaleLinesResponse,
   TripsListResponse,
   WarehouseWriteOffsRecentResponse,
   WarehousesListResponse,
@@ -43,6 +44,7 @@ export const queryRoots = {
   warehouseWriteOffsLedger: ["warehouse-write-offs-ledger"] as const,
   /** Префикс всех `GET …/shipment-report` по рейсам */
   shipmentReport: ["shipment-report"] as const,
+  tripSaleLines: ["trip-sale-lines"] as const,
 } as const;
 
 /**
@@ -239,6 +241,18 @@ export const shipmentReportQueryOptions = (tripId: string) =>
       ),
     staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
     refetchOnWindowFocus: true,
+  });
+
+/** Строки продаж по рейсу (правки продавцом, пока рейс открыт). */
+export const tripSaleLinesQueryOptions = (tripId: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.tripSaleLines, tripId] as const,
+    queryFn: () =>
+      apiGetJson<TripSaleLinesResponse>(
+        `/api/trips/${encodeURIComponent(tripId)}/sale-lines`,
+      ),
+    staleTime: QUERY_STALE_SHIPMENT_REPORT_MS,
+    enabled: tripId.trim().length > 0,
   });
 
 /**

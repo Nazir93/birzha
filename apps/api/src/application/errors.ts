@@ -196,6 +196,26 @@ export class PurchaseLineTotalMismatchError extends Error {
   }
 }
 
+export class TripSaleLineNotFoundError extends Error {
+  readonly lineId: string;
+
+  constructor(lineId: string) {
+    super(`Строка продажи не найдена: ${lineId}`);
+    this.name = "TripSaleLineNotFoundError";
+    this.lineId = lineId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/** Продавец не может править чужую продажу или рейс закрыт. */
+export class TripSaleEditForbiddenError extends Error {
+  constructor(message = "Нельзя изменить эту продажу") {
+    super(message);
+    this.name = "TripSaleEditForbiddenError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class InsufficientStockForTripError extends Error {
   readonly tripId: string;
   readonly batchId: string;

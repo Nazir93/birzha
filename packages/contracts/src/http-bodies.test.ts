@@ -119,6 +119,20 @@ describe("sellFromTripBodySchema (mixed)", () => {
   });
 });
 
+describe("sellFromTripBodySchema (packageCount)", () => {
+  const base = {
+    tripId: "t1",
+    kg: 1,
+    saleId: "s1",
+    pricePerKg: 10,
+  };
+
+  it("принимает packageCount", () => {
+    const r = sellFromTripBodySchema.parse({ ...base, packageCount: 3 });
+    expect(r.packageCount).toBe(3);
+  });
+});
+
 describe("sellFromTripBodySchema (card_transfer)", () => {
   const base = {
     tripId: "t1",

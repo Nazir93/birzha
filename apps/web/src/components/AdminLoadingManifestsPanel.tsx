@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../api/types.js";
 import { apiPostJson } from "../api/fetch-api.js";
 import {
   aggregateLoadingManifestLinesByCaliber,
+  formatLoadingManifestDisplayName,
   loadingManifestRoadCsvContent,
 } from "../format/loading-manifest.js";
+import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
 import {
   loadingManifestTripAssignLockFromDetail,
   loadingManifestTripAssignLockMessage,
@@ -90,7 +92,17 @@ export function AdminLoadingManifestsPanel() {
     return m;
   }, [tripsQuery.data?.trips]);
 
-  const manifests = listQuery.data?.loadingManifests ?? [];
+  const allManifests = listQuery.data?.loadingManifests ?? [];
+  const closedIds = useMemo(() => closedTripIdSet(tripsQuery.data?.trips ?? []), [tripsQuery.data?.trips]);
+  const manifests = useMemo(
+    () => splitLoadingManifestsByArchive(allManifests, closedIds).active,
+    [allManifests, closedIds],
+  );
+  const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
+  const openTripsForAssign = useMemo(
+    () => filterTripsInWork(tripsQuery.data?.trips ?? []),
+    [tripsQuery.data?.trips],
+  );
   const detail = detailQuery.data?.manifest;
 
   const warehouseOptions = useMemo(() => {
@@ -226,6 +238,10 @@ export function AdminLoadingManifestsPanel() {
       <h2 id="admin-loading-manifests-h" style={{ margin: "0 0 0.65rem", fontSize: "1.08rem" }}>
         Погрузка
       </h2>
+      <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem" }}>
+        Только погрузочные в работе. По закрытым рейсам — в разделе{" "}
+        <Link to={archivePath}>«Архив»</Link>.
+      </p>
 
       {listQuery.isPending ? (
         <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
@@ -306,7 +322,7 @@ export function AdminLoadingManifestsPanel() {
                           assignTripId={assignTripId}
                           setAssignTripId={setAssignTripId}
                           assignTrip={assignTrip}
-                          trips={tripsQuery.data?.trips ?? []}
+                          trips={openTripsForAssign}
                         />
                       ))
                     )}
@@ -448,8 +464,13 @@ function ManifestAccordionBlock({
         }}
       >
         <span>
-          № <strong>{m.manifestNumber}</strong> · {m.docDate} · {m.warehouseName} ({m.warehouseCode}) · {m.destinationName} ·
-          рейс: {tripLabel}
+          <strong>
+            {formatLoadingManifestDisplayName({
+              manifestNumber: m.manifestNumber,
+              destinationName: m.destinationName,
+            })}
+          </strong>{" "}
+          · {m.docDate} · {m.warehouseName} ({m.warehouseCode}) · рейс: {tripLabel}
         </span>
         <span className="birzha-disclosure__hint">
           {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг · {m.lineCount} парт. · ящ. ≈{" "}
@@ -530,8 +551,14 @@ function ManifestAccordionBlock({
                   Накладная на машину (свод по калибрам)
                 </h3>
                 <p style={{ margin: "0 0 0.55rem", fontSize: "0.88rem", lineHeight: 1.45 }} className="birzha-text-muted">
-                  № <strong>{detail.manifestNumber}</strong> · {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode}) ·{" "}
-                  {detail.destinationName} · рейс: <strong>{roadTripLabel}</strong>
+                  <strong>
+                    {formatLoadingManifestDisplayName({
+                      manifestNumber: detail.manifestNumber,
+                      destinationName: detail.destinationName,
+                    })}
+                  </strong>{" "}
+                  · {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode}) · рейс:{" "}
+                  <strong>{roadTripLabel}</strong>
                 </p>
                 <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                   <table style={{ ...tableStyle, minWidth: 420 }}>
@@ -594,7 +621,13 @@ function ManifestAccordionBlock({
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      const slug = detail.manifestNumber.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 72) || "pn";
+                      const slug =
+                        formatLoadingManifestDisplayName({
+                          manifestNumber: detail.manifestNumber,
+                          destinationName: detail.destinationName,
+                        })
+                          .replace(/[/\\?%*:|"<>]/g, "-")
+                          .slice(0, 72) || "pn";
                       a.download = `nakladnaya-na-mashinu-${slug}-${detail.docDate}.csv`;
                       a.rel = "noopener";
                       document.body.append(a);

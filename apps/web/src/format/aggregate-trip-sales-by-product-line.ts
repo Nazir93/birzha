@@ -1,5 +1,6 @@
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
+import { salesBatchLinesForChannel, type SaleChannelFilter } from "./trip-sales-channel.js";
 
 function bi(x: string | undefined): bigint {
   if (x === undefined || x === "") {
@@ -21,9 +22,10 @@ export type TripSalesByProductLineRow = {
 export function aggregateTripSalesByProductLine(
   report: ShipmentReportResponse,
   batchById: Map<string, BatchListItem>,
+  channel: SaleChannelFilter = "all",
 ): TripSalesByProductLineRow[] {
   const m = new Map<string, TripSalesByProductLineRow>();
-  for (const s of report.sales.byBatch) {
+  for (const s of salesBatchLinesForChannel(report.sales, channel)) {
     const g = bi(s.grams);
     if (g <= 0n) {
       continue;

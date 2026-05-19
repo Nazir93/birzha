@@ -7,6 +7,8 @@ import {
   aggregateBatchesByPurchaseDocument,
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
+  formatLoadingManifestDisplayName,
+  resolveLoadingManifestNumberForSave,
   filterBatchesForLoadingManifest,
   loadingManifestRoadCsvContent,
   sumLoadingManifestTotals,
@@ -218,6 +220,32 @@ describe("aggregateLoadingManifestLinesByCaliber", () => {
   });
 });
 
+describe("formatLoadingManifestDisplayName", () => {
+  it("для автономера ПН-… показывает только направление", () => {
+    expect(
+      formatLoadingManifestDisplayName({
+        manifestNumber: "ПН-2087687687-111",
+        destinationName: "Москва",
+      }),
+    ).toBe("Москва");
+  });
+
+  it("для своего номера добавляет №", () => {
+    expect(
+      formatLoadingManifestDisplayName({
+        manifestNumber: "Фура-12",
+        destinationName: "Москва",
+      }),
+    ).toBe("Москва · № Фура-12");
+  });
+});
+
+describe("resolveLoadingManifestNumberForSave", () => {
+  it("пустой ввод → город и дата", () => {
+    expect(resolveLoadingManifestNumberForSave("", "Москва", "2026-05-19")).toBe("Москва · 2026-05-19");
+  });
+});
+
 describe("loadingManifestRoadCsvContent", () => {
   it("включает шапку и итого", () => {
     const csv = loadingManifestRoadCsvContent({
@@ -228,7 +256,7 @@ describe("loadingManifestRoadCsvContent", () => {
       tripLabel: "Р-01",
       rows: [{ caliberLabel: "Помидоры · №5", totalKg: 10.5, totalPackages: 2 }],
     });
-    expect(csv).toContain("Погрузочная накладная (на машину);ПН-1");
+    expect(csv).toContain("Погрузочная накладная (на машину);Москва · № ПН-1");
     expect(csv).toContain("Рейс;Р-01");
     expect(csv).toContain("Итого");
   });

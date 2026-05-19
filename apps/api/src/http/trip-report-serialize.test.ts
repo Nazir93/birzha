@@ -7,6 +7,7 @@ import { saleLedgerAggregateToJson } from "./trip-report-serialize.js";
 function minimalSaleAggregate(overrides: Partial<TripSaleAggregate> = {}): TripSaleAggregate {
   return {
     totalGrams: 0n,
+    totalPackageCount: 0n,
     totalRevenueKopecks: 0n,
     totalCashKopecks: 0n,
     totalDebtKopecks: 0n,
@@ -23,6 +24,10 @@ function minimalSaleAggregate(overrides: Partial<TripSaleAggregate> = {}): TripS
     wholesaleCardTransferKopecks: 0n,
     byBatch: [],
     byClient: [],
+    retailByBatch: [],
+    wholesaleByBatch: [],
+    retailByClient: [],
+    wholesaleByClient: [],
     ...overrides,
   };
 }

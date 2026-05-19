@@ -226,6 +226,8 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   saleChannel: text("sale_channel").notNull().default("retail"),
   /** При канале «опт» — выбранный оптовик из справочника (снимок имени в `client_label`). */
   wholesaleBuyerId: text("wholesale_buyer_id").references(() => wholesalers.id, { onDelete: "set null" }),
+  /** Ящики по строке продажи (опционально; суммируются в отчёте по рейсу). */
+  packageCount: bigint("package_count", { mode: "bigint" }),
 });
 
 /** Успешно обработанные офлайн-действия (идемпотентность по устройству). */

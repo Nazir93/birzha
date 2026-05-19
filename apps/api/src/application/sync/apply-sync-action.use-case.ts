@@ -130,6 +130,7 @@ export class ApplySyncActionUseCase {
             counterpartyId: p.counterpartyId,
             wholesaleBuyerId: p.wholesaleBuyerId,
             recordedByUserId: ctx?.recordedByUserId,
+            packageCount: p.packageCount,
           });
           break;
         }

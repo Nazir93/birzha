@@ -7,6 +7,7 @@ export type PanelId =
   | "nakladnaya"
   | "distribution"
   | "trips"
+  | "archive"
   | "loadingManifests"
   | "sellerDispatch"
   | "operations"
@@ -20,6 +21,7 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Распределение товара",
   trips: "Рейсы",
+  archive: "Архив",
   loadingManifests: "Погрузка",
   reports: "Отчёты и рейсы",
   /** Запись недостачи по рейсу (`OperationsPanel`); отгрузка — в «Распределении», продажа — у продавца. */
@@ -37,6 +39,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   trips: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  archive: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
@@ -243,6 +246,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "distribution",
     "trips",
+    "archive",
     "loadingManifests",
     "sellerDispatch",
     "assignSeller",
@@ -258,7 +262,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const codes = globalRoleCodes(user);
   /** Только полевой продавец: `/s` и отчёт по рейсу `/s/reports`. */
   if (isSellerOnly(codes)) {
-    return ["reports"];
+    return ["reports", "archive"];
   }
   if (codes.has("logistics")) {
     const rest = base.filter((p) => p !== "reports");
@@ -329,6 +333,9 @@ export function hrefForPanelInCabinet(
     if (panel === "trips") {
       return ops.trips;
     }
+    if (panel === "archive") {
+      return ops.archive;
+    }
     if (panel === "loadingManifests") {
       return ops.loadingManifests;
     }
@@ -354,6 +361,9 @@ export function hrefForPanelInCabinet(
   if (currentCabinet === "sales") {
     if (panel === "reports") {
       return sales.reports;
+    }
+    if (panel === "archive") {
+      return sales.archive;
     }
     if (panel === "operations") {
       return sales.operations;

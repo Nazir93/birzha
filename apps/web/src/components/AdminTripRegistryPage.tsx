@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary, TripJson } from "../api/types.js";
 import { formatTripListStatusLabel, formatTripSelectLabel, tripListFullySold } from "../format/trip-label.js";
-import { sortTripsByDepartedDesc, splitTripsByStatus } from "../format/trip-sort.js";
+import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
+import { filterTripsInWork } from "../format/archive.js";
+import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { loadingManifestsListQueryOptions, queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -24,15 +26,6 @@ function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scop
   );
 }
 
-type StatusFilter = "all" | "open" | "closed";
-
-function parseStatus(v: string | null): StatusFilter {
-  if (v === "open" || v === "closed" || v === "all") {
-    return v;
-  }
-  return "open";
-}
-
 function tripMatchesSearch(t: TripJson, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) {
@@ -42,50 +35,26 @@ function tripMatchesSearch(t: TripJson, q: string): boolean {
   return bits.includes(s);
 }
 
-function filterTrips(list: TripJson[], status: StatusFilter, q: string): TripJson[] {
-  return list.filter((t) => {
-    if (status === "open" && t.status !== "open") {
-      return false;
-    }
-    if (status === "closed" && t.status !== "closed") {
-      return false;
-    }
-    return tripMatchesSearch(t, q);
-  });
-}
-
 export function AdminTripRegistryPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const showCloseTrip = canTripWrite(user ?? null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const status = parseStatus(searchParams.get("status"));
+  const [searchParams] = useSearchParams();
+  const legacyStatus = searchParams.get("status");
   const [queryText, setQueryText] = useState("");
-
-  const setStatus = (next: StatusFilter) => {
-    const p = new URLSearchParams(searchParams);
-    if (next === "all") {
-      p.delete("status");
-    } else {
-      p.set("status", next);
-    }
-    setSearchParams(p, { replace: true });
-  };
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const manQ = useQuery(loadingManifestsListQueryOptions());
 
-  const sortedTrips = useMemo(
-    () => sortTripsByDepartedDesc(tripsQ.data?.trips ?? []),
+  const sortedTripsOpen = useMemo(
+    () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
     [tripsQ.data?.trips],
   );
 
-  const tripStatusCounts = useMemo(() => {
-    const { open, closed } = splitTripsByStatus(sortedTrips);
-    return { open: open.length, closed: closed.length, all: sortedTrips.length };
-  }, [sortedTrips]);
-
-  const filtered = useMemo(() => filterTrips(sortedTrips, status, queryText), [sortedTrips, status, queryText]);
+  const filtered = useMemo(
+    () => sortedTripsOpen.filter((t) => tripMatchesSearch(t, queryText)),
+    [sortedTripsOpen, queryText],
+  );
 
   const manifestsByTripId = useMemo(() => {
     const m = new Map<string, LoadingManifestSummary[]>();
@@ -108,11 +77,11 @@ export function AdminTripRegistryPage() {
 
   useEffect(() => {
     setExpandedTripId(null);
-  }, [status, queryText]);
+  }, [queryText]);
 
   const closeTripMut = useMutation({
     mutationFn: async (tripId: string) => {
-      const t = sortedTrips.find((x) => x.id === tripId);
+      const t = sortedTripsOpen.find((x) => x.id === tripId);
       if (!t) {
         throw new Error("Рейс не найден в списке");
       }
@@ -134,6 +103,10 @@ export function AdminTripRegistryPage() {
   const loading = tripsQ.isPending || manQ.isPending;
   const err = tripsQ.isError || manQ.isError;
 
+  if (legacyStatus === "closed" || legacyStatus === "all") {
+    return <Navigate to={adminRoutes.archive} replace />;
+  }
+
   return (
     <div className="birzha-admin-dash" role="region" aria-labelledby="trip-registry-h">
       <header style={{ marginBottom: "0.85rem" }}>
@@ -146,8 +119,8 @@ export function AdminTripRegistryPage() {
           Рейсы
         </h2>
         <p style={{ margin: "0.35rem 0 0", fontSize: "0.88rem", color: "var(--color-muted)", maxWidth: 52 * 16 }}>
-          Список рейсов с фильтром и поиском. Нажмите «Накладные погрузки», чтобы увидеть погрузочные накладные, привязанные к
-          рейсу.
+          Только рейсы в работе. Закрытые — в разделе{" "}
+          <Link to={adminRoutes.archive}>«Архив»</Link>. Нажмите «Накладные погрузки» для погрузочных по рейсу.
         </p>
       </header>
 
@@ -160,30 +133,6 @@ export function AdminTripRegistryPage() {
 
       {!loading && !err ? (
         <>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.65rem", alignItems: "center" }}>
-            <span style={{ fontSize: "0.82rem", fontWeight: 600, marginRight: "0.25rem" }}>Статус:</span>
-            {(
-              [
-                ["open", "В работе", tripStatusCounts.open],
-                ["closed", "Закрытые", tripStatusCounts.closed],
-                ["all", "Все", tripStatusCounts.all],
-              ] as const
-            ).map(([key, label, count]) => (
-              <button
-                key={key}
-                type="button"
-                className={status === key ? "birzha-btn-ghost" : "birzha-btn-ghost"}
-                style={{
-                  ...btnStyleInline,
-                  fontWeight: status === key ? 700 : 500,
-                  borderColor: status === key ? "var(--birzha-accent)" : undefined,
-                }}
-                onClick={() => setStatus(key)}
-              >
-                {label} ({count})
-              </button>
-            ))}
-          </div>
           <label className="birzha-field-label" htmlFor="trip-registry-search">
             Поиск по номеру рейса, ТС, водителю или id
           </label>
@@ -198,11 +147,7 @@ export function AdminTripRegistryPage() {
 
           {filtered.length === 0 ? (
             <p className="birzha-text-muted" style={{ margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
-              {status === "open"
-                ? "Нет рейсов в работе. Закрытые — вкладка «Закрытые»."
-                : status === "closed"
-                  ? "Нет закрытых рейсов."
-                  : "Нет рейсов по фильтру."}
+              Нет рейсов в работе. Закрытые — в разделе <Link to={adminRoutes.archive}>«Архив»</Link>.
             </p>
           ) : null}
 
@@ -210,7 +155,7 @@ export function AdminTripRegistryPage() {
             defaultOpen
             title={
               <span style={{ fontWeight: 600 }}>
-                {status === "open" ? "В работе" : status === "closed" ? "Закрытые" : "Список"} ({filtered.length})
+                В работе ({filtered.length})
               </span>
             }
           >
@@ -334,7 +279,7 @@ export function AdminTripRegistryPage() {
                   Погрузочные накладные рейса{" "}
                   <strong>
                     {(() => {
-                      const trip = sortedTrips.find((x) => x.id === expandedTripId);
+                      const trip = sortedTripsOpen.find((x) => x.id === expandedTripId);
                       return trip ? formatTripSelectLabel(trip) : "рейс";
                     })()}
                   </strong>
@@ -348,7 +293,10 @@ export function AdminTripRegistryPage() {
                     {(manifestsByTripId.get(expandedTripId) ?? []).map((m) => (
                       <li key={m.id} style={{ marginBottom: "0.35rem" }}>
                         <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`} style={{ fontWeight: 600 }}>
-                          № {m.manifestNumber}
+                          {formatLoadingManifestDisplayName({
+                            manifestNumber: m.manifestNumber,
+                            destinationName: m.destinationName,
+                          })}
                         </Link>
                         <span className="birzha-text-muted">
                           {" "}

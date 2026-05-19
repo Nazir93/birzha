@@ -243,6 +243,29 @@ export type WholesalersListResponse = {
   wholesalers: WholesalerJson[];
 };
 
+/** Строка журнала продажи с рейса (для правок продавцом). */
+export type TripSaleLineJson = {
+  id: string;
+  tripId: string;
+  batchId: string;
+  saleId: string;
+  kg: string;
+  packageCount: string | null;
+  pricePerKgKopecks: string;
+  revenueKopecks: string;
+  cashKopecks: string;
+  debtKopecks: string;
+  cardTransferKopecks: string;
+  saleChannel: "retail" | "wholesale";
+  clientLabel: string | null;
+  wholesaleBuyerId: string | null;
+};
+
+export type TripSaleLinesResponse = {
+  trip: { id: string; status: string };
+  lines: TripSaleLineJson[];
+};
+
 export type LedgerBlock = {
   totalGrams: string;
   byBatch: { batchId: string; grams: string }[];
@@ -257,6 +280,8 @@ export type ShipmentLedgerBlock = {
 
 export type SalesBlock = {
   totalGrams: string;
+  /** Сумма ящиков по продажам (если были указаны). */
+  totalPackageCount?: string;
   totalRevenueKopecks: string;
   totalCashKopecks: string;
   totalDebtKopecks: string;
@@ -274,6 +299,7 @@ export type SalesBlock = {
   byBatch: {
     batchId: string;
     grams: string;
+    packageCount?: string;
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
@@ -287,6 +313,10 @@ export type SalesBlock = {
     debtKopecks: string;
     cardTransferKopecks: string;
   }[];
+  retailByBatch?: SalesBlock["byBatch"];
+  wholesaleByBatch?: SalesBlock["byBatch"];
+  retailByClient?: SalesBlock["byClient"];
+  wholesaleByClient?: SalesBlock["byClient"];
 };
 
 export type FinancialsBlock = {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
@@ -11,6 +11,7 @@ import {
   filterTripsAssignedToSellerForReports,
   isTripOpenForSellerWorkspace,
 } from "../format/seller-workspace-trips.js";
+import { adminAwarePathForPath, adminRoutes, ops, sales } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
@@ -55,6 +56,7 @@ const headingByContext: Record<TripReportViewContext, string> = {
 };
 
 export function TripReportPanel({ viewContext = "default" }: { viewContext?: TripReportViewContext }) {
+  const { pathname } = useLocation();
   const { user } = useAuth();
   /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
   const canTripWrite = user == null || canCreateTrip(user);
@@ -82,7 +84,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const fieldSellerSalesReport = viewContext === "sales" && Boolean(user && isFieldSellerOnly(user));
 
-  const tripsForSelect = useMemo(() => {
+  const tripsAllowedForReport = useMemo(() => {
     if (!fieldSellerSalesReport) {
       return sortedTrips;
     }
@@ -92,13 +94,19 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     return filterTripsAssignedToSellerForReports(sortedTrips, user.id);
   }, [sortedTrips, fieldSellerSalesReport, user]);
 
-  const sellerTripsOpen = useMemo(
-    () => tripsForSelect.filter(isTripOpenForSellerWorkspace),
-    [tripsForSelect],
+  const tripsForSelect = useMemo(
+    () => tripsAllowedForReport.filter(isTripOpenForSellerWorkspace),
+    [tripsAllowedForReport],
   );
-  const sellerTripsClosed = useMemo(
-    () => tripsForSelect.filter((t) => !isTripOpenForSellerWorkspace(t)),
-    [tripsForSelect],
+
+  const archivePath =
+    viewContext === "sales"
+      ? sales.archive
+      : adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
+
+  const archivedTripCount = useMemo(
+    () => tripsAllowedForReport.length - tripsForSelect.length,
+    [tripsAllowedForReport.length, tripsForSelect.length],
   );
 
   useEffect(() => {
@@ -116,13 +124,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   }, [searchParams, tripsForSelect, tripsQuery.data]);
 
   useEffect(() => {
-    if (!fieldSellerSalesReport || !tripId || !user || !tripsQuery.data) {
+    if (!tripId || !tripsQuery.data) {
       return;
     }
     if (!tripsForSelect.some((t) => t.id === tripId)) {
       setTripId("");
     }
-  }, [fieldSellerSalesReport, tripsQuery.data, tripsForSelect, tripId, user]);
+  }, [tripsQuery.data, tripsForSelect, tripId]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),
@@ -271,41 +279,20 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           </label>
           <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
             <option value="">—</option>
-            {fieldSellerSalesReport && sellerTripsOpen.length > 0 ? (
-              <optgroup label="В работе">
-                {sellerTripsOpen.map((t) => {
-                  const label = formatTripSelectLabel(t);
-                  return (
-                    <option key={t.id} value={t.id}>
-                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
-                    </option>
-                  );
-                })}
-              </optgroup>
-            ) : null}
-            {fieldSellerSalesReport && sellerTripsClosed.length > 0 ? (
-              <optgroup label="Завершённые (проданы / закрыты)">
-                {sellerTripsClosed.map((t) => {
-                  const label = formatTripSelectLabel(t);
-                  return (
-                    <option key={t.id} value={t.id}>
-                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
-                    </option>
-                  );
-                })}
-              </optgroup>
-            ) : null}
-            {!fieldSellerSalesReport
-              ? tripsForSelect.map((t) => {
-                  const label = formatTripSelectLabel(t);
-                  return (
-                    <option key={t.id} value={t.id}>
-                      {label.length > 120 ? `${label.slice(0, 117)}…` : label}
-                    </option>
-                  );
-                })
-              : null}
+            {tripsForSelect.map((t) => {
+              const label = formatTripSelectLabel(t);
+              return (
+                <option key={t.id} value={t.id}>
+                  {label.length > 120 ? `${label.slice(0, 117)}…` : label}
+                </option>
+              );
+            })}
           </select>
+          {archivedTripCount > 0 ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+              Закрытые и завершённые рейсы ({archivedTripCount}) — в разделе <Link to={archivePath}>«Архив»</Link>.
+            </p>
+          ) : null}
           {tripId && r && canDeleteTrip && canTripWrite && (
             <div style={{ marginTop: "0.5rem" }}>
               <button

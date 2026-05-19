@@ -6,6 +6,7 @@ import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
+import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { resolveUserLogin } from "../format/user-display.js";
@@ -59,7 +60,7 @@ export function AssignSellerPanel() {
   });
 
   const tripSelectOptions = useMemo(
-    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    () => sortTripsByTripNumberAsc(filterTripsInWork(tripsQuery.data?.trips ?? [])),
     [tripsQuery.data?.trips],
   );
   const sellerLoginById = useMemo(() => {

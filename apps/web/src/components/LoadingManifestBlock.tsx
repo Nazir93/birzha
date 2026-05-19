@@ -7,6 +7,7 @@ import {
   aggregateBatchesByCaliberLine,
   aggregateBatchesByPurchaseDocument,
   filterBatchesForLoadingManifest,
+  formatLoadingManifestDisplayName,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
@@ -132,8 +133,13 @@ export function LoadingManifestBlock({
       </h3>
       {manifest ? (
         <p style={{ margin: "0 0 0.55rem", fontSize: "0.92rem" }}>
-          <strong>№ {manifest.manifestNumber}</strong> от {manifest.docDate} · {manifest.destinationName} ·{" "}
-          {manifest.warehouseName} ({manifest.warehouseCode})
+          <strong>
+            {formatLoadingManifestDisplayName({
+              manifestNumber: manifest.manifestNumber,
+              destinationName: manifest.destinationName,
+            })}
+          </strong>{" "}
+          от {manifest.docDate} · {manifest.warehouseName} ({manifest.warehouseCode})
         </p>
       ) : (
         <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>

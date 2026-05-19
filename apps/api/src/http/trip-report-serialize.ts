@@ -43,6 +43,7 @@ export function shipmentLedgerToJson(aggregate: TripShipmentAggregate): Shipment
 /** Продажи: масса + выручка в копейках (строки). */
 export type SaleLedgerAggregateJson = {
   totalGrams: string;
+  totalPackageCount: string;
   totalRevenueKopecks: string;
   totalCashKopecks: string;
   totalDebtKopecks: string;
@@ -60,6 +61,7 @@ export type SaleLedgerAggregateJson = {
   byBatch: {
     batchId: string;
     grams: string;
+    packageCount: string;
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;
@@ -73,11 +75,16 @@ export type SaleLedgerAggregateJson = {
     debtKopecks: string;
     cardTransferKopecks: string;
   }[];
+  retailByBatch: SaleLedgerAggregateJson["byBatch"];
+  wholesaleByBatch: SaleLedgerAggregateJson["byBatch"];
+  retailByClient: SaleLedgerAggregateJson["byClient"];
+  wholesaleByClient: SaleLedgerAggregateJson["byClient"];
 };
 
 export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLedgerAggregateJson {
   return {
     totalGrams: aggregate.totalGrams.toString(),
+    totalPackageCount: aggregate.totalPackageCount.toString(),
     totalRevenueKopecks: aggregate.totalRevenueKopecks.toString(),
     totalCashKopecks: aggregate.totalCashKopecks.toString(),
     totalDebtKopecks: aggregate.totalDebtKopecks.toString(),
@@ -95,12 +102,47 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     byBatch: aggregate.byBatch.map((l) => ({
       batchId: l.batchId,
       grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),
       cardTransferKopecks: l.cardTransferKopecks.toString(),
     })),
     byClient: aggregate.byClient.map((l) => ({
+      clientLabel: l.clientLabel,
+      grams: l.grams.toString(),
+      revenueKopecks: l.revenueKopecks.toString(),
+      cashKopecks: l.cashKopecks.toString(),
+      debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
+    })),
+    retailByBatch: aggregate.retailByBatch.map((l) => ({
+      batchId: l.batchId,
+      grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
+      revenueKopecks: l.revenueKopecks.toString(),
+      cashKopecks: l.cashKopecks.toString(),
+      debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
+    })),
+    wholesaleByBatch: aggregate.wholesaleByBatch.map((l) => ({
+      batchId: l.batchId,
+      grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
+      revenueKopecks: l.revenueKopecks.toString(),
+      cashKopecks: l.cashKopecks.toString(),
+      debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
+    })),
+    retailByClient: aggregate.retailByClient.map((l) => ({
+      clientLabel: l.clientLabel,
+      grams: l.grams.toString(),
+      revenueKopecks: l.revenueKopecks.toString(),
+      cashKopecks: l.cashKopecks.toString(),
+      debtKopecks: l.debtKopecks.toString(),
+      cardTransferKopecks: l.cardTransferKopecks.toString(),
+    })),
+    wholesaleByClient: aggregate.wholesaleByClient.map((l) => ({
       clientLabel: l.clientLabel,
       grams: l.grams.toString(),
       revenueKopecks: l.revenueKopecks.toString(),

@@ -15,6 +15,7 @@ import {
   groupSellableRowsByCaliber,
   kgNumberToGramsBigInt,
   maxSellableGramsForBatch,
+  maxSellablePackagesForBatch,
   sellerCaliberGroupKey,
 } from "../format/seller-trip-caliber-groups.js";
 import { buildSellerSellChunks } from "../format/seller-sell-chunk-plan.js";
@@ -41,6 +42,7 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { parseSellFromTripForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { SellerTripSaleCorrections } from "./SellerTripSaleCorrections.js";
 import { TripSearchPicker } from "./TripSearchPicker.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -98,6 +100,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
 
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
   };
@@ -117,6 +120,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [sellBatchId, setSellBatchId] = useState("");
   const [sellTripId, setSellTripId] = useState("");
   const [sellKg, setSellKg] = useState("");
+  const [sellPackages, setSellPackages] = useState("");
   const [saleId, setSaleId] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [saleChannel, setSaleChannel] = useState<"retail" | "wholesale">("retail");
@@ -138,6 +142,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const sellerFlashDomId = `${idPrefix}-sale-flash`;
   const [sellerSaleFlash, setSellerSaleFlash] = useState<{
     kg: string;
+    packages: string | null;
     sumRub: string;
     productLine: string;
   } | null>(null);
@@ -166,6 +171,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellTripId(p);
     setSellBatchId("");
     setSellKg("");
+    setSellPackages("");
   }, [searchParams, isSellerUx, sellerTripsListQ.data?.trips]);
 
   /** Рейс закрыт в админке — сбрасываем выбор и URL, чтобы кабинет «очистился». */
@@ -185,6 +191,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellBatchId("");
     setSellCaliberKey(null);
     setSellKg("");
+    setSellPackages("");
     const next = new URLSearchParams(searchParams);
     next.delete("trip");
     const qs = next.toString();
@@ -259,6 +266,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   }, [isSellerUx, sellerTripsListQ.data?.trips]);
 
   const sellTripIdTrim = sellTripId.trim();
+  const selectedTripOpen = useMemo(() => {
+    if (!isSellerUx || !sellTripIdTrim) {
+      return true;
+    }
+    const t = (sellerTripsListQ.data?.trips ?? []).find((x) => x.id === sellTripIdTrim);
+    return t ? isTripOpenForSellerWorkspace(t) : true;
+  }, [isSellerUx, sellTripIdTrim, sellerTripsListQ.data?.trips]);
   const sellReportQuery = useQuery({
     ...shipmentReportQueryOptions(sellTripIdTrim),
     enabled: sellTripIdTrim.length > 0,
@@ -439,12 +453,15 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellCaliberKey(tile.key);
     setSellBatchId(tile.group.primaryBatchId);
     setSellKg(gramsBigIntToKgDecimalString(tile.group.totalNetG));
+    const estPkg = tile.group.rows.reduce((s, r) => s + estimateNetTransitPackageCount(r), 0n);
+    setSellPackages(estPkg > 0n ? String(estPkg) : "");
   }, []);
 
   const clearSellerSaleInputs = useCallback(() => {
     setSellBatchId("");
     setSellCaliberKey(null);
     setSellKg("");
+    setSellPackages("");
     setSellPrice("");
     setSaleId("");
     setCashMixed("");
@@ -676,6 +693,25 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     if (!sellKg.trim()) {
       return "Укажите кг продажи";
     }
+    if (sellSelectionSummary?.hasPkgData) {
+      const raw = sellPackages.trim();
+      if (!raw) {
+        return "Укажите количество ящиков в продаже";
+      }
+      const n = Number.parseInt(raw, 10);
+      if (!Number.isFinite(n) || n < 0) {
+        return "Ящики: целое неотрицательное число";
+      }
+      if (n <= 0) {
+        return "Количество ящиков должно быть больше нуля";
+      }
+      if (sellBatchId.trim()) {
+        const maxPkg = maxSellablePackagesForBatch(sellBatchId, sellableOnTripRows, batchByIdForSell);
+        if (BigInt(n) > maxPkg) {
+          return `Не больше ${String(maxPkg)} ящ. в машине по выбранному калибру`;
+        }
+      }
+    }
     if (!sellPrice.trim()) {
       return "Укажите цену за кг";
     }
@@ -693,8 +729,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     cardTransferKopecks,
     cashMixed,
     sellKg,
+    sellPackages,
     sellPrice,
     sellBatchId,
+    sellSelectionSummary?.hasPkgData,
     sellableOnTripRows,
     batchByIdForSell,
   ]);
@@ -773,6 +811,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
 
   const sell = useMutation({
     mutationFn: async () => {
+      const requirePackageCount = Boolean(sellSelectionSummary?.hasPkgData);
       const { batchId, body } = parseSellFromTripForm({
         batchId: sellBatchId,
         tripId: sellTripId,
@@ -787,6 +826,8 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         counterpartyId: sellCounterpartyId || undefined,
         wholesaleBuyerId: saleChannel === "wholesale" ? wholesaleBuyerId : undefined,
         sellerMoneyInRubles: isSellerUx,
+        packageCountRaw: sellPackages,
+        requirePackageCount,
       });
       const chunks = isSellerUx
         ? buildSellerSellChunks({
@@ -795,13 +836,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             batchById: batchByIdForSell,
             kg: body.kg,
             pricePerKg: body.pricePerKg,
+            packageCount: body.packageCount,
             paymentKind: body.paymentKind ?? "cash",
             cashKopecksMixed:
               body.cashKopecksMixed != null ? String(body.cashKopecksMixed) : undefined,
             cardTransferKopecks:
               body.cardTransferKopecks != null ? String(body.cardTransferKopecks) : undefined,
           })
-        : [{ batchId, kg: body.kg }];
+        : [{ batchId, kg: body.kg, ...(body.packageCount !== undefined ? { packageCount: body.packageCount } : {}) }];
       if (chunks.length === 0) {
         throw new Error("Укажите кг не больше остатка по выбранному калибру");
       }
@@ -814,6 +856,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             ...bodyBase,
             kg: part.kg,
             saleId: i === 0 ? body.saleId : randomUuid(),
+            ...(part.packageCount !== undefined ? { packageCount: part.packageCount } : {}),
             ...(part.cashKopecksMixed !== undefined ? { cashKopecksMixed: part.cashKopecksMixed } : {}),
             ...(part.cardTransferKopecks !== undefined
               ? { cardTransferKopecks: part.cardTransferKopecks }
@@ -844,8 +887,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           : "—";
       const summaryLine = sellSelectionSummary?.line?.trim();
       const productLine = summaryLine && summaryLine !== "—" ? summaryLine : "Товар";
+      const pkgTrim = sellPackages.trim();
       return {
         kg: sellKg.trim(),
+        packages: pkgTrim || null,
         sumRub,
         productLine,
       };
@@ -890,6 +935,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             <strong>{sellerSaleFlash.productLine}</strong>
             <span className="birzha-seller-sale-flash__sep"> · </span>
             <span>{sellerSaleFlash.kg} кг</span>
+            {sellerSaleFlash.packages ? (
+              <>
+                <span className="birzha-seller-sale-flash__sep"> · </span>
+                <span>{sellerSaleFlash.packages} ящ</span>
+              </>
+            ) : null}
             <span className="birzha-seller-sale-flash__sep"> · </span>
             <span>
               сумма <strong>{sellerSaleFlash.sumRub} ₽</strong>
@@ -1051,7 +1102,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
                 description={
                   sellerHasAssignedClosedOnly
-                    ? "Активных рейсов нет. Итоги по проданным и закрытым — в разделе «Отчёт по рейсу» (кнопка «Итоги» на главной)."
+                    ? "Активных рейсов нет. Итоги по проданным и закрытым — в разделе «Архив» в меню."
                     : undefined
                 }
               />
@@ -1067,6 +1118,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 setSellTripId(v);
                 setSellBatchId("");
                 setSellKg("");
+                setSellPackages("");
               }}
               aria-busy={sellerTripsListQ.isFetching || undefined}
               style={sellerFieldMb}
@@ -1092,6 +1144,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             setSellTripId(v);
             setSellBatchId("");
             setSellKg("");
+            setSellPackages("");
           }}
         />
       )}
@@ -1214,11 +1267,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               setSellBatchId(id);
               if (!id.trim()) {
                 setSellKg("");
+                setSellPackages("");
                 return;
               }
               const row = sellableOnTripRows.find((r) => r.batchId === id);
               if (row) {
                 setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
+                const est = estimateNetTransitPackageCount(row);
+                setSellPackages(est > 0n ? String(est) : "");
               }
             }}
             className={sellerFieldClass}
@@ -1288,6 +1344,30 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         inputMode="decimal"
         autoComplete="off"
       />
+      {sellSelectionSummary?.hasPkgData ? (
+        <>
+          <label
+            htmlFor={`${idPrefix}-in-pkg`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
+            {isSellerUx ? "Сколько ящиков в этой сделке *" : "Сколько ящиков в этой продаже *"}
+          </label>
+          <input
+            id={`${idPrefix}-in-pkg`}
+            value={sellPackages}
+            onChange={(e) => setSellPackages(e.target.value)}
+            className={sellerFieldClass}
+            style={isSellerUx ? sellerFieldMb : fieldStyle}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder={
+              sellSelectionSummary.estPkg > 0n
+                ? `не больше ${String(sellSelectionSummary.estPkg)}`
+                : undefined
+            }
+          />
+        </>
+      ) : null}
       {!isSellerUx && (
         <>
           <label htmlFor={`${idPrefix}-in-sale`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
@@ -1645,6 +1725,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           Готово.
         </p>
       )}
+      {isSellerUx && sellTripIdTrim ? (
+        <SellerTripSaleCorrections
+          tripId={sellTripIdTrim}
+          tripOpen={selectedTripOpen}
+          sellableRows={sellableOnTripRows}
+        />
+      ) : null}
     </BirzhaDisclosure>
   );
 }

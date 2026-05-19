@@ -196,6 +196,24 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # PWA: sw.js и index.html не кэшируем — иначе обновление кабинета продавца «приходит» с задержкой.
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        try_files $uri =404;
+    }
+    location = /manifest.webmanifest {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
@@ -269,7 +287,7 @@ pnpm exec turbo run build --force
 
 Подробнее — комментарий в `apps/web/vite.config.ts`. После установки ярлык открывает `/s` (дашборд продаж); офлайн-очередь — раздел «Офлайн» в том же кабинете.
 
-После нового деплоя пользователям может показаться баннер **«Доступна новая версия»** — это режим **`registerType: prompt`** и компонент **`PwaUpdateBanner`** (обновление service worker по кнопке).
+После нового деплоя пользователям может показаться баннер **«Доступна новая версия»** — это режим **`registerType: prompt`** и компонент **`PwaUpdateBanner`** (обновление service worker по кнопке **«Обновить»**). Проверка новой сборки: сразу при открытии, при возврате во вкладку/PWA и каждые **3 минуты** в фоне. На сервере для **`/sw.js`** и **`/index.html`** нужны заголовки **no-cache** (см. §8 и `deploy/nginx-birzha.example.conf`) — без них браузер может держать старый service worker сутками.
 
 ### 10.3. Проверка PWA на **https://24birzha.ru/**
 

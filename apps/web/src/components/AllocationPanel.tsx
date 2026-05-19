@@ -12,6 +12,8 @@ import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.
 import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
+  formatLoadingManifestDisplayName,
+  resolveLoadingManifestNumberForSave,
 } from "../format/loading-manifest.js";
 import { manifestsForWarehouseSorted } from "../format/loading-manifest-list.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
@@ -49,11 +51,6 @@ const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
 
 function todayDateOnly(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function defaultManifestNumber(): string {
-  const d = new Date();
-  return `ПН-${d.toISOString().slice(0, 10).replaceAll("-", "")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 /** Группировка: склад из строки накладной. В `stock` только партии `isFromPurchaseNakladnaya`. */
@@ -173,7 +170,7 @@ export function AllocationPanel() {
   /** Какие накл. вошли в «отбор под рейс» — общий список для сбора на погрузку и для строк качества. */
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
   const [manifestDate, setManifestDate] = useState(todayDateOnly);
-  const [manifestNumber, setManifestNumber] = useState(defaultManifestNumber);
+  const [manifestNumber, setManifestNumber] = useState("");
   const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
   const [savedManifestId, setSavedManifestId] = useState<string>("");
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
@@ -669,8 +666,14 @@ export function AllocationPanel() {
                   </select>
                 </label>
                 <label>
-                  Номер *
-                  <input value={manifestNumber} onChange={(e) => setManifestNumber(e.target.value)} style={fieldStyle} />
+                  Название накладной
+                  <input
+                    value={manifestNumber}
+                    onChange={(e) => setManifestNumber(e.target.value)}
+                    style={fieldStyle}
+                    placeholder="Как на бумаге: рейс, фура… (необязательно)"
+                    autoComplete="off"
+                  />
                 </label>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.7rem" }}>
@@ -681,16 +684,20 @@ export function AllocationPanel() {
                     createManifest.isPending ||
                     tableRows.length === 0 ||
                     !manifestDate ||
-                    !manifestNumber.trim() ||
                     !manifestDestinationCode
                   }
                   onClick={() => {
+                    const destLabel = labelDest[manifestDestinationCode] ?? manifestDestinationCode;
                     createManifest.mutate({
                       warehouseId: selectedWarehouse,
                       destinationCode: manifestDestinationCode,
                       batchIds: tableRows.map((b) => b.id),
                       docDate: manifestDate,
-                      manifestNumber: manifestNumber.trim(),
+                      manifestNumber: resolveLoadingManifestNumberForSave(
+                        manifestNumber,
+                        destLabel,
+                        manifestDate,
+                      ),
                     });
                   }}
                 >
@@ -709,7 +716,14 @@ export function AllocationPanel() {
               )}
               {savedManifestId && (
                 <p className="birzha-callout-info" role="status">
-                  Сохранено: № {savedManifestQuery.data?.manifest.manifestNumber ?? manifestNumber}.
+                  Сохранено:{" "}
+                  {formatLoadingManifestDisplayName(
+                    savedManifestQuery.data?.manifest ?? {
+                      manifestNumber: manifestNumber.trim(),
+                      destinationName: labelDest[manifestDestinationCode] ?? manifestDestinationCode,
+                    },
+                  )}
+                  .
                 </p>
               )}
             </BirzhaDisclosure>
@@ -775,7 +789,12 @@ export function AllocationPanel() {
                               }
                             >
                               <td style={thtd}>
-                                <strong>{m.manifestNumber}</strong>
+                                <strong>
+                                  {formatLoadingManifestDisplayName({
+                                    manifestNumber: m.manifestNumber,
+                                    destinationName: m.destinationName,
+                                  })}
+                                </strong>
                                 {isCurrent ? (
                                   <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
                                     только что сохранена

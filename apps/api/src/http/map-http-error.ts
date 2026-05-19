@@ -19,6 +19,8 @@ import {
   TripClosedError,
   TripNotEmptyError,
   TripNotFoundError,
+  TripSaleEditForbiddenError,
+  TripSaleLineNotFoundError,
   TripShortageExceedsNetError,
   WarehouseCodeConflictError,
   WarehouseNotFoundError,
@@ -118,6 +120,18 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "trip_closed",
       tripId: error.tripId,
+    });
+  }
+  if (error instanceof TripSaleLineNotFoundError) {
+    return reply.code(404).send({
+      error: "trip_sale_line_not_found",
+      lineId: error.lineId,
+    });
+  }
+  if (error instanceof TripSaleEditForbiddenError) {
+    return reply.code(403).send({
+      error: "trip_sale_edit_forbidden",
+      message: error.message,
     });
   }
   if (error instanceof InsufficientStockForTripError) {

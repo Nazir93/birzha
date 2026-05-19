@@ -96,4 +96,60 @@ describe("aggregateTripSalesByProductLine", () => {
     expect(rows[0]!.cash).toBe(10000n);
     expect(rows[0]!.debt).toBe(5000n);
   });
+
+  it("фильтрует по каналу розница", () => {
+    const report = minimalReport({
+      sales: {
+        ...minimalReport().sales,
+        byBatch: [
+          {
+            batchId: "b1",
+            grams: "2000",
+            revenueKopecks: "10000",
+            cashKopecks: "10000",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+          {
+            batchId: "b2",
+            grams: "1000",
+            revenueKopecks: "5000",
+            cashKopecks: "5000",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+        ],
+        retailByBatch: [
+          {
+            batchId: "b1",
+            grams: "2000",
+            revenueKopecks: "10000",
+            cashKopecks: "10000",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+        ],
+        wholesaleByBatch: [
+          {
+            batchId: "b2",
+            grams: "1000",
+            revenueKopecks: "5000",
+            cashKopecks: "5000",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+        ],
+      },
+    });
+    const map = new Map<string, BatchListItem>([
+      ["b1", batch("b1", "Помидоры", "5")],
+      ["b2", batch("b2", "Огурцы", "3")],
+    ]);
+    const retail = aggregateTripSalesByProductLine(report, map, "retail");
+    expect(retail).toHaveLength(1);
+    expect(retail[0]!.lineLabel).toBe("Помидоры · 5");
+    const wholesale = aggregateTripSalesByProductLine(report, map, "wholesale");
+    expect(wholesale).toHaveLength(1);
+    expect(wholesale[0]!.lineLabel).toBe("Огурцы · 3");
+  });
 });

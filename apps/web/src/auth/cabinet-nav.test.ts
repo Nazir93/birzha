@@ -4,24 +4,26 @@ import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js"
 import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 describe("cabinet-nav", () => {
-  it("аноним: операции — пять ссылок /o (в т.ч. Рейсы)", () => {
+  it("аноним: операции — шесть ссылок /o (в т.ч. Рейсы и Архив)", () => {
     const links = buildCabinetNavEntries("operations", null, false);
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
     expect(links[1]?.to).toBe(ops.distribution);
     expect(links[2]?.to).toBe(ops.trips);
-    expect(links[3]?.to).toBe(ops.reports);
-    expect(links[4]?.to).toBe(ops.operations);
+    expect(links[3]?.to).toBe(ops.archive);
+    expect(links[4]?.to).toBe(ops.reports);
+    expect(links[5]?.to).toBe(ops.operations);
   });
 
-  it("аноним: админ — сводка /a + те же операции и Рейсы", () => {
+  it("аноним: админ — сводка /a + те же операции, Архив и Погрузка", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.distribution);
     expect(links[3]?.to).toBe(adminRoutes.trips);
-    expect(links[4]?.to).toBe(adminRoutes.loadingManifests);
-    expect(links).toHaveLength(7);
+    expect(links[4]?.to).toBe(adminRoutes.archive);
+    expect(links[5]?.to).toBe(adminRoutes.loadingManifests);
+    expect(links).toHaveLength(8);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {
@@ -53,16 +55,17 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
   });
 
-  it("продавец (только seller): кабинет /s — продажа и отчёт по рейсу", () => {
+  it("продавец (только seller): кабинет /s — продажа, отчёт и архив", () => {
     const user = {
       id: "u1",
       login: "seller1",
       roles: [{ roleCode: "seller", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("sales", user, true);
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
     expect(links[0]).toEqual({ to: sales.home, label: "Продажа", key: "sales-home" });
     expect(links[1]).toEqual({ to: sales.reports, label: "Отчёт по рейсу", key: "reports" });
+    expect(links[2]).toEqual({ to: sales.archive, label: "Архив", key: "archive" });
   });
 
   it("seller + склад: на /s остаётся сводка и доступные подразделы", () => {
