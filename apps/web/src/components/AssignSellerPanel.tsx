@@ -225,7 +225,7 @@ export function AssignSellerPanel() {
             <BirzhaDisclosure
               nested
               defaultOpen
-              title={<span style={{ fontWeight: 600 }}>Итого по продавцу</span>}
+              title={<span className="birzha-assign-seller__kpi-disclosure-title">Итого по продавцу</span>}
             >
               <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
               <div className="birzha-assign-seller__kpi-card">

@@ -37,7 +37,6 @@ import {
   btnStyle,
   errorText,
   fieldStyleFullWidth,
-  preJson,
   tableStyle,
   thHead,
   thtd,
@@ -743,22 +742,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </div>
           )}
           </BirzhaDisclosure>
-
-          <div className="no-print" style={{ marginTop: "0.75rem" }}>
-            <BirzhaDisclosure
-              nested
-              defaultOpen={false}
-              title={<span className="birzha-text-subtle">Сырой JSON отчёта</span>}
-            >
-              <pre
-                style={{ ...preJson, marginTop: "0.5rem", fontSize: "0.8rem" }}
-                tabIndex={0}
-                aria-label="Полный JSON отчёта по рейсу"
-              >
-                {JSON.stringify(r, null, 2)}
-              </pre>
-            </BirzhaDisclosure>
-          </div>
         </div>
       ) : null}
     </div>

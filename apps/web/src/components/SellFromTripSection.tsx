@@ -25,7 +25,8 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { TRIP_STATUS_CLOSED, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import {
   buildTripBatchRows,
-  estimateNetTransitPackageCount,
+  estimateNetTransitPackageCountForSell,
+  rowUsesPackageAccountingForSell,
   type TripBatchTableRow,
 } from "../format/trip-report-rows.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -336,15 +337,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     const docNum = b?.nakladnaya?.documentNumber?.trim();
     const prefix = includeNakladPrefix && docNum ? `№ ${docNum} · ` : "";
     const kg = gramsBigIntToKgDecimalString(row.netTransitG);
-    const estPkg = estimateNetTransitPackageCount(row);
-    if (row.shippedPackages > 0n && estPkg > 0n) {
+    const estPkg = estimateNetTransitPackageCountForSell(row, b);
+    const usesPkg = rowUsesPackageAccountingForSell(row, b);
+    if (usesPkg && estPkg > 0n) {
       return `${prefix}${line} — ${kg} кг · ≈${estPkg} ящ в пути`;
     }
-    if (row.shippedPackages > 0n && row.netTransitG > 0n && estPkg === 0n) {
+    if (usesPkg && row.netTransitG > 0n && estPkg === 0n) {
       return `${prefix}${line} — ${kg} кг · <1 ящ в пути (оцен.)`;
-    }
-    if (row.shippedG > 0n && row.shippedPackages === 0n) {
-      return `${prefix}${line} — ${kg} кг (ящ: нет в отчёте — введите при отгрузке в рейс)`;
     }
     return `${prefix}${line} — ${kg} кг`;
   };
@@ -453,7 +452,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     setSellCaliberKey(tile.key);
     setSellBatchId(tile.group.primaryBatchId);
     setSellKg(gramsBigIntToKgDecimalString(tile.group.totalNetG));
-    const estPkg = tile.group.rows.reduce((s, r) => s + estimateNetTransitPackageCount(r), 0n);
+    const estPkg = tile.group.rows.reduce(
+      (s, r) => s + estimateNetTransitPackageCountForSell(r, batchByIdForSell.get(r.batchId)),
+      0n,
+    );
     setSellPackages(estPkg > 0n ? String(estPkg) : "");
   }, []);
 
@@ -592,19 +594,22 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     const netG = group?.totalNetG ?? row.netTransitG;
     const b = batchByIdForSell.get(row.batchId);
     const estPkg = group
-      ? group.rows.reduce((s, r) => s + estimateNetTransitPackageCount(r), 0n)
-      : estimateNetTransitPackageCount(row);
+      ? group.rows.reduce(
+          (s, r) => s + estimateNetTransitPackageCountForSell(r, batchByIdForSell.get(r.batchId)),
+          0n,
+        )
+      : estimateNetTransitPackageCountForSell(row, b);
+    const hasPkgData = group
+      ? group.rows.some((r) => rowUsesPackageAccountingForSell(r, batchByIdForSell.get(r.batchId)))
+      : rowUsesPackageAccountingForSell(row, b);
     return {
       line: group?.lineLabel ?? (b ? formatNakladLineLabel(b) : "—"),
       doc: b?.nakladnaya?.documentNumber?.trim() ?? "—",
       kg: gramsBigIntToKgDecimalString(netG),
       estPkg,
       hasShipped: group ? group.rows.some((r) => r.shippedG > 0n) : row.shippedG > 0n,
-      hasPkgData: group ? group.rows.some((r) => r.shippedPackages > 0n) : row.shippedPackages > 0n,
-      subUnitPackages:
-        (group ? group.rows.some((r) => r.shippedPackages > 0n) : row.shippedPackages > 0n) &&
-        netG > 0n &&
-        estPkg === 0n,
+      hasPkgData,
+      subUnitPackages: hasPkgData && netG > 0n && estPkg === 0n,
     };
   }, [sellBatchId, sellableOnTripRows, batchByIdForSell, selectedSellerCaliberGroup]);
 
@@ -1273,7 +1278,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               const row = sellableOnTripRows.find((r) => r.batchId === id);
               if (row) {
                 setSellKg(gramsBigIntToKgDecimalString(row.netTransitG));
-                const est = estimateNetTransitPackageCount(row);
+                const est = estimateNetTransitPackageCountForSell(
+                  row,
+                  batchByIdForSell.get(row.batchId),
+                );
                 setSellPackages(est > 0n ? String(est) : "");
               }
             }}

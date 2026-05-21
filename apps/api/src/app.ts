@@ -43,6 +43,8 @@ import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/driz
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
 import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
 import { DrizzleSyncIdempotencyRepository } from "./infrastructure/persistence/drizzle-sync-idempotency.repository.js";
+import { DrizzlePurchaseLinePackageMetaRepository } from "./infrastructure/persistence/drizzle-purchase-line-package-meta.js";
+import { NullPurchaseLinePackageMetaPort } from "./infrastructure/persistence/null-purchase-line-package-meta.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "./application/purchase/delete-purchase-document.use-case.js";
@@ -414,6 +416,9 @@ export async function buildApp(options: {
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
     }
 
+    const purchaseLinePackages = db
+      ? new DrizzlePurchaseLinePackageMetaRepository(db)
+      : new NullPurchaseLinePackageMetaPort();
     const applySync = new ApplySyncActionUseCase(
       syncIdempotency,
       batchRepository,
@@ -423,6 +428,7 @@ export async function buildApp(options: {
       shortageRepository,
       counterpartyRepository,
       wholesalerRepository,
+      purchaseLinePackages,
       runShipInTransaction,
       runSellInTransaction,
       runRecordTripShortageInTransaction,

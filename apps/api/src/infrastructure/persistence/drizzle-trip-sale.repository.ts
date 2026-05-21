@@ -83,18 +83,6 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
     return sum;
   }
 
-  async totalPackagesForTripAndBatch(tripId: string, batchId: string): Promise<bigint> {
-    const rows = await this.db
-      .select()
-      .from(tripBatchSales)
-      .where(and(eq(tripBatchSales.tripId, tripId), eq(tripBatchSales.batchId, batchId)));
-    let sum = 0n;
-    for (const r of rows) {
-      sum += r.packageCount ?? 0n;
-    }
-    return sum;
-  }
-
   async listLinesByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleLineRecord[]> {
     const whereClause = filter
       ? and(

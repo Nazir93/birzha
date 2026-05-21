@@ -66,16 +66,6 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
     return sum;
   }
 
-  async totalPackagesForTripAndBatch(tripId: string, batchId: string): Promise<bigint> {
-    let sum = 0n;
-    for (const r of this.rows) {
-      if (r.tripId === tripId && r.batchId === batchId) {
-        sum += r.packageCount ?? 0n;
-      }
-    }
-    return sum;
-  }
-
   async listLinesByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleLineRecord[]> {
     return this.rows
       .filter((r) => {

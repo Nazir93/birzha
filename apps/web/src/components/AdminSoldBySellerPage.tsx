@@ -249,7 +249,11 @@ export function AdminSoldBySellerPage() {
           ) : null}
 
           {!reportLoading && loadedReports.length > 0 ? (
-            <BirzhaDisclosure nested defaultOpen title={<span style={{ fontWeight: 600 }}>Итого по продавцу (в фильтре)</span>}>
+            <BirzhaDisclosure
+              nested
+              defaultOpen
+              title={<span className="birzha-assign-seller__kpi-disclosure-title">Итого по продавцу (в фильтре)</span>}
+            >
               <section className="birzha-assign-seller__kpi" aria-label="Итого по продавцу">
                 <div className="birzha-assign-seller__kpi-card">
                   <span className="birzha-assign-seller__kpi-label">Отгружено</span>

@@ -14,8 +14,14 @@ import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
+import type { PurchaseLinePackageMetaPort } from "../ports/purchase-line-package-meta.port.js";
+import { NullPurchaseLinePackageMetaPort } from "../../infrastructure/persistence/null-purchase-line-package-meta.js";
 import { loadBatchOrThrow } from "../load-batch.js";
-import { estimateTripBatchPackagesInTransit } from "../trip/trip-package-estimate.js";
+import {
+  effectiveShippedPackages,
+  estimateTripBatchPackagesInTransit,
+  tripSaleUsesPackageAccounting,
+} from "../trip/trip-package-estimate.js";
 import { kgToGrams } from "../units/kg-grams.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../units/rub-kopecks.js";
 
@@ -101,6 +107,7 @@ export class SellFromTripUseCase {
     private readonly shortages: TripShortageRepository,
     private readonly counterparties: CounterpartyRepository,
     private readonly wholesalers: WholesalerRepository,
+    private readonly purchasePackages: PurchaseLinePackageMetaPort = new NullPurchaseLinePackageMetaPort(),
     private readonly runSellInTransaction?: SellFromTripTransactionRunner,
   ) {}
 
@@ -152,6 +159,9 @@ export class SellFromTripUseCase {
     const shipLine = shipmentAgg.byBatch.find((l) => l.batchId === input.batchId);
     const shippedG = shipLine?.grams ?? 0n;
     const shippedPackages = shipLine?.packageCount ?? 0n;
+    const nakladnaya = await this.purchasePackages.findByBatchId(input.batchId);
+    const effectiveShipped = effectiveShippedPackages(shippedG, shippedPackages, nakladnaya);
+    const usesPackages = tripSaleUsesPackageAccounting(shippedPackages, nakladnaya);
 
     let salePackageCount: bigint | null = null;
     if (input.packageCount !== undefined) {
@@ -160,7 +170,7 @@ export class SellFromTripUseCase {
       }
       salePackageCount = BigInt(Math.floor(input.packageCount));
     }
-    if (shippedPackages > 0n) {
+    if (usesPackages) {
       if (salePackageCount === null) {
         throw new Error("Укажите количество ящиков в продаже");
       }
@@ -169,7 +179,7 @@ export class SellFromTripUseCase {
       }
       const maxPkg = estimateTripBatchPackagesInTransit(
         shippedG,
-        shippedPackages,
+        effectiveShipped,
         soldBefore,
         shortageBefore,
       );

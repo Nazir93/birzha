@@ -13,6 +13,8 @@ import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
+import type { PurchaseLinePackageMetaPort } from "../ports/purchase-line-package-meta.port.js";
+import { NullPurchaseLinePackageMetaPort } from "../../infrastructure/persistence/null-purchase-line-package-meta.js";
 import { loadBatchOrThrow } from "../load-batch.js";
 import type { SellFromTripTransactionRunner } from "./sell-from-trip.use-case.js";
 import { assertMayEditTripSaleLine, assertTripOpenForSaleEdit } from "./trip-sale-edit-guard.js";
@@ -47,6 +49,7 @@ export class UpdateTripSaleLineUseCase {
     private readonly shortages: TripShortageRepository,
     private readonly counterparties: CounterpartyRepository,
     private readonly wholesalers: WholesalerRepository,
+    private readonly purchasePackages: PurchaseLinePackageMetaPort = new NullPurchaseLinePackageMetaPort(),
     private readonly runInTransaction?: SellFromTripTransactionRunner,
   ) {}
 
@@ -110,15 +113,14 @@ export class UpdateTripSaleLineUseCase {
 
     const shipmentAgg = await this.shipments.aggregateByTripId(line.tripId);
     const shipLine = shipmentAgg.byBatch.find((l) => l.batchId === line.batchId);
-    const soldPackagesIncluding = await this.sales.totalPackagesForTripAndBatch(line.tripId, line.batchId);
+    const nakladnaya = await this.purchasePackages.findByBatchId(line.batchId);
     const salePackageCount = assertTripSalePackageCount({
       shippedGrams: shipLine?.grams ?? 0n,
       shippedPackages: shipLine?.packageCount ?? 0n,
+      nakladnaya,
       soldGramsIncludingLine: soldIncluding,
-      soldPackagesIncludingLine: soldPackagesIncluding,
       shortageGrams: shortage,
       lineGrams: line.grams,
-      linePackages: line.packageCount ?? 0n,
       packageCount: input.packageCount,
     });
 

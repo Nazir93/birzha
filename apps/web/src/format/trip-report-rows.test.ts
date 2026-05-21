@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { ShipmentReportResponse } from "../api/types.js";
+import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 
 import {
   aggregateTripBatchRows,
   buildTripBatchRows,
   estimateNetTransitPackageCount,
+  estimateNetTransitPackageCountForSell,
+  rowUsesPackageAccountingForSell,
   reconcileBatchTotalsWithReport,
 } from "./trip-report-rows.js";
 
@@ -118,6 +120,29 @@ describe("buildTripBatchRows", () => {
     r.sales.byBatch = [];
     r.shortage.byBatch = [];
     expect(buildTripBatchRows(r)).toEqual([]);
+  });
+
+  it("для продавца: ящики из накладной, если в отгрузке packageCount не вводили", () => {
+    const r = baseReport();
+    r.shipment.byBatch = [{ batchId: "b6", grams: "3000000", packageCount: undefined }];
+    r.sales.byBatch = [];
+    r.shortage.byBatch = [];
+    const row = buildTripBatchRows(r)[0]!;
+    expect(row.shippedPackages).toBe(0n);
+    const batch = {
+      id: "b6",
+      purchaseId: "p",
+      totalKg: 10000,
+      pricePerKg: 1,
+      pendingInboundKg: 0,
+      onWarehouseKg: 0,
+      inTransitKg: 3000,
+      soldKg: 0,
+      writtenOffKg: 0,
+      nakladnaya: { linePackageCount: 400 },
+    } as BatchListItem;
+    expect(rowUsesPackageAccountingForSell(row, batch)).toBe(true);
+    expect(estimateNetTransitPackageCountForSell(row, batch)).toBe(120n);
   });
 
   it("estimateNetTransitPackageCount — ящики в пути пропорционально кг", () => {

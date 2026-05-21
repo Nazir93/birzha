@@ -307,6 +307,9 @@ export function hrefForPanelInCabinet(
     if (panel === "trips") {
       return adminRoutes.trips;
     }
+    if (panel === "archive") {
+      return adminRoutes.archive;
+    }
     if (panel === "loadingManifests") {
       return adminRoutes.loadingManifests;
     }

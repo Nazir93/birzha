@@ -6,6 +6,8 @@ import type { TripShipmentRepository } from "../ports/trip-shipment-repository.p
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import type { CounterpartyRepository } from "../ports/counterparty-repository.port.js";
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
+import type { PurchaseLinePackageMetaPort } from "../ports/purchase-line-package-meta.port.js";
+import { NullPurchaseLinePackageMetaPort } from "../../infrastructure/persistence/null-purchase-line-package-meta.js";
 import { RecordTripShortageUseCase } from "../trip/record-trip-shortage.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "../trip/record-trip-shortage.use-case.js";
 import { CreateTripUseCase } from "../trip/create-trip.use-case.js";
@@ -48,6 +50,7 @@ export class ApplySyncActionUseCase {
     shortages: TripShortageRepository,
     counterparties: CounterpartyRepository,
     wholesalers: WholesalerRepository,
+    purchasePackages: PurchaseLinePackageMetaPort = new NullPurchaseLinePackageMetaPort(),
     runShipInTransaction?: ShipToTripTransactionRunner,
     runSellInTransaction?: SellFromTripTransactionRunner,
     runRecordTripShortageInTransaction?: RecordTripShortageTransactionRunner,
@@ -60,6 +63,7 @@ export class ApplySyncActionUseCase {
       shortages,
       counterparties,
       wholesalers,
+      purchasePackages,
       runSellInTransaction,
     );
     this.shipToTrip = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction);

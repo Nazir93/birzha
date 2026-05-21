@@ -1,4 +1,4 @@
-import type { ShipmentReportResponse } from "../api/types.js";
+import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 
 export type TripBatchTableRow = {
   batchId: string;
@@ -92,6 +92,46 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
   });
 }
 
+function purchasedGramsFromBatch(batch: BatchListItem | undefined): bigint {
+  if (!batch?.totalKg || batch.totalKg <= 0) {
+    return 0n;
+  }
+  return BigInt(Math.round(batch.totalKg * 1000));
+}
+
+/**
+ * Ящики отгрузки: из отчёта рейса, иначе доля по строке накладной (как на API).
+ */
+export function effectiveShippedPackagesForSell(
+  row: TripBatchTableRow,
+  batch: BatchListItem | undefined,
+): bigint {
+  if (row.shippedPackages > 0n) {
+    return row.shippedPackages;
+  }
+  const linePkg = batch?.nakladnaya?.linePackageCount;
+  if (linePkg == null || linePkg <= 0) {
+    return 0n;
+  }
+  const purchasedG = purchasedGramsFromBatch(batch);
+  if (purchasedG <= 0n || row.shippedG <= 0n) {
+    return 0n;
+  }
+  return (row.shippedG * BigInt(linePkg)) / purchasedG;
+}
+
+/** Учёт ящиков в продаже: отгрузка с ящиками или строка накладной с ящиками. */
+export function rowUsesPackageAccountingForSell(
+  row: TripBatchTableRow,
+  batch: BatchListItem | undefined,
+): boolean {
+  if (row.shippedPackages > 0n) {
+    return true;
+  }
+  const linePkg = batch?.nakladnaya?.linePackageCount;
+  return linePkg != null && linePkg > 0;
+}
+
 /**
  * Ящики «в пути»: при учёте продаж в ящиках — отгрузка минус продано; иначе доля по кг.
  */
@@ -110,17 +150,24 @@ export function estimateNetTransitPackageCount(r: TripBatchTableRow): bigint {
   return (r.shippedPackages * r.netTransitG) / r.shippedG;
 }
 
-/** Максимум ящиков к продаже по одной строке отчёта (как `estimateNetTransitPackageCount` до сделки). */
-export function maxSellablePackageCountForRow(r: TripBatchTableRow): bigint {
-  if (r.shippedPackages <= 0n) {
+/** Ящики «в пути» с учётом накладной, если в отгрузке ящики не вводили. */
+export function estimateNetTransitPackageCountForSell(
+  row: TripBatchTableRow,
+  batch: BatchListItem | undefined,
+): bigint {
+  const shipped = effectiveShippedPackagesForSell(row, batch);
+  if (shipped <= 0n) {
     return 0n;
   }
-  return estimateNetTransitPackageCount({
-    ...r,
-    netTransitG: r.netTransitG,
-    soldG: r.soldG,
-    soldPackages: r.soldPackages,
-  });
+  return estimateNetTransitPackageCount({ ...row, shippedPackages: shipped });
+}
+
+/** Максимум ящиков к продаже (кабинет продавца, с накладной). */
+export function maxSellablePackageCountForRowForSell(
+  row: TripBatchTableRow,
+  batch: BatchListItem | undefined,
+): bigint {
+  return estimateNetTransitPackageCountForSell(row, batch);
 }
 
 /** Суммы по колонкам таблицы партий (для подвала и сверки с API). */

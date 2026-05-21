@@ -7,7 +7,11 @@ import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { kgNumberToGramsBigInt } from "../format/seller-trip-caliber-groups.js";
-import type { TripBatchTableRow } from "../format/trip-report-rows.js";
+import {
+  maxSellablePackageCountForRowForSell,
+  rowUsesPackageAccountingForSell,
+  type TripBatchTableRow,
+} from "../format/trip-report-rows.js";
 import {
   inferPaymentKindFromSaleLine,
   kopecksPerKgToRubDecimalString,
@@ -37,9 +41,13 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${whole}.${rem.toString().padStart(3, "0").replace(/0+$/, "")}`;
 }
 
-function lineHasPkgData(batchId: string, sellableRows: TripBatchTableRow[]): boolean {
+function lineHasPkgData(
+  batchId: string,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+): boolean {
   const row = sellableRows.find((r) => r.batchId === batchId);
-  return row ? row.shippedPackages > 0n : false;
+  return row ? rowUsesPackageAccountingForSell(row, batchById.get(batchId)) : false;
 }
 
 function maxKgForLineCorrection(line: TripSaleLineJson, sellableRows: TripBatchTableRow[]): bigint {
@@ -51,14 +59,18 @@ function maxKgForLineCorrection(line: TripSaleLineJson, sellableRows: TripBatchT
   return row.netTransitG + lineG;
 }
 
-function maxPkgForLineCorrection(line: TripSaleLineJson, sellableRows: TripBatchTableRow[]): bigint {
+function maxPkgForLineCorrection(
+  line: TripSaleLineJson,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+): bigint {
   const row = sellableRows.find((r) => r.batchId === line.batchId);
   const linePkg = line.packageCount ? BigInt(line.packageCount) : 0n;
-  if (!row || row.shippedPackages <= 0n) {
+  if (!row) {
     return linePkg;
   }
-  const est = row.shippedG > 0n && row.netTransitG > 0n ? (row.shippedPackages * row.netTransitG) / row.shippedG : 0n;
-  return est + linePkg;
+  const maxBefore = maxSellablePackageCountForRowForSell(row, batchById.get(row.batchId));
+  return maxBefore + linePkg;
 }
 
 async function apiPatchJson(url: string, body: unknown): Promise<void> {
@@ -87,7 +99,7 @@ function SellerTripSaleEditForm({
 }) {
   const b = batchById.get(line.batchId);
   const label = b ? formatNakladLineLabel(b) : "партия";
-  const requirePkg = lineHasPkgData(line.batchId, sellableRows);
+  const requirePkg = lineHasPkgData(line.batchId, sellableRows, batchById);
   const payment0 = inferPaymentKindFromSaleLine(line);
 
   const [kg, setKg] = useState(line.kg);
@@ -133,7 +145,7 @@ function SellerTripSaleEditForm({
     if (requirePkg && packages.trim()) {
       const n = Number.parseInt(packages, 10);
       if (Number.isFinite(n) && n > 0) {
-        const maxPkg = maxPkgForLineCorrection(line, sellableRows);
+        const maxPkg = maxPkgForLineCorrection(line, sellableRows, batchById);
         if (BigInt(n) > maxPkg) {
           return `Не больше ${String(maxPkg)} ящ.`;
         }

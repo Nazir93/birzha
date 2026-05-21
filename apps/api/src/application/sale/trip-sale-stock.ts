@@ -1,4 +1,9 @@
-import { estimateTripBatchPackagesInTransit } from "../trip/trip-package-estimate.js";
+import type { PurchaseLinePackageMeta } from "../ports/purchase-line-package-meta.port.js";
+import {
+  effectiveShippedPackages,
+  estimateTripBatchPackagesInTransit,
+  tripSaleUsesPackageAccounting,
+} from "../trip/trip-package-estimate.js";
 
 /** Доступно кг в рейсе по партии, если исключить одну строку продажи (для правки). */
 export function availableGramsForTripSaleCorrection(input: {
@@ -14,11 +19,10 @@ export function availableGramsForTripSaleCorrection(input: {
 export function assertTripSalePackageCount(input: {
   shippedGrams: bigint;
   shippedPackages: bigint;
+  nakladnaya?: PurchaseLinePackageMeta | null;
   soldGramsIncludingLine: bigint;
-  soldPackagesIncludingLine: bigint;
   shortageGrams: bigint;
   lineGrams: bigint;
-  linePackages: bigint;
   packageCount?: number;
 }): bigint | null {
   let salePackageCount: bigint | null = null;
@@ -30,8 +34,15 @@ export function assertTripSalePackageCount(input: {
   }
 
   const soldGramsExcl = input.soldGramsIncludingLine - input.lineGrams;
+  const nakladnaya = input.nakladnaya ?? null;
+  const usesPackages = tripSaleUsesPackageAccounting(input.shippedPackages, nakladnaya);
+  const effectiveShipped = effectiveShippedPackages(
+    input.shippedGrams,
+    input.shippedPackages,
+    nakladnaya,
+  );
 
-  if (input.shippedPackages > 0n) {
+  if (usesPackages) {
     if (salePackageCount === null) {
       throw new Error("Укажите количество ящиков в продаже");
     }
@@ -40,7 +51,7 @@ export function assertTripSalePackageCount(input: {
     }
     const maxPkg = estimateTripBatchPackagesInTransit(
       input.shippedGrams,
-      input.shippedPackages,
+      effectiveShipped,
       soldGramsExcl,
       input.shortageGrams,
     );

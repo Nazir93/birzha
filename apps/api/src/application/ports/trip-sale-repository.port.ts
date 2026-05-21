@@ -94,7 +94,6 @@ export interface TripSaleRepository {
   append(row: TripSaleAppend): Promise<void>;
   aggregateByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleAggregate>;
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
-  totalPackagesForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
   listLinesByTripId(tripId: string, filter?: { onlyRecordedByUserId: string }): Promise<TripSaleLineRecord[]>;
   findLineById(lineId: string): Promise<TripSaleLineRecord | null>;
   updateLine(row: TripSaleLineRecord): Promise<void>;
