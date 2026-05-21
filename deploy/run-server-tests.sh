@@ -3,9 +3,10 @@
 #
 # Важно: в shell не должен висеть NODE_ENV=production (из apps/api/.env) — скрипт сбрасывает сам.
 #
-# Обязательно задайте отдельную БД, например:
-#   export TEST_DATABASE_URL=postgresql://birzha:PASSWORD@127.0.0.1:5432/birzha_test
-#   createdb birzha_test   # один раз
+# PG-тесты (опционально): отдельная БД, URL из apps/api/.env с другим именем базы:
+#   set -a && source apps/api/.env && set +a
+#   sudo -u postgres createdb birzha_test
+#   export TEST_DATABASE_URL="${DATABASE_URL%/*}/birzha_test"   # bash: та же учётка, другая БД
 #
 # Опционально E2E по ролям (отдельная БД):
 #   export E2E_DATABASE_URL=postgresql://birzha:PASSWORD@127.0.0.1:5432/birzha_e2e
@@ -34,15 +35,13 @@ pnpm --filter @birzha/domain test
 pnpm --filter @birzha/contracts test
 pnpm --filter @birzha/web test
 
-echo "==> api tests (in-memory)"
-pnpm --filter @birzha/api test
-
-if [[ -n "${TEST_DATABASE_URL:-}" ]]; then
-  echo "==> api PG integration (TEST_DATABASE_URL)"
-  TEST_DATABASE_URL="$TEST_DATABASE_URL" pnpm --filter @birzha/api test
-else
-  echo "SKIP: TEST_DATABASE_URL не задан — 18 PG-тестов API пропущены"
+echo "==> api tests (in-memory + PG если задан TEST_DATABASE_URL)"
+# Не подставляйте шаблон USER:PASS — скопируйте строку из apps/api/.env, замените имя БД на birzha_test.
+if [[ -n "${TEST_DATABASE_URL:-}" ]] && [[ "$TEST_DATABASE_URL" == *"USER"* ]]; then
+  echo "Ошибка: TEST_DATABASE_URL похож на шаблон из README — укажите реальный URL PostgreSQL" >&2
+  exit 1
 fi
+pnpm --filter @birzha/api test
 
 echo "==> build"
 pnpm build
