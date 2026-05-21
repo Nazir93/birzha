@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Полный прогон тестов на VPS (после git pull). НЕ использует prod DATABASE_URL для PG-тестов.
 #
+# Важно: в shell не должен висеть NODE_ENV=production (из apps/api/.env) — скрипт сбрасывает сам.
+#
 # Обязательно задайте отдельную БД, например:
 #   export TEST_DATABASE_URL=postgresql://birzha:PASSWORD@127.0.0.1:5432/birzha_test
 #   createdb birzha_test   # один раз
@@ -17,7 +19,11 @@ set -euo pipefail
 ROOT="${BIRZHA_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$ROOT"
 
-echo "==> install"
+# apps/api/.env часто задаёт NODE_ENV=production → pnpm ставит только prod и нет tsc/vitest.
+export NODE_ENV=development
+unset CI
+
+echo "==> install (devDependencies включены)"
 pnpm install --frozen-lockfile
 
 echo "==> typecheck"
@@ -41,7 +47,7 @@ fi
 echo "==> build"
 pnpm build
 
-if command -v chromium >/dev/null 2>&1 || [[ -d "$HOME/.cache/ms-playwright" ]]; then
+if pnpm exec playwright --version >/dev/null 2>&1; then
   echo "==> playwright install (если нужно)"
   pnpm exec playwright install chromium --with-deps 2>/dev/null || pnpm exec playwright install chromium
   echo "==> e2e in-memory"
@@ -53,7 +59,7 @@ if command -v chromium >/dev/null 2>&1 || [[ -d "$HOME/.cache/ms-playwright" ]];
     echo "SKIP: E2E ролей — нужны E2E_DATABASE_URL и E2E_JWT_SECRET"
   fi
 else
-  echo "SKIP: Playwright/Chromium — установите зависимости или запустите на CI"
+  echo "SKIP: Playwright не установлен (нужен dev install)"
 fi
 
 echo "OK: прогон завершён"
