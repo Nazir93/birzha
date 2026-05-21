@@ -1,19 +1,3 @@
-import type { TripJson } from "../api/types.js";
-
-/** Разделение рейсов для списков: «в работе» (open) и архив (closed). */
-export function splitTripsByStatus(trips: readonly TripJson[]): { open: TripJson[]; closed: TripJson[] } {
-  const open: TripJson[] = [];
-  const closed: TripJson[] = [];
-  for (const t of trips) {
-    if (t.status === "closed") {
-      closed.push(t);
-    } else {
-      open.push(t);
-    }
-  }
-  return { open, closed };
-}
-
 /** Список рейсов: сначала свежие по дате выезда, затем по номеру. */
 export function sortTripsByDepartedDesc<T extends { departedAt: string | null; tripNumber: string }>(
   trips: readonly T[],

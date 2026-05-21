@@ -94,17 +94,6 @@ export function groupSellableRowsByCaliber(
   return out;
 }
 
-export function formatSellerCaliberGroupOptionLabel(
-  g: SellerCaliberGroup,
-  kgFromGrams: (grams: bigint) => string,
-): string {
-  const kg = kgFromGrams(g.totalNetG);
-  if (g.rows.length <= 1) {
-    return `${g.lineLabel} · ${kg} кг`;
-  }
-  return `${g.lineLabel} · ${kg} кг · ${g.rows.length} партии`;
-}
-
 export function kgNumberToGramsBigInt(kg: number): bigint {
   if (!Number.isFinite(kg)) {
     return 0n;
@@ -147,20 +136,6 @@ export function allocateSellGramsAcrossTripRows(
     remaining -= take;
   }
   return out;
-}
-
-/**
- * Раскладывает кг продажи по партиям группы (сначала с большим остатком «в машине»).
- */
-export function allocateSellKgAcrossTripRows(
-  rows: TripBatchTableRow[],
-  kg: number,
-): { batchId: string; kg: number }[] {
-  const requested = kgNumberToGramsBigInt(kg);
-  return allocateSellGramsAcrossTripRows(rows, requested).map((p) => ({
-    batchId: p.batchId,
-    kg: gramsBigIntToKgNumber(p.grams),
-  }));
 }
 
 /** Максимум «в машине» по выбранному калибру (группа или одна партия). */

@@ -8,8 +8,6 @@ export const prefix = {
   accounting: "/b",
 } as const;
 
-export type CabinetPrefix = (typeof prefix)[keyof typeof prefix];
-
 /** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
 export const ops = {
   reports: `${prefix.operations}/reports`,

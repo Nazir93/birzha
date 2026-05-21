@@ -281,38 +281,6 @@ export function parseRecordTripShortageForm(batchIdRaw: string, tripIdRaw: strin
   });
 }
 
-export function parseCreateTripForm(
-  tripIdRaw: string,
-  tripNumberRaw: string,
-  vehicleLabelRaw = "",
-  driverNameRaw = "",
-  departedAtLocal = "",
-  assignedSellerUserIdRaw = "",
-) {
-  return mapZod(() => {
-    const id = tripIdRaw.trim() || randomUuid();
-    const tripNumber = tripNumberRaw.trim();
-    let departedAt: string | null | undefined;
-    if (departedAtLocal.trim() !== "") {
-      const d = new Date(departedAtLocal);
-      if (Number.isNaN(d.getTime())) {
-        throw new Error("Время отправления: введите корректные дату и время");
-      }
-      departedAt = d.toISOString();
-    }
-    const assignedSellerUserId =
-      assignedSellerUserIdRaw.trim() === "" ? null : assignedSellerUserIdRaw.trim();
-    return createTripBodySchema.parse({
-      id,
-      tripNumber,
-      vehicleLabel: vehicleLabelRaw,
-      driverName: driverNameRaw,
-      departedAt,
-      assignedSellerUserId,
-    });
-  });
-}
-
 /** Ожидаемая сумма строки накладной в копейках (из уже распарсенных чисел — как на сервере). */
 export function expectedLineTotalKopecks(totalKg: number, pricePerKg: number): number {
   return purchaseLineAmountKopecksFromDecimalStrings(

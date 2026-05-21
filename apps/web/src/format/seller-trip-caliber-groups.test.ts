@@ -3,14 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { BatchListItem } from "../api/types.js";
 import type { TripBatchTableRow } from "./trip-report-rows.js";
 import {
-  allocateSellKgAcrossTripRows,
-  formatSellerCaliberGroupOptionLabel,
+  allocateSellGramsAcrossTripRows,
   groupSellableRowsByCaliber,
 } from "./seller-trip-caliber-groups.js";
-
-function kg(g: bigint): string {
-  return (Number(g) / 1000).toString();
-}
 
 function batch(id: string, group: string, grade: string): BatchListItem {
   return {
@@ -70,7 +65,7 @@ describe("groupSellableRowsByCaliber", () => {
     expect(g[0]!.totalNetG).toBe(30_000n);
     expect(g[0]!.rows).toHaveLength(2);
     expect(g[0]!.primaryBatchId).toBe("b1");
-    expect(formatSellerCaliberGroupOptionLabel(g[0]!, kg)).toContain("2 партии");
+    expect(g[0]!.rows).toHaveLength(2);
   });
 
   it("разные калибры — две группы", () => {
@@ -108,7 +103,7 @@ describe("groupSellableRowsByCaliber", () => {
     expect(g).toHaveLength(2);
   });
 
-  it("allocateSellKgAcrossTripRows — списывает с нескольких партий по убыванию остатка", () => {
+  it("allocateSellGramsAcrossTripRows — списывает с нескольких партий по убыванию остатка", () => {
     const rows: TripBatchTableRow[] = [
       {
         batchId: "b-small",
@@ -135,10 +130,10 @@ describe("groupSellableRowsByCaliber", () => {
         cardTransferK: 0n,
       },
     ];
-    const parts = allocateSellKgAcrossTripRows(rows, 22);
+    const parts = allocateSellGramsAcrossTripRows(rows, 22_000n);
     expect(parts).toEqual([
-      { batchId: "b-big", kg: 20 },
-      { batchId: "b-small", kg: 2 },
+      { batchId: "b-big", grams: 20_000n },
+      { batchId: "b-small", grams: 2_000n },
     ]);
   });
 });

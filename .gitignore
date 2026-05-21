@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .turbo/
+**/.vite/
+**/vitest/**/results.json
 coverage/
 pnpm-debug.log*
 *.log
