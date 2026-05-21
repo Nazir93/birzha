@@ -28,6 +28,7 @@ TRUNCATE TABLE
   batches,
   purchase_documents,
   counterparties,
+  wholesalers,
   sync_processed_actions
 RESTART IDENTITY CASCADE;
 
