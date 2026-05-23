@@ -393,6 +393,7 @@ export function SellerTripSaleCorrections({
             const b = batchById.get(line.batchId);
             const headline = b ? formatNakladLineLabel(b) : "—";
             const sum = kopecksToRubLabel(line.revenueKopecks);
+            const pricePerKg = kopecksPerKgToRubDecimalString(line.pricePerKgKopecks);
             const isEditing = editingId === line.id;
             return (
               <li
@@ -414,7 +415,7 @@ export function SellerTripSaleCorrections({
                     <strong>{headline}</strong>
                     <span className="birzha-text-muted">
                       {" "}
-                      · {line.kg} кг
+                      · {line.kg} кг · {pricePerKg} ₽/кг
                       {line.packageCount ? ` · ${line.packageCount} ящ` : ""} · {sum} ₽
                     </span>
                   </span>
