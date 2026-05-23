@@ -11,6 +11,7 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { resolveUserLogin } from "../format/user-display.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
 import {
   aggregateSellerShipmentReports,
   clientSalePaymentLabelRu,
@@ -507,7 +508,7 @@ export function AssignSellerPanel() {
                             const debtK = BigInt(row.debtKopecks || "0");
                             const cashK = BigInt(row.cashKopecks || "0");
                             const cardK = BigInt(row.cardTransferKopecks || "0");
-                            const label = row.clientLabel?.trim() || "—";
+                            const label = formatTripSaleClientDisplayLabel(row.clientLabel, "all");
                             const payKind = clientSalePaymentLabelRu(cashK, debtK, cardK);
                             return (
                               <tr key={`${label}-${idx}`}>

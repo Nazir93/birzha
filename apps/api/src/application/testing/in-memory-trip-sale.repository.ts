@@ -24,7 +24,16 @@ function appendToLine(row: TripSaleAppend): TripSaleLineRecord {
     wholesaleBuyerId: row.wholesaleBuyerId ?? null,
     recordedByUserId: row.recordedByUserId ?? null,
     packageCount: row.packageCount ?? null,
+    recordedAt: row.recordedAt ?? new Date(),
   };
+}
+
+function compareTripSaleLinesNewestFirst(a: TripSaleLineRecord, b: TripSaleLineRecord): number {
+  const t = b.recordedAt.getTime() - a.recordedAt.getTime();
+  if (t !== 0) {
+    return t;
+  }
+  return b.id.localeCompare(a.id, "ru");
 }
 
 export class InMemoryTripSaleRepository implements TripSaleRepository {
@@ -78,7 +87,7 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
         return (r.recordedByUserId ?? null) === filter.onlyRecordedByUserId;
       })
       .slice()
-      .sort((a, b) => a.id.localeCompare(b.id, "ru"));
+      .sort(compareTripSaleLinesNewestFirst);
   }
 
   async findLineById(lineId: string): Promise<TripSaleLineRecord | null> {

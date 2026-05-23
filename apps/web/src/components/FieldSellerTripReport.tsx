@@ -7,8 +7,10 @@ import {
 } from "../format/aggregate-trip-sales-by-product-line.js";
 import { gramsToKgLabel, kopecksToRubLabelSafe } from "../format/money.js";
 import {
+  formatTripSaleClientDisplayLabel,
   salesChannelTotals,
   salesClientLinesForChannel,
+  shouldShowSalesClientTable,
   type SaleChannelFilter,
 } from "../format/trip-sales-channel.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -229,42 +231,46 @@ export function FieldSellerTripReport({
         </div>
       )}
 
-      <h3 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
-        {channel === "all" ? "Кому продано" : channel === "retail" ? "Розница — кому" : "Опт — кому"}
-      </h3>
-      {clientLines.length === 0 ? (
-        <BirzhaEmptyState compact title="Нет продаж по клиентам" />
-      ) : (
-        <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-          <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Кому продано">
-            <thead>
-              <tr>
-                <th scope="col" style={thHead}>
-                  Кому
-                </th>
-                <th scope="col" style={thHead}>
-                  кг
-                </th>
-                {payHead}
-              </tr>
-            </thead>
-            <tbody>
-              {clientLines.map((row, idx) => (
-                <tr key={`${row.clientLabel}-${idx}`}>
-                  <td style={thtd}>{row.clientLabel?.trim() ? row.clientLabel : "—"}</td>
-                  <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
-                  <td style={thtd}>{kopecksToRubLabelSafe(row.revenueKopecks)} ₽</td>
-                  <PaymentCells
-                    cashKopecks={row.cashKopecks}
-                    cardKopecks={row.cardTransferKopecks}
-                    debtKopecks={row.debtKopecks}
-                  />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {shouldShowSalesClientTable(channel) ? (
+        <>
+          <h3 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
+            {channel === "all" ? "Кому продано" : "Опт — кому"}
+          </h3>
+          {clientLines.length === 0 ? (
+            <BirzhaEmptyState compact title="Нет продаж по клиентам" />
+          ) : (
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+              <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Кому продано">
+                <thead>
+                  <tr>
+                    <th scope="col" style={thHead}>
+                      Кому
+                    </th>
+                    <th scope="col" style={thHead}>
+                      кг
+                    </th>
+                    {payHead}
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientLines.map((row, idx) => (
+                    <tr key={`${row.clientLabel}-${idx}`}>
+                      <td style={thtd}>{formatTripSaleClientDisplayLabel(row.clientLabel, channel)}</td>
+                      <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
+                      <td style={thtd}>{kopecksToRubLabelSafe(row.revenueKopecks)} ₽</td>
+                      <PaymentCells
+                        cashKopecks={row.cashKopecks}
+                        cardKopecks={row.cardTransferKopecks}
+                        debtKopecks={row.debtKopecks}
+                      />
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

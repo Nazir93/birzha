@@ -16,6 +16,7 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
 import {
   aggregateTripBatchRows,
   buildTripBatchRows,
@@ -613,7 +614,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   <tbody>
                     {r.sales.byClient.map((row, idx) => (
                       <tr key={`${row.clientLabel}-${idx}`}>
-                        <td style={thtd}>{row.clientLabel ? row.clientLabel : "—"}</td>
+                        <td style={thtd}>{formatTripSaleClientDisplayLabel(row.clientLabel, "all")}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
                         {!fieldSellerSalesReport ? (
                           <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>

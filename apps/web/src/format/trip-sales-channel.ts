@@ -66,3 +66,29 @@ export const SALE_CHANNEL_LABELS: Record<SaleChannelFilter, string> = {
   retail: "Розница",
   wholesale: "Опт",
 };
+
+/** Подпись в колонке «Кому» / «Клиент» в отчётах по продажам. */
+export const RETAIL_SALE_CLIENT_DISPLAY_LABEL = "Розница";
+
+/**
+ * Пустая метка у розницы (полевой продавец без имени клиента) → «Розница».
+ * Опт без имени (редко) остаётся «—».
+ */
+export function formatTripSaleClientDisplayLabel(
+  clientLabel: string | null | undefined,
+  channel: SaleChannelFilter,
+): string {
+  const trimmed = (clientLabel ?? "").trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  if (channel === "wholesale") {
+    return "—";
+  }
+  return RETAIL_SALE_CLIENT_DISPLAY_LABEL;
+}
+
+/** Таблица «кому» при фильтре «Розница» дублирует сводку по калибрам — не показываем. */
+export function shouldShowSalesClientTable(channel: SaleChannelFilter): boolean {
+  return channel !== "retail";
+}

@@ -228,6 +228,8 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   wholesaleBuyerId: text("wholesale_buyer_id").references(() => wholesalers.id, { onDelete: "set null" }),
   /** Ящики по строке продажи (опционально; суммируются в отчёте по рейсу). */
   packageCount: bigint("package_count", { mode: "bigint" }),
+  /** Момент фиксации продажи (для списка «исправить» — сначала последние). */
+  recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
 /** Успешно обработанные офлайн-действия (идемпотентность по устройству). */

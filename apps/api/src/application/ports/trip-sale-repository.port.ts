@@ -16,6 +16,7 @@ export type TripSaleLineRecord = {
   wholesaleBuyerId: string | null;
   recordedByUserId: string | null;
   packageCount: bigint | null;
+  recordedAt: Date;
 };
 
 export type TripSaleAppend = {
@@ -42,6 +43,8 @@ export type TripSaleAppend = {
   recordedByUserId?: string | null;
   /** Ящики по строке продажи (если указаны при фиксации). */
   packageCount?: bigint | null;
+  /** По умолчанию — момент вставки в БД. */
+  recordedAt?: Date;
 };
 
 export type TripSaleBatchLine = {

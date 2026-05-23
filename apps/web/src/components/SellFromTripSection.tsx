@@ -51,9 +51,26 @@ import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
-/** У продавца: не выводим весь справочник — только по поиску (и прокрутка внутри блока). */
-const WHOLESALER_SELLER_SEARCH_MIN_CHARS = 2;
+/** У продавца: не больше N строк в списке; при большем справочнике — фильтр по поиску. */
 const WHOLESALER_SELLER_MAX_ROWS = 80;
+
+type WholesalerListItem = { id: string; name: string; isActive: boolean };
+
+function filterWholesalersForSellerPicker(
+  active: WholesalerListItem[],
+  search: string,
+  selectedId: string,
+): { rows: WholesalerListItem[]; truncated: boolean; totalMatched: number } {
+  const q = search.trim().toLowerCase();
+  const matched = q ? active.filter((w) => w.name.toLowerCase().includes(q)) : active;
+  const totalMatched = matched.length;
+  let rows = totalMatched > WHOLESALER_SELLER_MAX_ROWS ? matched.slice(0, WHOLESALER_SELLER_MAX_ROWS) : matched;
+  const sel = selectedId ? active.find((w) => w.id === selectedId) : undefined;
+  if (sel && !rows.some((r) => r.id === sel.id)) {
+    rows = [sel, ...rows];
+  }
+  return { rows, truncated: totalMatched > WHOLESALER_SELLER_MAX_ROWS, totalMatched };
+}
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -504,58 +521,28 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     batchesForTripQuery.isPending,
   ]);
 
-  const wholesaleRowsFiltered = useMemo(() => {
-    const all = wholesalersQ.data?.wholesalers ?? [];
-    const active = all.filter((w) => w.isActive);
+  const activeWholesalers = useMemo(
+    () => (wholesalersQ.data?.wholesalers ?? []).filter((w) => w.isActive),
+    [wholesalersQ.data?.wholesalers],
+  );
+
+  const wholesalerPickerFiltered = useMemo(() => {
     const qSource = isSellerUx ? wholesalerSearchDebounced : wholesalerSearch;
-    const q = qSource.trim().toLowerCase();
-
-    let rows: typeof active;
     if (isSellerUx) {
-      if (q.length < WHOLESALER_SELLER_SEARCH_MIN_CHARS) {
-        const onlySel = wholesaleBuyerId ? active.find((w) => w.id === wholesaleBuyerId) : undefined;
-        rows = onlySel ? [onlySel] : [];
-      } else {
-        rows = active.filter((w) => w.name.toLowerCase().includes(q));
-        if (rows.length > WHOLESALER_SELLER_MAX_ROWS) {
-          rows = rows.slice(0, WHOLESALER_SELLER_MAX_ROWS);
-        }
-      }
-      const sel = wholesaleBuyerId ? active.find((w) => w.id === wholesaleBuyerId) : undefined;
-      if (sel && !rows.some((r) => r.id === sel.id)) {
-        rows = [sel, ...rows];
-      }
-      return rows;
+      return filterWholesalersForSellerPicker(activeWholesalers, qSource, wholesaleBuyerId);
     }
-
-    if (!q) {
-      return active;
-    }
-    return active.filter((w) => w.name.toLowerCase().includes(q));
+    const q = qSource.trim().toLowerCase();
+    const matched = q ? activeWholesalers.filter((w) => w.name.toLowerCase().includes(q)) : activeWholesalers;
+    return { rows: matched, truncated: false, totalMatched: matched.length };
   }, [
-    wholesalersQ.data?.wholesalers,
+    activeWholesalers,
     wholesalerSearch,
     wholesalerSearchDebounced,
     isSellerUx,
     wholesaleBuyerId,
   ]);
 
-  const wholesalerSellerPickMeta = useMemo(() => {
-    if (!isSellerUx) {
-      return null;
-    }
-    const active = (wholesalersQ.data?.wholesalers ?? []).filter((w) => w.isActive);
-    const q = wholesalerSearchDebounced.trim().toLowerCase();
-    if (q.length < WHOLESALER_SELLER_SEARCH_MIN_CHARS) {
-      return { matchedTotal: 0, truncated: false, waitingForChars: true as const };
-    }
-    const matched = active.filter((w) => w.name.toLowerCase().includes(q));
-    return {
-      matchedTotal: matched.length,
-      truncated: matched.length > WHOLESALER_SELLER_MAX_ROWS,
-      waitingForChars: false as const,
-    };
-  }, [isSellerUx, wholesalersQ.data?.wholesalers, wholesalerSearchDebounced]);
+  const wholesaleRowsFiltered = wholesalerPickerFiltered.rows;
 
   const selectedWholesalerLabel = useMemo(() => {
     if (!wholesaleBuyerId) {
@@ -626,14 +613,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         return "Подождите загрузку списка оптовиков";
       }
       if (!wholesaleBuyerId.trim()) {
-        const activeCount = (wholesalersQ.data?.wholesalers ?? []).filter((w) => w.isActive).length;
-        if (wholesalersQ.isSuccess && activeCount === 0) {
-          return "Нет активных оптовиков — администратор должен добавить их в справочник";
+        if (wholesalersQ.isSuccess && activeWholesalers.length === 0) {
+          return "Нет активных оптовиков — администратор должен добавить их в справочнике (Инвентарь)";
         }
-        if (wholesalersQ.isSuccess && wholesalerSearchDebounced.trim().length < WHOLESALER_SELLER_SEARCH_MIN_CHARS) {
-          return "Выберите оптовика из списка";
-        }
-        return "Выберите оптовика из списка ниже";
+        return "Выберите оптовика из списка";
       }
     }
     if (paymentKind === "card_transfer") {
@@ -728,8 +711,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
     wholesalersQ.isPending,
     wholesalersQ.isSuccess,
     wholesaleBuyerId,
-    wholesalerSearchDebounced,
-    wholesaleRowsFiltered.length,
+    activeWholesalers.length,
     paymentKind,
     cardTransferKopecks,
     cashMixed,
@@ -1022,7 +1004,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 onChange={(e) => setWholesalerSearch(e.target.value)}
                 className={sellerFieldClass}
                 style={{ ...sellerFieldMb, maxWidth: "100%" }}
-                placeholder={isSellerUx ? "Название оптовика…" : "Найти по названию…"}
+                placeholder={
+                  isSellerUx
+                    ? activeWholesalers.length > WHOLESALER_SELLER_MAX_ROWS
+                      ? "Сузить список по названию…"
+                      : "Название оптовика…"
+                    : "Найти по названию…"
+                }
                 autoComplete="off"
                 aria-label="Поиск оптовика"
               />
@@ -1041,14 +1029,14 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                 </p>
               ) : (
                 <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
-                  {wholesaleRowsFiltered.length === 0 ? (
-                    isSellerUx && wholesalerSellerPickMeta?.waitingForChars && !wholesaleBuyerId ? null : (
+                  {activeWholesalers.length === 0 ? (
                     <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-                      {(wholesalersQ.data?.wholesalers ?? []).filter((w) => w.isActive).length === 0
-                        ? "Активных оптовиков нет — их добавляет администратор в справочнике."
-                        : "Нет совпадений по поиску — измените запрос."}
+                      Активных оптовиков нет — их добавляет администратор в разделе «Инвентарь».
                     </li>
-                    )
+                  ) : wholesaleRowsFiltered.length === 0 ? (
+                    <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
+                      Нет совпадений по поиску — измените запрос.
+                    </li>
                   ) : (
                     wholesaleRowsFiltered.map((w) => (
                       <li key={w.id} className="birzha-seller-wholesaler-list__item">
@@ -1068,13 +1056,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
                   )}
                 </ul>
               )}
-              {isSellerUx &&
-              wholesalerSellerPickMeta &&
-              !wholesalerSellerPickMeta.waitingForChars &&
-              wholesalerSellerPickMeta.truncated ? (
+              {isSellerUx && wholesalerPickerFiltered.truncated ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0" }}>
-                  Показаны первые {WHOLESALER_SELLER_MAX_ROWS} из {wholesalerSellerPickMeta.matchedTotal} — уточните поиск,
-                  если нужного нет в списке.
+                  Показаны первые {WHOLESALER_SELLER_MAX_ROWS} из {wholesalerPickerFiltered.totalMatched} — уточните
+                  поиск, если нужного нет в списке.
                 </p>
               ) : null}
               {selectedWholesalerLabel ? (

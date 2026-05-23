@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 
 import type {
   TripSaleAggregate,
@@ -28,6 +28,7 @@ function rowToLine(r: typeof tripBatchSales.$inferSelect): TripSaleLineRecord {
     wholesaleBuyerId: r.wholesaleBuyerId,
     recordedByUserId: r.recordedByUserId,
     packageCount: r.packageCount,
+    recordedAt: r.recordedAt,
   };
 }
 
@@ -68,6 +69,7 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
       saleChannel: row.saleChannel,
       wholesaleBuyerId: row.wholesaleBuyerId?.trim() || null,
       packageCount: row.packageCount ?? null,
+      recordedAt: row.recordedAt ?? new Date(),
     });
   }
 
@@ -90,10 +92,12 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
           eq(tripBatchSales.recordedByUserId, filter.onlyRecordedByUserId),
         )
       : eq(tripBatchSales.tripId, tripId);
-    const rows = await this.db.select().from(tripBatchSales).where(whereClause);
-    return rows
-      .map(rowToLine)
-      .sort((a, b) => a.id.localeCompare(b.id, "ru"));
+    const rows = await this.db
+      .select()
+      .from(tripBatchSales)
+      .where(whereClause)
+      .orderBy(desc(tripBatchSales.recordedAt), desc(tripBatchSales.id));
+    return rows.map(rowToLine);
   }
 
   async findLineById(lineId: string): Promise<TripSaleLineRecord | null> {

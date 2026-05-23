@@ -15,6 +15,7 @@ export type TripSaleLineJson = {
   saleChannel: "retail" | "wholesale";
   clientLabel: string | null;
   wholesaleBuyerId: string | null;
+  recordedAt: string;
 };
 
 export function tripSaleLineToJson(line: TripSaleLineRecord): TripSaleLineJson {
@@ -39,5 +40,6 @@ export function tripSaleLineToJson(line: TripSaleLineRecord): TripSaleLineJson {
     saleChannel: line.saleChannel,
     clientLabel: line.clientLabel,
     wholesaleBuyerId: line.wholesaleBuyerId,
+    recordedAt: line.recordedAt.toISOString(),
   };
 }

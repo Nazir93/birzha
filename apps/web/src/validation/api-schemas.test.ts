@@ -228,6 +228,37 @@ describe("parseSellFromTripForm", () => {
     expect(r.body.cardTransferKopecks).toBeUndefined();
   });
 
+  it("опт: требует wholesaleBuyerId", () => {
+    expect(() =>
+      parseSellFromTripForm({
+        batchId: "b1",
+        tripId: "t1",
+        kg: "1",
+        saleId: "s1",
+        pricePerKg: "100",
+        saleChannel: "wholesale",
+        paymentKind: "cash",
+        cashMixed: "",
+      }),
+    ).toThrow(/оптовика/i);
+  });
+
+  it("опт: передаёт wholesaleBuyerId", () => {
+    const r = parseSellFromTripForm({
+      batchId: "b1",
+      tripId: "t1",
+      kg: "1",
+      saleId: "s1",
+      pricePerKg: "100",
+      saleChannel: "wholesale",
+      wholesaleBuyerId: "w-buyer-1",
+      paymentKind: "cash",
+      cashMixed: "",
+    });
+    expect(r.body.saleChannel).toBe("wholesale");
+    expect(r.body.wholesaleBuyerId).toBe("w-buyer-1");
+  });
+
   it("sellerMoneyInRubles: card_transfer на всю выручку", () => {
     const r = parseSellFromTripForm({
       batchId: "b1",

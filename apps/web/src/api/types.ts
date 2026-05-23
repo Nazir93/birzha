@@ -259,6 +259,7 @@ export type TripSaleLineJson = {
   saleChannel: "retail" | "wholesale";
   clientLabel: string | null;
   wholesaleBuyerId: string | null;
+  recordedAt: string;
 };
 
 export type TripSaleLinesResponse = {

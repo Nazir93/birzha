@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { SalesBlock } from "../api/types.js";
 
-import { salesBatchLinesForChannel, salesClientLinesForChannel, salesChannelTotals } from "./trip-sales-channel.js";
+import {
+  formatTripSaleClientDisplayLabel,
+  salesBatchLinesForChannel,
+  salesClientLinesForChannel,
+  salesChannelTotals,
+  shouldShowSalesClientTable,
+} from "./trip-sales-channel.js";
 
 function sales(overrides: Partial<SalesBlock> = {}): SalesBlock {
   return {
@@ -94,5 +100,18 @@ describe("trip-sales-channel", () => {
   it("salesClientLinesForChannel", () => {
     const s = sales();
     expect(salesClientLinesForChannel(s, "wholesale")[0]!.clientLabel).toBe("Оптик");
+  });
+
+  it("formatTripSaleClientDisplayLabel: пустая розница → Розница", () => {
+    expect(formatTripSaleClientDisplayLabel("", "all")).toBe("Розница");
+    expect(formatTripSaleClientDisplayLabel("  ", "retail")).toBe("Розница");
+    expect(formatTripSaleClientDisplayLabel("Магазин", "all")).toBe("Магазин");
+    expect(formatTripSaleClientDisplayLabel("", "wholesale")).toBe("—");
+  });
+
+  it("shouldShowSalesClientTable скрывает блок при фильтре розница", () => {
+    expect(shouldShowSalesClientTable("all")).toBe(true);
+    expect(shouldShowSalesClientTable("wholesale")).toBe(true);
+    expect(shouldShowSalesClientTable("retail")).toBe(false);
   });
 });

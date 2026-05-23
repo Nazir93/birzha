@@ -155,9 +155,10 @@ export function parseSellFromTripForm(input: {
     };
     if (saleCh === "wholesale") {
       const wb = input.wholesaleBuyerId?.trim();
-      if (wb) {
-        base.wholesaleBuyerId = wb;
+      if (!wb) {
+        throw new Error("Выберите оптовика из списка");
       }
+      base.wholesaleBuyerId = wb;
     }
     if (input.paymentKind === "mixed") {
       const cm = input.cashMixed.trim();
@@ -231,9 +232,10 @@ export function parseUpdateTripSaleForm(input: {
     };
     if (saleCh === "wholesale") {
       const wb = input.wholesaleBuyerId?.trim();
-      if (wb) {
-        base.wholesaleBuyerId = wb;
+      if (!wb) {
+        throw new Error("Выберите оптовика из списка");
       }
+      base.wholesaleBuyerId = wb;
     }
     if (input.paymentKind === "mixed") {
       const cm = input.cashMixed.trim();

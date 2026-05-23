@@ -16,6 +16,7 @@ import {
   inferPaymentKindFromSaleLine,
   kopecksPerKgToRubDecimalString,
 } from "../format/trip-sale-line-payment.js";
+import { sortTripSaleLinesNewestFirst } from "../format/trip-sale-line-order.js";
 import { parseUpdateTripSaleForm } from "../validation/api-schemas.js";
 import {
   batchesByIdsQueryOptions,
@@ -335,6 +336,11 @@ export function SellerTripSaleCorrections({
     return m;
   }, [batchesQ.data?.batches]);
 
+  const sortedLines = useMemo(
+    () => sortTripSaleLinesNewestFirst(linesQ.data?.lines ?? []),
+    [linesQ.data?.lines],
+  );
+
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
@@ -379,11 +385,11 @@ export function SellerTripSaleCorrections({
         <p style={warnText} role="alert">
           Не удалось загрузить список продаж.
         </p>
-      ) : (linesQ.data?.lines.length ?? 0) === 0 ? (
+      ) : sortedLines.length === 0 ? (
         <BirzhaEmptyState compact title="Пока нет продаж по этому рейсу" />
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {(linesQ.data?.lines ?? []).map((line) => {
+          {sortedLines.map((line) => {
             const b = batchById.get(line.batchId);
             const headline = b ? formatNakladLineLabel(b) : "—";
             const sum = kopecksToRubLabel(line.revenueKopecks);
