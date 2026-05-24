@@ -2807,12 +2807,39 @@ main.app-shell--cabinet {
 
 .birzha-cabinet-sidebar__nav {
   display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.15rem 0.45rem 0.75rem;
+  overflow: hidden;
+}
+
+.birzha-cabinet-sidebar__nav-inner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.06rem;
+}
+
+.birzha-cabinet-sidebar__nav-main {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.06rem;
   min-height: 0;
-  padding: 0.15rem 0.45rem 0.75rem;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.birzha-cabinet-sidebar__nav-foot {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.06rem;
+  margin-top: auto;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .birzha-cabinet-sidebar__link {

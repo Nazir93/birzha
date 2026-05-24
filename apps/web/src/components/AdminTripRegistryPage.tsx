@@ -11,21 +11,11 @@ import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { loadingManifestsListQueryOptions, queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canCreateTrip } from "../auth/role-panels.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
-
-const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
-
-function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
-  if (!user) {
-    return false;
-  }
-  return TRIP_WRITE_ROLES.some((r) =>
-    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
-  );
-}
 
 function tripMatchesSearch(t: TripJson, q: string): boolean {
   const s = q.trim().toLowerCase();
@@ -39,7 +29,7 @@ function tripMatchesSearch(t: TripJson, q: string): boolean {
 export function AdminTripRegistryPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const showCloseTrip = canTripWrite(user ?? null);
+  const showCloseTrip = canCreateTrip(user ?? null);
   const [searchParams] = useSearchParams();
   const legacyStatus = searchParams.get("status");
   const [queryText, setQueryText] = useState("");

@@ -15,6 +15,7 @@ import {
 } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
+import { hasGlobalRole } from "../auth/global-roles.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -22,13 +23,6 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thtd } from "../ui/styles.js";
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
-
-function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null, role: string): boolean {
-  if (!user) {
-    return false;
-  }
-  return user.roles.some((r) => r.roleCode === role && r.scopeType === "global" && r.scopeId === "");
-}
 
 function tripInDateRange(departedAt: string | null | undefined, from: string, to: string): boolean {
   if (!from.trim() && !to.trim()) {

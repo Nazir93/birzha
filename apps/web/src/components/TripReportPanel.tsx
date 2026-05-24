@@ -288,7 +288,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           </select>
           {archivedTripCount > 0 ? (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-              Закрытые и завершённые рейсы ({archivedTripCount}) — в разделе <Link to={archivePath}>«Архив»</Link>.
+              {viewContext === "accounting" ? (
+                <>
+                  Закрытые и завершённые рейсы ({archivedTripCount}) в этом списке не показываются — сводка по всем
+                  рейсам на главной странице бухгалтерии.
+                </>
+              ) : (
+                <>
+                  Закрытые и завершённые рейсы ({archivedTripCount}) — в разделе <Link to={archivePath}>«Архив»</Link>.
+                </>
+              )}
             </p>
           ) : null}
           {tripId && r && canDeleteTrip && canTripWrite && (

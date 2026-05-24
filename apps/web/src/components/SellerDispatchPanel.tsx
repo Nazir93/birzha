@@ -5,6 +5,7 @@ import { apiPostJson } from "../api/fetch-api.js";
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { hasGlobalRole } from "../auth/global-roles.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -28,13 +29,6 @@ const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
-
-function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null, role: string): boolean {
-  if (!user) {
-    return false;
-  }
-  return user.roles.some((r) => r.roleCode === role && r.scopeType === "global" && r.scopeId === "");
-}
 
 function shipmentProductLabel(
   report: ShipmentReportResponse | undefined,

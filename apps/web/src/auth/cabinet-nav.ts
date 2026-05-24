@@ -4,6 +4,7 @@ import {
   hrefForPanelInCabinet,
   isFieldSellerOnly,
   NAV_PANEL_LABELS,
+  adminSidebarPanelOrder,
   operationsPanelOrder,
   type CabinetId,
 } from "./role-panels.js";
@@ -15,20 +16,30 @@ const ANON_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: ops.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "dist", to: ops.distribution, label: NAV_PANEL_LABELS.distribution },
   { key: "trips", to: ops.trips, label: NAV_PANEL_LABELS.trips },
-  { key: "archive", to: ops.archive, label: NAV_PANEL_LABELS.archive },
   { key: "rep", to: ops.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: ops.operations, label: NAV_PANEL_LABELS.operations },
+  { key: "archive", to: ops.archive, label: NAV_PANEL_LABELS.archive },
 ];
 
 const ANON_ADMIN_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: adminRoutes.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "dist", to: adminRoutes.distribution, label: NAV_PANEL_LABELS.distribution },
   { key: "trips", to: adminRoutes.trips, label: NAV_PANEL_LABELS.trips },
-  { key: "archive", to: adminRoutes.archive, label: NAV_PANEL_LABELS.archive },
   { key: "lm", to: adminRoutes.loadingManifests, label: NAV_PANEL_LABELS.loadingManifests },
   { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: adminRoutes.operations, label: NAV_PANEL_LABELS.operations },
+  { key: "archive", to: adminRoutes.archive, label: NAV_PANEL_LABELS.archive },
 ];
+
+/** Архив — отдельно внизу сайдбара (остальные пункты выше). */
+export function splitCabinetNavForSidebar(entries: CabinetNavEntry[]): {
+  main: CabinetNavEntry[];
+  bottom: CabinetNavEntry[];
+} {
+  const bottom = entries.filter((e) => e.key === "archive");
+  const main = entries.filter((e) => e.key !== "archive");
+  return { main, bottom };
+}
 
 /**
  * Пункты бокового меню кабинета (как в прежнем `AppNav`, без дублирования логики).
@@ -58,26 +69,11 @@ export function buildCabinetNavEntries(
   }
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
+    out.push({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
-    out.push({ to: accounting.sellerDispatch, label: NAV_PANEL_LABELS.sellerDispatch, key: "acc-dispatch" });
-    out.push({ to: accounting.trade, label: NAV_PANEL_LABELS.assignSeller, key: "acc-trade" });
+    return out;
   }
-  const panelOrder =
-    cabinet === "admin"
-      ? ([
-          "nakladnaya",
-          "distribution",
-          "trips",
-          "archive",
-          "loadingManifests",
-          "sellerDispatch",
-          "assignSeller",
-          "operations",
-          "inventory",
-          "users",
-          "service",
-        ] as const)
-      : operationsPanelOrder(user);
+  const panelOrder = cabinet === "admin" ? adminSidebarPanelOrder(user) : operationsPanelOrder(user);
   for (const p of panelOrder) {
     const to = hrefForPanelInCabinet(user, p, cabinet);
     if (to) {

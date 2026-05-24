@@ -68,24 +68,21 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
-export type SellFromTripVariant = "seller" | "operations";
-
 /**
- * Одна форма продажи с рейса: рейс → партия (калибр) → кг, цена, оплата.
- * Используется в кабинете продавца (/s) и в общих операциях (/o/operations).
+ * Форма продажи с рейса для кабинета продавца (/s): рейс → партия (калибр) → кг, цена, оплата.
  */
-export function SellFromTripSection({ variant }: { variant: SellFromTripVariant }) {
+export function SellFromTripSection() {
   const { meta } = useAuth();
   const online = useNavigatorOnLine();
-  const isSellerUx = variant === "seller";
+  const isSellerUx = true;
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const idPrefix = variant === "seller" ? "seller-sell" : "op-sell";
+  const idPrefix = "seller-sell";
   /** Якорь для прокрутки `?focus=sell` */
-  const scrollTargetId = variant === "seller" ? "seller-work-sell" : "op-sec-sell";
+  const scrollTargetId = "seller-work-sell";
   const headingId = `${scrollTargetId}-h`;
 
   const invalidateDomain = () => {
@@ -882,11 +879,11 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   return (
     <BirzhaDisclosure
       id={scrollTargetId}
-      className={variant === "seller" ? "birzha-seller-sell-panel" : ""}
+      className="birzha-seller-sell-panel"
       defaultOpen
       title={
-        <h3 id={headingId} style={{ margin: 0, fontSize: variant === "seller" ? "1.05rem" : "0.98rem" }}>
-          {variant === "seller" ? "Продажа с рейса" : "Шаг 2 · Продажа с рейса"}
+        <h3 id={headingId} style={{ margin: 0, fontSize: "1.05rem" }}>
+          Продажа с рейса
         </h3>
       }
     >
@@ -1608,9 +1605,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         type="button"
         style={{
           ...btnStyle,
-          ...(variant === "seller"
-            ? { fontSize: "1.1rem", padding: "0.75rem 1.15rem", fontWeight: 700, marginTop: "0.65rem" }
-            : { marginTop: "0.5rem" }),
+          fontSize: "1.1rem",
+          padding: "0.75rem 1.15rem",
+          fontWeight: 700,
+          marginTop: "0.65rem",
         }}
         disabled={sell.isPending || Boolean(isSellerUx && sellerSellBlockReason)}
         aria-busy={sell.isPending || undefined}

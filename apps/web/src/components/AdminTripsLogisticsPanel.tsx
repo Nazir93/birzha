@@ -8,6 +8,7 @@ import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
 import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canCreateTrip } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -16,17 +17,6 @@ import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/
 import { randomUuid } from "../lib/random-uuid.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
-const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
-
-function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
-  if (!user) {
-    return false;
-  }
-  return TRIP_WRITE_ROLES.some((r) =>
-    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
-  );
-}
-
 /**
  * Создание / закрытие / удаление рейсов — вынесено из «Складов и калибров» в отдельный раздел меню.
  */
@@ -34,7 +24,7 @@ export function AdminTripsLogisticsPanel() {
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
-  const showCloseTrip = canTripWrite(user);
+  const showCloseTrip = canCreateTrip(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const [newTripNumber, setNewTripNumber] = useState("");

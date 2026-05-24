@@ -82,6 +82,7 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
         cashKopecks: 2500n,
         debtKopecks: 0n,
         cardTransferKopecks: 0n,
+        packageCount: 0n,
       },
     ]);
     expect(agg.byClient).toEqual([

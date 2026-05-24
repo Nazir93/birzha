@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "./cabinet-nav.js";
+import { buildCabinetNavEntries, cabinetNavLinkUsesEnd, splitCabinetNavForSidebar } from "./cabinet-nav.js";
 import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 describe("cabinet-nav", () => {
@@ -10,9 +10,9 @@ describe("cabinet-nav", () => {
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
     expect(links[1]?.to).toBe(ops.distribution);
     expect(links[2]?.to).toBe(ops.trips);
-    expect(links[3]?.to).toBe(ops.archive);
-    expect(links[4]?.to).toBe(ops.reports);
-    expect(links[5]?.to).toBe(ops.operations);
+    expect(links[3]?.to).toBe(ops.reports);
+    expect(links[4]?.to).toBe(ops.operations);
+    expect(links[5]?.to).toBe(ops.archive);
   });
 
   it("аноним: админ — сводка /a + те же операции, Архив и Погрузка", () => {
@@ -21,8 +21,8 @@ describe("cabinet-nav", () => {
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.distribution);
     expect(links[3]?.to).toBe(adminRoutes.trips);
-    expect(links[4]?.to).toBe(adminRoutes.archive);
-    expect(links[5]?.to).toBe(adminRoutes.loadingManifests);
+    expect(links[4]?.to).toBe(adminRoutes.loadingManifests);
+    expect(links[links.length - 1]?.to).toBe(adminRoutes.archive);
     expect(links).toHaveLength(8);
   });
 
@@ -33,11 +33,11 @@ describe("cabinet-nav", () => {
       roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("admin", user, true);
-    expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
+    expect(links.find((x) => x.key === "nakladnaya")).toBeUndefined();
+    expect(links.find((x) => x.key === "distribution")).toBeUndefined();
     expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
     expect(links.find((x) => x.key === "archive")?.to).toBe(adminRoutes.archive);
     expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
-    expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links.find((x) => x.key === "reports")).toBeUndefined();
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
     expect(links.find((x) => x.key === "sellerDispatch")?.to).toBe(adminRoutes.sellerDispatch);
@@ -45,15 +45,18 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 
-  it("бухгалтерия: отгрузка и продажи отдельно", () => {
+  it("бухгалтерия: только сводка, отчёт и контрагенты (без операций /o)", () => {
     const user = {
       id: "u2",
       login: "acc",
       roles: [{ roleCode: "accountant", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("accounting", user, true);
-    expect(links.find((x) => x.key === "acc-dispatch")?.to).toBe(accounting.sellerDispatch);
-    expect(links.find((x) => x.key === "acc-trade")?.to).toBe(accounting.trade);
+    expect(links).toHaveLength(3);
+    expect(links[0]).toEqual({ to: accounting.home, label: "Сводка", key: "acc-home" });
+    expect(links[1]).toEqual({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
+    expect(links[2]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
   });
 
   it("продавец (только seller): кабинет /s — продажа, отчёт и архив", () => {
@@ -82,6 +85,15 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "sales-home")?.to).toBe(sales.home);
     expect(links.find((x) => x.key === "reports")?.to).toBe(sales.reports);
     expect(links.find((x) => x.key === "operations")?.to).toBe(sales.operations);
+  });
+
+  it("splitCabinetNavForSidebar: архив внизу", () => {
+    const links = buildCabinetNavEntries("operations", null, false);
+    const { main, bottom } = splitCabinetNavForSidebar(links);
+    expect(bottom).toHaveLength(1);
+    expect(bottom[0]?.key).toBe("archive");
+    expect(main.find((x) => x.key === "archive")).toBeUndefined();
+    expect(main[main.length - 1]?.key).not.toBe("archive");
   });
 
   it("cabinetNavLinkUsesEnd только для корней /a /s /b", () => {

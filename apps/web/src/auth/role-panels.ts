@@ -1,4 +1,13 @@
-import { adminRoutes, accounting, ops, prefix, routes, sales } from "../routes.js";
+import {
+  adminRoutes,
+  accounting,
+  ops,
+  prefix,
+  routes,
+  sales,
+  sharedOpsPath,
+  type SharedOpsSegment,
+} from "../routes.js";
 
 import type { AuthUser } from "./auth-context.js";
 
@@ -42,8 +51,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   archive: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
-  sellerDispatch: ["admin", "manager", "purchaser", "logistics", "accountant"],
-  assignSeller: ["admin", "manager", "purchaser", "logistics", "accountant"],
+  sellerDispatch: ["admin", "manager", "purchaser", "logistics"],
+  assignSeller: ["admin", "manager", "purchaser", "logistics"],
   service: ["admin"],
   /** Склады и калибры — только admin (согласовано с API). */
   inventory: ["admin"],
@@ -246,7 +255,6 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "distribution",
     "trips",
-    "archive",
     "loadingManifests",
     "sellerDispatch",
     "assignSeller",
@@ -255,6 +263,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "inventory",
     "users",
     "service",
+    "archive",
   ];
   if (!user) {
     return base;
@@ -271,6 +280,46 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   return base;
 }
 
+/**
+ * Боковое меню `/a`: без дубля «Закупка»/«Распределение» — они на сводке (KPI и быстрые ссылки).
+ * Маршруты `/a/purchase-nakladnaya` и `/a/distribution` по-прежнему доступны по прямым URL.
+ */
+export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
+  return [
+    "trips",
+    "loadingManifests",
+    "sellerDispatch",
+    "assignSeller",
+    "operations",
+    "inventory",
+    "users",
+    "service",
+    "archive",
+  ];
+}
+
+const SHARED_OPS_PANELS = [
+  "reports",
+  "nakladnaya",
+  "distribution",
+  "trips",
+  "archive",
+  "loadingManifests",
+  "sellerDispatch",
+  "assignSeller",
+  "operations",
+] as const satisfies readonly PanelId[];
+
+type SharedOpsPanel = (typeof SHARED_OPS_PANELS)[number];
+
+function isSharedOpsPanel(panel: PanelId): panel is SharedOpsPanel {
+  return (SHARED_OPS_PANELS as readonly PanelId[]).includes(panel);
+}
+
+function sharedOpsSegmentForPanel(panel: SharedOpsPanel): SharedOpsSegment {
+  return panel === "nakladnaya" ? "purchaseNakladnaya" : panel;
+}
+
 export function hrefForPanelInCabinet(
   user: AuthUser,
   panel: PanelId,
@@ -282,84 +331,11 @@ export function hrefForPanelInCabinet(
   if (!canAccessCabinet(user, currentCabinet)) {
     return null;
   }
-  if (currentCabinet === "accounting" && panel === "reports") {
-    return accounting.reports;
-  }
-  if (currentCabinet === "admin") {
-    if (panel === "inventory") {
-      return adminRoutes.inventory;
-    }
-    if (panel === "users") {
-      return adminRoutes.users;
-    }
-    if (panel === "service") {
-      return adminRoutes.service;
-    }
-    if (panel === "nakladnaya") {
-      return canAccessPanel(user, "nakladnaya") ? adminRoutes.purchaseNakladnaya : null;
-    }
+  if (currentCabinet === "accounting") {
     if (panel === "reports") {
-      return adminRoutes.reports;
+      return accounting.reports;
     }
-    if (panel === "distribution") {
-      return adminRoutes.distribution;
-    }
-    if (panel === "trips") {
-      return adminRoutes.trips;
-    }
-    if (panel === "archive") {
-      return adminRoutes.archive;
-    }
-    if (panel === "loadingManifests") {
-      return adminRoutes.loadingManifests;
-    }
-    if (panel === "sellerDispatch") {
-      return adminRoutes.sellerDispatch;
-    }
-    if (panel === "assignSeller") {
-      return adminRoutes.assignSeller;
-    }
-    if (panel === "operations") {
-      return adminRoutes.operations;
-    }
-  }
-  if (currentCabinet === "operations") {
-    if (panel === "reports") {
-      return ops.reports;
-    }
-    if (panel === "nakladnaya") {
-      return canAccessPanel(user, "nakladnaya") ? ops.purchaseNakladnaya : null;
-    }
-    if (panel === "distribution") {
-      return ops.distribution;
-    }
-    if (panel === "trips") {
-      return ops.trips;
-    }
-    if (panel === "archive") {
-      return ops.archive;
-    }
-    if (panel === "loadingManifests") {
-      return ops.loadingManifests;
-    }
-    if (panel === "sellerDispatch") {
-      return ops.sellerDispatch;
-    }
-    if (panel === "assignSeller") {
-      return ops.assignSeller;
-    }
-    if (panel === "operations") {
-      return ops.operations;
-    }
-    if (panel === "inventory" && canManageInventoryCatalog(user)) {
-      return adminRoutes.inventory;
-    }
-    if (panel === "users" && canAccessPanel(user, "users")) {
-      return adminRoutes.users;
-    }
-    if (panel === "service" && canAccessPanel(user, "service")) {
-      return adminRoutes.service;
-    }
+    return null;
   }
   if (currentCabinet === "sales") {
     if (panel === "reports") {
@@ -371,17 +347,43 @@ export function hrefForPanelInCabinet(
     if (panel === "operations") {
       return sales.operations;
     }
+    return null;
   }
-  if (currentCabinet === "accounting") {
-    if (panel === "reports") {
-      return accounting.reports;
+  if (currentCabinet === "admin") {
+    if (panel === "inventory") {
+      return adminRoutes.inventory;
     }
-    if (panel === "sellerDispatch") {
-      return accounting.sellerDispatch;
+    if (panel === "users") {
+      return adminRoutes.users;
     }
-    if (panel === "assignSeller") {
-      return accounting.trade;
+    if (panel === "service") {
+      return adminRoutes.service;
     }
+    if (isSharedOpsPanel(panel)) {
+      if (panel === "nakladnaya" && !canAccessPanel(user, "nakladnaya")) {
+        return null;
+      }
+      return sharedOpsPath("admin", sharedOpsSegmentForPanel(panel));
+    }
+    return null;
+  }
+  if (currentCabinet === "operations") {
+    if (isSharedOpsPanel(panel)) {
+      if (panel === "nakladnaya" && !canAccessPanel(user, "nakladnaya")) {
+        return null;
+      }
+      return sharedOpsPath("operations", sharedOpsSegmentForPanel(panel));
+    }
+    if (panel === "inventory" && canManageInventoryCatalog(user)) {
+      return adminRoutes.inventory;
+    }
+    if (panel === "users" && canAccessPanel(user, "users")) {
+      return adminRoutes.users;
+    }
+    if (panel === "service" && canAccessPanel(user, "service")) {
+      return adminRoutes.service;
+    }
+    return null;
   }
   return null;
 }

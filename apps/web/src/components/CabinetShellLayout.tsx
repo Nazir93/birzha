@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { buildCabinetNavEntries, cabinetNavLinkUsesEnd } from "../auth/cabinet-nav.js";
+import {
+  buildCabinetNavEntries,
+  cabinetNavLinkUsesEnd,
+  splitCabinetNavForSidebar,
+  type CabinetNavEntry,
+} from "../auth/cabinet-nav.js";
 import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
@@ -107,6 +112,9 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "acc-cp") {
     return "counterparties";
   }
+  if (key === "acc-reports") {
+    return "reports";
+  }
   return "dashboard";
 }
 
@@ -187,28 +195,38 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
     () => buildCabinetNavEntries(cabinetId, user, authRestricted),
     [cabinetId, user, authRestricted],
   );
+  const { main: mainNavEntries, bottom: bottomNavEntries } = useMemo(
+    () => splitCabinetNavForSidebar(entries),
+    [entries],
+  );
 
   const showUser = ready && meta?.authApi === "enabled";
 
+  const renderSidebarLinks = (items: CabinetNavEntry[]) =>
+    items.map(({ to, label, key }) => (
+      <NavLink
+        key={`${key}-${to}`}
+        to={to}
+        end={cabinetNavLinkUsesEnd(cabinetId, to)}
+        className={({ isActive }) =>
+          `birzha-cabinet-sidebar__link${isActive ? " birzha-cabinet-sidebar__link--active" : ""}`
+        }
+        title={!mobile && sidebarCollapsed ? label : undefined}
+        aria-label={label}
+        onClick={() => mobile && setMobileDrawerOpen(false)}
+      >
+        <SidebarNavIcon name={sidebarNavIconName(key)} />
+        <span className="birzha-cabinet-sidebar__link-text">{label}</span>
+      </NavLink>
+    ));
+
   const sidebarNav = (
-    <>
-      {entries.map(({ to, label, key }) => (
-        <NavLink
-          key={`${key}-${to}`}
-          to={to}
-          end={cabinetNavLinkUsesEnd(cabinetId, to)}
-          className={({ isActive }) =>
-            `birzha-cabinet-sidebar__link${isActive ? " birzha-cabinet-sidebar__link--active" : ""}`
-          }
-          title={!mobile && sidebarCollapsed ? label : undefined}
-          aria-label={label}
-          onClick={() => mobile && setMobileDrawerOpen(false)}
-        >
-          <SidebarNavIcon name={sidebarNavIconName(key)} />
-          <span className="birzha-cabinet-sidebar__link-text">{label}</span>
-        </NavLink>
-      ))}
-    </>
+    <div className="birzha-cabinet-sidebar__nav-inner">
+      <div className="birzha-cabinet-sidebar__nav-main">{renderSidebarLinks(mainNavEntries)}</div>
+      {bottomNavEntries.length > 0 ? (
+        <div className="birzha-cabinet-sidebar__nav-foot">{renderSidebarLinks(bottomNavEntries)}</div>
+      ) : null}
+    </div>
   );
 
   return (

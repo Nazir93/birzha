@@ -8,34 +8,52 @@ export const prefix = {
   accounting: "/b",
 } as const;
 
-/** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
-export const ops = {
-  reports: `${prefix.operations}/reports`,
-  /** Рейсы: создание, закрытие, удаление (кабинет операций и админки). */
-  trips: `${prefix.operations}/trips`,
-  purchaseNakladnaya: `${prefix.operations}/purchase-nakladnaya`,
-  distribution: `${prefix.operations}/distribution`,
-  loadingManifests: `${prefix.operations}/loading-manifests`,
-  operations: `${prefix.operations}/operations`,
-  sellerDispatch: `${prefix.operations}/seller-dispatch`,
-  assignSeller: `${prefix.operations}/assign-seller`,
-  /** Архив: закрытые рейсы, проданные накладные, погрузочные по закрытым рейсам. */
-  archive: `${prefix.operations}/archive`,
+export type OpsCabinetPrefix = typeof prefix.operations | typeof prefix.admin;
+
+/** Сегменты путей, общие для `/o` и `/a`. */
+const SHARED_OPS_SEGMENTS = {
+  reports: "reports",
+  trips: "trips",
+  purchaseNakladnaya: "purchase-nakladnaya",
+  distribution: "distribution",
+  loadingManifests: "loading-manifests",
+  operations: "operations",
+  sellerDispatch: "seller-dispatch",
+  assignSeller: "assign-seller",
+  archive: "archive",
 } as const;
+
+export type SharedOpsSegment = keyof typeof SHARED_OPS_SEGMENTS;
+
+function sharedOpsPaths(root: OpsCabinetPrefix) {
+  const s = SHARED_OPS_SEGMENTS;
+  return {
+    reports: `${root}/${s.reports}`,
+    trips: `${root}/${s.trips}`,
+    purchaseNakladnaya: `${root}/${s.purchaseNakladnaya}`,
+    distribution: `${root}/${s.distribution}`,
+    loadingManifests: `${root}/${s.loadingManifests}`,
+    operations: `${root}/${s.operations}`,
+    sellerDispatch: `${root}/${s.sellerDispatch}`,
+    assignSeller: `${root}/${s.assignSeller}`,
+    archive: `${root}/${s.archive}`,
+  } as const;
+}
+
+/** Путь панели в кабинете `/o` или `/a`. */
+export function sharedOpsPath(cabinet: "operations" | "admin", segment: SharedOpsSegment): string {
+  const root = cabinet === "admin" ? prefix.admin : prefix.operations;
+  return sharedOpsPaths(root)[segment];
+}
+
+/** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
+export const ops = sharedOpsPaths(prefix.operations);
 
 /** Справочники (склады, калибры) и meta — узкий круг. */
 export const adminRoutes = {
   /** Главная админки — сводка KPI. */
   home: prefix.admin,
-  reports: `${prefix.admin}/reports`,
-  /** Рейсы: создание, закрытие, удаление (в админском кабинете). */
-  trips: `${prefix.admin}/trips`,
-  purchaseNakladnaya: `${prefix.admin}/purchase-nakladnaya`,
-  distribution: `${prefix.admin}/distribution`,
-  loadingManifests: `${prefix.admin}/loading-manifests`,
-  operations: `${prefix.admin}/operations`,
-  sellerDispatch: `${prefix.admin}/seller-dispatch`,
-  assignSeller: `${prefix.admin}/assign-seller`,
+  ...sharedOpsPaths(prefix.admin),
   inventory: `${prefix.admin}/inventory`,
   /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
   tripRegistry: `${prefix.admin}/trip-registry`,
@@ -63,8 +81,6 @@ export const accounting = {
   home: prefix.accounting,
   reports: `${prefix.accounting}/reports`,
   counterparties: `${prefix.accounting}/counterparties`,
-  sellerDispatch: `${prefix.accounting}/seller-dispatch`,
-  trade: `${prefix.accounting}/trade`,
 } as const;
 
 /**
@@ -100,15 +116,16 @@ export const legacyPathList: readonly string[] = [
 /**
  * Карточка сохранённой накладной (логистика/склад — в кабинете /o).
  */
+export function isAdminCabinetPath(pathname: string): boolean {
+  return pathname === prefix.admin || pathname.startsWith(`${prefix.admin}/`);
+}
+
 export function purchaseNakladnayaDocumentPath(documentId: string, cabinet: "operations" | "admin" = "operations"): string {
-  const base = cabinet === "admin" ? adminRoutes.purchaseNakladnaya : ops.purchaseNakladnaya;
-  return `${base}/${encodeURIComponent(documentId)}`;
+  return `${sharedOpsPath(cabinet, "purchaseNakladnaya")}/${encodeURIComponent(documentId)}`;
 }
 
 export function purchaseNakladnayaBasePathForPath(pathname: string): string {
-  return pathname === prefix.admin || pathname.startsWith(`${prefix.admin}/`)
-    ? adminRoutes.purchaseNakladnaya
-    : ops.purchaseNakladnaya;
+  return sharedOpsPath(isAdminCabinetPath(pathname) ? "admin" : "operations", "purchaseNakladnaya");
 }
 
 export function purchaseNakladnayaDocumentPathForPath(pathname: string, documentId: string): string {
@@ -116,5 +133,5 @@ export function purchaseNakladnayaDocumentPathForPath(pathname: string, document
 }
 
 export function adminAwarePathForPath(pathname: string, adminPath: string, operationsPath: string): string {
-  return pathname === prefix.admin || pathname.startsWith(`${prefix.admin}/`) ? adminPath : operationsPath;
+  return isAdminCabinetPath(pathname) ? adminPath : operationsPath;
 }

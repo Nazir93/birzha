@@ -27,33 +27,31 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Отчёт по рейсу" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Отгрузка" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Продажи" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Операции" })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: "Офлайн-очередь" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Диагностика" })).toHaveCount(0);
   });
 
   test("кладовщик: отчёты, операции, офлайн; без «Диагностика»", async ({ page }) => {
-    await page.goto("/o/reports");
-    await page.getByRole("button", { name: "Выйти" }).click();
-    await expect(page.getByRole("link", { name: "Вход" })).toBeVisible({ timeout: 15_000 });
-
+    await page.context().clearCookies();
     await page.goto("/login");
     await page.locator("#login-user").fill("e2e_warehouse");
     await page.locator("#login-pass").fill(password);
     await page.getByRole("button", { name: "Войти" }).click();
-    await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/o\/(purchase-nakladnaya|reports)$/, { timeout: 20_000 });
 
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Операции" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Офлайн-очередь" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Недостача по рейсу" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Диагностика" })).toHaveCount(0);
   });
 
-  test("продавец: /s, сводка, отчёты и операции; без накладной", async ({ page }) => {
+  test("продавец: /s — только продажа; без накладной и контрагентов", async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible({ timeout: 30_000 });
     await page.locator("#login-user").fill("e2e_seller");
@@ -62,10 +60,9 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(page).toHaveURL(/\/s\/?$/, { timeout: 20_000 });
 
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
-    await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Операции" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Продажа" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toHaveCount(0);
   });
 });

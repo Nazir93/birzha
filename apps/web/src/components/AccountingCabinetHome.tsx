@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { adminRoutes, accounting } from "../routes.js";
-import { useAuth } from "../auth/auth-context.js";
-import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { accounting } from "../routes.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
@@ -10,9 +8,6 @@ import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
  * Главная бухкабинета: остатки, выручка и прибыль по данным API; без форм ввода рейса/партий.
  */
 export function AccountingCabinetHome() {
-  const { user } = useAuth();
-  const showServiceLink = user && canManageInventoryCatalog(user);
-
   return (
     <section className="birzha-home-premium" aria-labelledby="acc-home-h">
       <header className="birzha-home-hero birzha-home-hero--accounting">
@@ -39,12 +34,6 @@ export function AccountingCabinetHome() {
             <span>Клиенты</span>
             <strong>Контрагенты</strong>
           </Link>
-          {showServiceLink ? (
-            <Link to={adminRoutes.service} className="birzha-home-action">
-              <span>Сервис</span>
-              <strong>Диагностика</strong>
-            </Link>
-          ) : null}
         </nav>
       </header>
 

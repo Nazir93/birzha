@@ -18,7 +18,7 @@ import {
   queryRoots,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminRoutes, ops, prefix } from "../routes.js";
+import { isAdminCabinetPath, sharedOpsPath } from "../routes.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { parseRecordTripShortageForm, parseShipForm } from "../validation/api-schemas.js";
 
@@ -27,10 +27,7 @@ const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 export function OperationsPanel() {
   const location = useLocation();
   const queryClient = useQueryClient();
-  const reportsPath =
-    location.pathname === prefix.admin || location.pathname.startsWith(`${prefix.admin}/`)
-      ? adminRoutes.reports
-      : ops.reports;
+  const reportsPath = sharedOpsPath(isAdminCabinetPath(location.pathname) ? "admin" : "operations", "reports");
 
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });

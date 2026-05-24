@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch, assertOkResponse, closeTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { hasGlobalRole } from "../auth/global-roles.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { filterTripsInWork } from "../format/archive.js";
@@ -33,13 +34,6 @@ import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styl
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
-
-function hasGlobalRole(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null, role: string): boolean {
-  if (!user) {
-    return false;
-  }
-  return user.roles.some((r) => r.roleCode === role && r.scopeType === "global" && r.scopeId === "");
-}
 
 export function AssignSellerPanel() {
   const { meta, user } = useAuth();

@@ -176,6 +176,13 @@
       "when": 1777700000000,
       "tag": "0024_trip_sale_package_count",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777800000000,
+      "tag": "0025_trip_sale_recorded_at",
+      "breakpoints": true
     }
   ]
 }

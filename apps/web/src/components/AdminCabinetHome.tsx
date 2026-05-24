@@ -13,6 +13,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canCreateTrip } from "../auth/role-panels.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
@@ -26,17 +27,6 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
-
-const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
-
-function canTripWrite(user: { roles: { roleCode: string; scopeType: string; scopeId: string }[] } | null): boolean {
-  if (!user) {
-    return false;
-  }
-  return TRIP_WRITE_ROLES.some((r) =>
-    user.roles.some((g) => g.roleCode === r && g.scopeType === "global" && g.scopeId === ""),
-  );
-}
 
 function MassDistributionRing({
   warehouseKg,
@@ -81,7 +71,7 @@ function MassDistributionRing({
 export function AdminCabinetHome() {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
-  const showCloseTrip = canTripWrite(user ?? null);
+  const showCloseTrip = canCreateTrip(user ?? null);
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const batchesQ = useQuery({
@@ -307,7 +297,15 @@ export function AdminCabinetHome() {
             </div>
           </header>
 
-          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Погрузка и отгрузка">
+          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Быстрые разделы">
+            <Link to={adminRoutes.purchaseNakladnaya}>Закупка товара</Link>
+            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
+              ·
+            </span>
+            <Link to={adminRoutes.distribution}>Распределение</Link>
+            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
+              ·
+            </span>
             <Link to={adminRoutes.loadingManifests}>Погрузка на машину</Link>
             <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
               ·

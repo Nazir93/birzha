@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { useLocation, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { useLocation, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "./auth/auth-context.js";
 import { defaultRouteForUser } from "./auth/role-panels.js";
@@ -16,7 +16,8 @@ import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
-import { legacyPathList, login, ops, prefix } from "./routes.js";
+import { SharedOperationsCabinetRoutes } from "./routing/shared-operations-routes.js";
+import { accounting, legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
 import { ErrorAlert } from "./ui/ErrorAlerts.js";
 import { preJson } from "./ui/styles.js";
@@ -29,9 +30,6 @@ const AdminCabinetHome = lazy(() =>
 );
 const AdminUsersPanel = lazy(() =>
   import("./components/AdminUsersPanel.js").then((m) => ({ default: m.AdminUsersPanel })),
-);
-const AdminLoadingManifestsPanel = lazy(() =>
-  import("./components/AdminLoadingManifestsPanel.js").then((m) => ({ default: m.AdminLoadingManifestsPanel })),
 );
 const AdminSoldBySellerPage = lazy(() =>
   import("./components/AdminSoldBySellerPage.js").then((m) => ({ default: m.AdminSoldBySellerPage })),
@@ -50,34 +48,11 @@ const AdminTransitTripsPage = lazy(() =>
 const AdminTripRegistryPage = lazy(() =>
   import("./components/AdminTripRegistryPage.js").then((m) => ({ default: m.AdminTripRegistryPage })),
 );
-const AssignSellerPanel = lazy(() =>
-  import("./components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
-);
-const SellerDispatchPanel = lazy(() =>
-  import("./components/SellerDispatchPanel.js").then((m) => ({ default: m.SellerDispatchPanel })),
-);
-const AllocationPanel = lazy(() =>
-  import("./components/AllocationPanel.js").then((m) => ({ default: m.AllocationPanel })),
-);
 const CounterpartiesPanel = lazy(() =>
   import("./components/CounterpartiesPanel.js").then((m) => ({ default: m.CounterpartiesPanel })),
 );
-const AdminTripsLogisticsPanel = lazy(() =>
-  import("./components/AdminTripsLogisticsPanel.js").then((m) => ({ default: m.AdminTripsLogisticsPanel })),
-);
 const InventoryAdminPanel = lazy(() =>
   import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
-);
-const OperationsPanel = lazy(() =>
-  import("./components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
-);
-const PurchaseNakladnayaDetailSection = lazy(() =>
-  import("./components/PurchaseNakladnayaDetailSection.js").then((m) => ({
-    default: m.PurchaseNakladnayaDetailSection,
-  })),
-);
-const PurchaseNakladnayaSection = lazy(() =>
-  import("./components/PurchaseNakladnayaSection.js").then((m) => ({ default: m.PurchaseNakladnayaSection })),
 );
 const SellerCabinetHome = lazy(() =>
   import("./components/SellerCabinetHome.js").then((m) => ({ default: m.SellerCabinetHome })),
@@ -88,9 +63,7 @@ const SellerSalesOperationsRedirect = lazy(() =>
 const TripReportPanel = lazy(() =>
   import("./components/TripReportPanel.js").then((m) => ({ default: m.TripReportPanel })),
 );
-const ArchivePage = lazy(() =>
-  import("./components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })),
-);
+const ArchivePage = lazy(() => import("./components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })));
 
 function isCabinetShellPath(pathname: string): boolean {
   const roots = [prefix.admin, prefix.operations, prefix.sales, prefix.accounting] as const;
@@ -160,102 +133,7 @@ export function App() {
               </RequireCabinet>
             }
           >
-            <Route
-              path="reports"
-              element={
-                <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <TripReportPanel viewContext="default" />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="purchase-nakladnaya"
-              element={
-                <RequirePanel panel="nakladnaya">
-                  <section className="birzha-card">
-                    <Outlet />
-                  </section>
-                </RequirePanel>
-              }
-            >
-              <Route index element={<PurchaseNakladnayaSection />} />
-              <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
-            </Route>
-            <Route
-              path="distribution"
-              element={
-                <RequirePanel panel="distribution">
-                  <section className="birzha-card">
-                    <AllocationPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="trips"
-              element={
-                <RequirePanel panel="trips">
-                  <AdminTripsLogisticsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="archive"
-              element={
-                <RequirePanel panel="archive">
-                  <ArchivePage />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="operations"
-              element={
-                <RequirePanel panel="operations">
-                  <section className="birzha-card">
-                    <OperationsPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="loading-manifests"
-              element={
-                <RequirePanel panel="loadingManifests">
-                  <AdminLoadingManifestsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="loading-manifests/:manifestId"
-              element={
-                <RequirePanel panel="loadingManifests">
-                  <AdminLoadingManifestsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="seller-dispatch"
-              element={
-                <RequirePanel panel="sellerDispatch">
-                  <section className="birzha-card">
-                    <SellerDispatchPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="assign-seller"
-              element={
-                <RequirePanel panel="assignSeller">
-                  <section className="birzha-card">
-                    <AssignSellerPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route index element={<Navigate to="reports" replace />} />
+            <SharedOperationsCabinetRoutes defaultIndex="reports" />
           </Route>
 
           <Route
@@ -266,101 +144,7 @@ export function App() {
               </RequireCabinet>
             }
           >
-            <Route
-              path="reports"
-              element={
-                <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <TripReportPanel viewContext="default" />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="purchase-nakladnaya"
-              element={
-                <RequirePanel panel="nakladnaya">
-                  <section className="birzha-card">
-                    <Outlet />
-                  </section>
-                </RequirePanel>
-              }
-            >
-              <Route index element={<PurchaseNakladnayaSection />} />
-              <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
-            </Route>
-            <Route
-              path="distribution"
-              element={
-                <RequirePanel panel="distribution">
-                  <section className="birzha-card">
-                    <AllocationPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="trips"
-              element={
-                <RequirePanel panel="trips">
-                  <AdminTripsLogisticsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="archive"
-              element={
-                <RequirePanel panel="archive">
-                  <ArchivePage />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="loading-manifests"
-              element={
-                <RequirePanel panel="loadingManifests">
-                  <AdminLoadingManifestsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="loading-manifests/:manifestId"
-              element={
-                <RequirePanel panel="loadingManifests">
-                  <AdminLoadingManifestsPanel />
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="seller-dispatch"
-              element={
-                <RequirePanel panel="sellerDispatch">
-                  <section className="birzha-card">
-                    <SellerDispatchPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="assign-seller"
-              element={
-                <RequirePanel panel="assignSeller">
-                  <section className="birzha-card">
-                    <AssignSellerPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="operations"
-              element={
-                <RequirePanel panel="operations">
-                  <section className="birzha-card">
-                    <OperationsPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
+            <SharedOperationsCabinetRoutes defaultIndex="home" />
             <Route
               path="trip-registry"
               element={
@@ -514,26 +298,8 @@ export function App() {
                 </RequirePanel>
               }
             />
-            <Route
-              path="seller-dispatch"
-              element={
-                <RequirePanel panel="sellerDispatch">
-                  <section className="birzha-card">
-                    <SellerDispatchPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="trade"
-              element={
-                <RequirePanel panel="assignSeller">
-                  <section className="birzha-card">
-                    <AssignSellerPanel />
-                  </section>
-                </RequirePanel>
-              }
-            />
+            <Route path="seller-dispatch" element={<Navigate to={accounting.home} replace />} />
+            <Route path="trade" element={<Navigate to={accounting.home} replace />} />
             <Route
               index
               element={

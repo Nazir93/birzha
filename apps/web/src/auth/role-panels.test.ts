@@ -47,10 +47,11 @@ describe("role-panels", () => {
     expect(canAccessPanel(userWithRoles("receiver"), "loadingManifests")).toBe(true);
   });
 
-  it("бухгалтер — отчёты, не операции и не накладная", () => {
+  it("бухгалтер — отчёты и контрагенты, не операции и не отгрузка/продажи", () => {
     const u = userWithRoles("accountant");
     expect(canAccessPanel(u, "reports")).toBe(true);
-    expect(canAccessPanel(u, "assignSeller")).toBe(true);
+    expect(canAccessPanel(u, "assignSeller")).toBe(false);
+    expect(canAccessPanel(u, "sellerDispatch")).toBe(false);
     expect(canAccessPanel(u, "nakladnaya")).toBe(false);
     expect(canAccessPanel(u, "distribution")).toBe(false);
     expect(canAccessPanel(u, "operations")).toBe(false);

@@ -39,7 +39,7 @@ export function SellerCabinetHome() {
         </nav>
       </header>
 
-      <SellFromTripSection variant="seller" />
+      <SellFromTripSection />
     </div>
   );
 }

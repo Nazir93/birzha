@@ -41,7 +41,11 @@ if [[ -n "${TEST_DATABASE_URL:-}" ]] && [[ "$TEST_DATABASE_URL" == *"USER"* ]]; 
   echo "Ошибка: TEST_DATABASE_URL похож на шаблон из README — укажите реальный URL PostgreSQL" >&2
   exit 1
 fi
-pnpm --filter @birzha/api test
+if [[ -n "${TEST_DATABASE_URL:-}" ]]; then
+  pnpm --filter @birzha/api exec vitest run --config vitest.config.ts --maxWorkers=1
+else
+  pnpm --filter @birzha/api test
+fi
 
 echo "==> build"
 pnpm build
