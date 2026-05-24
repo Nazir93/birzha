@@ -490,10 +490,11 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(listBody.batches.some((b) => b.id === batchId)).toBeTruthy();
 
     await page.goto("/operations");
-    await expect(page.getByRole("region", { name: "Операции по партиям и рейсу" })).toBeVisible({
+    await expect(page).toHaveURL(/\/o\/operations$/, { timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Недостача по рейсу и справочно партии" })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible();
     await expect(page.locator("#op-batches-heading")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Партии по накладным", { exact: false })).toBeVisible();
     /** Блок «Партии по накладным» только для партий с оформленной накладной; сырой POST /batches без накладной — пустое состояние. */
