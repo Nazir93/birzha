@@ -56,10 +56,14 @@ if pnpm exec playwright --version >/dev/null 2>&1; then
   # apps/api/.env часто задаёт PORT=3000 (prod API) — E2E поднимает свой сервер на 3099.
   unset PORT
   export PORT=3099
-  echo "==> e2e in-memory (PORT=3099)"
-  pnpm exec playwright test
-  if [[ -n "${E2E_DATABASE_URL:-}" && -n "${E2E_JWT_SECRET:-}" ]]; then
+  E2E_PG_URL="${E2E_DATABASE_URL:-}"
+  E2E_PG_JWT="${E2E_JWT_SECRET:-}"
+  echo "==> e2e in-memory (PORT=3099, без E2E_DATABASE_URL)"
+  env -u E2E_DATABASE_URL -u E2E_JWT_SECRET pnpm exec playwright test e2e/golden-smoke.spec.ts
+  if [[ -n "${E2E_PG_URL}" && -n "${E2E_PG_JWT}" ]]; then
     echo "==> e2e roles (PostgreSQL, PORT=3099)"
+    export E2E_DATABASE_URL="${E2E_PG_URL}"
+    export E2E_JWT_SECRET="${E2E_PG_JWT}"
     pnpm exec playwright test e2e/role-nav-auth.spec.ts
   else
     echo "SKIP: E2E ролей — нужны E2E_DATABASE_URL и E2E_JWT_SECRET"

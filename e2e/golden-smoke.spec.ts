@@ -16,27 +16,27 @@ function revenueKopecksFromGramsAndPricePerKg(grams: bigint, pricePerKgKopecks: 
 test.describe("золотой smoke (UI + API)", () => {
   test.describe.configure({ mode: "serial" });
 
-  test("корень / → редирект на /reports", async ({ page }) => {
+  test("корень / → редирект на /o/reports", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveURL(/\/reports$/);
+    await expect(page).toHaveURL(/\/o\/reports$/);
     await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("неизвестный путь → редирект на /reports (catch-all)", async ({ page }) => {
+  test("неизвестный путь → редирект на /o/reports (catch-all)", async ({ page }) => {
     await page.goto("/_e2e-no-such-route");
-    await expect(page).toHaveURL(/\/reports$/);
+    await expect(page).toHaveURL(/\/o\/reports$/);
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("/login при выключенной обязательной авторизации → редирект на /reports", async ({ page }) => {
+  test("/login при выключенной обязательной авторизации → редирект на /o/reports", async ({ page }) => {
     await page.goto("/login");
-    await expect(page).toHaveURL(/\/reports$/);
+    await expect(page).toHaveURL(/\/o\/reports$/);
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
   test("главная и служебная страница: meta с включённым batches API", async ({ page }) => {
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
 
     await page.goto("/service");
@@ -54,7 +54,7 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
 
     const select = page.locator("#trip-select");
@@ -71,7 +71,7 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
 
     await page.selectOption("#trip-select", id);
@@ -124,7 +124,7 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
     await page.selectOption("#trip-select", tripId);
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
@@ -171,7 +171,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const reportJson = (await reportRes.json()) as { shortage: { totalGrams: string } };
     expect(reportJson.shortage.totalGrams).toBe("2000");
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
@@ -231,7 +231,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const cardLabel = kopecksToRubLabel(report.sales.totalCardTransferKopecks);
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
@@ -294,7 +294,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const cardLabel = kopecksToRubLabel(report.sales.totalCardTransferKopecks);
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
@@ -397,7 +397,7 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(report.financials.costOfShortageKopecks).toBe(expectedCostShortage.toString());
     expect(report.financials.grossProfitKopecks).toBe(expectedGross.toString());
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
     await page.selectOption("#trip-select", tripId);
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
@@ -437,7 +437,7 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
     await page.selectOption("#trip-select", tripId);
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
@@ -503,12 +503,12 @@ test.describe("золотой smoke (UI + API)", () => {
   });
 
   test("навигация: вкладки AppNav (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
-    await page.goto("/reports");
+    await page.goto("/o/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
 
     await nav.getByRole("link", { name: "Закупка товара" }).click();
-    await expect(page).toHaveURL(/\/purchase-nakladnaya$/);
+    await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/);
     await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Распределение товара" }).click();
@@ -516,7 +516,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Операции" }).click();
-    await expect(page).toHaveURL(/\/operations$/);
+    await expect(page).toHaveURL(/\/o\/operations$/);
     await expect(page.getByRole("heading", { name: "Операции по партиям и рейсу" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Рейсы" }).click();
@@ -530,7 +530,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     const adminNav = page.getByRole("navigation", { name: "Разделы приложения" });
     await adminNav.getByRole("link", { name: "Отчёты и рейсы" }).click();
-    await expect(page).toHaveURL(/\/reports$/);
+    await expect(page).toHaveURL(/\/o\/reports$/);
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 });
