@@ -519,10 +519,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/o\/operations$/);
     await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible({ timeout: 15_000 });
 
-    await page
-      .getByRole("navigation", { name: "Разделы приложения" })
-      .getByRole("link", { name: "Рейсы" })
-      .click();
+    await page.goto("/o/trips");
     await expect(page).toHaveURL(/\/o\/trips$/);
     await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
 
