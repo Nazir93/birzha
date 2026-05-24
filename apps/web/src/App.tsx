@@ -16,7 +16,7 @@ import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
 import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
-import { SharedOperationsCabinetRoutes } from "./routing/shared-operations-routes.js";
+import { sharedOperationsCabinetRouteElements } from "./routing/shared-operations-routes.js";
 import { accounting, legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
 import { ErrorAlert } from "./ui/ErrorAlerts.js";
@@ -133,7 +133,7 @@ export function App() {
               </RequireCabinet>
             }
           >
-            <SharedOperationsCabinetRoutes defaultIndex="reports" />
+            {sharedOperationsCabinetRouteElements("reports")}
           </Route>
 
           <Route
@@ -144,7 +144,7 @@ export function App() {
               </RequireCabinet>
             }
           >
-            <SharedOperationsCabinetRoutes defaultIndex="home" />
+            {sharedOperationsCabinetRouteElements("home")}
             <Route
               path="trip-registry"
               element={

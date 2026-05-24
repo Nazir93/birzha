@@ -35,9 +35,11 @@ const AssignSellerPanel = lazy(() =>
 );
 
 /**
- * Общие панели закупа/склада/логистики в кабинетах `/o` и `/a` (один набор Route, без копипасты в App.tsx).
+ * Общие панели закупа/склада/логистики в кабинетах `/o` и `/a`.
+ * Вызывать как `{sharedOperationsCabinetRouteElements("reports")}` внутри родительского `<Route>` —
+ * не как `<Component />` (React Router требует прямых потомков `<Route>`).
  */
-export function SharedOperationsCabinetRoutes({ defaultIndex }: { defaultIndex: "reports" | "home" }) {
+export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "home") {
   return (
     <>
       <Route
