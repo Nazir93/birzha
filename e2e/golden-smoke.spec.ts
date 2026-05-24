@@ -519,17 +519,19 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/o\/operations$/);
     await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible({ timeout: 15_000 });
 
-    await nav.getByRole("link", { name: "Рейсы" }).click();
+    await page
+      .getByRole("navigation", { name: "Разделы приложения" })
+      .getByRole("link", { name: "Рейсы" })
+      .click();
     await expect(page).toHaveURL(/\/o\/trips$/);
     await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
 
-    /* Ссылка «Диагностика» в шапке только у admin/manager; анонимный e2e — прямой legacy URL. */
+    /* Анонимный e2e: legacy /service → /a/service; отчёты — снова /o/reports. */
     await page.goto("/service");
     await expect(page).toHaveURL(/\/a\/service$/);
     await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible({ timeout: 30_000 });
 
-    const adminNav = page.getByRole("navigation", { name: "Разделы приложения" });
-    await adminNav.getByRole("link", { name: "Отчёты и рейсы" }).click();
+    await page.goto("/o/reports");
     await expect(page).toHaveURL(/\/o\/reports$/);
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
