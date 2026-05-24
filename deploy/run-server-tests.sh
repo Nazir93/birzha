@@ -53,10 +53,13 @@ pnpm build
 if pnpm exec playwright --version >/dev/null 2>&1; then
   echo "==> playwright install (если нужно)"
   pnpm exec playwright install chromium --with-deps 2>/dev/null || pnpm exec playwright install chromium
-  echo "==> e2e in-memory"
+  # apps/api/.env часто задаёт PORT=3000 (prod API) — E2E поднимает свой сервер на 3099.
+  unset PORT
+  export PORT=3099
+  echo "==> e2e in-memory (PORT=3099)"
   pnpm exec playwright test
   if [[ -n "${E2E_DATABASE_URL:-}" && -n "${E2E_JWT_SECRET:-}" ]]; then
-    echo "==> e2e roles (PostgreSQL)"
+    echo "==> e2e roles (PostgreSQL, PORT=3099)"
     pnpm exec playwright test e2e/role-nav-auth.spec.ts
   else
     echo "SKIP: E2E ролей — нужны E2E_DATABASE_URL и E2E_JWT_SECRET"
