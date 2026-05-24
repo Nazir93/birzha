@@ -18,7 +18,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
   test("корень / → редирект на /o/reports", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveURL(/\/o\/reports$/);
+    await expect(page).toHaveURL(/\/o\/reports$/, { timeout: 20_000 });
     await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });

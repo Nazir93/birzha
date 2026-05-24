@@ -62,6 +62,8 @@ if (pgUrl && jwtSecret && jwtSecret.length >= 32) {
     NODE_ENV: "development",
     PORT: String(port),
     DATABASE_URL: undefined,
+    JWT_SECRET: undefined,
+    REQUIRE_API_AUTH: "false",
   });
 
   const batches = new InMemoryBatchRepository();
