@@ -59,7 +59,8 @@ if pnpm exec playwright --version >/dev/null 2>&1; then
   E2E_PG_URL="${E2E_DATABASE_URL:-}"
   E2E_PG_JWT="${E2E_JWT_SECRET:-}"
   echo "==> e2e in-memory (PORT=3099, без E2E_DATABASE_URL)"
-  env -u E2E_DATABASE_URL -u E2E_JWT_SECRET pnpm exec playwright test e2e/golden-smoke.spec.ts
+  # apps/api/.env может задавать REQUIRE_API_AUTH=true — для in-memory E2E отключаем.
+  env -u E2E_DATABASE_URL -u E2E_JWT_SECRET REQUIRE_API_AUTH=false pnpm exec playwright test e2e/golden-smoke.spec.ts
   if [[ -n "${E2E_PG_URL}" && -n "${E2E_PG_JWT}" ]]; then
     echo "==> e2e roles (PostgreSQL, PORT=3099)"
     export E2E_DATABASE_URL="${E2E_PG_URL}"
