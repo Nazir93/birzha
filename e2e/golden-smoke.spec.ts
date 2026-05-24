@@ -456,8 +456,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const text = await readFile(dlPath!, "utf8");
     expect(text).toContain("Рейс;");
     expect(text).toContain(tripNumber);
-    expect(text).toContain("Партия_id");
-    expect(text).toContain(batchId);
+    expect(text).toContain("Товар_калибр");
     expect(text).toContain("25000");
   });
 
