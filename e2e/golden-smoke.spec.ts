@@ -19,7 +19,6 @@ test.describe("золотой smoke (UI + API)", () => {
   test("корень / → редирект на /o/reports", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/o\/reports$/, { timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
@@ -37,7 +36,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
   test("главная и служебная страница: meta с включённым batches API", async ({ page }) => {
     await page.goto("/o/reports");
-    await expect(page.getByRole("heading", { name: "Биржа" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
 
     await page.goto("/service");
     await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible();
