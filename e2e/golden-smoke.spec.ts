@@ -495,10 +495,11 @@ test.describe("золотой smoke (UI + API)", () => {
       timeout: 15_000,
     });
     await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible();
-    await expect(page.locator("#op-batches-heading")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Партии по накладным", { exact: false })).toBeVisible();
-    /** Блок «Партии по накладным» только для партий с оформленной накладной; сырой POST /batches без накладной — пустое состояние. */
-    await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible();
+    const batchesBlock = page.getByText("Партии по закупочным накладным", { exact: true });
+    await expect(batchesBlock).toBeVisible();
+    await batchesBlock.click();
+    /** Блок только для партий с накладной; сырой POST /batches — пустое состояние. */
+    await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible({ timeout: 15_000 });
   });
 
   test("навигация: вкладки AppNav (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
