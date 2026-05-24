@@ -11,7 +11,8 @@ import { useAuth } from "../auth/auth-context.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -174,7 +175,7 @@ export function AdminTripsLogisticsPanel() {
           </span>
         }
       >
-        {tripError && <p style={errorText}>{tripError}</p>}
+        {tripError ? <ErrorAlert message={tripError} title="Рейс" /> : null}
         <div className="birzha-inventory-logistics-form">
           <div className="birzha-inventory-logistics-form__field">
             <label className="birzha-field-label">№ рейса</label>
@@ -231,7 +232,7 @@ export function AdminTripsLogisticsPanel() {
             </button>
           </div>
         </div>
-        {tripsQ.isError && <p style={errorText}>Рейсы: {String(tripsQ.error)}</p>}
+        {tripsQ.isError ? <ErrorAlert error={tripsQ.error} title="Список рейсов" /> : null}
         {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
         {tripsQ.isSuccess && (
           <>

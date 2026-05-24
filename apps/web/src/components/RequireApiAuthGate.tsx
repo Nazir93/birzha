@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/auth-context.js";
 import { login } from "../routes.js";
 import { LoadingScreen } from "../ui/LoadingIndicator.js";
-import { errorText } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 
 /** Если `requireApiAuth` на сервере и сессии нет — редирект на `/login`. */
 export function RequireApiAuthGate() {
@@ -12,13 +12,14 @@ export function RequireApiAuthGate() {
 
   if (bootstrapError) {
     return (
-      <section className="birzha-card" role="alert" aria-labelledby="auth-bootstrap-error-heading">
+      <section className="birzha-card" aria-labelledby="auth-bootstrap-error-heading">
         <h2 id="auth-bootstrap-error-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
           Не удалось проверить вход
         </h2>
-        <p style={errorText}>
-          Сервер или сессия временно недоступны ({bootstrapError.message}). Обновите страницу или обратитесь к администратору.
-        </p>
+        <ErrorAlert
+          title="Сервер недоступен"
+          message="Сервер или сессия временно недоступны. Обновите страницу или обратитесь к администратору."
+        />
       </section>
     );
   }

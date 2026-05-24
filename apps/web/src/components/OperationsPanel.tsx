@@ -8,7 +8,8 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
-import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
+import { WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -121,7 +122,9 @@ export function OperationsPanel() {
     <div role="region" aria-label="Недостача по рейсу и справочно партии">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Недостача по рейсу</h2>
 
-      {batchesQuery.isError && <p style={warnText}>Список партий не загрузился. Проверьте связь и повторите.</p>}
+      {batchesQuery.isError ? (
+        <WarningAlert title="Партии">Список партий не загрузился. Проверьте связь и повторите.</WarningAlert>
+      ) : null}
       <StaleDataNotice show={batchesQuery.isFetching && !batchesQuery.isPending} label="Обновление списка партий…" />
       {batchesQuery.isPending && (
         <LoadingBlock label="Загрузка партий и остатков…" minHeight={96} skeleton skeletonRows={6} />
@@ -290,11 +293,11 @@ export function OperationsPanel() {
         </BirzhaDisclosure>
       )}
 
-      {tripsQuery.isError && (
-        <p style={{ ...warnText, marginTop: "0.65rem" }}>
+      {tripsQuery.isError ? (
+        <WarningAlert title="Рейсы">
           Список рейсов не загрузился — выберите рейс вручную или повторите позже.
-        </p>
-      )}
+        </WarningAlert>
+      ) : null}
     </div>
   );
 }

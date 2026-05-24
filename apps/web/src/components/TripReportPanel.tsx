@@ -33,10 +33,10 @@ import {
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import {
   btnSecondary,
   btnStyle,
-  errorText,
   fieldStyleFullWidth,
   tableStyle,
   thHead,
@@ -253,11 +253,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={5} />
         </div>
       )}
-      {tripsQuery.isError && (
-        <p className="no-print" role="alert" style={errorText}>
-          Не удалось загрузить рейсы. Проверьте связь и повторите.
-        </p>
-      )}
+      {tripsQuery.isError ? (
+        <ErrorAlert className="no-print" message="Не удалось загрузить рейсы. Проверьте связь и повторите." title="Список рейсов" />
+      ) : null}
 
       {tripsQuery.data && tripsForSelect.length === 0 && (
         <div className="no-print" style={{ marginTop: "0.5rem" }}>
@@ -314,16 +312,12 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </button>
             </div>
           )}
-          {deleteTripMutation.isError && (
-            <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.5rem", marginBottom: 0 }}>
-              {(deleteTripMutation.error as Error).message}
-            </p>
-          )}
-          {closeTripMutation.isError && (
-            <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.5rem", marginBottom: 0 }}>
-              {(closeTripMutation.error as Error).message}
-            </p>
-          )}
+          {deleteTripMutation.isError ? (
+            <ErrorAlert className="no-print" error={deleteTripMutation.error} title="Удаление рейса" />
+          ) : null}
+          {closeTripMutation.isError ? (
+            <ErrorAlert className="no-print" error={closeTripMutation.error} title="Закрытие рейса" />
+          ) : null}
         </div>
       )}
 
@@ -342,18 +336,17 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           <LoadingIndicator size="sm" label="Обновление отчёта…" />
         </p>
       )}
-      {tripId && reportQuery.isError && (
-        <p className="no-print" role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
-          {fieldSellerSalesReport
-            ? "Не удалось открыть отчёт по этому рейсу. Убедитесь, что рейс закреплён за вами; если ошибка повторяется — сообщите администратору."
-            : "Отчёт недоступен: рейс не найден или сервер временно не отвечает."}
-          {(reportQuery.error as Error)?.message ? (
-            <span className="birzha-ui-sm" style={{ display: "block", marginTop: "0.35rem", fontWeight: 400 }}>
-              {(reportQuery.error as Error).message}
-            </span>
-          ) : null}
-        </p>
-      )}
+      {tripId && reportQuery.isError ? (
+        <ErrorAlert
+          className="no-print"
+          title="Отчёт недоступен"
+          message={
+            fieldSellerSalesReport
+              ? "Не удалось открыть отчёт по этому рейсу. Убедитесь, что рейс закреплён за вами; если ошибка повторяется — сообщите администратору."
+              : "Рейс не найден или сервер временно не отвечает."
+          }
+        />
+      ) : null}
 
       {r && fieldSellerSalesReport ? (
         <FieldSellerTripReport report={r} batchById={batchById} />

@@ -113,14 +113,19 @@ export class UpdateTripSaleLineUseCase {
 
     const shipmentAgg = await this.shipments.aggregateByTripId(line.tripId);
     const shipLine = shipmentAgg.byBatch.find((l) => l.batchId === line.batchId);
+    const salesAgg = await this.sales.aggregateByTripId(line.tripId);
+    const soldPkgIncluding =
+      salesAgg.byBatch.find((l) => l.batchId === line.batchId)?.packageCount ?? 0n;
     const nakladnaya = await this.purchasePackages.findByBatchId(line.batchId);
     const salePackageCount = assertTripSalePackageCount({
       shippedGrams: shipLine?.grams ?? 0n,
       shippedPackages: shipLine?.packageCount ?? 0n,
       nakladnaya,
       soldGramsIncludingLine: soldIncluding,
+      soldPackagesIncludingLine: soldPkgIncluding,
       shortageGrams: shortage,
       lineGrams: line.grams,
+      linePackageCount: line.packageCount ?? 0n,
       packageCount: input.packageCount,
     });
 

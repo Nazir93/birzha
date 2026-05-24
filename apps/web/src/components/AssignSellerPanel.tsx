@@ -27,6 +27,7 @@ import {
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -217,9 +218,7 @@ export function AssignSellerPanel() {
             <LoadingBlock label="Загрузка отчётов по рейсам…" minHeight={72} skeleton skeletonRows={5} />
           ) : null}
           {reportError ? (
-            <p role="alert" className="birzha-assign-seller__alert">
-              Не удалось загрузить часть отчётов. Обновите страницу.
-            </p>
+            <ErrorAlert message="Не удалось загрузить часть отчётов. Обновите страницу." title="Отчёты" />
           ) : null}
 
           {!reportLoading && loadedReports.length > 0 ? (
@@ -390,9 +389,7 @@ export function AssignSellerPanel() {
               }
             >
               {closeTripSoldOutMut.isError ? (
-                <p className="birzha-text-danger birzha-ui-sm" role="alert" style={{ margin: "0 0 0.65rem" }}>
-                  {(closeTripSoldOutMut.error as Error).message}
-                </p>
+                <ErrorAlert error={closeTripSoldOutMut.error} title="Закрытие рейса" />
               ) : null}
               <div className="birzha-assign-seller__detail-grid">
                 <div className="birzha-assign-seller__detail-block">

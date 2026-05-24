@@ -148,6 +148,9 @@ export class SellFromTripUseCase {
     const shipped = await this.shipments.totalGramsForTripAndBatch(input.tripId, input.batchId);
     const soldBefore = await this.sales.totalGramsForTripAndBatch(input.tripId, input.batchId);
     const shortageBefore = await this.shortages.totalGramsForTripAndBatch(input.tripId, input.batchId);
+    const salesAgg = await this.sales.aggregateByTripId(input.tripId);
+    const soldPkgBefore =
+      salesAgg.byBatch.find((l) => l.batchId === input.batchId)?.packageCount ?? 0n;
     const available = shipped - soldBefore - shortageBefore;
 
     const requested = kgToGrams(input.kg);
@@ -182,6 +185,7 @@ export class SellFromTripUseCase {
         effectiveShipped,
         soldBefore,
         shortageBefore,
+        soldPkgBefore,
       );
       if (salePackageCount > maxPkg) {
         throw new Error(

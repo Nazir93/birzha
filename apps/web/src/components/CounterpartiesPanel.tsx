@@ -8,7 +8,8 @@ import { canWriteCounterpartyCatalog } from "../auth/role-panels.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyleDense, thHeadDense, thtdDense, warnText } from "../ui/styles.js";
+import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 /**
  * Справочник контрагентов: список, добавление и удаление (когда разрешено API и ролью).
@@ -118,11 +119,11 @@ export function CounterpartiesPanel() {
         defaultOpen
         title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Список контрагентов</span>}
       >
-        {listQ.isError && <p style={warnText}>Список не загрузился.</p>}
+        {listQ.isError ? <WarningAlert title="Список">Список не загрузился.</WarningAlert> : null}
         {listQ.isPending && <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={5} />}
 
-        {createM.isError && <p style={errorText}>{(createM.error as Error).message}</p>}
-        {deleteM.isError && <p style={errorText}>{(deleteM.error as Error).message}</p>}
+        {createM.isError ? <ErrorAlert error={createM.error} title="Создание" /> : null}
+        {deleteM.isError ? <ErrorAlert error={deleteM.error} title="Удаление" /> : null}
 
         {listQ.data && listQ.data.counterparties.length === 0 && !listQ.isPending && (
           <BirzhaEmptyState compact title="Список пуст" />

@@ -46,9 +46,14 @@ describe("apiFetch", () => {
     await expect(assertOkResponse(res)).rejects.toThrow("bad thing");
   });
 
-  it("assertOkResponse с подписью включает её в сообщение", async () => {
-    const res = new Response("x", { status: 500 });
-    await expect(assertOkResponse(res, "/api/x")).rejects.toThrow("/api/x: x");
+  it("assertOkResponse парсит JSON message из тела", async () => {
+    const res = new Response(JSON.stringify({ message: "Выберите оптовика" }), { status: 400 });
+    await expect(assertOkResponse(res)).rejects.toThrow("Выберите оптовика");
+  });
+
+  it("assertOkResponse подставляет понятный текст для 500 без тела", async () => {
+    const res = new Response("", { status: 500 });
+    await expect(assertOkResponse(res)).rejects.toThrow(/сервер временно/i);
   });
 
   it("apiPostJsonOr403 при 403 бросает переданный текст", async () => {

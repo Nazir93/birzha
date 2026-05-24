@@ -6,6 +6,7 @@ import { isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.j
 import { tripByIdQueryOptions, tripsSearchPickerQueryOptions } from "../query/core-list-queries.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle } from "../ui/styles.js";
 
 function useDebouncedValue<T>(value: T, ms: number): T {
@@ -118,11 +119,9 @@ export function TripSearchPicker({
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
             </p>
           )}
-          {pickerQuery.isError && (
-            <p role="alert" className="birzha-ui-sm birzha-text-danger" style={{ margin: "0 0 0.35rem" }}>
-              Не удалось загрузить рейсы.
-            </p>
-          )}
+          {pickerQuery.isError ? (
+            <ErrorAlert message="Не удалось загрузить рейсы." title="Поиск рейсов" />
+          ) : null}
           <ul
             className="birzha-scroll-panel birzha-trip-search-picker__list"
             role="listbox"

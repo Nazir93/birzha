@@ -83,7 +83,7 @@ export function formatTripSaleClientDisplayLabel(
     return trimmed;
   }
   if (channel === "wholesale") {
-    return "—";
+    return "Опт";
   }
   return RETAIL_SALE_CLIENT_DISPLAY_LABEL;
 }

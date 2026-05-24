@@ -17,7 +17,8 @@ import {
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { btnStyle, fieldStyle, successText, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
@@ -208,9 +209,7 @@ export function SellerDispatchPanel() {
             ))}
           </select>
           {fieldSellersQuery.isError ? (
-            <p role="alert" style={{ ...warnText, marginTop: "0.35rem", fontSize: "0.86rem" }}>
-              Список продавцов не загрузился.
-            </p>
+            <ErrorAlert message="Список продавцов не загрузился." title="Продавцы" />
           ) : null}
           {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 ? (
             <BirzhaEmptyState compact title="Нет активных продавцов" />

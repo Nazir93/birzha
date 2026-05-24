@@ -18,6 +18,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thtd } from "../ui/styles.js";
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
@@ -243,9 +244,7 @@ export function AdminSoldBySellerPage() {
             </p>
           ) : null}
           {reportError ? (
-            <p role="alert" className="birzha-assign-seller__alert">
-              Не удалось загрузить часть отчётов. Обновите страницу.
-            </p>
+            <ErrorAlert message="Не удалось загрузить часть отчётов. Обновите страницу." title="Отчёты" />
           ) : null}
 
           {!reportLoading && loadedReports.length > 0 ? (

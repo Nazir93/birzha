@@ -7,7 +7,8 @@ import { adminRoutes } from "../routes.js";
 import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, btnStyleInline, errorText, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Администратор",
@@ -438,16 +439,10 @@ export function AdminUsersPanel() {
             {createM.isPending ? "Создание…" : "Создать"}
           </button>
         </div>
-        {password.length >= 10 && passwordAgain.length > 0 && password !== passwordAgain && (
-          <p role="status" style={{ ...errorText, marginTop: "0.65rem", marginBottom: 0 }}>
-            Поля «новый пароль» и «повтор» должны совпадать.
-          </p>
-        )}
-        {formError && (
-          <p role="alert" style={{ ...errorText, marginTop: "0.65rem", marginBottom: 0 }}>
-            {formError}
-          </p>
-        )}
+        {password.length >= 10 && passwordAgain.length > 0 && password !== passwordAgain ? (
+          <WarningAlert title="Пароль">Поля «новый пароль» и «повтор» должны совпадать.</WarningAlert>
+        ) : null}
+        {formError ? <ErrorAlert message={formError} title="Пользователь" /> : null}
         {formOk && (
           <p role="status" className="birzha-callout-info" style={{ marginTop: "0.65rem", marginBottom: 0 }}>
             {formOk}
@@ -473,11 +468,9 @@ export function AdminUsersPanel() {
         {listQ.isPending && (
           <LoadingBlock label="Загрузка списка…" minHeight={72} skeleton skeletonRows={6} />
         )}
-        {listQ.isError && (
-          <p role="alert" style={errorText}>
-            Не удалось загрузить список. Проверьте вход и повторите.
-          </p>
-        )}
+        {listQ.isError ? (
+          <ErrorAlert message="Не удалось загрузить список. Проверьте вход и повторите." title="Пользователи" />
+        ) : null}
         {listQ.data && user && (
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Пользователи">
@@ -512,11 +505,8 @@ export function AdminUsersPanel() {
                 ))}
               </tbody>
             </table>
-            {(passwordM.error || deleteM.error) && (
-              <p role="alert" style={{ ...errorText, marginTop: "0.75rem", marginBottom: 0 }}>
-                {passwordM.error?.message ?? deleteM.error?.message}
-              </p>
-            )}
+            {passwordM.error ? <ErrorAlert error={passwordM.error} title="Пароль" /> : null}
+            {deleteM.error ? <ErrorAlert error={deleteM.error} title="Удаление" /> : null}
           </div>
         )}
         </BirzhaDisclosure>

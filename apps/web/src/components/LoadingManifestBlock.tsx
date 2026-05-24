@@ -12,6 +12,7 @@ import {
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
@@ -516,9 +517,7 @@ export function LoadingManifestBlock({
                 </table>
               </div>
               {writeOff.isError && writeOff.errorMessage ? (
-                <p role="alert" style={{ marginTop: "0.45rem", color: "#b91c1c", fontSize: "0.88rem" }}>
-                  {writeOff.errorMessage}
-                </p>
+                <ErrorAlert message={writeOff.errorMessage} title="Списание" />
               ) : null}
             </div>
           ) : null}

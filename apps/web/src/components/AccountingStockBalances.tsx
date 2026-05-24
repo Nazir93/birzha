@@ -6,7 +6,8 @@ import { batchesFullListQueryOptions, warehousesFullListQueryOptions } from "../
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 /** Копейки: кг × руб/кг с округлением по строке партии. */
 function inventoryValueKopecks(batches: readonly BatchListItem[], kgOf: (b: BatchListItem) => number): bigint {
@@ -98,9 +99,7 @@ export function AccountingStockBalances() {
   }
   if (batchesQ.isError) {
     return (
-      <p style={errorText} role="alert">
-        Остатки не загрузились. Проверьте связь и повторите.
-      </p>
+      <ErrorAlert message="Остатки не загрузились. Проверьте связь и повторите." title="Остатки" />
     );
   }
 

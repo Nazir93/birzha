@@ -20,7 +20,8 @@ import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
 import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 /**
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
  */
@@ -307,8 +308,8 @@ export function InventoryAdminPanel() {
           </span>
         }
       >
-      {nakladError && <p style={errorText}>{nakladError}</p>}
-      {purchaseDocsQ.isError && <p style={errorText}>Не загрузились накладные: {String(purchaseDocsQ.error)}</p>}
+      {nakladError ? <ErrorAlert message={nakladError} title="Накладная" /> : null}
+      {purchaseDocsQ.isError ? <ErrorAlert error={purchaseDocsQ.error} title="Накладные" /> : null}
       {purchaseDocsQ.isPending && (
         <LoadingBlock label="Список накладных…" minHeight={48} skeleton skeletonRows={3} />
       )}
@@ -374,8 +375,8 @@ export function InventoryAdminPanel() {
               </span>
             }
           >
-          {destFormError && <p style={errorText}>{destFormError}</p>}
-          {shipDestQ.isError && <p style={errorText}>Направления: {String(shipDestQ.error)}</p>}
+          {destFormError ? <ErrorAlert message={destFormError} title="Направление" /> : null}
+          {shipDestQ.isError ? <ErrorAlert error={shipDestQ.error} title="Направления" /> : null}
           {shipDestQ.isPending && (
             <LoadingBlock label="Справочник направлений…" minHeight={48} skeleton skeletonRows={3} />
           )}
@@ -485,8 +486,8 @@ export function InventoryAdminPanel() {
               </span>
             }
           >
-            {wholesalerFormError && <p style={errorText}>{wholesalerFormError}</p>}
-            {wholesalersQ.isError && <p style={errorText}>Оптовики: {String(wholesalersQ.error)}</p>}
+            {wholesalerFormError ? <ErrorAlert message={wholesalerFormError} title="Оптовик" /> : null}
+            {wholesalersQ.isError ? <ErrorAlert error={wholesalersQ.error} title="Оптовики" /> : null}
             {wholesalersQ.isPending && (
               <LoadingBlock label="Справочник оптовиков…" minHeight={48} skeleton skeletonRows={3} />
             )}
@@ -578,11 +579,7 @@ export function InventoryAdminPanel() {
           </span>
         }
       >
-      {warehousesQ.isError && (
-        <p role="alert" style={errorText}>
-          {warehousesQ.error instanceof Error ? warehousesQ.error.message : String(warehousesQ.error)}
-        </p>
-      )}
+      {warehousesQ.isError ? <ErrorAlert error={warehousesQ.error} title="Склады" /> : null}
       {warehousesQ.isPending && (
         <LoadingBlock label="Загрузка складов…" minHeight={48} skeleton skeletonRows={3} />
       )}
@@ -613,7 +610,7 @@ export function InventoryAdminPanel() {
           {createWarehouse.isPending ? "…" : "Добавить склад"}
         </button>
       </div>
-      {warehouseFormError && <p style={errorText}>{warehouseFormError}</p>}
+      {warehouseFormError ? <ErrorAlert message={warehouseFormError} title="Склад" /> : null}
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
         <table style={{ ...tableStyle, minWidth: 420 }}>
           <thead>
@@ -661,11 +658,7 @@ export function InventoryAdminPanel() {
           </span>
         }
       >
-      {gradesQ.isError && (
-        <p role="alert" style={errorText}>
-          {gradesQ.error instanceof Error ? gradesQ.error.message : String(gradesQ.error)}
-        </p>
-      )}
+      {gradesQ.isError ? <ErrorAlert error={gradesQ.error} title="Калибры" /> : null}
       {gradesQ.isPending && (
         <LoadingBlock label="Загрузка калибров…" minHeight={48} skeleton skeletonRows={3} />
       )}
@@ -713,7 +706,7 @@ export function InventoryAdminPanel() {
           {createProductGrade.isPending ? "…" : "Добавить калибр"}
         </button>
       </div>
-      {gradeFormError && <p style={errorText}>{gradeFormError}</p>}
+      {gradeFormError ? <ErrorAlert message={gradeFormError} title="Калибр" /> : null}
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
         <table style={{ ...tableStyle, minWidth: 560 }}>
           <thead>

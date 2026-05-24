@@ -1419,6 +1419,237 @@ a.birzha-kpi-tile--link:focus-visible {
   color: var(--birzha-link);
 }
 
+/* ——— Уведомления: ошибки, предупреждения, тосты ——— */
+.birzha-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0.65rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  font-size: clamp(0.84rem, 2.8vw, 0.92rem);
+  line-height: 1.5;
+  background: var(--birzha-surface-muted);
+  color: var(--color-text);
+}
+
+.birzha-alert__icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  margin-top: 0.05rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.birzha-alert__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.birzha-alert__title {
+  margin: 0 0 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.birzha-alert__message {
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.birzha-alert__dismiss {
+  flex: 0 0 auto;
+  margin: -0.15rem -0.25rem 0 0;
+  padding: 0.2rem 0.55rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.birzha-alert__dismiss:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.birzha-alert--error {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+.birzha-alert--error .birzha-alert__icon {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.birzha-alert--warning {
+  border-color: rgba(217, 119, 6, 0.45);
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.birzha-alert--warning .birzha-alert__icon {
+  background: #fde68a;
+  color: #b45309;
+}
+
+.birzha-alert--info {
+  border-left: 3px solid var(--birzha-accent);
+  background: var(--birzha-surface-muted);
+  color: var(--color-text);
+}
+
+.birzha-alert--info .birzha-alert__icon {
+  background: var(--birzha-accent-soft);
+  color: var(--birzha-accent);
+}
+
+.birzha-alert--success {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.birzha-alert--success .birzha-alert__icon {
+  background: #bbf7d0;
+  color: #15803d;
+}
+
+.birzha-error-boundary-wrap {
+  width: 100%;
+  max-width: min(36rem, calc(100vw - 1.5rem));
+  margin: 1.5rem auto;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+}
+
+.birzha-error-boundary-wrap .birzha-alert {
+  margin-top: 0;
+}
+
+.birzha-error-boundary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.birzha-alert-toast-host {
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.75rem max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+
+.birzha-alert--toast {
+  pointer-events: auto;
+  width: 100%;
+  max-width: min(36rem, 100%);
+  margin: 0;
+  box-shadow: var(--birzha-shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+
+.birzha-alert--compact {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.84rem;
+}
+
+.birzha-alert--compact .birzha-alert__title {
+  display: none;
+}
+
+.birzha-alert--compact .birzha-alert__icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.75rem;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert--error {
+  background: linear-gradient(180deg, #450a0a 0%, #1c1917 100%);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert--error .birzha-alert__icon {
+  background: rgba(127, 29, 29, 0.85);
+  color: #fca5a5;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert--warning {
+  background: linear-gradient(180deg, #451a03 0%, #1c1917 100%);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert--warning .birzha-alert__icon {
+  background: rgba(120, 53, 15, 0.85);
+  color: #fcd34d;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert--success {
+  background: linear-gradient(180deg, #052e16 0%, #1c1917 100%);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #bbf7d0;
+}
+
+html[data-birzha-theme="dark"] .birzha-alert__dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Старые классы → тот же вид (постепенная миграция) */
+.birzha-assign-seller__alert,
+p[role="alert"].birzha-text-danger {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: clamp(0.84rem, 2.8vw, 0.92rem);
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+html[data-birzha-theme="dark"] .birzha-assign-seller__alert,
+html[data-birzha-theme="dark"] p[role="alert"].birzha-text-danger {
+  background: linear-gradient(180deg, #450a0a 0%, #1c1917 100%);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
 /** Карточка реквизитов на экране закупочной накладной */
 .birzha-nakl-detail-meta {
   display: grid;

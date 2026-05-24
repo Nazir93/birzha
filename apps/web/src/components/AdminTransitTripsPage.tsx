@@ -8,7 +8,8 @@ import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { errorText, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function tripHasTransitMass(t: TripJson): boolean {
   if (t.status !== "open") {
@@ -91,11 +92,7 @@ export function AdminTransitTripsPage() {
       </header>
 
       {tripsQ.isPending ? <LoadingBlock label="Загрузка рейсов…" minHeight={72} skeleton skeletonRows={4} /> : null}
-      {tripsQ.isError ? (
-        <p role="alert" style={errorText}>
-          Не удалось загрузить рейсы.
-        </p>
-      ) : null}
+      {tripsQ.isError ? <ErrorAlert message="Не удалось загрузить рейсы." title="Рейсы" /> : null}
 
       {!tripsQ.isPending && !tripsQ.isError ? (
         <>

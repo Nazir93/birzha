@@ -11,7 +11,8 @@ import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const MAX_TRIPS = 50;
 
@@ -96,9 +97,7 @@ export function AccountingTripsSummary() {
   }
   if (tripsQuery.isError) {
     return (
-      <p style={errorText} role="alert">
-        Список рейсов не загрузился. Проверьте связь и повторите.
-      </p>
+      <ErrorAlert message="Список рейсов не загрузился. Проверьте связь и повторите." title="Рейсы" />
     );
   }
   if (sortedTrips.length === 0) {
@@ -173,9 +172,10 @@ export function AccountingTripsSummary() {
                 return (
                   <tr key={t.id}>
                     <td colSpan={8} style={thtd}>
-                      <span role="alert" style={errorText}>
-                        Нет отчёта: {t.tripNumber}
-                      </span>
+                      <ErrorAlert
+                        className="birzha-alert--compact"
+                        message={`Нет отчёта по рейсу ${t.tripNumber}.`}
+                      />
                     </td>
                   </tr>
                 );
@@ -247,9 +247,7 @@ export function AccountingTripsSummary() {
         </table>
       </div>
       {hasError && !anyLoading ? (
-        <p className="birzha-callout-warning" role="alert" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
-          Часть отчётов не загрузилась — обновите страницу.
-        </p>
+        <WarningAlert title="Отчёты">Часть отчётов не загрузилась — обновите страницу.</WarningAlert>
       ) : null}
     </BirzhaDisclosure>
   );

@@ -13,7 +13,8 @@ import { adminRoutes } from "../routes.js";
 import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyleInline, errorText, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
 
@@ -125,11 +126,7 @@ export function AdminTripRegistryPage() {
       </header>
 
       {loading ? <LoadingBlock label="Загрузка рейсов…" minHeight={72} skeleton skeletonRows={4} /> : null}
-      {err ? (
-        <p role="alert" style={errorText}>
-          Не удалось загрузить данные.
-        </p>
-      ) : null}
+      {err ? <ErrorAlert message="Не удалось загрузить данные." title="Реестр рейсов" /> : null}
 
       {!loading && !err ? (
         <>
@@ -309,11 +306,7 @@ export function AdminTripRegistryPage() {
                 )}
               </div>
             ) : null}
-            {closeTripMut.isError ? (
-              <p className="birzha-text-danger birzha-ui-sm" style={{ marginTop: "0.35rem" }} role="alert">
-                {(closeTripMut.error as Error).message}
-              </p>
-            ) : null}
+            {closeTripMut.isError ? <ErrorAlert error={closeTripMut.error} title="Закрытие рейса" /> : null}
           </BirzhaDisclosure>
         </>
       ) : null}

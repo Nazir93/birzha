@@ -106,7 +106,7 @@ describe("trip-sales-channel", () => {
     expect(formatTripSaleClientDisplayLabel("", "all")).toBe("Розница");
     expect(formatTripSaleClientDisplayLabel("  ", "retail")).toBe("Розница");
     expect(formatTripSaleClientDisplayLabel("Магазин", "all")).toBe("Магазин");
-    expect(formatTripSaleClientDisplayLabel("", "wholesale")).toBe("—");
+    expect(formatTripSaleClientDisplayLabel("", "wholesale")).toBe("Опт");
   });
 
   it("shouldShowSalesClientTable скрывает блок при фильтре розница", () => {

@@ -83,13 +83,43 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
  * После `apiFetch`: при неуспешном статусе читает тело (text) и бросает `Error`.
  * При успехе тело не читает.
  */
-export async function assertOkResponse(res: Response, contextLabel?: string): Promise<void> {
+function messageFromErrorBody(detail: string, status: number): string {
+  const trimmed = detail.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const j = JSON.parse(trimmed) as { message?: string; error?: string };
+      if (typeof j.message === "string" && j.message.trim()) {
+        return j.message.trim();
+      }
+      if (typeof j.error === "string" && j.error.trim()) {
+        return j.error.trim();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (trimmed) {
+    return trimmed;
+  }
+  if (status === 401) {
+    return "Сессия истекла — войдите снова.";
+  }
+  if (status === 403) {
+    return "Недостаточно прав для этого действия.";
+  }
+  if (status >= 500) {
+    return "Сервер временно не отвечает. Подождите и повторите.";
+  }
+  return `Ошибка сервера (${status})`;
+}
+
+export async function assertOkResponse(res: Response, _contextLabel?: string): Promise<void> {
   if (res.ok) {
     return;
   }
-  const detail = (await res.text()).trim();
-  const msg = detail || `HTTP ${res.status}`;
-  throw new Error(contextLabel ? `${contextLabel}: ${msg}` : msg);
+  const detail = await res.text();
+  const msg = messageFromErrorBody(detail, res.status);
+  throw new Error(msg);
 }
 
 export async function apiGetJson<T>(url: string): Promise<T> {

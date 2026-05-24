@@ -44,12 +44,16 @@ export function tripSaleUsesPackageAccounting(
   return nakladnaya != null && nakladnaya.linePackageCount > 0n;
 }
 
-/** Оценка ящиков «в пути» по партии: отгрузка × (остаток кг / отгружено кг). */
+/**
+ * Ящики «в пути» по партии (как в отчёте продавца): доля по кг и, если уже продавали
+ * с указанием ящиков, не больше остатка по журналу ящиков.
+ */
 export function estimateTripBatchPackagesInTransit(
   shippedG: bigint,
   shippedPackages: bigint,
   soldG: bigint,
   shortageG: bigint,
+  soldPackages: bigint = 0n,
 ): bigint {
   if (shippedG <= 0n || shippedPackages <= 0n) {
     return 0n;
@@ -58,5 +62,13 @@ export function estimateTripBatchPackagesInTransit(
   if (netG <= 0n) {
     return 0n;
   }
-  return (shippedPackages * netG) / shippedG;
+  const byKg = (shippedPackages * netG) / shippedG;
+  if (soldPackages > 0n) {
+    const byLedger = shippedPackages - soldPackages;
+    if (byLedger <= 0n) {
+      return 0n;
+    }
+    return byLedger < byKg ? byLedger : byKg;
+  }
+  return byKg;
 }

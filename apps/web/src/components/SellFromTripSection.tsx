@@ -13,12 +13,10 @@ import { formatNakladLineLabel } from "../format/batch-label.js";
 import {
   findSellerCaliberGroupForBatch,
   groupSellableRowsByCaliber,
-  kgNumberToGramsBigInt,
-  maxSellableGramsForBatch,
-  maxSellablePackagesForBatch,
+  maxSellablePackagesForSellKg,
   sellerCaliberGroupKey,
 } from "../format/seller-trip-caliber-groups.js";
-import { buildSellerSellChunks } from "../format/seller-sell-chunk-plan.js";
+import { buildSellerSellChunks, sellerSellPlanBlockReason } from "../format/seller-sell-chunk-plan.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -44,33 +42,16 @@ import { parseSellFromTripForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { SellerTripSaleCorrections } from "./SellerTripSaleCorrections.js";
+import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
+import { filterWholesalersForSellerPicker } from "../format/wholesaler-picker.js";
 import { TripSearchPicker } from "./TripSearchPicker.js";
+import { BirzhaAlert } from "../ui/BirzhaAlert.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, fieldStyle, successText, warnText } from "../ui/styles.js";
+import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
-
-/** У продавца: не больше N строк в списке; при большем справочнике — фильтр по поиску. */
-const WHOLESALER_SELLER_MAX_ROWS = 80;
-
-type WholesalerListItem = { id: string; name: string; isActive: boolean };
-
-function filterWholesalersForSellerPicker(
-  active: WholesalerListItem[],
-  search: string,
-  selectedId: string,
-): { rows: WholesalerListItem[]; truncated: boolean; totalMatched: number } {
-  const q = search.trim().toLowerCase();
-  const matched = q ? active.filter((w) => w.name.toLowerCase().includes(q)) : active;
-  const totalMatched = matched.length;
-  let rows = totalMatched > WHOLESALER_SELLER_MAX_ROWS ? matched.slice(0, WHOLESALER_SELLER_MAX_ROWS) : matched;
-  const sel = selectedId ? active.find((w) => w.id === selectedId) : undefined;
-  if (sel && !rows.some((r) => r.id === sel.id)) {
-    rows = [sel, ...rows];
-  }
-  return { rows, truncated: totalMatched > WHOLESALER_SELLER_MAX_ROWS, totalMatched };
-}
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -85,15 +66,6 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   }
   const frac = rem.toString().padStart(3, "0").replace(/0+$/, "");
   return `${negative ? "-" : ""}${whole}.${frac}`;
-}
-
-function useDebouncedValue<T>(value: T, ms: number): T {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const t = window.setTimeout(() => setV(value), ms);
-    return () => window.clearTimeout(t);
-  }, [value, ms]);
-  return v;
 }
 
 export type SellFromTripVariant = "seller" | "operations";
@@ -144,7 +116,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   const [saleChannel, setSaleChannel] = useState<"retail" | "wholesale">("retail");
   const [wholesaleBuyerId, setWholesaleBuyerId] = useState("");
   const [wholesalerSearch, setWholesalerSearch] = useState("");
-  const wholesalerSearchDebounced = useDebouncedValue(wholesalerSearch, 220);
   const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed" | "card_transfer">("cash");
   const sellerFieldClass = isSellerUx ? "birzha-seller-form-control" : undefined;
   const sellerFieldMb = { marginBottom: "0.45rem" as const, maxWidth: "100%" as const };
@@ -527,20 +498,10 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
   );
 
   const wholesalerPickerFiltered = useMemo(() => {
-    const qSource = isSellerUx ? wholesalerSearchDebounced : wholesalerSearch;
-    if (isSellerUx) {
-      return filterWholesalersForSellerPicker(activeWholesalers, qSource, wholesaleBuyerId);
-    }
-    const q = qSource.trim().toLowerCase();
+    const q = wholesalerSearch.trim().toLowerCase();
     const matched = q ? activeWholesalers.filter((w) => w.name.toLowerCase().includes(q)) : activeWholesalers;
-    return { rows: matched, truncated: false, totalMatched: matched.length };
-  }, [
-    activeWholesalers,
-    wholesalerSearch,
-    wholesalerSearchDebounced,
-    isSellerUx,
-    wholesaleBuyerId,
-  ]);
+    return filterWholesalersForSellerPicker(matched, "", wholesaleBuyerId);
+  }, [activeWholesalers, wholesalerSearch, wholesaleBuyerId]);
 
   const wholesaleRowsFiltered = wholesalerPickerFiltered.rows;
 
@@ -599,6 +560,25 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       subUnitPackages: hasPkgData && netG > 0n && estPkg === 0n,
     };
   }, [sellBatchId, sellableOnTripRows, batchByIdForSell, selectedSellerCaliberGroup]);
+
+  const sellPkgMaxHint = useMemo(() => {
+    if (!sellSelectionSummary?.hasPkgData || !sellBatchId.trim()) {
+      return null;
+    }
+    const kgNum = Number(sellKg.replace(",", "."));
+    const max =
+      Number.isFinite(kgNum) && kgNum > 0
+        ? maxSellablePackagesForSellKg(sellBatchId, sellableOnTripRows, batchByIdForSell, kgNum)
+        : sellSelectionSummary.estPkg;
+    return max > 0n ? String(max) : null;
+  }, [
+    sellSelectionSummary?.hasPkgData,
+    sellSelectionSummary?.estPkg,
+    sellBatchId,
+    sellKg,
+    sellableOnTripRows,
+    batchByIdForSell,
+  ]);
 
   /** Блок «Зафиксировать» у продавца: опт без выбора, сумма карты, лимит к выручке. */
   const sellerSellBlockReason = useMemo(() => {
@@ -666,15 +646,6 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         }
       }
     }
-    if (sellBatchId.trim() && sellKg.trim()) {
-      const kgNum = Number(sellKg.replace(",", "."));
-      if (Number.isFinite(kgNum) && kgNum > 0) {
-        const maxG = maxSellableGramsForBatch(sellBatchId, sellableOnTripRows, batchByIdForSell);
-        if (kgNumberToGramsBigInt(kgNum) > maxG) {
-          return `Не больше ${gramsBigIntToKgDecimalString(maxG)} кг в машине по выбранному калибру`;
-        }
-      }
-    }
     if (!sellBatchId.trim()) {
       return "Выберите калибр на рейсе";
     }
@@ -693,15 +664,24 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
       if (n <= 0) {
         return "Количество ящиков должно быть больше нуля";
       }
-      if (sellBatchId.trim()) {
-        const maxPkg = maxSellablePackagesForBatch(sellBatchId, sellableOnTripRows, batchByIdForSell);
-        if (BigInt(n) > maxPkg) {
-          return `Не больше ${String(maxPkg)} ящ. в машине по выбранному калибру`;
-        }
-      }
     }
     if (!sellPrice.trim()) {
       return "Укажите цену за кг";
+    }
+    if (sellBatchId.trim() && sellKg.trim() && sellPrice.trim()) {
+      const planErr = sellerSellPlanBlockReason({
+        sellBatchId,
+        sellableRows: sellableOnTripRows,
+        batchById: batchByIdForSell,
+        kgRaw: sellKg,
+        priceRaw: sellPrice,
+        packageCountRaw: sellPackages,
+        requirePackageCount: Boolean(sellSelectionSummary?.hasPkgData),
+        paymentKind,
+      });
+      if (planErr) {
+        return planErr;
+      }
     }
     return null;
   }, [
@@ -995,78 +975,12 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             </p>
           ) : null}
           {saleChannel === "retail" ? null : wholesalersCatalog ? (
-            <div style={{ marginTop: "0.85rem" }} role="region" aria-labelledby={`${idPrefix}-wholesale-h`}>
-              <span id={`${idPrefix}-wholesale-h`} className="birzha-form-label birzha-form-label--block" style={{ marginBottom: "0.35rem" }}>
-                Оптовик *
-              </span>
-              <input
-                value={wholesalerSearch}
-                onChange={(e) => setWholesalerSearch(e.target.value)}
-                className={sellerFieldClass}
-                style={{ ...sellerFieldMb, maxWidth: "100%" }}
-                placeholder={
-                  isSellerUx
-                    ? activeWholesalers.length > WHOLESALER_SELLER_MAX_ROWS
-                      ? "Сузить список по названию…"
-                      : "Название оптовика…"
-                    : "Найти по названию…"
-                }
-                autoComplete="off"
-                aria-label="Поиск оптовика"
+            <div style={{ marginTop: "0.85rem" }}>
+              <SellerWholesalerPicker
+                idPrefix={idPrefix}
+                value={wholesaleBuyerId}
+                onChange={setWholesaleBuyerId}
               />
-              {isSellerUx && wholesalerSearch.trim() !== wholesalerSearchDebounced.trim() ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.25rem 0 0" }} role="status">
-                  Подождите, ищем…
-                </p>
-              ) : null}
-              {wholesalersQ.isPending ? (
-                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.35rem 0 0" }}>
-                  Загрузка списка оптовиков…
-                </p>
-              ) : wholesalersQ.isError ? (
-                <p style={warnText} role="alert">
-                  {wholesalersQ.error instanceof Error ? wholesalersQ.error.message : String(wholesalersQ.error)}
-                </p>
-              ) : (
-                <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
-                  {activeWholesalers.length === 0 ? (
-                    <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-                      Активных оптовиков нет — их добавляет администратор в разделе «Инвентарь».
-                    </li>
-                  ) : wholesaleRowsFiltered.length === 0 ? (
-                    <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-                      Нет совпадений по поиску — измените запрос.
-                    </li>
-                  ) : (
-                    wholesaleRowsFiltered.map((w) => (
-                      <li key={w.id} className="birzha-seller-wholesaler-list__item">
-                        <button
-                          type="button"
-                          onClick={() => setWholesaleBuyerId(w.id)}
-                          className={
-                            wholesaleBuyerId === w.id
-                              ? "birzha-seller-wholesaler-list__pick birzha-seller-wholesaler-list__pick--active"
-                              : "birzha-seller-wholesaler-list__pick"
-                          }
-                        >
-                          {w.name}
-                        </button>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              )}
-              {isSellerUx && wholesalerPickerFiltered.truncated ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0" }}>
-                  Показаны первые {WHOLESALER_SELLER_MAX_ROWS} из {wholesalerPickerFiltered.totalMatched} — уточните
-                  поиск, если нужного нет в списке.
-                </p>
-              ) : null}
-              {selectedWholesalerLabel ? (
-                <p className="birzha-text-muted birzha-text-muted--sm" style={{ margin: "0.45rem 0 0" }}>
-                  <strong>{selectedWholesalerLabel}</strong>
-                </p>
-              ) : null}
             </div>
           ) : null}
         </section>
@@ -1080,11 +994,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
             </p>
           )}
-          {sellerTripsListQ.isError && (
-            <p role="alert" className="birzha-ui-sm birzha-text-danger" style={{ margin: "0 0 0.5rem" }}>
-              Рейсы не загрузились.
-            </p>
-          )}
+          {sellerTripsListQ.isError ? (
+            <ErrorAlert message="Рейсы не загрузились. Проверьте связь и обновите страницу." title="Список рейсов" />
+          ) : null}
           {sellerTripsListQ.isSuccess && sellerTripOptions.length === 0 && (
             <div style={{ marginBottom: "0.5rem" }}>
               <BirzhaEmptyState
@@ -1148,13 +1060,13 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
           />
         </p>
       )}
-      {sellTripIdTrim && sellReportQuery.isError && (
-        <p role="alert" style={{ ...warnText, marginTop: 0, marginBottom: "0.5rem" }}>
+      {sellTripIdTrim && sellReportQuery.isError ? (
+        <WarningAlert title="Данные рейса">
           {isSellerUx
-            ? "Ошибка загрузки остатков по рейсу. Повторите позже или обратитесь к администратору."
-            : "Ошибка отчёта по рейсу. Выберите другой рейс или обновите страницу."}
-        </p>
-      )}
+            ? "Не удалось загрузить остатки по рейсу. Повторите позже или обратитесь к администратору."
+            : "Не удалось загрузить отчёт по рейсу. Выберите другой рейс или обновите страницу."}
+        </WarningAlert>
+      ) : null}
       {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
         <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
           <BirzhaEmptyState
@@ -1353,11 +1265,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
             style={isSellerUx ? sellerFieldMb : fieldStyle}
             inputMode="numeric"
             autoComplete="off"
-            placeholder={
-              sellSelectionSummary.estPkg > 0n
-                ? `не больше ${String(sellSelectionSummary.estPkg)}`
-                : undefined
-            }
+            placeholder={sellPkgMaxHint ? `не больше ${sellPkgMaxHint}` : undefined}
           />
         </>
       ) : null}
@@ -1548,9 +1456,7 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
               Загрузка списка…
             </p>
           ) : wholesalersQ.isError ? (
-            <p style={warnText} role="alert">
-              {wholesalersQ.error instanceof Error ? wholesalersQ.error.message : String(wholesalersQ.error)}
-            </p>
+            <ErrorAlert error={wholesalersQ.error} title="Список оптовиков" />
           ) : (
             <ul
               style={{
@@ -1694,9 +1600,9 @@ export function SellFromTripSection({ variant }: { variant: SellFromTripVariant 
         </>
       )}
       {isSellerUx && sellerSellBlockReason ? (
-        <p role="status" style={{ ...warnText, marginTop: "0.5rem", marginBottom: 0 }}>
+        <BirzhaAlert variant="warning" title="Перед сохранением" role="status">
           {sellerSellBlockReason}
-        </p>
+        </BirzhaAlert>
       ) : null}
       <button
         type="button"

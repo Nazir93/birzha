@@ -22,7 +22,8 @@ import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/Horizon
 import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyleInline, errorText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyleInline, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
 
@@ -236,11 +237,7 @@ export function AdminCabinetHome() {
       <h2 className="birzha-sr-only">Сводка</h2>
 
       {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} skeleton skeletonRows={5} />}
-      {err && (
-        <p role="alert" style={errorText}>
-          Ошибка загрузки данных.
-        </p>
-      )}
+      {err ? <ErrorAlert message="Ошибка загрузки данных." title="Сводка" /> : null}
       {!loading && !err && (
         <>
           <header className="birzha-admin-dash__hero">
@@ -593,11 +590,7 @@ export function AdminCabinetHome() {
                   </tbody>
                 </table>
               </div>
-              {closeTripMut.isError ? (
-                <p className="birzha-text-danger birzha-ui-sm" style={{ marginTop: "0.35rem" }} role="alert">
-                  {(closeTripMut.error as Error).message}
-                </p>
-              ) : null}
+              {closeTripMut.isError ? <ErrorAlert error={closeTripMut.error} title="Закрытие рейса" /> : null}
               {sortedTripsOpen.length > 0 ? (
                 <BirzhaPagination
                   pageIndex={tripsPage}

@@ -5,7 +5,9 @@ import { useAuth } from "../auth/auth-context.js";
 import { postLoginRedirectPath } from "../auth/role-panels.js";
 import { ops } from "../routes.js";
 import { LoadingScreen } from "../ui/LoadingIndicator.js";
-import { errorText, fieldStyle } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { humanizeErrorMessage } from "../format/user-facing-error.js";
+import { fieldStyle } from "../ui/styles.js";
 
 export function LoginPage() {
   const { ready, meta, user, login, bootstrapError, usingStaleMeta } = useAuth();
@@ -24,9 +26,10 @@ export function LoginPage() {
           <h2 id="login-error-heading" className="birzha-page-title" style={{ marginTop: 0 }}>
             Нет связи с API
           </h2>
-          <p role="alert" style={errorText}>
-            Сервер временно недоступен ({bootstrapError.message}). Попробуйте обновить страницу или обратитесь к администратору.
-          </p>
+          <ErrorAlert
+            title="Нет связи с API"
+            message="Сервер временно недоступен. Обновите страницу или обратитесь к администратору."
+          />
         </section>
       </div>
     );
@@ -48,7 +51,7 @@ export function LoginPage() {
     setPending(true);
     void login(loginField.trim(), password)
       .catch((e: unknown) => {
-        setErr(e instanceof Error ? e.message : String(e));
+        setErr(humanizeErrorMessage(e));
       })
       .finally(() => setPending(false));
   };
@@ -98,11 +101,7 @@ export function LoginPage() {
         >
           {pending ? "Вход…" : "Войти"}
         </button>
-        {err && (
-          <p role="alert" style={{ ...errorText, marginTop: "0.75rem" }}>
-            {err}
-          </p>
-        )}
+        {err ? <ErrorAlert message={err} title="Не удалось войти" /> : null}
       </section>
     </div>
   );

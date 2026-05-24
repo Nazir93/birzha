@@ -7,6 +7,7 @@ import { warehouseWriteOffsLedgerQueryOptions, warehousesFullListQueryOptions } 
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 /**
@@ -83,11 +84,7 @@ export function AdminWarehouseWriteOffsLedgerPage() {
 
       {ledgerQ.isPending && <LoadingBlock label="Загрузка журнала…" minHeight={80} skeleton skeletonRows={5} />}
 
-      {ledgerQ.isError && (
-        <p role="alert" style={{ color: "#b91c1c" }}>
-          {(ledgerQ.error as Error).message}
-        </p>
-      )}
+      {ledgerQ.isError ? <ErrorAlert error={ledgerQ.error} title="Журнал списаний" /> : null}
 
       {!ledgerQ.isPending && !ledgerQ.isError && lines.length === 0 && (
         <BirzhaEmptyState compact title="Записей пока нет" description="Списания появятся после первой операции в «Распределении»." />

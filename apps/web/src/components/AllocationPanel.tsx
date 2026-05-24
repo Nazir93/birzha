@@ -38,7 +38,8 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyle, thHead, thtd, warnText } from "../ui/styles.js";
+import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 /** «Брак» по всей партии в списке не проставляем — только частичное кг-списание. */
 
@@ -426,9 +427,7 @@ export function AllocationPanel() {
 
   if (batchesQuery.isError) {
     return (
-      <p role="alert" style={errorText}>
-        Не удалось загрузить партии. Запустите API с PostgreSQL для распределения.
-      </p>
+      <ErrorAlert message="Не удалось загрузить партии. Запустите API с PostgreSQL для распределения." title="Партии" />
     );
   }
 
@@ -436,11 +435,9 @@ export function AllocationPanel() {
     <div role="region" aria-label="Распределение товара">
       <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Распределение товара</h2>
 
-      {warehousesQuery.isError && (
-        <p className="birzha-callout-warning" role="alert">
-          Справочник складов не загрузился — подписи к складу могут быть неполны.
-        </p>
-      )}
+      {warehousesQuery.isError ? (
+        <WarningAlert title="Склады">Справочник складов не загрузился — подписи к складу могут быть неполны.</WarningAlert>
+      ) : null}
 
       {loading && <LoadingBlock label="Загрузка партий…" minHeight={100} skeleton skeletonRows={6} />}
 
@@ -456,13 +453,13 @@ export function AllocationPanel() {
           {(reservedBatchIdsQuery.error as Error)?.message ? ` ${(reservedBatchIdsQuery.error as Error).message}` : ""}
         </p>
       )}
-      {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 && (
-        <p style={warnText} role="status">
+      {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 ? (
+        <InfoAlert title="Нет партий для отбора">
           Остатки с оформленной <strong>закупкой товара</strong> (номер накладной и склад в строке) здесь не найдены — на отбор не
           попадут «ручные»/старые партии без накладной. Оформите приём в{" "}
           <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
-        </p>
-      )}
+        </InfoAlert>
+      ) : null}
       {!loading &&
         list.length === 0 &&
         (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length === 0 && (
@@ -709,11 +706,13 @@ export function AllocationPanel() {
                   </button>
                 )}
               </div>
-              {createManifest.isError && (
-                <p style={errorText} role="alert">
-                  Не удалось сохранить погрузочную накладную. Проверьте дату, город и выбранные партии.
-                </p>
-              )}
+              {createManifest.isError ? (
+                <ErrorAlert
+                  error={createManifest.error}
+                  message="Не удалось сохранить погрузочную накладную. Проверьте дату, город и выбранные партии."
+                  title="Сохранение"
+                />
+              ) : null}
               {savedManifestId && (
                 <p className="birzha-callout-info" role="status">
                   Сохранено:{" "}
@@ -743,9 +742,7 @@ export function AllocationPanel() {
                   </p>
                 ) : null}
                 {manifestsListQuery.isError ? (
-                  <p style={errorText} role="alert">
-                    Не удалось загрузить список погрузочных накладных.
-                  </p>
+                  <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Список ПН" />
                 ) : null}
                 {manifestsOnThisWarehouse.length === 0 && !manifestsListQuery.isPending && !manifestsListQuery.isError ? (
                   <BirzhaEmptyState compact title="Пока нет сохранённых ПН на этом складе" />

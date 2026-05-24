@@ -13,7 +13,8 @@ import { purchaseNakladnayaBasePathForPath } from "../routes.js";
 import { linePackageCountForNakladnayaSum, lineTotalKopecksForNakladnayaSum } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { errorText, thHeadDense, thtdDense } from "../ui/styles.js";
+import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
+import { thHeadDense, thtdDense } from "../ui/styles.js";
 
 export function PurchaseNakladnayaDetailSection() {
   const { documentId } = useParams<{ documentId: string }>();
@@ -58,14 +59,14 @@ export function PurchaseNakladnayaDetailSection() {
 
   if (!enabled) {
     return (
-      <p className="birzha-callout-warning" role="status">
+      <InfoAlert title="Раздел недоступен">
         Раздел накладных временно недоступен. Обратитесь к администратору.
-      </p>
+      </InfoAlert>
     );
   }
 
   if (!id) {
-    return <p style={errorText}>Не удалось открыть накладную.</p>;
+    return <ErrorAlert message="Не удалось открыть накладную." />;
   }
 
   if (docQ.isPending) {
@@ -73,18 +74,14 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   if (docQ.isError) {
-    return (
-      <p role="alert" style={errorText}>
-        {docQ.error instanceof Error ? docQ.error.message : String(docQ.error)}
-      </p>
-    );
+    return <ErrorAlert error={docQ.error} title="Накладная" />;
   }
 
   const doc = docQ.data;
   if (!doc) {
     return (
       <div className="birzha-panel">
-        <p style={errorText}>Документ не найден.</p>
+        <ErrorAlert message="Документ не найден." />
         <Link to={listPath} style={{ fontSize: "0.92rem" }}>
           ← Назад к закупке товара
         </Link>

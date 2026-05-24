@@ -117,6 +117,27 @@ describe("buildSellerSellChunks", () => {
     expect(chunks[0]).toEqual({ batchId: "b-big", kg: 15 });
   });
 
+  it("ящики не превышают лимит по каждой партии при разбиении", () => {
+    const rowsWithPkg: TripBatchTableRow[] = [
+      { ...row("b-big", 20_000n), shippedPackages: 20n, soldPackages: 0n },
+      { ...row("b-small", 5_000n), shippedPackages: 5n, soldPackages: 0n },
+    ];
+    const chunks = buildSellerSellChunks({
+      sellBatchId: "b-big",
+      sellableRows: rowsWithPkg,
+      batchById,
+      kg: 22,
+      pricePerKg: 100,
+      paymentKind: "cash",
+      packageCount: 20,
+    });
+    const pkgByBatch = new Map(chunks.map((c) => [c.batchId, c.packageCount ?? 0]));
+    expect((pkgByBatch.get("b-big") ?? 0) + (pkgByBatch.get("b-small") ?? 0)).toBe(20);
+    expect(pkgByBatch.get("b-big") ?? 0).toBeLessThanOrEqual(20);
+    expect(pkgByBatch.get("b-small") ?? 0).toBeLessThanOrEqual(5);
+    expect(pkgByBatch.get("b-small") ?? 0).toBeGreaterThan(0);
+  });
+
   it("отклоняет кг больше суммарного остатка группы", () => {
     expect(() =>
       buildSellerSellChunks({

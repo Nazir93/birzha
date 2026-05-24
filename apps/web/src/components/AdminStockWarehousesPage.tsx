@@ -12,7 +12,8 @@ import {
 import { adminRoutes } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
@@ -127,11 +128,7 @@ export function AdminStockWarehousesPage() {
       </header>
 
       {loading ? <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={4} /> : null}
-      {warehousesQ.isError ? (
-        <p role="alert" style={errorText}>
-          Склады не загрузились.
-        </p>
-      ) : null}
+      {warehousesQ.isError ? <ErrorAlert message="Склады не загрузились." title="Склады" /> : null}
 
       {!loading && !warehousesQ.isError ? (
         <>
@@ -163,7 +160,7 @@ export function AdminStockWarehousesPage() {
                 {createWarehouse.isPending ? "…" : "Добавить склад"}
               </button>
             </div>
-            {warehouseFormError ? <p style={errorText}>{warehouseFormError}</p> : null}
+            {warehouseFormError ? <ErrorAlert message={warehouseFormError} title="Склад" /> : null}
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table style={{ ...tableStyle, minWidth: 420 }}>
                 <thead>

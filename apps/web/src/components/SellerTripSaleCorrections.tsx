@@ -17,18 +17,20 @@ import {
   kopecksPerKgToRubDecimalString,
 } from "../format/trip-sale-line-payment.js";
 import { sortTripSaleLinesNewestFirst } from "../format/trip-sale-line-order.js";
+import { formatSellerCorrectionSaleMeta } from "../format/trip-sale-line-display.js";
+import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
 import { parseUpdateTripSaleForm } from "../validation/api-schemas.js";
 import {
   batchesByIdsQueryOptions,
   queryRoots,
   tripSaleLinesQueryOptions,
-  wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, warnText } from "../ui/styles.js";
+import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle } from "../ui/styles.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -117,11 +119,6 @@ function SellerTripSaleEditForm({
       ? kopecksToRubLabel(line.cardTransferKopecks).replace(/\s/g, "").replace("₽", "")
       : "",
   );
-
-  const wholesalersQ = useQuery({
-    ...wholesalersFullListQueryOptions(),
-    enabled: wholesalersCatalog && saleChannel === "wholesale",
-  });
 
   const blockReason = useMemo(() => {
     if (!kg.trim()) {
@@ -217,34 +214,31 @@ function SellerTripSaleEditForm({
       <label className="birzha-form-label birzha-form-label--block">Тип сделки</label>
       <select
         value={saleChannel}
-        onChange={(e) => setSaleChannel(e.target.value as "retail" | "wholesale")}
+        onChange={(e) => {
+          const v = e.target.value as "retail" | "wholesale";
+          setSaleChannel(v);
+          if (v === "retail") {
+            setWholesaleBuyerId("");
+          }
+        }}
         className="birzha-seller-form-control"
         style={fieldMb}
       >
         <option value="retail">Розница</option>
         <option value="wholesale" disabled={!wholesalersCatalog}>
-          Опт
+          Опт {!wholesalersCatalog ? "(недоступно)" : ""}
         </option>
       </select>
-      {saleChannel === "wholesale" && wholesalersCatalog ? (
-        <>
-          <label className="birzha-form-label birzha-form-label--block">Оптовик *</label>
-          <select
+      {saleChannel === "wholesale" ? (
+        <div style={{ marginTop: "0.35rem" }}>
+          <SellerWholesalerPicker
+            idPrefix={`edit-${line.id}`}
             value={wholesaleBuyerId}
-            onChange={(e) => setWholesaleBuyerId(e.target.value)}
-            className="birzha-seller-form-control"
-            style={fieldMb}
-          >
-            <option value="">— выберите —</option>
-            {(wholesalersQ.data?.wholesalers ?? [])
-              .filter((w) => w.isActive)
-              .map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-          </select>
-        </>
+            onChange={setWholesaleBuyerId}
+            enabled={wholesalersCatalog}
+            fallbackLabel={line.clientLabel}
+          />
+        </div>
       ) : null}
       <label className="birzha-form-label birzha-form-label--block">Оплата</label>
       <select
@@ -283,9 +277,7 @@ function SellerTripSaleEditForm({
         </>
       ) : null}
       {blockReason ? (
-        <p style={{ ...warnText, marginTop: 0 }} role="status">
-          {blockReason}
-        </p>
+        <WarningAlert title="Перед сохранением">{blockReason}</WarningAlert>
       ) : null}
       <div style={{ marginTop: "0.55rem" }}>
         <button
@@ -382,9 +374,7 @@ export function SellerTripSaleCorrections({
       {linesQ.isPending ? (
         <LoadingIndicator size="sm" label="Загрузка продаж…" />
       ) : linesQ.isError ? (
-        <p style={warnText} role="alert">
-          Не удалось загрузить список продаж.
-        </p>
+        <ErrorAlert message="Не удалось загрузить список продаж." title="Продажи рейса" />
       ) : sortedLines.length === 0 ? (
         <BirzhaEmptyState compact title="Пока нет продаж по этому рейсу" />
       ) : (
@@ -393,7 +383,7 @@ export function SellerTripSaleCorrections({
             const b = batchById.get(line.batchId);
             const headline = b ? formatNakladLineLabel(b) : "—";
             const sum = kopecksToRubLabel(line.revenueKopecks);
-            const pricePerKg = kopecksPerKgToRubDecimalString(line.pricePerKgKopecks);
+            const meta = formatSellerCorrectionSaleMeta(line);
             const isEditing = editingId === line.id;
             return (
               <li
@@ -415,8 +405,7 @@ export function SellerTripSaleCorrections({
                     <strong>{headline}</strong>
                     <span className="birzha-text-muted">
                       {" "}
-                      · {line.kg} кг · {pricePerKg} ₽/кг
-                      {line.packageCount ? ` · ${line.packageCount} ящ` : ""} · {sum} ₽
+                      · {meta} · {sum} ₽
                     </span>
                   </span>
                   {!isEditing ? (

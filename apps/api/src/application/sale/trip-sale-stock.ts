@@ -21,8 +21,11 @@ export function assertTripSalePackageCount(input: {
   shippedPackages: bigint;
   nakladnaya?: PurchaseLinePackageMeta | null;
   soldGramsIncludingLine: bigint;
+  soldPackagesIncludingLine?: bigint;
   shortageGrams: bigint;
   lineGrams: bigint;
+  /** Ящики редактируемой строки (исключаются из «уже продано»). */
+  linePackageCount?: bigint;
   packageCount?: number;
 }): bigint | null {
   let salePackageCount: bigint | null = null;
@@ -34,6 +37,9 @@ export function assertTripSalePackageCount(input: {
   }
 
   const soldGramsExcl = input.soldGramsIncludingLine - input.lineGrams;
+  const soldPkgIncl = input.soldPackagesIncludingLine ?? 0n;
+  const linePkg = input.linePackageCount ?? 0n;
+  const soldPkgExcl = soldPkgIncl > linePkg ? soldPkgIncl - linePkg : 0n;
   const nakladnaya = input.nakladnaya ?? null;
   const usesPackages = tripSaleUsesPackageAccounting(input.shippedPackages, nakladnaya);
   const effectiveShipped = effectiveShippedPackages(
@@ -54,6 +60,7 @@ export function assertTripSalePackageCount(input: {
       effectiveShipped,
       soldGramsExcl,
       input.shortageGrams,
+      soldPkgExcl,
     );
     if (salePackageCount > maxPkg) {
       throw new Error(

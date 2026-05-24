@@ -40,15 +40,14 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import {
   btnStyle,
   dateFieldStyle,
-  errorText,
   fieldStyle,
   successText,
   thHeadDense,
   thtdDense,
-  warnText,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 
@@ -323,27 +322,23 @@ export function PurchaseNakladnayaSection() {
           </div>
         }
       >
-      {catalogLoadErrorText && <p style={warnText}>{catalogLoadErrorText}</p>}
-      {catalogsEmptyOk && canManageCatalog && (
-        <p role="status" style={warnText}>
+      {catalogLoadErrorText ? <WarningAlert title="Справочники">{catalogLoadErrorText}</WarningAlert> : null}
+      {catalogsEmptyOk && canManageCatalog ? (
+        <InfoAlert title="Справочники пусты">
           В справочнике нет складов или калибров — нечего выбирать в списках. Добавьте их в разделе{" "}
           <strong>Склады и калибры</strong> (кабинет админа) или попросите администратора проверить начальные справочники.
-        </p>
-      )}
-      {catalogsEmptyOk && !canManageCatalog && (
-        <p role="status" style={warnText}>
+        </InfoAlert>
+      ) : null}
+      {catalogsEmptyOk && !canManageCatalog ? (
+        <InfoAlert title="Справочники пусты">
           В справочнике нет складов или калибров — обратитесь к администратору, чтобы настроить справочники в кабинете{" "}
           <strong>админа</strong> (склады и калибры), либо попросите применить миграции на сервере.
-        </p>
-      )}
+        </InfoAlert>
+      ) : null}
       {(warehousesQ.isPending || gradesQ.isPending) && (
         <LoadingBlock label="Загрузка справочников складов и калибров…" minHeight={56} skeleton skeletonRows={3} />
       )}
-      {listQ.isError && (
-        <p role="alert" style={errorText}>
-          Список накладных не загрузился: {listQ.error instanceof Error ? listQ.error.message : String(listQ.error)}
-        </p>
-      )}
+      {listQ.isError ? <ErrorAlert error={listQ.error} title="Список накладных" /> : null}
 
       <div style={{ display: "grid", gap: "0.5rem", width: "100%", maxWidth: "100%", marginBottom: "0.75rem" }}>
         <label className="birzha-form-label">
@@ -395,20 +390,20 @@ export function PurchaseNakladnayaSection() {
         </label>
       </div>
 
-      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog && (
-        <p role="status" style={warnText}>
+      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog ? (
+        <InfoAlert title="Нет калибров">
           В справочнике нет калибров. Добавьте калибры в{" "}
           <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
             кабинете админа — «Склады и калибры»
           </Link>
           , обновите страницу.
-        </p>
-      )}
-      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && !canManageCatalog && (
-        <p role="status" style={warnText}>
+        </InfoAlert>
+      ) : null}
+      {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && !canManageCatalog ? (
+        <InfoAlert title="Нет калибров">
           В справочнике нет калибров — пусть администратор добавит их в разделе «Склады и калибры».
-        </p>
-      )}
+        </InfoAlert>
+      ) : null}
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
         <table className="birzha-nakl-lines-table">
           <thead>
@@ -583,11 +578,7 @@ export function PurchaseNakladnayaSection() {
         </button>
       </p>
 
-      {formError && (
-        <p role="alert" style={errorText}>
-          {formError}
-        </p>
-      )}
+      {formError ? <ErrorAlert message={formError} title="Создание накладной" /> : null}
       {lastOk && <p style={successText}>{lastOk}</p>}
 
       {listQ.isPending && (

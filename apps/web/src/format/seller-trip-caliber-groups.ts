@@ -167,6 +167,25 @@ export function maxSellablePackagesForBatch(
   return sum;
 }
 
+/** Лимит ящиков при частичной продаже кг (пропорционально остатку группы). */
+export function maxSellablePackagesForSellKg(
+  sellBatchId: string,
+  sellableRows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+  sellKg: number,
+): bigint {
+  const maxPkg = maxSellablePackagesForBatch(sellBatchId, sellableRows, batchById);
+  const maxG = maxSellableGramsForBatch(sellBatchId, sellableRows, batchById);
+  if (maxG <= 0n || !Number.isFinite(sellKg) || sellKg <= 0) {
+    return maxPkg;
+  }
+  const reqG = kgNumberToGramsBigInt(sellKg);
+  if (reqG >= maxG) {
+    return maxPkg;
+  }
+  return (maxPkg * reqG) / maxG;
+}
+
 /** Группа, в которую входит выбранная партия (для продавца). */
 export function findSellerCaliberGroupForBatch(
   sellBatchId: string,

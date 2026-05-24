@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { useAuth } from "../auth/auth-context.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import {
   aggregateTripSalesByProductLine,
@@ -100,6 +101,8 @@ export function FieldSellerTripReport({
   report: ShipmentReportResponse;
   batchById: Map<string, BatchListItem>;
 }) {
+  const { meta } = useAuth();
+  const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const [channel, setChannel] = useState<SaleChannelFilter>("all");
   const { sales } = report;
 
@@ -118,7 +121,12 @@ export function FieldSellerTripReport({
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
         Анализ продаж
       </h3>
-      <SellerSaleChannelPills value={channel} onChange={setChannel} />
+      <SellerSaleChannelPills
+        value={channel}
+        onChange={setChannel}
+        wholesaleDisabled={!wholesalersCatalog}
+        wholesaleDisabledTitle="Справочник оптовиков недоступен"
+      />
 
       {channel !== "all" ? <ChannelSummaryStrip channel={channel} sales={sales} /> : null}
 

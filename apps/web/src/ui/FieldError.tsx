@@ -1,13 +1,12 @@
-import { errorText } from "./styles.js";
+import { ErrorAlert } from "./ErrorAlerts.js";
 
-/** Однострочное сообщение об ошибке формы (без секретов в тексте). */
-export function FieldError({ error }: { error: Error | null }) {
-  if (!error) {
-    return null;
-  }
-  return (
-    <p role="alert" style={errorText}>
-      {error.message}
-    </p>
-  );
+/** Сообщение об ошибке формы или запроса — адаптивный блок. */
+export function FieldError({
+  error,
+  title,
+}: {
+  error: Error | null;
+  title?: string;
+}) {
+  return <ErrorAlert error={error} title={title} />;
 }

@@ -26,7 +26,8 @@ import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { btnStyle, errorText, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { btnStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function formatPkg(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) {
@@ -247,9 +248,7 @@ export function AdminLoadingManifestsPanel() {
         <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
       ) : null}
       {listQuery.isError ? (
-        <p style={errorText} role="alert">
-          Не удалось загрузить список погрузочных накладных.
-        </p>
+        <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Список ПН" />
       ) : null}
 
       {(listQuery.data != null || manifestId.trim().length > 0) && (
@@ -482,9 +481,7 @@ function ManifestAccordionBlock({
           <LoadingBlock label="Загрузка карточки…" minHeight={56} skeleton skeletonRows={4} />
         ) : null}
         {detailError ? (
-          <p style={errorText} role="alert">
-            Не удалось загрузить карточку накладной.
-          </p>
+          <ErrorAlert message="Не удалось загрузить карточку накладной." title="Карточка ПН" />
         ) : null}
 
         {detail ? (
@@ -533,9 +530,7 @@ function ManifestAccordionBlock({
                       </button>
                     </div>
                     {assignTrip.isError ? (
-                      <p style={errorText} role="alert">
-                        {assignTrip.error instanceof Error ? assignTrip.error.message : String(assignTrip.error ?? "")}
-                      </p>
+                      <ErrorAlert error={assignTrip.error} title="Привязка к рейсу" />
                     ) : null}
                   </>
                 )}

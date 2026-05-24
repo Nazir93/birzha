@@ -9,6 +9,7 @@ import {
   kgNumberToGramsBigInt,
   maxSellableGramsForBatch,
 } from "./seller-trip-caliber-groups.js";
+import { maxSellablePackageCountForRowForSell } from "./trip-report-rows.js";
 
 export type SellerSellChunk = {
   batchId: string;
@@ -18,26 +19,89 @@ export type SellerSellChunk = {
   cardTransferKopecks?: string;
 };
 
-function splitPackagesProRata(totalPackages: number, gramParts: { batchId: string; grams: bigint }[]): number[] {
-  if (gramParts.length === 0) {
+/**
+ * Раскладывает ящики по партиям с учётом лимита на каждую (как кг), без превышения API.
+ */
+export function allocateSellPackagesAcrossGramParts(
+  gramParts: { batchId: string; grams: bigint }[],
+  rows: TripBatchTableRow[],
+  batchById: Map<string, BatchListItem>,
+  requestedPackages: number,
+): { batchId: string; packageCount: number }[] {
+  if (requestedPackages <= 0 || gramParts.length === 0) {
     return [];
   }
   const totalG = gramParts.reduce((s, p) => s + p.grams, 0n);
-  if (totalG <= 0n || totalPackages <= 0) {
-    return gramParts.map(() => 0);
+  if (totalG <= 0n) {
+    return [];
   }
-  let assigned = 0;
-  const out: number[] = [];
+  const rowByBatch = new Map(rows.map((r) => [r.batchId, r]));
+  const caps = new Map<string, number>();
+  for (const p of gramParts) {
+    const row = rowByBatch.get(p.batchId);
+    caps.set(
+      p.batchId,
+      row ? Number(maxSellablePackageCountForRowForSell(row, batchById.get(p.batchId))) : 0,
+    );
+  }
+  const assigned = new Map<string, number>();
+  for (const p of gramParts) {
+    assigned.set(p.batchId, 0);
+  }
+  let remaining = requestedPackages;
+
   for (let i = 0; i < gramParts.length; i++) {
-    if (i === gramParts.length - 1) {
-      out.push(totalPackages - assigned);
-    } else {
-      const part = Number((BigInt(totalPackages) * gramParts[i]!.grams) / totalG);
-      out.push(part);
-      assigned += part;
+    const p = gramParts[i]!;
+    const cap = caps.get(p.batchId) ?? 0;
+    let share =
+      i === gramParts.length - 1
+        ? remaining
+        : Number((BigInt(requestedPackages) * p.grams) / totalG);
+    share = Math.min(share, cap, remaining);
+    if (share > 0) {
+      assigned.set(p.batchId, share);
+      remaining -= share;
     }
   }
-  return out;
+
+  if (remaining > 0) {
+    const sorted = gramParts.slice().sort((a, b) => {
+      const ra = rowByBatch.get(a.batchId);
+      const rb = rowByBatch.get(b.batchId);
+      const na = ra?.netTransitG ?? 0n;
+      const nb = rb?.netTransitG ?? 0n;
+      if (na < nb) {
+        return 1;
+      }
+      if (na > nb) {
+        return -1;
+      }
+      return a.batchId.localeCompare(b.batchId);
+    });
+    for (const p of sorted) {
+      if (remaining <= 0) {
+        break;
+      }
+      const cur = assigned.get(p.batchId) ?? 0;
+      const cap = caps.get(p.batchId) ?? 0;
+      const extra = Math.min(cap - cur, remaining);
+      if (extra > 0) {
+        assigned.set(p.batchId, cur + extra);
+        remaining -= extra;
+      }
+    }
+  }
+
+  if (remaining > 0) {
+    const allowed = requestedPackages - remaining;
+    throw new Error(
+      `При выбранных кг можно указать не больше ${allowed} ящ. — по партиям калибра остаток меньше`,
+    );
+  }
+
+  return [...assigned.entries()]
+    .filter(([, n]) => n > 0)
+    .map(([batchId, packageCount]) => ({ batchId, packageCount }));
 }
 
 function splitKopecksProRata(totalKopecks: bigint, chunkRevenues: bigint[]): bigint[] {
@@ -123,12 +187,13 @@ export function buildSellerSellChunks(input: {
   }));
 
   if (input.packageCount !== undefined && input.packageCount > 0) {
-    const pkgParts = splitPackagesProRata(input.packageCount, gramParts);
-    pkgParts.forEach((n, i) => {
-      if (n > 0) {
-        chunks[i]!.packageCount = n;
+    const pkgParts = allocateSellPackagesAcrossGramParts(gramParts, rows, input.batchById, input.packageCount);
+    for (const part of pkgParts) {
+      const chunk = chunks.find((c) => c.batchId === part.batchId);
+      if (chunk) {
+        chunk.packageCount = part.packageCount;
       }
-    });
+    }
   }
 
   if (chunks.length === 1) {
@@ -158,4 +223,55 @@ export function buildSellerSellChunks(input: {
   }
 
   return chunks;
+}
+
+/** Проверка плана продажи продавца (кг, ящики, лимиты по партиям) — текст для блокировки кнопки. */
+export function sellerSellPlanBlockReason(input: {
+  sellBatchId: string;
+  sellableRows: TripBatchTableRow[];
+  batchById: Map<string, BatchListItem>;
+  kgRaw: string;
+  priceRaw: string;
+  packageCountRaw?: string;
+  requirePackageCount: boolean;
+  paymentKind: "cash" | "debt" | "mixed" | "card_transfer";
+  cashKopecksMixed?: string;
+  cardTransferKopecks?: string;
+}): string | null {
+  const kgNum = Number(input.kgRaw.replace(",", "."));
+  if (!Number.isFinite(kgNum) || kgNum <= 0) {
+    return null;
+  }
+  const priceNum = Number(input.priceRaw.replace(",", "."));
+  if (!Number.isFinite(priceNum) || priceNum < 0) {
+    return null;
+  }
+  let packageCount: number | undefined;
+  if (input.requirePackageCount) {
+    const raw = input.packageCountRaw?.trim() ?? "";
+    if (!raw) {
+      return null;
+    }
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n <= 0) {
+      return null;
+    }
+    packageCount = n;
+  }
+  try {
+    buildSellerSellChunks({
+      sellBatchId: input.sellBatchId,
+      sellableRows: input.sellableRows,
+      batchById: input.batchById,
+      kg: kgNum,
+      pricePerKg: priceNum,
+      paymentKind: input.paymentKind,
+      cashKopecksMixed: input.cashKopecksMixed,
+      cardTransferKopecks: input.cardTransferKopecks,
+      packageCount,
+    });
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : "Проверьте кг, ящики и цену";
+  }
 }

@@ -80,6 +80,77 @@ describe("UpdateTripSaleLineUseCase", () => {
     expect(saved?.toPersistenceState().inTransitKg).toBe(25);
   });
 
+  it("меняет канал на опт и подставляет имя оптовика", async () => {
+    const trips = new InMemoryTripRepository();
+    const trip = Trip.create({ id: "t1", tripNumber: "1", assignedSellerUserId: "u1" });
+    await trips.save(trip);
+
+    const batches = new InMemoryBatchRepository();
+    const batch = Batch.create({
+      id: "b1",
+      purchaseId: "p1",
+      totalKg: 100,
+      pricePerKg: 10,
+      distribution: "on_hand",
+    });
+    batch.shipToTrip(50, "t1");
+    batch.sellFromTrip(10, "s1");
+    await batches.save(batch);
+
+    const shipments = new InMemoryTripShipmentRepository();
+    await shipments.append({
+      id: "sh1",
+      tripId: "t1",
+      batchId: "b1",
+      grams: 50_000n,
+      packageCount: null,
+    });
+
+    const sales = new InMemoryTripSaleRepository();
+    await sales.append({
+      id: "line1",
+      tripId: "t1",
+      batchId: "b1",
+      saleId: "s1",
+      grams: 10_000n,
+      pricePerKgKopecks: 1000n,
+      revenueKopecks: 10_000n,
+      cashKopecks: 10_000n,
+      debtKopecks: 0n,
+      cardTransferKopecks: 0n,
+      saleChannel: "retail",
+      recordedByUserId: "u1",
+    });
+
+    const wholesalers = new InMemoryWholesalerRepository();
+    const w = await wholesalers.create("ООО Опт");
+
+    const uc = new UpdateTripSaleLineUseCase(
+      batches,
+      trips,
+      shipments,
+      sales,
+      new InMemoryTripShortageRepository(),
+      new InMemoryCounterpartyRepository(),
+      wholesalers,
+    );
+
+    await uc.execute({
+      lineId: "line1",
+      kg: 10,
+      pricePerKg: 12,
+      saleChannel: "wholesale",
+      wholesaleBuyerId: w.id,
+      editorUserId: "u1",
+      editorRoles: [{ roleCode: "seller", scopeType: "global", scopeId: "" }],
+    });
+
+    const line = await sales.findLineById("line1");
+    expect(line?.saleChannel).toBe("wholesale");
+    expect(line?.wholesaleBuyerId).toBe(w.id);
+    expect(line?.clientLabel).toBe("ООО Опт");
+  });
+
   it("отклоняет правку при закрытом рейсе", async () => {
     const trips = new InMemoryTripRepository();
     const trip = Trip.create({ id: "t1", tripNumber: "1" });

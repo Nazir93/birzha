@@ -18,7 +18,8 @@ import { RequirePanel } from "./components/RequirePanel.js";
 import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
 import { legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
-import { errorText, preJson } from "./ui/styles.js";
+import { ErrorAlert } from "./ui/ErrorAlerts.js";
+import { preJson } from "./ui/styles.js";
 
 const AccountingCabinetHome = lazy(() =>
   import("./components/AccountingCabinetHome.js").then((m) => ({ default: m.AccountingCabinetHome })),
@@ -115,11 +116,9 @@ function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | nul
       <h2 id="service-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
         Диагностика сервера
       </h2>
-      {bootstrapError && (
-        <p role="alert" style={errorText}>
-          Сервер временно недоступен.
-        </p>
-      )}
+      {bootstrapError ? (
+        <ErrorAlert title="Сервер недоступен" message="Сервер временно недоступен." />
+      ) : null}
       {!bootstrapError && metaJson && (
         <pre style={preJson} tabIndex={0} aria-label="JSON ответа GET /api/meta">
           {metaJson}
