@@ -276,12 +276,11 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   return base;
 }
 
-/**
- * Боковое меню `/a`: без дубля «Закупка»/«Распределение» — они на сводке (KPI и быстрые ссылки).
- * Маршруты `/a/purchase-nakladnaya` и `/a/distribution` по-прежнему доступны по прямым URL.
- */
+/** Боковое меню `/a`: закупка и распределение в начале, как в `/o`. */
 export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
   return [
+    "nakladnaya",
+    "distribution",
     "trips",
     "loadingManifests",
     "sellerDispatch",

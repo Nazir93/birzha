@@ -33,8 +33,8 @@ describe("cabinet-nav", () => {
       roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("admin", user, true);
-    expect(links.find((x) => x.key === "nakladnaya")).toBeUndefined();
-    expect(links.find((x) => x.key === "distribution")).toBeUndefined();
+    expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
+    expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
     expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
     expect(links.find((x) => x.key === "archive")?.to).toBe(adminRoutes.archive);
     expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
