@@ -323,8 +323,17 @@ export function lineTotalKopecksForNakladnayaSum(raw: string): number {
   return kopecksFromNakladnayaAmountFieldForSum(raw);
 }
 
+/** Внутренний номер накладной: поставщик + дата (до 64 символов, как в API). */
+export function documentNumberFromSupplierName(supplierName: string, docDate: string): string {
+  const sup = supplierName.trim();
+  const date = docDate.trim();
+  const suffix = date ? ` · ${date}` : "";
+  const maxSupLen = Math.max(1, 64 - suffix.length);
+  const head = sup.length > maxSupLen ? sup.slice(0, maxSupLen) : sup;
+  return `${head}${suffix}`.slice(0, 64);
+}
+
 export function parseCreatePurchaseDocumentForm(input: {
-  documentNumber: string;
   docDate: string;
   warehouseId: string;
   supplierName: string;
@@ -395,17 +404,19 @@ export function parseCreatePurchaseDocumentForm(input: {
       });
     });
 
+    const sup = input.supplierName.trim();
+    if (!sup) {
+      throw new Error("Укажите поставщика");
+    }
+
     const payload: Record<string, unknown> = {
-      documentNumber: input.documentNumber.trim(),
+      documentNumber: documentNumberFromSupplierName(sup, input.docDate.trim()),
       docDate: input.docDate.trim(),
       warehouseId: input.warehouseId.trim(),
       extraCostKopecks,
       lines,
+      supplierName: sup,
     };
-    const sup = input.supplierName.trim();
-    if (sup) {
-      payload.supplierName = sup;
-    }
     const buy = input.buyerLabel.trim();
     if (buy) {
       payload.buyerLabel = buy;

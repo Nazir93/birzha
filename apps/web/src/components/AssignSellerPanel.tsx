@@ -39,6 +39,7 @@ type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: s
 
 export function AssignSellerPanel() {
   const { meta, user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const batchesQuery = useQuery(batchesFullListQueryOptions());

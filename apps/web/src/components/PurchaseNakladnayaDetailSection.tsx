@@ -104,7 +104,7 @@ export function PurchaseNakladnayaDetailSection() {
         defaultOpen
         title={
           <h3 id="nakl-detail-heading" style={{ margin: 0, fontSize: "1rem" }}>
-            Накладная <strong>{doc.documentNumber}</strong>
+            Накладная · <strong>{doc.supplierName?.trim() || doc.documentNumber}</strong>
             <span className="birzha-text-muted birzha-ui-sm" style={{ marginLeft: "0.5rem", fontWeight: 500 }}>
               {formatPurchaseDocDateRu(doc.docDate)}
             </span>
@@ -147,11 +147,6 @@ export function PurchaseNakladnayaDetailSection() {
             warehouseLabel(doc.warehouseId)
           )}
         </div>
-        {doc.supplierName && (
-          <div>
-            <strong>Поставщик:</strong> {doc.supplierName}
-          </div>
-        )}
         {doc.buyerLabel && (
           <div>
             <strong>Покупатель / подпись:</strong> {doc.buyerLabel}

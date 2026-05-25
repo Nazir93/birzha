@@ -1,14 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import type {
-  CreatePurchaseDocumentResponse,
-  ProductGradeJson,
-  PurchaseDocumentSummary,
-  WarehouseJson,
-} from "../api/types.js";
+import type { CreatePurchaseDocumentResponse, ProductGradeJson } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
@@ -22,24 +17,15 @@ import {
   lineTotalKopecksForNakladnayaSum,
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
-import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
-import { filterPurchaseDocumentsInWork } from "../format/archive.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
-import {
-  batchesFullListQueryOptions,
-  productGradesFullListQueryOptions,
-  purchaseDocumentsFullListQueryOptions,
-  warehousesFullListQueryOptions,
-} from "../query/core-list-queries.js";
+import { productGradesFullListQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
-import { adminAwarePathForPath, adminRoutes, login, ops, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import { adminRoutes, login } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
-import { BirzhaPagination } from "../ui/BirzhaPagination.js";
-import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
-import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
+import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import {
   btnStyle,
@@ -50,8 +36,6 @@ import {
   thtdDense,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
-
-const NAKLAD_LIST_PAGE_SIZE = 25;
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -82,7 +66,6 @@ function emptyLine(): LineDraft {
 }
 
 export function PurchaseNakladnayaSection() {
-  const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const canManageCatalog = user ? canManageInventoryCatalog(user) : false;
   const queryClient = useQueryClient();
@@ -91,17 +74,12 @@ export function PurchaseNakladnayaSection() {
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
-  const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
-  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
-
-  const [documentNumber, setDocumentNumber] = useState("");
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [buyerLabel, setBuyerLabel] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
-  const [nakladListPage, setNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const refreshLists = useCallback(async () => {
@@ -113,7 +91,6 @@ export function PurchaseNakladnayaSection() {
       setFormError(null);
       setLastOk(null);
       const body = parseCreatePurchaseDocumentForm({
-        documentNumber,
         docDate,
         warehouseId,
         supplierName,
@@ -126,7 +103,6 @@ export function PurchaseNakladnayaSection() {
     onSuccess: async () => {
       setLastOk("Накладная сохранена.");
       setFormError(null);
-      setDocumentNumber("");
       setDocDate(todayIsoDate());
       setWarehouseId("");
       setSupplierName("");
@@ -139,28 +115,6 @@ export function PurchaseNakladnayaSection() {
       setFormError(e.message);
     },
   });
-
-  const activePurchaseDocs = useMemo(() => {
-    const docs = listQ.data?.purchaseDocuments ?? [];
-    if (!batchesQ.isSuccess) {
-      return [];
-    }
-    return filterPurchaseDocumentsInWork(docs, batchesQ.data.batches);
-  }, [listQ.data?.purchaseDocuments, batchesQ.isSuccess, batchesQ.data?.batches]);
-
-  const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
-
-  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
-
-  useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
-    setNakladListPage((p) => Math.min(p, maxPage));
-  }, [activePurchaseDocs.length]);
-
-  const nakladPageSlice = useMemo(() => {
-    const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [activePurchaseDocs, nakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -338,17 +292,15 @@ export function PurchaseNakladnayaSection() {
       {(warehousesQ.isPending || gradesQ.isPending) && (
         <LoadingBlock label="Загрузка справочников складов и калибров…" minHeight={56} skeleton skeletonRows={3} />
       )}
-      {listQ.isError ? <ErrorAlert error={listQ.error} title="Список накладных" /> : null}
-
       <div style={{ display: "grid", gap: "0.5rem", width: "100%", maxWidth: "100%", marginBottom: "0.75rem" }}>
         <label className="birzha-form-label">
-          Номер документа *
+          Поставщик *
           <input
-            value={documentNumber}
-            onChange={(e) => setDocumentNumber(e.target.value)}
+            value={supplierName}
+            onChange={(e) => setSupplierName(e.target.value)}
             style={fieldStyle}
-            placeholder="НФ-100"
-            autoComplete="off"
+            placeholder="Теплица / отправитель"
+            autoComplete="organization"
           />
         </label>
         <label className="birzha-form-label">
@@ -379,10 +331,6 @@ export function PurchaseNakladnayaSection() {
               </option>
             ))}
           </select>
-        </label>
-        <label className="birzha-form-label">
-          Поставщик (опц.)
-          <input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} style={fieldStyle} />
         </label>
         <label className="birzha-form-label">
           Покупатель / подпись (опц.)
@@ -580,123 +528,7 @@ export function PurchaseNakladnayaSection() {
 
       {formError ? <ErrorAlert message={formError} title="Создание накладной" /> : null}
       {lastOk && <p style={successText}>{lastOk}</p>}
-
-      {listQ.isPending && (
-        <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
-      )}
-
-      {listQ.isFetching && !listQ.isPending && (
-        <p style={{ margin: "0.35rem 0" }} role="status" aria-live="polite">
-          <LoadingIndicator size="sm" label="Обновление списка накладных…" />
-        </p>
-      )}
-
-      {listQ.data && listQ.data.purchaseDocuments.length === 0 && !listQ.isPending && (
-        <div style={{ marginTop: "0.75rem" }}>
-          <BirzhaEmptyState compact title="Сохранённых накладных пока нет" description="Создайте документ формой выше." />
-        </div>
-      )}
-
-      {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
-        <div style={{ marginTop: "0.75rem" }}>
-          <h4 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
-            В работе
-            {batchesQ.isSuccess ? (
-              <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
-                {" "}
-                ({activePurchaseDocs.length})
-              </span>
-            ) : null}
-          </h4>
-          {batchesQ.isPending && (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              Уточняем остатки по партиям…
-            </p>
-          )}
-          {batchesQ.isSuccess && activePurchaseDocs.length === 0 ? (
-            <BirzhaEmptyState
-              compact
-              title="Нет накладных в работе"
-              description={
-                <>
-                  Проданные и без остатка — в разделе{" "}
-                  <Link to={archivePath}>«Архив»</Link>.
-                </>
-              }
-            />
-          ) : null}
-          {batchesQ.isSuccess && activePurchaseDocs.length > 0 ? (
-            <>
-              <PurchaseNakladnayaDocTable
-                docs={nakladPageSlice}
-                pathname={pathname}
-                warehouses={warehousesQ.data?.warehouses ?? []}
-              />
-              <BirzhaPagination
-                pageIndex={nakladListPage}
-                pageCount={nakladPageCount}
-                itemLabel="накладных"
-                onPageChange={setNakladListPage}
-              />
-            </>
-          ) : null}
-
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
-            Накладные без остатка по партиям — в разделе <Link to={archivePath}>«Архив»</Link>.
-          </p>
-        </div>
-      )}
       </BirzhaDisclosure>
     </section>
-  );
-}
-
-function PurchaseNakladnayaDocTable({
-  docs,
-  pathname,
-  warehouses,
-}: {
-  docs: PurchaseDocumentSummary[];
-  pathname: string;
-  warehouses: WarehouseJson[];
-}) {
-  return (
-    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-      <table style={{ borderCollapse: "collapse", fontSize: "0.82rem", minWidth: 520 }}>
-        <thead>
-          <tr>
-            <th style={thHeadDense}>Номер</th>
-            <th style={thHeadDense}>Дата</th>
-            <th style={thHeadDense}>Склад</th>
-            <th style={thHeadDense}>Строк</th>
-          </tr>
-        </thead>
-        <tbody>
-          {docs.map((d) => {
-            const wh = warehouses.find((w) => w.id === d.warehouseId);
-            return (
-              <tr key={d.id}>
-                <td style={thtdDense}>
-                  <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
-                    {d.documentNumber}
-                  </Link>
-                </td>
-                <td style={{ ...thtdDense, fontWeight: 600 }}>{formatPurchaseDocDateRu(d.docDate)}</td>
-                <td style={thtdDense}>
-                  {wh ? (
-                    <>
-                      {wh.name} <span className="birzha-text-muted">({wh.code})</span>
-                    </>
-                  ) : (
-                    <span className="birzha-text-muted">—</span>
-                  )}
-                </td>
-                <td style={thtdDense}>{d.lineCount}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
   );
 }

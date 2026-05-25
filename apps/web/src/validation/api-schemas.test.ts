@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  documentNumberFromSupplierName,
   parseCreateBatchForm,
   parseCreatePurchaseDocumentForm,
   parseReceiveForm,
@@ -33,10 +34,15 @@ describe("parseCreateBatchForm", () => {
   });
 });
 
+describe("documentNumberFromSupplierName", () => {
+  it("добавляет дату к названию поставщика", () => {
+    expect(documentNumberFromSupplierName("Теплица №1", "2026-04-16")).toBe("Теплица №1 · 2026-04-16");
+  });
+});
+
 describe("parseCreatePurchaseDocumentForm", () => {
   it("собирает тело накладной", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-manas",
       supplierName: "Поставщик",
@@ -52,17 +58,38 @@ describe("parseCreatePurchaseDocumentForm", () => {
         },
       ],
     });
-    expect(body.documentNumber).toBe("НФ-1");
+    expect(body.documentNumber).toBe("Поставщик · 2026-04-16");
+    expect(body.supplierName).toBe("Поставщик");
     expect(body.lines[0]?.lineTotalKopecks).toBe(50_000);
     expect(body.lines[0]?.packageCount).toBe(2);
   });
 
+  it("требует поставщика", () => {
+    expect(() =>
+      parseCreatePurchaseDocumentForm({
+        docDate: "2026-04-16",
+        warehouseId: "wh-1",
+        supplierName: "  ",
+        buyerLabel: "",
+        extraCostKopecks: "0",
+        lines: [
+          {
+            productGradeId: "pg-1",
+            totalKg: "1",
+            packageCount: "",
+            pricePerKg: "0",
+            lineTotalKopecks: "0",
+          },
+        ],
+      }),
+    ).toThrow(/поставщик/i);
+  });
+
   it("короба с запятой округляются до целого", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-1",
-      supplierName: "",
+      supplierName: "ООО Ромашка",
       buyerLabel: "",
       extraCostKopecks: "0",
       lines: [
@@ -80,10 +107,9 @@ describe("parseCreatePurchaseDocumentForm", () => {
 
   it("сумма строки «руб,коп» в точные копейки без float", () => {
     const body = parseCreatePurchaseDocumentForm({
-      documentNumber: "НФ-1",
       docDate: "2026-04-16",
       warehouseId: "wh-1",
-      supplierName: "",
+      supplierName: "Поставщик",
       buyerLabel: "",
       extraCostKopecks: "100,50",
       lines: [
