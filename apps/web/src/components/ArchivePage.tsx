@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import type { LoadingManifestSummary, PurchaseDocumentSummary, TripJson, WarehouseJson } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -29,6 +29,7 @@ import {
   purchaseNakladnayaDocumentPathForPath,
   sales,
 } from "../routes.js";
+import { ArchivedTripSalesReport } from "./ArchivedTripSalesReport.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -48,7 +49,13 @@ function formatTripDepartedRu(departedAt: string | null): string {
   return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function reportPathForTrip(pathname: string, tripId: string, salesMode: boolean): string {
+/** Отчёт по продажам прямо в архиве (сводка + журнал сделок). */
+function archiveSalesReportPath(pathname: string, tripId: string, salesMode: boolean): string {
+  const base = salesMode ? sales.archive : adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
+  return `${base}?${new URLSearchParams({ trip: tripId }).toString()}`;
+}
+
+function fullTripReportPath(pathname: string, tripId: string, salesMode: boolean): string {
   const base = salesMode ? sales.reports : adminAwarePathForPath(pathname, adminRoutes.reports, ops.reports);
   return `${base}?${new URLSearchParams({ trip: tripId }).toString()}`;
 }
@@ -238,8 +245,10 @@ function TripsArchiveTable({
 /** Закрытые рейсы, проданные закупочные и погрузочные по закрытым рейсам — только здесь. */
 export function ArchivePage() {
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, meta } = useAuth();
   const salesMode = pathname === prefix.sales || pathname.startsWith(`${prefix.sales}/`);
+  const reportTripId = searchParams.get("trip")?.trim() ?? "";
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const batchesQ = useQuery(batchesFullListQueryOptions());
@@ -310,7 +319,13 @@ export function ArchivePage() {
   }, [archivedManifests.length, manifestPaged.pageCount]);
 
   const loading = tripsQ.isPending || batchesQ.isPending;
-  const reportTo = (tripId: string) => reportPathForTrip(pathname, tripId, salesMode);
+  const reportTo = (tripId: string) => archiveSalesReportPath(pathname, tripId, salesMode);
+  const selectedArchivedTrip = useMemo(() => {
+    if (!reportTripId) {
+      return null;
+    }
+    return archivedTrips.find((t) => t.id === reportTripId) ?? null;
+  }, [archivedTrips, reportTripId]);
 
   return (
     <section className="birzha-card" aria-labelledby="archive-heading">
@@ -339,6 +354,23 @@ export function ArchivePage() {
             onPageChange={setTripsPage}
           >
             <TripsArchiveTable trips={tripsPaged.slice} reportTo={reportTo} />
+            {reportTripId ? (
+              selectedArchivedTrip ? (
+                <ArchivedTripSalesReport
+                  tripId={selectedArchivedTrip.id}
+                  tripNumber={selectedArchivedTrip.tripNumber}
+                  fullReportPath={
+                    salesMode ? undefined : fullTripReportPath(pathname, selectedArchivedTrip.id, salesMode)
+                  }
+                />
+              ) : (
+                <BirzhaEmptyState
+                  compact
+                  title="Рейс не найден в архиве"
+                  description="Возможно, рейс ещё открыт или у вас нет доступа к этому рейсу."
+                />
+              )
+            ) : null}
           </PaginatedSection>
 
           {!salesMode ? (

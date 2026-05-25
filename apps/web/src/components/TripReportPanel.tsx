@@ -94,10 +94,23 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     return filterTripsAssignedToSellerForReports(sortedTrips, user.id);
   }, [sortedTrips, fieldSellerSalesReport, user]);
 
-  const tripsForSelect = useMemo(
+  /** Открытые рейсы в выпадающем списке; закрытые — только в «Архив» или по ссылке ?trip=. */
+  const openTripsForSelect = useMemo(
     () => tripsAllowedForReport.filter(isTripOpenForSellerWorkspace),
     [tripsAllowedForReport],
   );
+
+  /** Список для select: открытые + выбранный закрытый (переход из архива с ?trip=). */
+  const tripsForSelect = useMemo(() => {
+    if (!tripId) {
+      return openTripsForSelect;
+    }
+    const pinned = tripsAllowedForReport.find((t) => t.id === tripId);
+    if (!pinned || isTripOpenForSellerWorkspace(pinned)) {
+      return openTripsForSelect;
+    }
+    return [pinned, ...openTripsForSelect];
+  }, [openTripsForSelect, tripsAllowedForReport, tripId]);
 
   const archivePath =
     viewContext === "sales"
@@ -105,8 +118,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       : adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
 
   const archivedTripCount = useMemo(
-    () => tripsAllowedForReport.length - tripsForSelect.length,
-    [tripsAllowedForReport.length, tripsForSelect.length],
+    () => tripsAllowedForReport.length - openTripsForSelect.length,
+    [tripsAllowedForReport.length, openTripsForSelect.length],
   );
 
   useEffect(() => {
@@ -117,20 +130,20 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     if (!p || !tripsQuery.data) {
       return;
     }
-    if (tripsForSelect.some((t) => t.id === p)) {
+    if (tripsAllowedForReport.some((t) => t.id === p)) {
       setTripId(p);
       initialTripFromUrl.current = true;
     }
-  }, [searchParams, tripsForSelect, tripsQuery.data]);
+  }, [searchParams, tripsAllowedForReport, tripsQuery.data]);
 
   useEffect(() => {
     if (!tripId || !tripsQuery.data) {
       return;
     }
-    if (!tripsForSelect.some((t) => t.id === tripId)) {
+    if (!tripsAllowedForReport.some((t) => t.id === tripId)) {
       setTripId("");
     }
-  }, [tripsQuery.data, tripsForSelect, tripId]);
+  }, [tripsQuery.data, tripsAllowedForReport, tripId]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),
@@ -257,7 +270,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
         <ErrorAlert className="no-print" message="Не удалось загрузить рейсы. Проверьте связь и повторите." title="Список рейсов" />
       ) : null}
 
-      {tripsQuery.data && tripsForSelect.length === 0 && (
+      {tripsQuery.data && tripsAllowedForReport.length === 0 && (
         <div className="no-print" style={{ marginTop: "0.5rem" }}>
           <BirzhaEmptyState
             compact

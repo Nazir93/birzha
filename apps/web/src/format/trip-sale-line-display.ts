@@ -1,6 +1,27 @@
 import type { TripSaleLineJson } from "../api/types.js";
 
-import { kopecksPerKgToRubDecimalString } from "./trip-sale-line-payment.js";
+import { inferPaymentKindFromSaleLine, kopecksPerKgToRubDecimalString } from "./trip-sale-line-payment.js";
+import { kopecksToRubLabel } from "./money.js";
+
+const PAYMENT_LABEL: Record<ReturnType<typeof inferPaymentKindFromSaleLine>, string> = {
+  cash: "Наличные",
+  debt: "В долг",
+  mixed: "Смешанная",
+  card_transfer: "Перевод на карту",
+};
+
+/** Подпись способа оплаты для журнала продаж. */
+export function formatTripSaleLinePaymentLabel(line: TripSaleLineJson): string {
+  const kind = inferPaymentKindFromSaleLine(line);
+  const base = PAYMENT_LABEL[kind];
+  if (kind === "mixed") {
+    return `${base}: нал ${kopecksToRubLabel(line.cashKopecks)} ₽, долг ${kopecksToRubLabel(line.debtKopecks)} ₽`;
+  }
+  if (kind === "card_transfer") {
+    return `${base}: ${kopecksToRubLabel(line.cardTransferKopecks)} ₽`;
+  }
+  return base;
+}
 
 /** Строка «кг · цена · ящики · оптовик» в списке исправления продаж. */
 export function formatSellerCorrectionSaleMeta(line: TripSaleLineJson): string {
