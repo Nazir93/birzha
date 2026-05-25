@@ -66,7 +66,6 @@ export const adminRoutes = {
   /** Журнал списаний брака с остатка (все накладные). */
   warehouseWriteOffsLedger: `${prefix.admin}/warehouse-write-offs`,
   users: `${prefix.admin}/users`,
-  service: `${prefix.admin}/service`,
   archive: `${prefix.admin}/archive`,
 } as const;
 
@@ -100,7 +99,6 @@ export const routes = {
     purchaseNakladnaya: "/purchase-nakladnaya",
     distribution: "/distribution",
     operations: "/operations",
-    service: "/service",
   },
 } as const;
 
@@ -110,7 +108,6 @@ export const legacyPathList: readonly string[] = [
   routes.legacy.purchaseNakladnaya,
   routes.legacy.distribution,
   routes.legacy.operations,
-  routes.legacy.service,
 ] as const;
 
 /**

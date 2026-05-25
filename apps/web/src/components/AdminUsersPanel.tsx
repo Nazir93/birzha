@@ -88,7 +88,7 @@ function PasswordFieldWithToggle({
 }) {
   const [visible, setVisible] = useState(false);
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+    <div className="birzha-password-field-row">
       <input
         id={id}
         type={visible ? "text" : "password"}
@@ -96,7 +96,7 @@ function PasswordFieldWithToggle({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{ ...fieldStyle, maxWidth: "11rem", fontSize: "0.85rem" }}
+        style={{ ...fieldStyle, fontSize: "0.85rem" }}
         autoComplete={autoComplete}
       />
       <button
@@ -371,45 +371,37 @@ export function AdminUsersPanel() {
           Ввод по умолчанию скрыт звёздочками; кнопка «Показать» нужна, чтобы сверить символы перед сохранением. Ранее
           заданный пароль из базы не отображается — хранится только хэш.
         </p>
-        <div className="birzha-form-grid birzha-form-grid--actions">
-          <label className="birzha-form-label">
+        <div className="birzha-admin-user-create-row">
+          <label className="birzha-form-label birzha-form-label--block">
             Логин
             <input
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              style={{ ...fieldStyle, display: "block", minWidth: "12rem", marginTop: "0.25rem" }}
+              style={fieldStyle}
               autoComplete="off"
             />
           </label>
-          <label className="birzha-form-label">
+          <label className="birzha-form-label birzha-form-label--block">
             Новый пароль (≥ 10 символов)
-            <span style={{ display: "block", marginTop: "0.25rem" }}>
-              <PasswordFieldWithToggle
-                value={password}
-                onChange={setPassword}
-                disabled={createM.isPending}
-                autoComplete="new-password"
-              />
-            </span>
+            <PasswordFieldWithToggle
+              value={password}
+              onChange={setPassword}
+              disabled={createM.isPending}
+              autoComplete="new-password"
+            />
           </label>
-          <label className="birzha-form-label">
+          <label className="birzha-form-label birzha-form-label--block">
             Повтор нового пароля
-            <span style={{ display: "block", marginTop: "0.25rem" }}>
-              <PasswordFieldWithToggle
-                value={passwordAgain}
-                onChange={setPasswordAgain}
-                disabled={createM.isPending}
-                autoComplete="new-password"
-              />
-            </span>
+            <PasswordFieldWithToggle
+              value={passwordAgain}
+              onChange={setPasswordAgain}
+              disabled={createM.isPending}
+              autoComplete="new-password"
+            />
           </label>
-          <label className="birzha-form-label">
+          <label className="birzha-form-label birzha-form-label--block">
             Роль
-            <select
-              value={roleCode}
-              onChange={(e) => setRoleCode(e.target.value)}
-              style={{ ...fieldStyle, display: "block", minWidth: "14rem", marginTop: "0.25rem" }}
-            >
+            <select value={roleCode} onChange={(e) => setRoleCode(e.target.value)} style={fieldStyle}>
               {roleOptions.map((code) => (
                 <option key={code} value={code}>
                   {ROLE_LABEL[code] ?? code}
@@ -419,6 +411,7 @@ export function AdminUsersPanel() {
           </label>
           <button
             type="button"
+            className="birzha-admin-user-create-row__submit"
             style={btnStyle}
             disabled={
               createM.isPending ||

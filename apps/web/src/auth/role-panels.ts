@@ -21,7 +21,6 @@ export type PanelId =
   | "sellerDispatch"
   | "operations"
   | "assignSeller"
-  | "service"
   | "inventory"
   | "users";
 
@@ -37,7 +36,6 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   operations: "Недостача по рейсу",
   sellerDispatch: "Отгрузка",
   assignSeller: "Продажи",
-  service: "Диагностика",
   inventory: "Склады и калибры",
   users: "Сотрудники",
 };
@@ -53,7 +51,6 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "purchaser", "logistics"],
   assignSeller: ["admin", "manager", "purchaser", "logistics"],
-  service: ["admin"],
   /** Склады и калибры — только admin (согласовано с API). */
   inventory: ["admin"],
   /** Учётные записи (логин/роль) — как `userManagement` на API. */
@@ -262,7 +259,6 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "operations",
     "inventory",
     "users",
-    "service",
     "archive",
   ];
   if (!user) {
@@ -293,7 +289,6 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
     "operations",
     "inventory",
     "users",
-    "service",
     "archive",
   ];
 }
@@ -356,9 +351,6 @@ export function hrefForPanelInCabinet(
     if (panel === "users") {
       return adminRoutes.users;
     }
-    if (panel === "service") {
-      return adminRoutes.service;
-    }
     if (isSharedOpsPanel(panel)) {
       if (panel === "nakladnaya" && !canAccessPanel(user, "nakladnaya")) {
         return null;
@@ -379,9 +371,6 @@ export function hrefForPanelInCabinet(
     }
     if (panel === "users" && canAccessPanel(user, "users")) {
       return adminRoutes.users;
-    }
-    if (panel === "service" && canAccessPanel(user, "service")) {
-      return adminRoutes.service;
     }
     return null;
   }
@@ -432,19 +421,12 @@ export type LegacySegment = keyof typeof routes.legacy;
 /** Куда вести со старого пути (без префикса кабинета). */
 export function canonicalPathForLegacy(legacy: LegacySegment, user: AuthUser | null): string {
   if (!user) {
-    if (legacy === "service") {
-      return adminRoutes.service;
-    }
     return {
       reports: ops.reports,
       purchaseNakladnaya: ops.purchaseNakladnaya,
       distribution: ops.distribution,
       operations: ops.operations,
-      service: adminRoutes.service,
     }[legacy];
-  }
-  if (legacy === "service") {
-    return adminRoutes.service;
   }
   if (legacy === "reports") {
     if (cabinetForUser(user) === "accounting") {

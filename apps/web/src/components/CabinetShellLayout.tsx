@@ -69,7 +69,6 @@ type SidebarNavIconName =
   | "assignSeller"
   | "inventory"
   | "users"
-  | "service"
   | "counterparties";
 
 function sidebarNavIconName(key: string): SidebarNavIconName {
@@ -106,9 +105,6 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "users") {
     return "users";
   }
-  if (key === "service") {
-    return "service";
-  }
   if (key === "acc-cp") {
     return "counterparties";
   }
@@ -129,7 +125,6 @@ function SidebarNavIcon({ name }: { name: SidebarNavIconName }) {
     assignSeller: ["M7 7h10", "M12 12h8", "M9 18a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0"],
     inventory: ["M4 9l8-4 8 4-8 4-8-4z", "M6 11v6l6 3 6-3v-6", "M12 13v7"],
     users: ["M9 11a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0", "M17 11a2.5 2.5 0 100-5", "M15.5 15.5A4 4 0 0120 20"],
-    service: ["M14.5 5.5a4 4 0 00-5.1 5.1L4 16v4h4l5.4-5.4a4 4 0 005.1-5.1l-3 3-4-4 3-3z"],
     counterparties: ["M4 20h16", "M6 20V8l6-4 6 4v12", "M9 20v-5h6v5", "M9 10h.01", "M12 10h.01", "M15 10h.01"],
   };
 

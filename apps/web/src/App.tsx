@@ -18,8 +18,6 @@ import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
 import { sharedOperationsCabinetRouteElements } from "./routing/shared-operations-routes.js";
 import { accounting, legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
-import { ErrorAlert } from "./ui/ErrorAlerts.js";
-import { preJson } from "./ui/styles.js";
 
 const AccountingCabinetHome = lazy(() =>
   import("./components/AccountingCabinetHome.js").then((m) => ({ default: m.AccountingCabinetHome })),
@@ -82,27 +80,7 @@ function RouteFallback() {
   return <LoadingScreen label="Загрузка раздела…" />;
 }
 
-function ServicePage({ bootstrapError, metaJson }: { bootstrapError: Error | null; metaJson: string | null }) {
-  return (
-    <section className="birzha-card" aria-labelledby="service-heading">
-      <h2 id="service-heading" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem", fontWeight: 600 }}>
-        Диагностика сервера
-      </h2>
-      {bootstrapError ? (
-        <ErrorAlert title="Сервер недоступен" message="Сервер временно недоступен." />
-      ) : null}
-      {!bootstrapError && metaJson && (
-        <pre style={preJson} tabIndex={0} aria-label="JSON ответа GET /api/meta">
-          {metaJson}
-        </pre>
-      )}
-    </section>
-  );
-}
-
 export function App() {
-  const { meta, bootstrapError } = useAuth();
-  const metaJson = meta ? JSON.stringify(meta, null, 2) : null;
   const { pathname } = useLocation();
   const cabinetShell = isCabinetShellPath(pathname);
 
@@ -207,14 +185,7 @@ export function App() {
                 </RequirePanel>
               }
             />
-            <Route
-              path="service"
-              element={
-                <RequirePanel panel="service">
-                  <ServicePage bootstrapError={bootstrapError} metaJson={metaJson} />
-                </RequirePanel>
-              }
-            />
+            <Route path="service" element={<Navigate to=".." replace />} />
             <Route
               index
               element={

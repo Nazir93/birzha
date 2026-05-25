@@ -380,10 +380,6 @@ export function InventoryAdminPanel() {
           {shipDestQ.isPending && (
             <LoadingBlock label="Справочник направлений…" minHeight={48} skeleton skeletonRows={3} />
           )}
-          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
-            Код хранится в партии. «Удалить» — снятие с выбора (is_active = false), повтор с тем же кодом —
-            обновит подпись и снова включит.
-          </p>
           <div className="birzha-inventory-inline-tools">
             <input
               value={newDestCode}

@@ -26,7 +26,6 @@ describe("role-panels", () => {
     const u = userWithRoles("admin");
     expect(canAccessPanel(u, "reports")).toBe(true);
     expect(canAccessPanel(u, "loadingManifests")).toBe(true);
-    expect(canAccessPanel(u, "service")).toBe(true);
   });
 
   it("manager не видит админ-кабинет и админские панели", () => {
@@ -37,7 +36,6 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "sellerDispatch")).toBe(true);
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
-    expect(canAccessPanel(u, "service")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
   });
 
@@ -64,7 +62,6 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "operations")).toBe(true);
     expect(canAccessPanel(u, "assignSeller")).toBe(false);
     expect(canAccessPanel(u, "reports")).toBe(true);
-    expect(canAccessPanel(u, "service")).toBe(false);
   });
 
   it("defaultRouteForUser", () => {

@@ -3561,6 +3561,66 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   grid-template-columns: repeat(auto-fit, minmax(12rem, max-content));
 }
 
+/** Создание пользователя (/a/users): одна строка полей на широком экране */
+.birzha-admin-user-create-row {
+  display: grid;
+  grid-template-columns:
+    minmax(8.5rem, 1fr) minmax(10rem, 1.2fr) minmax(10rem, 1.2fr) minmax(8.5rem, 0.95fr)
+    auto;
+  gap: 0.5rem 0.65rem;
+  align-items: end;
+}
+
+.birzha-admin-user-create-row .birzha-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.birzha-admin-user-create-row input,
+.birzha-admin-user-create-row select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.birzha-password-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.birzha-password-field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.birzha-admin-user-create-row__submit {
+  align-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 56rem) {
+  .birzha-admin-user-create-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .birzha-admin-user-create-row__submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 30rem) {
+  .birzha-admin-user-create-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .birzha-section-heading {
   display: flex;
   flex-wrap: wrap;

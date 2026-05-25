@@ -2,7 +2,7 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../auth/auth-context.js";
 import { canonicalPathForLegacy, type LegacySegment } from "../auth/role-panels.js";
-import { adminRoutes, ops, routes } from "../routes.js";
+import { ops, routes } from "../routes.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 
 const pathToLegacyKey = new Map<string, LegacySegment>([
@@ -10,7 +10,6 @@ const pathToLegacyKey = new Map<string, LegacySegment>([
   [routes.legacy.purchaseNakladnaya, "purchaseNakladnaya"],
   [routes.legacy.distribution, "distribution"],
   [routes.legacy.operations, "operations"],
-  [routes.legacy.service, "service"],
 ]);
 
 /** Старые URL без префикса кабинета → редирект в канонический путь. */
@@ -37,7 +36,6 @@ export function LegacyPathRedirect() {
       purchaseNakladnaya: ops.purchaseNakladnaya,
       distribution: ops.distribution,
       operations: ops.operations,
-      service: adminRoutes.service,
     };
     return <Navigate to={m[key]} replace />;
   }

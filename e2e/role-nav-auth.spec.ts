@@ -32,10 +32,9 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Продажи" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Операции" })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: "Диагностика" })).toHaveCount(0);
   });
 
-  test("кладовщик: отчёты, операции, офлайн; без «Диагностика»", async ({ page }) => {
+  test("кладовщик: отчёты, операции; без служебных разделов админки", async ({ page }) => {
     await page.context().clearCookies();
     await page.goto("/login");
     await page.locator("#login-user").fill("e2e_warehouse");
@@ -47,7 +46,6 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Недостача по рейсу" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Диагностика" })).toHaveCount(0);
   });
 
   test("продавец: /s — только продажа; без накладной и контрагентов", async ({ page }) => {

@@ -34,15 +34,12 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("главная и служебная страница: meta с включённым batches API", async ({ page }) => {
-    await page.goto("/o/reports");
-    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
-
-    await page.goto("/service");
-    await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible();
-    const pre = page.getByLabel("JSON ответа GET /api/meta");
-    await expect(pre).toContainText('"batchesApi": "enabled"', { timeout: 30_000 });
-    await expect(pre).toContainText('"syncApi": "enabled"');
+  test("GET /api/meta: batches и sync включены", async ({ request }) => {
+    const res = await request.get("/api/meta");
+    expect(res.ok()).toBeTruthy();
+    const meta = (await res.json()) as { batchesApi?: string; syncApi?: string };
+    expect(meta.batchesApi).toBe("enabled");
+    expect(meta.syncApi).toBe("enabled");
   });
 
   test("отчёты: после POST /trips в селекторе появляется рейс", async ({ page, request }) => {
@@ -502,7 +499,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("навигация: боковое меню /o (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
+  test("навигация: боковое меню /o (закупка → распределение → операции → рейсы → отчёты)", async ({ page }) => {
     await page.goto("/o/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -522,11 +519,6 @@ test.describe("золотой smoke (UI + API)", () => {
     await page.goto("/o/trips");
     await expect(page).toHaveURL(/\/o\/trips$/);
     await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
-
-    /* Анонимный e2e: legacy /service → /a/service; отчёты — снова /o/reports. */
-    await page.goto("/service");
-    await expect(page).toHaveURL(/\/a\/service$/);
-    await expect(page.getByRole("heading", { name: "Диагностика сервера" })).toBeVisible({ timeout: 30_000 });
 
     await page.goto("/o/reports");
     await expect(page).toHaveURL(/\/o\/reports$/);
