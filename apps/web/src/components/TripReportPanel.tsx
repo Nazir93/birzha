@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
@@ -57,6 +57,7 @@ const headingByContext: Record<TripReportViewContext, string> = {
 
 export function TripReportPanel({ viewContext = "default" }: { viewContext?: TripReportViewContext }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
   const canTripWrite = user == null || canCreateTrip(user);
@@ -198,14 +199,19 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           "По отчёту ещё есть остаток погруженного (в машине). Закрыть рейс всё равно? Обычно закрывают после полной продажи.",
         );
         if (!ok) {
-          return;
+          return { closedTripId: null as string | null };
         }
       }
       await closeTripById(tripId, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
+      return { closedTripId: tripId };
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+      const closedId = result?.closedTripId;
+      if (closedId) {
+        navigate(`${archivePath}?${new URLSearchParams({ trip: closedId }).toString()}`);
+      }
     },
   });
 

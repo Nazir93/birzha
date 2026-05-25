@@ -215,7 +215,8 @@ export function registerBatchRoutes(
     }
   });
 
-  app.get("/trips/:tripId/sale-lines", { ...withPreHandlers(routeAuth.sell) }, async (req, reply) => {
+  /** Чтение журнала — как отчёт по рейсу (бухгалтер, логист); правки строк — `routeAuth.sell`. */
+  app.get("/trips/:tripId/sale-lines", { ...withPreHandlers(routeAuth.tripReportRead) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       const trip = await trips.findById(tripId);

@@ -206,6 +206,22 @@ describe("Batch HTTP", () => {
     const b = await batches.findById("flow-1");
     expect(b!.remainingKg()).toBe(450);
     expect(b!.totalProcessedKg()).toBe(50);
+
+    r = await app.inject({ method: "POST", url: "/trips/t-1/close", payload: {} });
+    expect(r.statusCode).toBe(200);
+
+    r = await app.inject({ method: "GET", url: "/trips/t-1/shipment-report" });
+    expect(r.statusCode).toBe(200);
+    const closedReport = JSON.parse(r.body) as { sales: { totalGrams: string } };
+    expect(closedReport.sales.totalGrams).toBe("50000");
+
+    r = await app.inject({ method: "GET", url: "/trips/t-1/sale-lines" });
+    expect(r.statusCode).toBe(200);
+    const linesBody = JSON.parse(r.body) as { trip: { status: string }; lines: { kg: string }[] };
+    expect(linesBody.trip.status).toBe("closed");
+    expect(linesBody.lines).toHaveLength(1);
+    expect(linesBody.lines[0]!.kg).toBe("50");
+
     await app.close();
   });
 

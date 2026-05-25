@@ -208,7 +208,7 @@ export const shipmentReportQueryOptions = (tripId: string) =>
     refetchOnWindowFocus: true,
   });
 
-/** Строки продаж по рейсу (правки продавцом, пока рейс открыт). */
+/** Строки продаж по рейсу (чтение — архив и отчёт; правки — пока рейс открыт). */
 export const tripSaleLinesQueryOptions = (tripId: string) =>
   queryOptions({
     queryKey: [...queryRoots.tripSaleLines, tripId] as const,

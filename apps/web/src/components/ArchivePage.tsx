@@ -1,15 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
-import type { LoadingManifestSummary, PurchaseDocumentSummary, TripJson, WarehouseJson } from "../api/types.js";
+import type {
+  LoadingManifestSummary,
+  PurchaseDocumentSummary,
+  ShipmentReportResponse,
+  TripJson,
+  WarehouseJson,
+} from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   closedTripIdSet,
   filterPurchaseDocumentsArchived,
   filterTripsArchived,
+  isTripArchived,
   splitLoadingManifestsByArchive,
 } from "../format/archive.js";
+import {
+  formatTripArchiveSalesRevenue,
+  formatTripArchiveSalesSoldKg,
+} from "../format/trip-archive-sales-summary.js";
 import { filterTripsAssignedToSellerForReports } from "../format/seller-workspace-trips.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
@@ -18,6 +29,7 @@ import {
   batchesFullListQueryOptions,
   loadingManifestsListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
+  shipmentReportQueryOptions,
   tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -219,25 +231,35 @@ function ManifestArchiveTable({
 function TripsArchiveTable({
   trips,
   reportTo,
+  reportByTripId,
+  reportLoadingTripIds,
 }: {
   trips: readonly TripJson[];
   reportTo: (tripId: string) => string;
+  reportByTripId: ReadonlyMap<string, ShipmentReportResponse>;
+  reportLoadingTripIds: ReadonlySet<string>;
 }) {
   return (
     <ArchiveDataTable
       ariaLabel="Архив рейсов"
-      headers={["Дата выезда", "№ рейса", "Статус", "ТС / водитель", ""]}
-      rows={trips.map((t) => [
-        formatTripDepartedRu(t.departedAt),
-        <Link key="n" to={reportTo(t.id)} style={{ fontWeight: 700 }}>
-          {t.tripNumber}
-        </Link>,
-        formatTripListStatusLabel(t),
-        [t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—",
-        <Link key="r" to={reportTo(t.id)}>
-          Отчёт
-        </Link>,
-      ])}
+      headers={["Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""]}
+      rows={trips.map((t) => {
+        const rep = reportByTripId.get(t.id);
+        const loading = reportLoadingTripIds.has(t.id);
+        return [
+          formatTripDepartedRu(t.departedAt),
+          <Link key="n" to={reportTo(t.id)} style={{ fontWeight: 700 }}>
+            {t.tripNumber}
+          </Link>,
+          formatTripListStatusLabel(t),
+          formatTripArchiveSalesSoldKg(rep, loading),
+          formatTripArchiveSalesRevenue(rep, loading),
+          [t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—",
+          <Link key="r" to={reportTo(t.id)}>
+            Все продажи
+          </Link>,
+        ];
+      })}
     />
   );
 }
@@ -320,12 +342,60 @@ export function ArchivePage() {
 
   const loading = tripsQ.isPending || batchesQ.isPending;
   const reportTo = (tripId: string) => archiveSalesReportPath(pathname, tripId, salesMode);
+
   const selectedArchivedTrip = useMemo(() => {
     if (!reportTripId) {
       return null;
     }
-    return archivedTrips.find((t) => t.id === reportTripId) ?? null;
-  }, [archivedTrips, reportTripId]);
+    const fromList = archivedTrips.find((t) => t.id === reportTripId);
+    if (fromList) {
+      return fromList;
+    }
+    const t = (tripsQ.data?.trips ?? []).find((x) => x.id === reportTripId);
+    if (!t || !isTripArchived(t)) {
+      return null;
+    }
+    if (salesMode && user && !filterTripsAssignedToSellerForReports([t], user.id).length) {
+      return null;
+    }
+    return t;
+  }, [archivedTrips, reportTripId, salesMode, tripsQ.data?.trips, user]);
+
+  const tripIdsForArchiveSummaries = useMemo(() => {
+    const ids = new Set(tripsPaged.slice.map((t) => t.id));
+    if (reportTripId) {
+      ids.add(reportTripId);
+    }
+    return [...ids];
+  }, [reportTripId, tripsPaged.slice]);
+
+  const archiveReportQueries = useQueries({
+    queries: tripIdsForArchiveSummaries.map((tripId) => ({
+      ...shipmentReportQueryOptions(tripId),
+      enabled: !tripsQ.isPending && tripId.length > 0,
+    })),
+  });
+
+  const reportByTripId = useMemo(() => {
+    const m = new Map<string, ShipmentReportResponse>();
+    for (let i = 0; i < tripIdsForArchiveSummaries.length; i++) {
+      const data = archiveReportQueries[i]?.data;
+      if (data) {
+        m.set(tripIdsForArchiveSummaries[i]!, data);
+      }
+    }
+    return m;
+  }, [archiveReportQueries, tripIdsForArchiveSummaries]);
+
+  const reportLoadingTripIds = useMemo(() => {
+    const s = new Set<string>();
+    for (let i = 0; i < tripIdsForArchiveSummaries.length; i++) {
+      if (archiveReportQueries[i]?.isPending) {
+        s.add(tripIdsForArchiveSummaries[i]!);
+      }
+    }
+    return s;
+  }, [archiveReportQueries, tripIdsForArchiveSummaries]);
 
   return (
     <section className="birzha-card" aria-labelledby="archive-heading">
@@ -334,43 +404,49 @@ export function ArchivePage() {
       </h2>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 1rem" }}>
         {salesMode
-          ? "Закрытые рейсы, закреплённые за вами. Активные — в «Продажа» и «Отчёт по рейсу»."
-          : "Закрытые рейсы, накладные без остатка и погрузочные по закрытым рейсам. В остальных разделах — только то, что в работе."}
+          ? "Закрытые рейсы, закреплённые за вами: в таблице — итог продаж, по ссылке «Все продажи» — полный отчёт и журнал сделок."
+          : "Закрытые рейсы: все продажи сохраняются здесь после закрытия. В таблице — итог; «Все продажи» или номер рейса — сводка и каждая сделка."}
       </p>
 
       {loading && <LoadingBlock label="Загрузка архива…" minHeight={80} skeleton skeletonRows={5} />}
 
       {!loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {reportTripId ? (
+            selectedArchivedTrip ? (
+              <ArchivedTripSalesReport
+                tripId={selectedArchivedTrip.id}
+                tripNumber={selectedArchivedTrip.tripNumber}
+                fullReportPath={
+                  salesMode ? undefined : fullTripReportPath(pathname, selectedArchivedTrip.id, salesMode)
+                }
+              />
+            ) : (
+              <BirzhaEmptyState
+                compact
+                title="Рейс не найден в архиве"
+                description="Возможно, рейс ещё открыт или у вас нет доступа к этому рейсу."
+              />
+            )
+          ) : null}
+
           <PaginatedSection
             title="Рейсы"
             count={archivedTrips.length}
             defaultOpen
             emptyTitle="Архив рейсов пуст"
-            emptyDescription="После закрытия рейса он появится здесь."
+            emptyDescription="После закрытия рейса он появится здесь с полным отчётом по продажам."
             pageCount={tripsPaged.pageCount}
             pageIndex={tripsPage}
             itemLabel="рейсов"
             onPageChange={setTripsPage}
           >
-            <TripsArchiveTable trips={tripsPaged.slice} reportTo={reportTo} />
-            {reportTripId ? (
-              selectedArchivedTrip ? (
-                <ArchivedTripSalesReport
-                  tripId={selectedArchivedTrip.id}
-                  tripNumber={selectedArchivedTrip.tripNumber}
-                  fullReportPath={
-                    salesMode ? undefined : fullTripReportPath(pathname, selectedArchivedTrip.id, salesMode)
-                  }
-                />
-              ) : (
-                <BirzhaEmptyState
-                  compact
-                  title="Рейс не найден в архиве"
-                  description="Возможно, рейс ещё открыт или у вас нет доступа к этому рейсу."
-                />
-              )
-            ) : null}
+            <TripsArchiveTable
+              trips={tripsPaged.slice}
+              reportTo={reportTo}
+              reportByTripId={reportByTripId}
+              reportLoadingTripIds={reportLoadingTripIds}
+            />
           </PaginatedSection>
 
           {!salesMode ? (
