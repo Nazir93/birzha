@@ -16,6 +16,11 @@ import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
+import {
+  batchHasRemainingStockKg,
+  countBatchesWithRemainingStock,
+  sumSoldKgInWorkBatches,
+} from "../format/purchase-nakladnaya-list-status.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -116,17 +121,18 @@ export function AdminCabinetHome() {
       if (b.inTransitKg > 0) {
         transitKg += b.inTransitKg;
       }
-      if (b.soldKg > 0) {
-        soldKg += b.soldKg;
-      }
       writtenOffKg += b.writtenOffKg ?? 0;
 
       const wid = b.nakladnaya?.warehouseId ?? "";
       const whLabel = wid ? whById.get(wid) ?? "Без названия" : "Без склада";
       byWarehouseKg.set(whLabel, (byWarehouseKg.get(whLabel) ?? 0) + b.onWarehouseKg);
 
+      if (!batchHasRemainingStockKg(b)) {
+        continue;
+      }
       const g = (b.nakladnaya?.productGroup ?? "").trim() || "Без вида";
-      byProductGroupKg.set(g, (byProductGroupKg.get(g) ?? 0) + b.totalKg);
+      const workKg = b.onWarehouseKg + b.inTransitKg + (b.pendingInboundKg ?? 0);
+      byProductGroupKg.set(g, (byProductGroupKg.get(g) ?? 0) + workKg);
     }
 
     const trips = tripsQ.data?.trips ?? [];
@@ -162,12 +168,13 @@ export function AdminCabinetHome() {
 
     /** Отгружено в сводке = масса в рейсе, ещё не продана (inTransit). После продажи уходит в «Продано», здесь → 0. */
     const dispatchedKg = transitKg;
+    soldKg = sumSoldKgInWorkBatches(batches);
 
     return {
       tripCount: trips.length,
       tripsOpen,
       tripsClosed,
-      batchCount: batches.length,
+      batchCount: countBatchesWithRemainingStock(batches),
       warehouseKg,
       transitKg,
       soldKg,
@@ -277,9 +284,9 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.soldBySeller}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--blue birzha-admin-stat--link"
-                title="Продажи по продавцам"
+                title="Продано по партиям в работе; после закрытия рейса — в архиве"
               >
-                <span className="birzha-admin-stat__label">Продано (партии)</span>
+                <span className="birzha-admin-stat__label">Продано (в работе)</span>
                 <span className="birzha-admin-stat__value">
                   {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
                 </span>
@@ -345,11 +352,11 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__value">{aggregates.tripsClosed}</div>
               </Link>
               <Link
-                to={`${adminRoutes.inventory}#inv-product-grades`}
+                to={adminRoutes.distribution}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Справочник калибров"
+                title="Партии с остатком на складе или в рейсе; после закрытия рейса и продажи — 0"
               >
-                <div className="birzha-kpi-tile__label">Партий</div>
+                <div className="birzha-kpi-tile__label">Партий в работе</div>
                 <div className="birzha-kpi-tile__value">{aggregates.batchCount}</div>
               </Link>
               <Link
@@ -385,7 +392,7 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.soldBySeller}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue birzha-kpi-tile--link"
-                title="Продано по продавцам"
+                title="Продано по партиям в работе; закрытый рейс — см. архив"
               >
                 <div className="birzha-kpi-tile__label">Продано, кг</div>
                 <div className="birzha-kpi-tile__value">

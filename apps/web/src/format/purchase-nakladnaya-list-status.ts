@@ -14,6 +14,23 @@ export function batchHasRemainingStockKg(b: BatchListItem): boolean {
   );
 }
 
+/** Партии «в работе» для сводки: без остатка (всё в рейсе продано) не считаем. */
+export function countBatchesWithRemainingStock(batches: readonly BatchListItem[]): number {
+  return batches.filter(batchHasRemainingStockKg).length;
+}
+
+/** Продано на сводке — только по партиям в работе; после закрытия рейса и продажи → 0 (детали в архиве). */
+export function sumSoldKgInWorkBatches(batches: readonly BatchListItem[]): number {
+  let soldKg = 0;
+  for (const b of batches) {
+    if (!batchHasRemainingStockKg(b) || b.soldKg <= STOCK_EPS_KG) {
+      continue;
+    }
+    soldKg += b.soldKg;
+  }
+  return soldKg;
+}
+
 /** Все партии накладной без остатка — документ уходит в «Продано». Без партий — в активных. */
 export function purchaseDocumentFullySold(
   documentId: string,

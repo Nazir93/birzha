@@ -204,7 +204,7 @@ export function AssignSellerPanel() {
           <p className="birzha-assign-seller__seller-line">
             <strong>{sellerLabel}</strong>
             <span className="birzha-assign-seller__seller-meta">
-              рейсов закреплено: {selectedSellerTrips.length}
+              рейсов в работе: {selectedSellerTrips.length}
             </span>
           </p>
 

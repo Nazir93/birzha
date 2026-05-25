@@ -4,6 +4,8 @@ import type { BatchListItem } from "../api/types.js";
 
 import {
   batchHasRemainingStockKg,
+  countBatchesWithRemainingStock,
+  sumSoldKgInWorkBatches,
   purchaseDocumentFullySold,
   splitPurchaseDocumentsBySoldStatus,
 } from "./purchase-nakladnaya-list-status.js";
@@ -40,6 +42,24 @@ describe("purchase-nakladnaya-list-status", () => {
 
   it("всё продано/отгружено — партия без остатка", () => {
     expect(batchHasRemainingStockKg(batch("b1", "d1", {}))).toBe(false);
+  });
+
+  it("countBatchesWithRemainingStock считает только партии с остатком", () => {
+    const batches = [
+      batch("b1", "d1", { warehouse: 1 }),
+      batch("b2", "d1", {}),
+      batch("b3", "d2", { transit: 0.5 }),
+    ];
+    expect(countBatchesWithRemainingStock(batches)).toBe(2);
+  });
+
+  it("sumSoldKgInWorkBatches не суммирует проданное без остатка", () => {
+    const batches = [
+      batch("b1", "d1", { warehouse: 5 }),
+      batch("b2", "d1", {}),
+    ];
+    expect(sumSoldKgInWorkBatches(batches)).toBe(100);
+    expect(sumSoldKgInWorkBatches([batches[1]!])).toBe(0);
   });
 
   it("накладная продана, когда у всех партий нет остатка", () => {

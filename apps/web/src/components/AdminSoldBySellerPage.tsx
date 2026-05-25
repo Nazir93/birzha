@@ -6,6 +6,7 @@ import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { ShipmentReportResponse } from "../api/types.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { aggregateSellerShipmentReports, tripLedgerMetrics } from "../format/seller-trip-metrics.js";
+import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { resolveUserLogin } from "../format/user-display.js";
 import {
@@ -64,7 +65,7 @@ export function AdminSoldBySellerPage() {
   });
 
   const tripSelectOptions = useMemo(
-    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    () => sortTripsByTripNumberAsc(filterTripsInWork(tripsQuery.data?.trips ?? [])),
     [tripsQuery.data?.trips],
   );
 
