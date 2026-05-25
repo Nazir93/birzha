@@ -11,7 +11,5 @@ export const QUERY_STALE_LISTS_MS = 120_000;
 export const QUERY_STALE_SHIPMENT_REPORT_MS = 45_000;
 
 /** Подбор рейса в форме (ограниченная выборка) — чаще обновлять, чем полный список. */
-export const QUERY_STALE_TRIP_PICKER_MS = 30_000;
-
 /** Держать выгруженные данные в памяти после ухода со страницы; вместе с персистом в localStorage — комфортный офлайн «назад». */
 export const QUERY_GC_MS = 6 * 60 * 60 * 1000;

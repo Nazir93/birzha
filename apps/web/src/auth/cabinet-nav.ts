@@ -42,7 +42,7 @@ export function splitCabinetNavForSidebar(entries: CabinetNavEntry[]): {
 }
 
 /**
- * Пункты бокового меню кабинета (как в прежнем `AppNav`, без дублирования логики).
+ * Пункты бокового меню кабинета (единый источник для `CabinetShellLayout`).
  */
 export function buildCabinetNavEntries(
   cabinet: CabinetId,

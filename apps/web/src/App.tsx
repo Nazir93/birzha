@@ -9,7 +9,6 @@ import {
   OperationsCabinetLayout,
   SalesCabinetLayout,
 } from "./components/CabinetShellLayout.js";
-import { LegacyChrome } from "./components/LegacyChrome.js";
 import { LegacyPathRedirect } from "./components/LegacyPathRedirect.js";
 import { LoginPage } from "./components/LoginPage.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
@@ -105,15 +104,10 @@ export function App() {
   const { meta, bootstrapError } = useAuth();
   const metaJson = meta ? JSON.stringify(meta, null, 2) : null;
   const { pathname } = useLocation();
-  const showChrome = pathname !== login;
   const cabinetShell = isCabinetShellPath(pathname);
-  const legacyStickyHeader = showChrome && !cabinetShell;
 
   return (
-    <main
-      className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}${legacyStickyHeader ? " app-shell--legacy-sticky-header" : ""}`}
-    >
-      {showChrome && !cabinetShell ? <LegacyChrome /> : null}
+    <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
       <StaleMetaBanner />
 
       <Suspense fallback={<RouteFallback />}>

@@ -13,7 +13,6 @@ import type {
   LoadingManifestsListResponse,
   ShipmentReportResponse,
   ShipDestinationsListResponse,
-  TripJson,
   TripSaleLinesResponse,
   TripsListResponse,
   WarehouseWriteOffsRecentResponse,
@@ -23,7 +22,6 @@ import type {
 import {
   QUERY_STALE_LISTS_MS,
   QUERY_STALE_SHIPMENT_REPORT_MS,
-  QUERY_STALE_TRIP_PICKER_MS,
 } from "./query-defaults.js";
 
 /**
@@ -67,39 +65,6 @@ export const tripsFieldSellerOptionsQueryOptions = () =>
     queryFn: () => apiGetJson<FieldSellerOptionsResponse>("/api/trips/field-seller-options"),
     staleTime: QUERY_STALE_LISTS_MS,
   });
-
-/**
- * Подбор рейса: `GET /api/trips?search=&limit=&order=` (как в TripSearchPicker).
- */
-export const tripsSearchPickerQueryOptions = (search: string) => {
-  const q = search.trim();
-  return queryOptions({
-    queryKey: [...queryRoots.trips, "picker", q] as const,
-    queryFn: () => {
-      const p = new URLSearchParams();
-      if (q) {
-        p.set("search", q);
-      }
-      /** До 500 — чтобы старые/«обнулённые» по остатку рейса не пропадали из подборщика при большом потоке. */
-      p.set("limit", "500");
-      p.set("order", "departedAtDesc");
-      return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
-    },
-    staleTime: QUERY_STALE_TRIP_PICKER_MS,
-  });
-};
-
-/** Одна карточка рейса: `GET /api/trips/:id`. */
-export const tripByIdQueryOptions = (tripId: string) => {
-  const id = tripId.trim();
-  return queryOptions({
-    queryKey: [...queryRoots.trips, "detail", id] as const,
-    queryFn: () => apiGetJson<{ trip: TripJson }>(`/api/trips/${encodeURIComponent(id)}`),
-    enabled: id.length > 0,
-    staleTime: QUERY_STALE_LISTS_MS,
-    refetchOnWindowFocus: true,
-  });
-};
 
 /**
  * Полный `GET /api/batches` без фильтров — один queryKey для кеша по всему приложению.

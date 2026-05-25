@@ -502,7 +502,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("навигация: вкладки AppNav (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
+  test("навигация: боковое меню /o (закупка → распределение → операции → рейсы → диагностика → отчёты)", async ({ page }) => {
     await page.goto("/o/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
