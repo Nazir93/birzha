@@ -16,9 +16,6 @@ export function SettingsAdminLayout() {
           <h2 id="settings-admin-heading" className="birzha-home-hero__title">
             Настройки
           </h2>
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "42rem" }}>
-            Склады, калибры, направления отгрузки и учётные записи сотрудников — в одном месте.
-          </p>
         </div>
       </header>
 

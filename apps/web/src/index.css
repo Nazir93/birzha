@@ -1204,7 +1204,20 @@ a.birzha-kpi-tile--link:focus-visible {
 }
 
 .birzha-nakl-lines-table__actions {
-  width: 8.5rem;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.birzha-nakl-lines-table__actions-cell {
+  text-align: right;
+}
+
+.birzha-nakl-line-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
 }
 
 .birzha-nakl-line-field {
@@ -1214,23 +1227,55 @@ a.birzha-kpi-tile--link:focus-visible {
 }
 
 .birzha-nakl-line-action {
-  margin-top: 0 !important;
-  margin-right: 0 !important;
-  padding: 0.42rem 0.65rem !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+  padding: 0.4rem 0.72rem !important;
   border-radius: 10px !important;
+  font-family: inherit;
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
   background: var(--birzha-btn-outline-bg) !important;
   color: var(--color-text) !important;
   border: 1px solid var(--birzha-btn-outline-border) !important;
   box-shadow: var(--birzha-btn-outline-shadow);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    opacity 0.14s ease;
 }
 
 .birzha-nakl-line-action:hover:not(:disabled) {
   background: var(--birzha-surface-muted) !important;
 }
 
+.birzha-nakl-line-action--calc {
+  white-space: nowrap;
+}
+
 .birzha-nakl-line-action--remove {
-  width: 2.2rem;
-  padding-inline: 0 !important;
+  width: 2.3rem;
+  min-width: 2.3rem;
+  height: 2.3rem;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem !important;
+  line-height: 1;
+  color: var(--color-text-muted) !important;
+}
+
+.birzha-nakl-line-action--remove:hover:not(:disabled) {
+  color: var(--color-text) !important;
+  border-color: var(--color-danger, #c53030) !important;
+  background: color-mix(in srgb, var(--color-danger, #c53030) 12%, var(--birzha-surface-muted)) !important;
+}
+
+.birzha-nakl-line-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .birzha-nakl-lines-table__total-label,

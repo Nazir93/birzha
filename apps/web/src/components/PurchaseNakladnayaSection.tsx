@@ -432,24 +432,26 @@ export function PurchaseNakladnayaSection() {
                     title="«руб,коп» или целое — копейки; кнопка «Рассчитать» подставит ₽ по кг × цена"
                   />
                 </td>
-                <td style={thtdDense}>
-                  <button
-                    type="button"
-                    className="birzha-nakl-line-action"
-                    style={{ ...btnStyle, fontSize: "0.78rem" }}
-                    onClick={() => fillLineKopecks(line.key)}
-                  >
-                    Рассчитать
-                  </button>
-                  <button
-                    type="button"
-                    className="birzha-nakl-line-action birzha-nakl-line-action--remove"
-                    style={{ ...btnStyle, fontSize: "0.78rem", marginLeft: 4 }}
-                    onClick={() => removeLine(line.key)}
-                    disabled={lines.length <= 1}
-                  >
-                    ✕
-                  </button>
+                <td style={thtdDense} className="birzha-nakl-lines-table__actions-cell">
+                  <div className="birzha-nakl-line-actions">
+                    <button
+                      type="button"
+                      className="birzha-nakl-line-action birzha-nakl-line-action--calc"
+                      onClick={() => fillLineKopecks(line.key)}
+                    >
+                      Рассчитать
+                    </button>
+                    <button
+                      type="button"
+                      className="birzha-nakl-line-action birzha-nakl-line-action--remove"
+                      onClick={() => removeLine(line.key)}
+                      disabled={lines.length <= 1}
+                      aria-label="Удалить строку"
+                      title="Удалить строку"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
