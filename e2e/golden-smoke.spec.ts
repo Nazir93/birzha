@@ -457,14 +457,17 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(text).toContain("25000");
   });
 
-  test("распределение: регион загрузки и legacy /distribution → /o/distribution", async ({ page }) => {
+  test("погрузка: раздел и legacy /distribution → /o/distribution", async ({ page }) => {
     await page.goto("/o/distribution");
-    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "Распределение товара" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Погрузка на машину" })).toBeVisible();
 
     await page.goto("/distribution");
     await expect(page).toHaveURL(/\/o\/distribution$/);
-    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
+
+    await page.goto("/o/loading-manifests");
+    await expect(page).toHaveURL(/\/o\/distribution$/);
   });
 
   test("операции: панель и таблица партий (GET /api/batches)", async ({ page, request }) => {
@@ -508,9 +511,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/);
     await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
 
-    await nav.getByRole("link", { name: "Распределение товара" }).click();
+    await nav.getByRole("link", { name: "Погрузка на машину" }).click();
     await expect(page).toHaveURL(/\/o\/distribution$/);
-    await expect(page.getByRole("region", { name: "Распределение товара" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Недостача по рейсу" }).click();
     await expect(page).toHaveURL(/\/o\/operations$/);

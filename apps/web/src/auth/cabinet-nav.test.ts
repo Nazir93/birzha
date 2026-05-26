@@ -15,15 +15,14 @@ describe("cabinet-nav", () => {
     expect(links[5]?.to).toBe(ops.archive);
   });
 
-  it("аноним: админ — сводка /a + те же операции, Архив и Погрузка", () => {
+  it("аноним: админ — сводка /a + операции (единая погрузка)", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.distribution);
     expect(links[3]?.to).toBe(adminRoutes.trips);
-    expect(links[4]?.to).toBe(adminRoutes.loadingManifests);
     expect(links[links.length - 1]?.to).toBe(adminRoutes.archive);
-    expect(links).toHaveLength(8);
+    expect(links).toHaveLength(7);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {
@@ -37,7 +36,7 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
     expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
     expect(links.find((x) => x.key === "archive")?.to).toBe(adminRoutes.archive);
-    expect(links.find((x) => x.key === "loadingManifests")?.to).toBe(adminRoutes.loadingManifests);
+    expect(links.find((x) => x.key === "loadingManifests")).toBeUndefined();
     expect(links.find((x) => x.key === "reports")).toBeUndefined();
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
     expect(links.find((x) => x.key === "sellerDispatch")?.to).toBe(adminRoutes.sellerDispatch);

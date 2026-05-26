@@ -27,7 +27,7 @@ export type PanelId =
 /** Подписи вкладок навигации (шапка / сайдбар). */
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
-  distribution: "Распределение товара",
+  distribution: "Погрузка на машину",
   trips: "Рейсы",
   archive: "Архив",
   loadingManifests: "Погрузка",
@@ -252,7 +252,6 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "distribution",
     "trips",
-    "loadingManifests",
     "sellerDispatch",
     "assignSeller",
     "reports",
@@ -282,7 +281,6 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
     "nakladnaya",
     "distribution",
     "trips",
-    "loadingManifests",
     "sellerDispatch",
     "assignSeller",
     "operations",
@@ -298,7 +296,6 @@ const SHARED_OPS_PANELS = [
   "distribution",
   "trips",
   "archive",
-  "loadingManifests",
   "sellerDispatch",
   "assignSeller",
   "operations",
@@ -319,6 +316,9 @@ export function hrefForPanelInCabinet(
   panel: PanelId,
   currentCabinet: CabinetId,
 ): string | null {
+  if (panel === "loadingManifests") {
+    return hrefForPanelInCabinet(user, "distribution", currentCabinet);
+  }
   if (!canAccessPanel(user, panel)) {
     return null;
   }

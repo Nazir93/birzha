@@ -73,7 +73,7 @@ function fullTripReportPath(pathname: string, tripId: string, salesMode: boolean
 }
 
 function manifestPathFor(pathname: string, manifestId: string): string {
-  return `${adminAwarePathForPath(pathname, adminRoutes.loadingManifests, ops.loadingManifests)}/${encodeURIComponent(manifestId)}`;
+  return `${adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution)}/${encodeURIComponent(manifestId)}`;
 }
 
 function ArchiveDataTable({

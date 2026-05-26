@@ -95,25 +95,37 @@ fi
 if [[ "${SKIP_SYSTEMD_RESTART:-0}" != "1" ]]; then
   echo ">>> systemctl restart $SERVICE"
   sudo systemctl restart "$SERVICE"
+  echo ">>> ожидание запуска API (3 с)"
+  sleep 3
+  if ! systemctl is-active --quiet "$SERVICE"; then
+    echo "Ошибка: $SERVICE не в состоянии active после restart" >&2
+    journalctl -u "$SERVICE" -n 40 --no-pager >&2 || true
+    exit 1
+  fi
 else
   echo ">>> SKIP_SYSTEMD_RESTART=1 — перезапуск systemd вручную"
 fi
 
 if [[ "${SKIP_HEALTHCHECK:-0}" != "1" ]]; then
   echo ">>> healthcheck $HEALTH_URL"
-  for attempt in 1 2 3 4 5; do
-    if curl -fsS "$HEALTH_URL" >/dev/null; then
-      echo ">>> healthcheck ok"
+  health_ok=0
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+      health_ok=1
+      echo ">>> healthcheck ok (попытка $attempt)"
       break
     fi
-    if [[ "$attempt" == "5" ]]; then
-      echo "Ошибка: healthcheck не прошёл: $HEALTH_URL" >&2
-      echo "Предыдущий commit до обновления: $PREVIOUS_COMMIT; текущий commit: $CURRENT_COMMIT" >&2
-      echo "Откат кода: git checkout $PREVIOUS_COMMIT && CI=1 pnpm install --frozen-lockfile && pnpm exec turbo run build --force && sudo systemctl restart $SERVICE" >&2
-      exit 1
-    fi
+    echo ">>> healthcheck попытка $attempt/10 — API ещё не отвечает, ждём 2 с…" >&2
     sleep 2
   done
+  if [[ "$health_ok" != "1" ]]; then
+    echo "Ошибка: healthcheck не прошёл: $HEALTH_URL" >&2
+    journalctl -u "$SERVICE" -n 40 --no-pager >&2 || true
+    echo "Предыдущий commit до обновления: $PREVIOUS_COMMIT; текущий commit: $CURRENT_COMMIT" >&2
+    echo "Откат кода: git checkout $PREVIOUS_COMMIT && CI=1 pnpm install --frozen-lockfile && pnpm exec turbo run build --force && sudo systemctl restart $SERVICE" >&2
+    echo "Диагностика: bash deploy/check-server.sh" >&2
+    exit 1
+  fi
 else
   echo ">>> SKIP_HEALTHCHECK=1 — пропуск healthcheck"
 fi

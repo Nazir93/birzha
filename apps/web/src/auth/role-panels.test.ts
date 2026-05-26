@@ -8,6 +8,7 @@ import {
   canManageInventoryCatalog,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
+  hrefForPanelInCabinet,
   isFieldSellerOnly,
   operationsPanelOrder,
   postLoginRedirectPath,
@@ -37,6 +38,13 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
+  });
+
+  it("loadingManifests ведёт на единый раздел distribution", () => {
+    expect(hrefForPanelInCabinet(userWithRoles("warehouse"), "loadingManifests", "operations")).toBe(
+      ops.distribution,
+    );
+    expect(hrefForPanelInCabinet(userWithRoles("admin"), "loadingManifests", "admin")).toBe(adminRoutes.distribution);
   });
 
   it("warehouse и logistics видят Погрузку (как Распределение)", () => {

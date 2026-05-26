@@ -241,7 +241,7 @@ export function AdminCabinetHome() {
             <Link
               to={adminRoutes.distribution}
               className="birzha-admin-dash__hero-ring birzha-admin-dash__hero-ring--link"
-              title="Распределение массы и партии по складам"
+              title="Погрузка на машину — распределение по складам"
             >
               <MassDistributionRing
                 warehouseKg={aggregates.warehouseKg}
@@ -309,11 +309,7 @@ export function AdminCabinetHome() {
             <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
               ·
             </span>
-            <Link to={adminRoutes.distribution}>Распределение</Link>
-            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
-              ·
-            </span>
-            <Link to={adminRoutes.loadingManifests}>Погрузка на машину</Link>
+            <Link to={adminRoutes.distribution}>Погрузка на машину</Link>
             <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
               ·
             </span>

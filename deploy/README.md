@@ -17,7 +17,9 @@ set -a && source apps/api/.env && set +a
 pg_dump "$DATABASE_URL" --format=custom --file "birzha-before-update-$(date +%F-%H%M).dump"
 cd apps/api && pnpm db:migrate
 sudo systemctl restart birzha-api
+sleep 3
 curl -fsS http://127.0.0.1:3000/health
+bash deploy/check-server.sh
 ```
 
 Если база изначально поднималась только через `db:push` и `db:migrate` ругается на уже существующие объекты, на этом шаге используйте **`pnpm db:push`** вместо `db:migrate` (или выровняйте журнал миграций вручную). Скрипт `server-update.sh` переключается переменной **`BIRZHA_DB_APPLY=migrate`** / **`BIRZHA_DB_APPLY=push`** (по умолчанию в скрипте — **push**).
@@ -70,7 +72,9 @@ git checkout ПРЕДЫДУЩИЙ_COMMIT
 pnpm install --frozen-lockfile
 pnpm exec turbo run build --force
 sudo systemctl restart birzha-api
+sleep 3
 curl -fsS http://127.0.0.1:3000/health
+bash deploy/check-server.sh
 ```
 
 Откат схемы/данных делается только из заранее снятого `pg_dump`, не через `git checkout`.

@@ -1,6 +1,8 @@
 import { lazy } from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 
+import { RedirectLoadingManifestRoute } from "./RedirectLoadingManifestRoute.js";
+
 import { RequirePanel } from "../components/RequirePanel.js";
 
 const TripReportPanel = lazy(() =>
@@ -23,9 +25,6 @@ const AdminTripsLogisticsPanel = lazy(() =>
 const ArchivePage = lazy(() => import("../components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })));
 const OperationsPanel = lazy(() =>
   import("../components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
-);
-const AdminLoadingManifestsPanel = lazy(() =>
-  import("../components/AdminLoadingManifestsPanel.js").then((m) => ({ default: m.AdminLoadingManifestsPanel })),
 );
 const SellerDispatchPanel = lazy(() =>
   import("../components/SellerDispatchPanel.js").then((m) => ({ default: m.SellerDispatchPanel })),
@@ -70,11 +69,14 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
         element={
           <RequirePanel panel="distribution">
             <section className="birzha-card">
-              <AllocationPanel />
+              <Outlet />
             </section>
           </RequirePanel>
         }
-      />
+      >
+        <Route index element={<AllocationPanel />} />
+        <Route path=":manifestId" element={<AllocationPanel />} />
+      </Route>
       <Route
         path="trips"
         element={
@@ -104,16 +106,16 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
       <Route
         path="loading-manifests"
         element={
-          <RequirePanel panel="loadingManifests">
-            <AdminLoadingManifestsPanel />
+          <RequirePanel panel="distribution">
+            <RedirectLoadingManifestRoute />
           </RequirePanel>
         }
       />
       <Route
         path="loading-manifests/:manifestId"
         element={
-          <RequirePanel panel="loadingManifests">
-            <AdminLoadingManifestsPanel />
+          <RequirePanel panel="distribution">
+            <RedirectLoadingManifestRoute />
           </RequirePanel>
         }
       />

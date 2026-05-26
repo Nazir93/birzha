@@ -273,13 +273,13 @@ export function AdminTripRegistryPage() {
                 </p>
                 {(manifestsByTripId.get(expandedTripId) ?? []).length === 0 ? (
                   <p style={{ margin: 0, fontSize: "0.88rem" }} className="birzha-text-muted">
-                    Нет привязанных накладных. Оформите погрузку в разделе «Распределение» или «Погрузка».
+                    Нет привязанных накладных. Оформите погрузку в разделе «Погрузка на машину».
                   </p>
                 ) : (
                   <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.88rem" }}>
                     {(manifestsByTripId.get(expandedTripId) ?? []).map((m) => (
                       <li key={m.id} style={{ marginBottom: "0.35rem" }}>
-                        <Link to={`${adminRoutes.loadingManifests}/${encodeURIComponent(m.id)}`} style={{ fontWeight: 600 }}>
+                        <Link to={`${adminRoutes.distribution}/${encodeURIComponent(m.id)}`} style={{ fontWeight: 600 }}>
                           {formatLoadingManifestDisplayName({
                             manifestNumber: m.manifestNumber,
                             destinationName: m.destinationName,
