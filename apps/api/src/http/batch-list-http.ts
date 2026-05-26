@@ -24,12 +24,17 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
   const wJoin = m?.warehouseId != null && String(m.warehouseId).trim() !== "" ? String(m.warehouseId).trim() : null;
   const wBatch = b.getWarehouseId();
   const w = wJoin ?? wBatch;
+  const purchaseId = b.getPurchaseId()?.trim() || "";
+  const documentIdFromLine =
+    m?.documentId != null && String(m.documentId).trim() !== "" ? String(m.documentId).trim() : "";
+  const documentId = documentIdFromLine || purchaseId || null;
+
   if (!m && w == null) {
     return undefined;
   }
   if (!m && w != null) {
     return {
-      documentId: null,
+      documentId,
       warehouseId: w,
       productGradeCode: null,
       productGroup: null,
@@ -41,7 +46,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
     return undefined;
   }
   return {
-    documentId: m.documentId,
+    documentId,
     warehouseId: w,
     productGradeCode: m.productGradeCode,
     productGroup: m.productGroup,

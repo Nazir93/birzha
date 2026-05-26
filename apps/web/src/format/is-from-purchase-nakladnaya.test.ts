@@ -35,10 +35,28 @@ describe("isFromPurchaseNakladnaya", () => {
     ).toBe(true);
   });
 
-  it("false без documentId", () => {
+  it("true при warehouseId и purchaseId партии (documentId в API пустой)", () => {
     expect(
       isFromPurchaseNakladnaya(
-        b({ id: "1", nakladnaya: { warehouseId: "w" } as BatchListItem["nakladnaya"] }),
+        b({
+          id: "1",
+          purchaseId: "doc-1",
+          nakladnaya: {
+            documentId: null,
+            warehouseId: "w1",
+            documentNumber: null,
+            productGradeCode: "№5",
+            productGroup: null,
+          } as BatchListItem["nakladnaya"],
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("false без documentId и purchaseId", () => {
+    expect(
+      isFromPurchaseNakladnaya(
+        b({ id: "1", purchaseId: "", nakladnaya: { warehouseId: "w" } as BatchListItem["nakladnaya"] }),
       ),
     ).toBe(false);
   });

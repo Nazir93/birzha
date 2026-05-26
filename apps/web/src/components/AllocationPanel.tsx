@@ -151,7 +151,10 @@ export function AllocationPanel() {
     return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
   }, [shipDestQ.data]);
 
-  const batchesQuery = useQuery(batchesFullListQueryOptions());
+  const batchesQuery = useQuery({
+    ...batchesFullListQueryOptions(),
+    refetchOnMount: "always",
+  });
   const warehousesQuery = useQuery(warehousesFullListQueryOptions());
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const routeDetailQuery = useQuery({
@@ -297,13 +300,17 @@ export function AllocationPanel() {
     },
   });
 
+  const batchesOnWarehouse = useMemo(
+    () => (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0),
+    [batchesQuery.data?.batches],
+  );
+
   const list = useMemo(
     () =>
-      (batchesQuery.data?.batches ?? [])
-        .filter((b) => b.onWarehouseKg > 0)
+      batchesOnWarehouse
         .filter(isFromPurchaseNakladnaya)
         .filter((b) => !reservedBatchIdSet.has(b.id)),
-    [batchesQuery.data?.batches, reservedBatchIdSet],
+    [batchesOnWarehouse, reservedBatchIdSet],
   );
   const loading = batchesQuery.isPending;
   const refetching = batchesQuery.isFetching && !batchesQuery.isPending;
@@ -509,15 +516,24 @@ export function AllocationPanel() {
           Не удалось загрузить список партий, уже внесённых в погрузочные накладные — отбор показывает полный остаток.
         </p>
       )}
-      {!loading && list.length === 0 && (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length > 0 ? (
+      {!loading && list.length === 0 && batchesOnWarehouse.length > 0 ? (
         <InfoAlert title="Нет партий для отбора">
-          Остатки с оформленной <strong>закупкой товара</strong> здесь не найдены. Оформите приём в{" "}
-          <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
+          На складе есть остаток ({batchesOnWarehouse.length} парт.), но без привязки к{" "}
+          <strong>закупочной накладной</strong>. Оформите приём в{" "}
+          <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link> и нажмите «Обновить список».
+          <p style={{ margin: "0.5rem 0 0" }}>
+            <button
+              type="button"
+              style={btnStyle}
+              disabled={batchesQuery.isFetching}
+              onClick={() => void batchesQuery.refetch()}
+            >
+              {batchesQuery.isFetching ? "Обновление…" : "Обновить список партий"}
+            </button>
+          </p>
         </InfoAlert>
       ) : null}
-      {!loading &&
-        list.length === 0 &&
-        (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0).length === 0 && (
+      {!loading && list.length === 0 && batchesOnWarehouse.length === 0 && (
           <BirzhaEmptyState
             compact
             title="Нет партий с остатком на складе"
