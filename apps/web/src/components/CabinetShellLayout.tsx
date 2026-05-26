@@ -69,6 +69,7 @@ type SidebarNavIconName =
   | "assignSeller"
   | "inventory"
   | "users"
+  | "settings"
   | "counterparties";
 
 function sidebarNavIconName(key: string): SidebarNavIconName {
@@ -99,11 +100,8 @@ function sidebarNavIconName(key: string): SidebarNavIconName {
   if (key === "sellerDispatch") {
     return "assignSeller";
   }
-  if (key === "inventory") {
-    return "inventory";
-  }
-  if (key === "users") {
-    return "users";
+  if (key === "inventory" || key === "users" || key === "settings") {
+    return "settings";
   }
   if (key === "acc-cp") {
     return "counterparties";
@@ -123,8 +121,9 @@ function SidebarNavIcon({ name }: { name: SidebarNavIconName }) {
     reports: ["M5 19V5", "M5 19h14", "M9 15v-4", "M13 15V8", "M17 15v-7"],
     operations: ["M7 7h10", "M14 4l3 3-3 3", "M17 17H7", "M10 14l-3 3 3 3"],
     assignSeller: ["M7 7h10", "M12 12h8", "M9 18a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0"],
-    inventory: ["M4 9l8-4 8 4-8 4-8-4z", "M6 11v6l6 3 6-3v-6", "M12 13v7"],
-    users: ["M9 11a3 3 0 100-6 3 3 0 000 6z", "M4 20a5 5 0 0110 0", "M17 11a2.5 2.5 0 100-5", "M15.5 15.5A4 4 0 0120 20"],
+    inventory: ["M12 3v3", "M12 18v3", "M4.2 7.8l2.1 2.1", "M17.7 14.1l2.1 2.1", "M3 12h3", "M18 12h3", "M7.8 19.8l2.1-2.1", "M14.1 9.9l2.1-2.1"],
+    users: ["M12 3v3", "M12 18v3", "M4.2 7.8l2.1 2.1", "M17.7 14.1l2.1 2.1", "M3 12h3", "M18 12h3", "M7.8 19.8l2.1-2.1", "M14.1 9.9l2.1-2.1"],
+    settings: ["M12 3v3", "M12 18v3", "M4.2 7.8l2.1 2.1", "M17.7 14.1l2.1 2.1", "M3 12h3", "M18 12h3", "M7.8 19.8l2.1-2.1", "M14.1 9.9l2.1-2.1"],
     counterparties: ["M4 20h16", "M6 20V8l6-4 6 4v12", "M9 20v-5h6v5", "M9 10h.01", "M12 10h.01", "M15 10h.01"],
   };
 

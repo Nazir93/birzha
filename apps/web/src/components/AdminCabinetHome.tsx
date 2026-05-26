@@ -414,7 +414,7 @@ export function AdminCabinetHome() {
                 </div>
               </Link>
               <Link
-                to={adminRoutes.inventory}
+                to={adminRoutes.settingsCatalog}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
                 title="Справочник складов"
               >
@@ -422,7 +422,7 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__value">{aggregates.warehouseCatalogCount}</div>
               </Link>
               <Link
-                to={adminRoutes.inventory}
+                to={adminRoutes.settingsCatalog}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
                 title="Справочник калибров"
               >

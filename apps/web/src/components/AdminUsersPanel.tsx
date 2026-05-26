@@ -202,7 +202,11 @@ function UserRowActions({
 /**
  * Создание логинов и ролей сотрудников (только admin/manager; зам не выдаёт admin/manager).
  */
-export function AdminUsersPanel() {
+type AdminUsersPanelProps = {
+  embedded?: boolean;
+};
+
+export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {}) {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const showApi = meta?.adminUsersApi === "enabled" && user != null;
@@ -309,6 +313,14 @@ export function AdminUsersPanel() {
   });
 
   if (!showApi) {
+    const unavailable = (
+      <p className="birzha-callout-warning" role="status">
+        Управление сотрудниками недоступно (нужен PostgreSQL и авторизация на API).
+      </p>
+    );
+    if (embedded) {
+      return <div className="birzha-settings-admin__embedded">{unavailable}</div>;
+    }
     return (
       <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
         <header className="birzha-home-hero">
@@ -318,43 +330,14 @@ export function AdminUsersPanel() {
               Сотрудники
             </h2>
           </div>
-          <nav className="birzha-home-actions no-print" aria-label="Действия">
-            <Link to={adminRoutes.operations} className="birzha-home-action">
-              <span>Кабинет</span>
-              <strong>Перейти к операциям</strong>
-            </Link>
-            <Link to={adminRoutes.home} className="birzha-home-action">
-              <span>Админка</span>
-              <strong>Сводка</strong>
-            </Link>
-          </nav>
         </header>
+        {unavailable}
       </section>
     );
   }
 
-  return (
-    <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
-      <header className="birzha-home-hero">
-        <div>
-          <p className="birzha-home-hero__eyebrow">Команда</p>
-          <h2 id="admin-users-heading" className="birzha-home-hero__title">
-            Сотрудники
-          </h2>
-        </div>
-        <div className="birzha-home-actions no-print" aria-label="Правила доступа">
-          <div className="birzha-home-action" role="note">
-            <span>Роль manager</span>
-            <strong>Без admin/manager</strong>
-          </div>
-          <div className="birzha-home-action" role="note">
-            <span>Пароль</span>
-            <strong>От 10 символов</strong>
-          </div>
-        </div>
-      </header>
-
-      <div className="birzha-home-work-card">
+  const body = (
+    <div className="birzha-home-work-card">
         <BirzhaDisclosure
           nested
           defaultOpen
@@ -504,6 +487,40 @@ export function AdminUsersPanel() {
         )}
         </BirzhaDisclosure>
       </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="birzha-settings-admin__embedded" aria-label="Сотрудники">
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem" }}>
+          Роль «руководитель» не может выдавать admin/manager. Пароль — не менее 10 символов.
+        </p>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
+      <header className="birzha-home-hero">
+        <div>
+          <p className="birzha-home-hero__eyebrow">Команда</p>
+          <h2 id="admin-users-heading" className="birzha-home-hero__title">
+            Сотрудники
+          </h2>
+        </div>
+        <div className="birzha-home-actions no-print" aria-label="Правила доступа">
+          <div className="birzha-home-action" role="note">
+            <span>Роль manager</span>
+            <strong>Без admin/manager</strong>
+          </div>
+          <div className="birzha-home-action" role="note">
+            <span>Пароль</span>
+            <strong>От 10 символов</strong>
+          </div>
+        </div>
+      </header>
+      {body}
     </section>
   );
 }

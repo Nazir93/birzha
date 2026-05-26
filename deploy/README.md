@@ -79,6 +79,19 @@ bash deploy/check-server.sh
 
 Откат схемы/данных делается только из заранее снятого `pg_dump`, не через `git checkout`.
 
+## Очистка данных (начать с нуля)
+
+**Необратимо** удаляет накладные, рейсы, партии, продажи, погрузочные накладные, контрагентов и т.п. **Сохраняются** учётные записи (`users`) и справочник направлений отгрузки. Склады и калибры пересоздаются из сида (Манас, Каякент, №5…).
+
+```bash
+cd /opt/birzha
+BIRZHA_AUTO_BACKUP=1 bash deploy/clean-database.sh
+```
+
+Локально (тот же смысл): `cd apps/api && pnpm db:reset-test-data` (нужен `DATABASE_URL` в `.env`).
+
+После очистки, если нужен тестовый набор: `cd apps/api && BIRZHA_DEMO_SEED_PASSWORD='…' pnpm db:seed-demo`.
+
 ## Из GitHub (CI → SSH)
 
 В репозитории: **Settings → Secrets and variables → Actions** добавьте:

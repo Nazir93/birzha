@@ -54,6 +54,11 @@ export const adminRoutes = {
   /** Главная админки — сводка KPI. */
   home: prefix.admin,
   ...sharedOpsPaths(prefix.admin),
+  /** Настройки: справочники и сотрудники. */
+  settings: `${prefix.admin}/settings`,
+  settingsCatalog: `${prefix.admin}/settings/catalog`,
+  settingsTeam: `${prefix.admin}/settings/team`,
+  /** Редиректы со старых URL. */
   inventory: `${prefix.admin}/inventory`,
   /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
   tripRegistry: `${prefix.admin}/trip-registry`,

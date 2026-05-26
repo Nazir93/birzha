@@ -41,6 +41,9 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
     expect(links.find((x) => x.key === "sellerDispatch")?.to).toBe(adminRoutes.sellerDispatch);
     expect(links.find((x) => x.key === "assignSeller")?.to).toBe(adminRoutes.assignSeller);
+    expect(links.find((x) => x.key === "settings")?.to).toBe(adminRoutes.settingsCatalog);
+    expect(links.find((x) => x.key === "inventory")).toBeUndefined();
+    expect(links.find((x) => x.key === "users")).toBeUndefined();
     expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 

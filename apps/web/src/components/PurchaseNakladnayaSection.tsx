@@ -280,7 +280,7 @@ export function PurchaseNakladnayaSection() {
       {catalogsEmptyOk && canManageCatalog ? (
         <InfoAlert title="Справочники пусты">
           В справочнике нет складов или калибров — нечего выбирать в списках. Добавьте их в разделе{" "}
-          <strong>Склады и калибры</strong> (кабинет админа) или попросите администратора проверить начальные справочники.
+          <strong>Настройки</strong> (кабинет админа) или попросите администратора проверить начальные справочники.
         </InfoAlert>
       ) : null}
       {catalogsEmptyOk && !canManageCatalog ? (
@@ -341,15 +341,15 @@ export function PurchaseNakladnayaSection() {
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && canManageCatalog ? (
         <InfoAlert title="Нет калибров">
           В справочнике нет калибров. Добавьте калибры в{" "}
-          <Link to={adminRoutes.inventory} style={{ fontWeight: 600 }}>
-            кабинете админа — «Склады и калибры»
+          <Link to={adminRoutes.settingsCatalog} style={{ fontWeight: 600 }}>
+            кабинете админа — «Настройки»
           </Link>
           , обновите страницу.
         </InfoAlert>
       ) : null}
       {!gradesQ.isPending && gradeCount === 0 && !gradesQ.isError && !canManageCatalog ? (
         <InfoAlert title="Нет калибров">
-          В справочнике нет калибров — пусть администратор добавит их в разделе «Склады и калибры».
+          В справочнике нет калибров — пусть администратор добавит их в «Настройках».
         </InfoAlert>
       ) : null}
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">

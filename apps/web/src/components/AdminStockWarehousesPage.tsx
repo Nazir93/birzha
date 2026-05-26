@@ -114,7 +114,7 @@ export function AdminStockWarehousesPage() {
             ← Сводка
           </Link>{" "}
           ·{" "}
-          <Link to={`${adminRoutes.inventory}#inv-product-grades`} className="birzha-ui-sm">
+          <Link to={`${adminRoutes.settingsCatalog}#inv-product-grades`} className="birzha-ui-sm">
             Калибры в справочнике
           </Link>
         </p>

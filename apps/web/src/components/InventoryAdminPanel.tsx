@@ -25,7 +25,12 @@ import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/
 /**
  * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
  */
-export function InventoryAdminPanel() {
+type InventoryAdminPanelProps = {
+  /** Внутри раздела «Настройки» — без отдельного заголовка страницы. */
+  embedded?: boolean;
+};
+
+export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelProps = {}) {
   const { hash } = useLocation();
   const { meta } = useAuth();
   const queryClient = useQueryClient();
@@ -278,26 +283,28 @@ export function InventoryAdminPanel() {
     );
   }
 
-  return (
-    <section className="birzha-home-premium birzha-inventory-admin" aria-labelledby="inv-adm-heading">
-      <header className="birzha-home-hero birzha-inventory-admin__hero">
-        <div>
-          <p className="birzha-home-hero__eyebrow">Справочники</p>
-          <h2 id="inv-adm-heading" className="birzha-home-hero__title">
-            Склады и калибры
-          </h2>
-        </div>
-        <nav className="birzha-home-actions no-print" aria-label="Быстрые действия справочников">
-          <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
-            <span>Ввод</span>
-            <strong>Закупка товара</strong>
-          </Link>
-          <Link to={adminRoutes.operations} className="birzha-home-action">
-            <span>Движение</span>
-            <strong>Операции</strong>
-          </Link>
-        </nav>
-      </header>
+  const content = (
+    <>
+      {!embedded ? (
+        <header className="birzha-home-hero birzha-inventory-admin__hero">
+          <div>
+            <p className="birzha-home-hero__eyebrow">Справочники</p>
+            <h2 id="inv-adm-heading" className="birzha-home-hero__title">
+              Склады и калибры
+            </h2>
+          </div>
+          <nav className="birzha-home-actions no-print" aria-label="Быстрые действия справочников">
+            <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
+              <span>Ввод</span>
+              <strong>Закупка товара</strong>
+            </Link>
+            <Link to={adminRoutes.operations} className="birzha-home-action">
+              <span>Движение</span>
+              <strong>Операции</strong>
+            </Link>
+          </nav>
+        </header>
+      ) : null}
 
       <BirzhaDisclosure
         defaultOpen
@@ -744,6 +751,20 @@ export function InventoryAdminPanel() {
         </table>
       </div>
       </BirzhaDisclosure>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="birzha-inventory-admin birzha-settings-admin__embedded" aria-label="Склады и калибры">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <section className="birzha-home-premium birzha-inventory-admin" aria-labelledby="inv-adm-heading">
+      {content}
     </section>
   );
 }

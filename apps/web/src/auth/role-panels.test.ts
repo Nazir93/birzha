@@ -33,11 +33,19 @@ describe("role-panels", () => {
     const u = userWithRoles("manager");
     expect(canAccessCabinet(u, "admin")).toBe(false);
     expect(canAccessPanel(u, "inventory")).toBe(false);
+    expect(canAccessPanel(u, "settings")).toBe(false);
     expect(canAccessPanel(u, "loadingManifests")).toBe(true);
     expect(canAccessPanel(u, "sellerDispatch")).toBe(true);
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
+  });
+
+  it("inventory и users ведут в подразделы настроек", () => {
+    const admin = userWithRoles("admin");
+    expect(hrefForPanelInCabinet(admin, "inventory", "admin")).toBe(adminRoutes.settingsCatalog);
+    expect(hrefForPanelInCabinet(admin, "users", "admin")).toBe(adminRoutes.settingsTeam);
+    expect(hrefForPanelInCabinet(admin, "settings", "admin")).toBe(adminRoutes.settingsCatalog);
   });
 
   it("loadingManifests ведёт на единый раздел distribution", () => {

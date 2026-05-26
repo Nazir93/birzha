@@ -51,6 +51,9 @@ const CounterpartiesPanel = lazy(() =>
 const InventoryAdminPanel = lazy(() =>
   import("./components/InventoryAdminPanel.js").then((m) => ({ default: m.InventoryAdminPanel })),
 );
+const SettingsAdminLayout = lazy(() =>
+  import("./components/SettingsAdminLayout.js").then((m) => ({ default: m.SettingsAdminLayout })),
+);
 const SellerCabinetHome = lazy(() =>
   import("./components/SellerCabinetHome.js").then((m) => ({ default: m.SellerCabinetHome })),
 );
@@ -168,23 +171,21 @@ export function App() {
               }
             />
             <Route
-              path="inventory"
+              path="settings"
               element={
-                <RequirePanel panel="inventory">
+                <RequirePanel panel="settings">
                   <section className="birzha-card">
-                    <InventoryAdminPanel />
+                    <SettingsAdminLayout />
                   </section>
                 </RequirePanel>
               }
-            />
-            <Route
-              path="users"
-              element={
-                <RequirePanel panel="users">
-                  <AdminUsersPanel />
-                </RequirePanel>
-              }
-            />
+            >
+              <Route index element={<Navigate to="catalog" replace />} />
+              <Route path="catalog" element={<InventoryAdminPanel embedded />} />
+              <Route path="team" element={<AdminUsersPanel embedded />} />
+            </Route>
+            <Route path="inventory" element={<Navigate to="../settings/catalog" replace />} />
+            <Route path="users" element={<Navigate to="../settings/team" replace />} />
             <Route path="service" element={<Navigate to=".." replace />} />
             <Route
               index

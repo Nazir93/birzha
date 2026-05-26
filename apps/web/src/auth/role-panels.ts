@@ -22,7 +22,8 @@ export type PanelId =
   | "operations"
   | "assignSeller"
   | "inventory"
-  | "users";
+  | "users"
+  | "settings";
 
 /** Подписи вкладок навигации (шапка / сайдбар). */
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
@@ -38,6 +39,7 @@ export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   assignSeller: "Продажи",
   inventory: "Склады и калибры",
   users: "Сотрудники",
+  settings: "Настройки",
 };
 
 const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
@@ -55,6 +57,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   inventory: ["admin"],
   /** Учётные записи (логин/роль) — как `userManagement` на API. */
   users: ["admin"],
+  settings: ["admin"],
 };
 
 const OPERATIONS_CABINET_ROLES = new Set<string>(["purchaser", "warehouse", "logistics", "receiver", "manager"]);
@@ -256,8 +259,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "assignSeller",
     "reports",
     "operations",
-    "inventory",
-    "users",
+    "settings",
     "archive",
   ];
   if (!user) {
@@ -284,8 +286,7 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
     "sellerDispatch",
     "assignSeller",
     "operations",
-    "inventory",
-    "users",
+    "settings",
     "archive",
   ];
 }
@@ -319,6 +320,20 @@ export function hrefForPanelInCabinet(
   if (panel === "loadingManifests") {
     return hrefForPanelInCabinet(user, "distribution", currentCabinet);
   }
+  if (panel === "inventory" || panel === "users" || panel === "settings") {
+    const accessPanel: PanelId =
+      panel === "users" ? "users" : panel === "inventory" ? "inventory" : "settings";
+    if (!canAccessPanel(user, accessPanel)) {
+      return null;
+    }
+    if (!canAccessCabinet(user, currentCabinet)) {
+      return null;
+    }
+    if (currentCabinet === "admin" || currentCabinet === "operations") {
+      return panel === "users" ? adminRoutes.settingsTeam : adminRoutes.settingsCatalog;
+    }
+    return null;
+  }
   if (!canAccessPanel(user, panel)) {
     return null;
   }
@@ -344,12 +359,6 @@ export function hrefForPanelInCabinet(
     return null;
   }
   if (currentCabinet === "admin") {
-    if (panel === "inventory") {
-      return adminRoutes.inventory;
-    }
-    if (panel === "users") {
-      return adminRoutes.users;
-    }
     if (isSharedOpsPanel(panel)) {
       if (panel === "nakladnaya" && !canAccessPanel(user, "nakladnaya")) {
         return null;
@@ -364,12 +373,6 @@ export function hrefForPanelInCabinet(
         return null;
       }
       return sharedOpsPath("operations", sharedOpsSegmentForPanel(panel));
-    }
-    if (panel === "inventory" && canManageInventoryCatalog(user)) {
-      return adminRoutes.inventory;
-    }
-    if (panel === "users" && canAccessPanel(user, "users")) {
-      return adminRoutes.users;
     }
     return null;
   }
