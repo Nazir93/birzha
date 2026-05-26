@@ -18,6 +18,11 @@ import {
 } from "../format/trip-sale-line-payment.js";
 import { sortTripSaleLinesNewestFirst } from "../format/trip-sale-line-order.js";
 import { formatSellerCorrectionSaleMeta } from "../format/trip-sale-line-display.js";
+import {
+  groupTripSaleLinesForCorrections,
+  type TripSaleLineCorrectionsGroup,
+} from "../format/trip-sale-line-groups.js";
+import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
 import { parseUpdateTripSaleForm } from "../validation/api-schemas.js";
 import {
@@ -297,6 +302,157 @@ function SellerTripSaleEditForm({
   );
 }
 
+function formatGroupCorrectionMeta(group: TripSaleLineCorrectionsGroup): string {
+  const sample = group.lines[0]!;
+  const parts: string[] = [`${group.totalKg} кг`];
+  const pricePart = formatSellerCorrectionSaleMeta(sample)
+    .split(" · ")
+    .find((p) => p.includes("₽/кг"));
+  if (pricePart) {
+    parts.push(pricePart);
+  }
+  if (group.totalPackages) {
+    parts.push(`${group.totalPackages} ящ`);
+  }
+  if (sample.saleChannel === "wholesale") {
+    const name = sample.clientLabel?.trim();
+    parts.push(name ? `Опт: ${name}` : "Опт");
+  }
+  if (group.lines.length > 1) {
+    parts.push(`по ${group.lines.length} накладным`);
+  }
+  return parts.join(" · ");
+}
+
+function SellerTripSaleCorrectionsGroupRow({
+  group,
+  batchById,
+  sellableRows,
+  wholesalersCatalog,
+  editingId,
+  expanded,
+  onToggleExpand,
+  onEditLine,
+  onCancelEdit,
+  onDoneEdit,
+  remove,
+}: {
+  group: TripSaleLineCorrectionsGroup;
+  batchById: Map<string, BatchListItem>;
+  sellableRows: TripBatchTableRow[];
+  wholesalersCatalog: boolean;
+  editingId: string | null;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onEditLine: (lineId: string) => void;
+  onCancelEdit: () => void;
+  onDoneEdit: () => void;
+  remove: { isPending: boolean; mutate: (lineId: string) => void };
+}) {
+  const sum = kopecksToRubLabel(String(group.totalRevenueKopecks));
+  const meta = formatGroupCorrectionMeta(group);
+  const multi = group.lines.length > 1;
+  const anyEditing = group.lines.some((l) => editingId === l.id);
+
+  const deleteGroup = () => {
+    const msg = multi
+      ? `Удалить продажу ${group.lineLabel}: ${group.totalKg} кг${group.totalPackages ? `, ${group.totalPackages} ящ` : ""} (${sum} ₽)? Масса вернётся в остаток «в машине».`
+      : `Удалить продажу ${group.totalKg} кг (${sum} ₽)? Масса вернётся в остаток «в машине».`;
+    if (!window.confirm(msg)) {
+      return;
+    }
+    for (const line of group.lines) {
+      remove.mutate(line.id);
+    }
+  };
+
+  return (
+    <li
+      style={{
+        borderBottom: "1px solid var(--color-border)",
+        padding: "0.55rem 0",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.35rem 0.75rem",
+          alignItems: "baseline",
+        }}
+      >
+        <span style={{ flex: "1 1 12rem" }}>
+          <strong>{group.lineLabel}</strong>
+          <span className="birzha-text-muted">
+            {" "}
+            · {meta} · {sum} ₽
+          </span>
+        </span>
+        {!anyEditing ? (
+          <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+            {multi ? (
+              <button type="button" style={btnStyle} onClick={onToggleExpand}>
+                {expanded ? "Скрыть накладные" : "По накладным"}
+              </button>
+            ) : (
+              <button type="button" style={btnStyle} onClick={() => onEditLine(group.lines[0]!.id)}>
+                Исправить
+              </button>
+            )}
+            <button type="button" style={btnStyle} disabled={remove.isPending} onClick={deleteGroup}>
+              Удалить
+            </button>
+          </span>
+        ) : null}
+      </div>
+      {multi && expanded && !anyEditing ? (
+        <ul
+          className="birzha-text-muted birzha-ui-sm"
+          style={{ listStyle: "none", margin: "0.4rem 0 0", padding: "0 0 0 0.75rem" }}
+        >
+          {group.lines.map((line) => {
+            const b = batchById.get(line.batchId);
+            const caption = b ? formatBatchPartyCaption(b) : "партия";
+            const partSum = kopecksToRubLabel(line.revenueKopecks);
+            return (
+              <li
+                key={line.id}
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.35rem 0.5rem",
+                  alignItems: "baseline",
+                  marginTop: "0.25rem",
+                }}
+              >
+                <span style={{ flex: "1 1 10rem" }}>
+                  {caption} · {formatSellerCorrectionSaleMeta(line)} · {partSum} ₽
+                </span>
+                <button type="button" style={btnStyle} onClick={() => onEditLine(line.id)}>
+                  Исправить
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {group.lines.map((line) =>
+        editingId === line.id ? (
+          <SellerTripSaleEditForm
+            key={line.id}
+            line={line}
+            batchById={batchById}
+            sellableRows={sellableRows}
+            wholesalersCatalog={wholesalersCatalog}
+            onDone={onDoneEdit}
+            onCancel={onCancelEdit}
+          />
+        ) : null,
+      )}
+    </li>
+  );
+}
+
 export function SellerTripSaleCorrections({
   tripId,
   tripOpen,
@@ -332,6 +488,13 @@ export function SellerTripSaleCorrections({
     () => sortTripSaleLinesNewestFirst(linesQ.data?.lines ?? []),
     [linesQ.data?.lines],
   );
+
+  const saleGroups = useMemo(
+    () => groupTripSaleLinesForCorrections(sortedLines, batchById),
+    [sortedLines, batchById],
+  );
+
+  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
@@ -375,79 +538,31 @@ export function SellerTripSaleCorrections({
         <LoadingIndicator size="sm" label="Загрузка продаж…" />
       ) : linesQ.isError ? (
         <ErrorAlert message="Не удалось загрузить список продаж." title="Продажи рейса" />
-      ) : sortedLines.length === 0 ? (
+      ) : saleGroups.length === 0 ? (
         <BirzhaEmptyState compact title="Пока нет продаж по этому рейсу" />
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {sortedLines.map((line) => {
-            const b = batchById.get(line.batchId);
-            const headline = b ? formatNakladLineLabel(b) : "—";
-            const sum = kopecksToRubLabel(line.revenueKopecks);
-            const meta = formatSellerCorrectionSaleMeta(line);
-            const isEditing = editingId === line.id;
-            return (
-              <li
-                key={line.id}
-                style={{
-                  borderBottom: "1px solid var(--color-border)",
-                  padding: "0.55rem 0",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "0.35rem 0.75rem",
-                    alignItems: "baseline",
-                  }}
-                >
-                  <span style={{ flex: "1 1 12rem" }}>
-                    <strong>{headline}</strong>
-                    <span className="birzha-text-muted">
-                      {" "}
-                      · {meta} · {sum} ₽
-                    </span>
-                  </span>
-                  {!isEditing ? (
-                    <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-                      <button type="button" style={btnStyle} onClick={() => setEditingId(line.id)}>
-                        Исправить
-                      </button>
-                      <button
-                        type="button"
-                        style={btnStyle}
-                        disabled={remove.isPending}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Удалить продажу ${line.kg} кг (${sum} ₽)? Масса вернётся в остаток «в машине».`,
-                            )
-                          ) {
-                            remove.mutate(line.id);
-                          }
-                        }}
-                      >
-                        Удалить
-                      </button>
-                    </span>
-                  ) : null}
-                </div>
-                {isEditing ? (
-                  <SellerTripSaleEditForm
-                    line={line}
-                    batchById={batchById}
-                    sellableRows={sellableRows}
-                    wholesalersCatalog={wholesalersCatalog}
-                    onDone={() => {
-                      setEditingId(null);
-                      invalidate();
-                    }}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : null}
-              </li>
-            );
-          })}
+          {saleGroups.map((group) => (
+            <SellerTripSaleCorrectionsGroupRow
+              key={group.key}
+              group={group}
+              batchById={batchById}
+              sellableRows={sellableRows}
+              wholesalersCatalog={wholesalersCatalog}
+              editingId={editingId}
+              expanded={expandedGroupKey === group.key}
+              onToggleExpand={() =>
+                setExpandedGroupKey((k) => (k === group.key ? null : group.key))
+              }
+              onEditLine={setEditingId}
+              onCancelEdit={() => setEditingId(null)}
+              onDoneEdit={() => {
+                setEditingId(null);
+                invalidate();
+              }}
+              remove={remove}
+            />
+          ))}
         </ul>
       )}
       <FieldError error={remove.error as Error | null} />

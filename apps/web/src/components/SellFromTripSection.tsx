@@ -635,7 +635,7 @@ export function SellFromTripSection() {
           const chunkBody = {
             ...bodyBase,
             kg: part.kg,
-            saleId: i === 0 ? body.saleId : randomUuid(),
+            saleId: body.saleId,
             ...(part.packageCount !== undefined ? { packageCount: part.packageCount } : {}),
             ...(part.cashKopecksMixed !== undefined ? { cashKopecksMixed: part.cashKopecksMixed } : {}),
             ...(part.cardTransferKopecks !== undefined
