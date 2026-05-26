@@ -535,11 +535,7 @@ export function AllocationPanel() {
 
   return (
     <div role="region" aria-label="Погрузка на машину">
-      <h2 style={{ margin: "0 0 0.35rem", fontSize: "1.1rem" }}>Погрузка на машину</h2>
-      <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }}>
-        Шаг 1: склад → списание по калибру → отбор накладных. Шаг 2: город и сохранение погрузочной накладной — только
-        после кнопки «Готово».
-      </p>
+      <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.1rem" }}>Погрузка на машину</h2>
 
       {warehousesQuery.isError ? (
         <WarningAlert title="Склады">Справочник складов не загрузился — подписи к складу могут быть неполны.</WarningAlert>
