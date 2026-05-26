@@ -76,6 +76,32 @@ describe("groupTripSaleLinesForCorrections", () => {
     expect(g[0]!.totalPackages).toBe("243");
   });
 
+  it("склеивает части с одним saleId даже в разные секунды", () => {
+    const batchById = new Map<string, BatchListItem>([
+      ["b1", batch("b1", "Томат", "5")],
+      ["b2", batch("b2", "Томат", "5")],
+    ]);
+    const lines = [
+      line({
+        id: "l1",
+        batchId: "b1",
+        saleId: "sale-same",
+        kg: "100",
+        recordedAt: "2026-05-19T12:00:01.000Z",
+      }),
+      line({
+        id: "l2",
+        batchId: "b2",
+        saleId: "sale-same",
+        kg: "143",
+        recordedAt: "2026-05-19T12:00:05.000Z",
+      }),
+    ];
+    const g = groupTripSaleLinesForCorrections(lines, batchById);
+    expect(g).toHaveLength(1);
+    expect(g[0]!.totalKg).toBe("243");
+  });
+
   it("разные калибры — две группы", () => {
     const batchById = new Map<string, BatchListItem>([
       ["b1", batch("b1", "Томат", "5")],

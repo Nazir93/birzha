@@ -489,10 +489,15 @@ export function SellerTripSaleCorrections({
     [linesQ.data?.lines],
   );
 
-  const saleGroups = useMemo(
-    () => groupTripSaleLinesForCorrections(sortedLines, batchById),
-    [sortedLines, batchById],
-  );
+  const correctionsGroupsReady =
+    batchIds.length === 0 || batchesQ.isSuccess || batchesQ.isError;
+
+  const saleGroups = useMemo(() => {
+    if (!correctionsGroupsReady) {
+      return [];
+    }
+    return groupTripSaleLinesForCorrections(sortedLines, batchById);
+  }, [sortedLines, batchById, correctionsGroupsReady]);
 
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
 
@@ -534,7 +539,7 @@ export function SellerTripSaleCorrections({
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
         Можно изменить или отменить свою продажу, пока рейс не закрыт в админке.
       </p>
-      {linesQ.isPending ? (
+      {linesQ.isPending || (sortedLines.length > 0 && !correctionsGroupsReady) ? (
         <LoadingIndicator size="sm" label="Загрузка продаж…" />
       ) : linesQ.isError ? (
         <ErrorAlert message="Не удалось загрузить список продаж." title="Продажи рейса" />
