@@ -337,7 +337,8 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
   }
 
   const body = (
-    <div className="birzha-home-work-card">
+    <>
+      <div className="birzha-home-work-card">
         <BirzhaDisclosure
           nested
           defaultOpen
@@ -487,6 +488,7 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
         )}
         </BirzhaDisclosure>
       </div>
+    </>
   );
 
   if (embedded) {
