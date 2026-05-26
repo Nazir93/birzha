@@ -205,6 +205,10 @@ export type TripJson = {
   transitRemainingGrams?: string;
   /** Полный список: был ли товар отгружен в рейс. */
   hasShipmentToTrip?: boolean;
+  /** Полный список: отгружено в рейс (граммы, строка). */
+  shippedGrams?: string;
+  /** Полный список: продано с рейса (граммы, строка). */
+  soldGrams?: string;
 };
 
 /** Мета для ответа `GET /api/trips?search=&limit=` (подбор без полной выборки). */

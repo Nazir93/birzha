@@ -17,11 +17,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
-import {
-  batchHasRemainingStockKg,
-  countBatchesWithRemainingStock,
-  sumSoldKgInWorkBatches,
-} from "../format/purchase-nakladnaya-list-status.js";
+import { sumOpenTripsMassKg, sumWarehouseKgFromBatches } from "../format/admin-dashboard-aggregates.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -36,14 +32,16 @@ const ADMIN_TRIPS_PAGE_SIZE = 15;
 
 function MassDistributionRing({
   warehouseKg,
-  transitKg,
+  loadingManifestKg,
+  inTripKg,
   soldKg,
 }: {
   warehouseKg: number;
-  transitKg: number;
+  loadingManifestKg: number;
+  inTripKg: number;
   soldKg: number;
 }) {
-  const total = warehouseKg + transitKg + soldKg;
+  const total = warehouseKg + loadingManifestKg + inTripKg + soldKg;
   if (total <= 0) {
     return (
       <div className="birzha-admin-mass-ring birzha-admin-mass-ring--empty" aria-hidden>
@@ -52,19 +50,20 @@ function MassDistributionRing({
     );
   }
   const w = (warehouseKg / total) * 360;
-  const tr = (transitKg / total) * 360;
-  const w2 = w + tr;
+  const lm = w + (loadingManifestKg / total) * 360;
+  const tr = lm + (inTripKg / total) * 360;
   const gradient = `conic-gradient(
     #16a34a 0deg ${w}deg,
-    #f59e0b ${w}deg ${w2}deg,
-    #2563eb ${w2}deg 360deg
+    #7c3aed ${w}deg ${lm}deg,
+    #f59e0b ${lm}deg ${tr}deg,
+    #2563eb ${tr}deg 360deg
   )`;
   return (
     <div
       className="birzha-admin-mass-ring"
       style={{ background: gradient }}
       role="img"
-      aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, погружено ${transitKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
+      aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, в погрузочных накладных ${loadingManifestKg.toFixed(0)} кг, в открытых рейсах ${inTripKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
     >
       <div className="birzha-admin-mass-ring__hole" />
     </div>
@@ -109,35 +108,10 @@ export function AdminCabinetHome() {
 
   const aggregates = useMemo(() => {
     const batches = batchesQ.data?.batches ?? [];
-    let warehouseKg = 0;
-    let transitKg = 0;
-    let soldKg = 0;
-    let writtenOffKg = 0;
-    const byWarehouseKg = new Map<string, number>();
-    const byProductGroupKg = new Map<string, number>();
-
-    for (const b of batches) {
-      if (b.onWarehouseKg > 0) {
-        warehouseKg += b.onWarehouseKg;
-      }
-      if (b.inTransitKg > 0) {
-        transitKg += b.inTransitKg;
-      }
-      writtenOffKg += b.writtenOffKg ?? 0;
-
-      const wid = b.nakladnaya?.warehouseId ?? "";
-      const whLabel = wid ? whById.get(wid) ?? "Без названия" : "Без склада";
-      byWarehouseKg.set(whLabel, (byWarehouseKg.get(whLabel) ?? 0) + b.onWarehouseKg);
-
-      if (!batchHasRemainingStockKg(b)) {
-        continue;
-      }
-      const g = (b.nakladnaya?.productGroup ?? "").trim() || "Без вида";
-      const workKg = b.onWarehouseKg + b.inTransitKg + (b.pendingInboundKg ?? 0);
-      byProductGroupKg.set(g, (byProductGroupKg.get(g) ?? 0) + workKg);
-    }
-
     const trips = tripsQ.data?.trips ?? [];
+    const warehouseSums = sumWarehouseKgFromBatches(batches, whById);
+    const openTripsMass = sumOpenTripsMassKg(trips);
+
     let tripsOpen = 0;
     let tripsClosed = 0;
     for (const t of trips) {
@@ -148,7 +122,7 @@ export function AdminCabinetHome() {
       }
     }
 
-    const warehouseBars: HorizontalBarItem[] = [...byWarehouseKg.entries()]
+    const warehouseBars: HorizontalBarItem[] = [...warehouseSums.byWarehouseKg.entries()]
       .filter(([, v]) => v > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
@@ -158,7 +132,7 @@ export function AdminCabinetHome() {
         display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
       }));
 
-    const groupBars: HorizontalBarItem[] = [...byProductGroupKg.entries()]
+    const groupBars: HorizontalBarItem[] = [...warehouseSums.byProductGroupKg.entries()]
       .filter(([, v]) => v > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
@@ -168,10 +142,6 @@ export function AdminCabinetHome() {
         display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
       }));
 
-    /** Отгружено в сводке = масса в рейсе, ещё не продана (inTransit). После продажи уходит в «Продано», здесь → 0. */
-    const dispatchedKg = transitKg;
-    soldKg = sumSoldKgInWorkBatches(batches);
-
     const closedTripIds = closedTripIdSet(trips);
     const activeLoadingManifests = splitLoadingManifestsByArchive(
       loadingManifestsQ.data?.loadingManifests ?? [],
@@ -179,18 +149,24 @@ export function AdminCabinetHome() {
     ).active;
     const loadingManifestKg = activeLoadingManifests.reduce((s, m) => s + m.totalKg, 0);
 
+    /** Открытые рейсы: отгрузка / остаток в машине / продажи — из журналов рейса, не из полей партии. */
+    const transitKg = openTripsMass.shippedKg;
+    const dispatchedKg = openTripsMass.remainingInTripKg;
+    const soldKg = openTripsMass.soldKg;
+
     return {
       tripCount: trips.length,
       tripsOpen,
       tripsClosed,
-      batchCount: countBatchesWithRemainingStock(batches),
-      warehouseKg,
+      batchCount: warehouseSums.batchCount,
+      warehouseKg: warehouseSums.warehouseKg,
       transitKg,
       soldKg,
       dispatchedKg,
+      inTripRemainingKg: dispatchedKg,
       loadingManifestKg,
       loadingManifestCount: activeLoadingManifests.length,
-      writtenOffKg,
+      writtenOffKg: warehouseSums.writtenOffKg,
       warehouseCatalogCount: whQ.data?.warehouses.length ?? 0,
       warehouseBars,
       groupBars,
@@ -256,7 +232,8 @@ export function AdminCabinetHome() {
             >
               <MassDistributionRing
                 warehouseKg={aggregates.warehouseKg}
-                transitKg={aggregates.transitKg}
+                loadingManifestKg={aggregates.loadingManifestKg}
+                inTripKg={aggregates.inTripRemainingKg}
                 soldKg={aggregates.soldKg}
               />
               <ul className="birzha-admin-dash__legend" aria-hidden>
@@ -264,7 +241,10 @@ export function AdminCabinetHome() {
                   <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--wh" /> На складе
                 </li>
                 <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--tr" /> Погружено
+                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--lm" /> В ПН
+                </li>
+                <li>
+                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--tr" /> В рейсе
                 </li>
                 <li>
                   <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--sl" /> Продано
@@ -285,7 +265,7 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.transitTrips}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--amber birzha-admin-stat--link"
-                title="Кг в открытых рейсах (после отгрузки со склада в разделе «Отгрузка»)"
+                title="Отгружено в открытые рейсы (раздел «Отгрузка в рейс»)"
               >
                 <span className="birzha-admin-stat__label">Погружено в рейс</span>
                 <span className="birzha-admin-stat__value">
@@ -310,7 +290,7 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.soldBySeller}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--blue birzha-admin-stat--link"
-                title="Продано по партиям в работе; после закрытия рейса — в архиве"
+                title="Продано с открытых рейсов; после закрытия рейса — в архиве"
               >
                 <span className="birzha-admin-stat__label">Продано (в работе)</span>
                 <span className="birzha-admin-stat__value">
@@ -394,7 +374,7 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.transitTrips}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
-                title="Погружено в рейс: остаток в машине (до продажи)"
+                title="Отгружено в открытые рейсы (журнал отгрузки)"
               >
                 <div className="birzha-kpi-tile__label">Погружено, кг</div>
                 <div className="birzha-kpi-tile__value">
@@ -414,7 +394,7 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.soldBySeller}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue birzha-kpi-tile--link"
-                title="Продано по партиям в работе; закрытый рейс — см. архив"
+                title="Продано с открытых рейсов; закрытый рейс — см. архив"
               >
                 <div className="birzha-kpi-tile__label">Продано, кг</div>
                 <div className="birzha-kpi-tile__value">
@@ -497,8 +477,8 @@ export function AdminCabinetHome() {
               <div className="birzha-chart-card birzha-chart-card--premium">
                 <h3>Масса: склад · погружено · продано</h3>
                 <MassBalanceStrip
-                  warehouseKg={aggregates.warehouseKg}
-                  transitKg={aggregates.transitKg}
+                  warehouseKg={aggregates.warehouseKg + aggregates.loadingManifestKg}
+                  transitKg={aggregates.inTripRemainingKg}
                   soldKg={aggregates.soldKg}
                 />
               </div>

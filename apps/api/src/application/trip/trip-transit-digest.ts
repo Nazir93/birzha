@@ -7,6 +7,10 @@ export type TripTransitDigest = {
   hasShipmentToTrip: boolean;
   /** Сумма max(0, отгружено − продано − недостача) по партиям — «остаток в пути» для отчёта. */
   remainingNetTransitGrams: bigint;
+  /** Всего отгружено в рейс (граммы). */
+  totalShippedGrams: bigint;
+  /** Всего продано с рейса (граммы). */
+  totalSoldGrams: bigint;
 };
 
 /**
@@ -43,5 +47,7 @@ export function computeTripTransitDigest(
   return {
     hasShipmentToTrip: shipment.totalGrams > 0n,
     remainingNetTransitGrams: remainingSum,
+    totalShippedGrams: shipment.totalGrams,
+    totalSoldGrams: sales.totalGrams,
   };
 }

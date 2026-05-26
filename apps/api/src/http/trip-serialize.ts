@@ -4,6 +4,8 @@ import type { Trip } from "@birzha/domain";
 export type TripListJsonExtra = {
   transitRemainingGrams: string;
   hasShipmentToTrip: boolean;
+  shippedGrams: string;
+  soldGrams: string;
 };
 
 export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
@@ -24,5 +26,7 @@ export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
     ...base,
     transitRemainingGrams: listExtra.transitRemainingGrams,
     hasShipmentToTrip: listExtra.hasShipmentToTrip,
+    shippedGrams: listExtra.shippedGrams,
+    soldGrams: listExtra.soldGrams,
   };
 }

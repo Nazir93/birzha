@@ -48,6 +48,8 @@ describe("computeTripTransitDigest", () => {
     const d = computeTripTransitDigest(emptyShipment(), emptySales(), emptyShortage());
     expect(d.hasShipmentToTrip).toBe(false);
     expect(d.remainingNetTransitGrams).toBe(0n);
+    expect(d.totalShippedGrams).toBe(0n);
+    expect(d.totalSoldGrams).toBe(0n);
   });
 
   it("отгружено и всё продано — остаток 0, есть отгрузка", () => {
@@ -73,6 +75,8 @@ describe("computeTripTransitDigest", () => {
     const d = computeTripTransitDigest(shipment, sales, emptyShortage());
     expect(d.hasShipmentToTrip).toBe(true);
     expect(d.remainingNetTransitGrams).toBe(0n);
+    expect(d.totalShippedGrams).toBe(1000n);
+    expect(d.totalSoldGrams).toBe(1000n);
   });
 
   it("часть в пути", () => {
@@ -98,5 +102,7 @@ describe("computeTripTransitDigest", () => {
     const d = computeTripTransitDigest(shipment, sales, emptyShortage());
     expect(d.hasShipmentToTrip).toBe(true);
     expect(d.remainingNetTransitGrams).toBe(1500n);
+    expect(d.totalShippedGrams).toBe(2000n);
+    expect(d.totalSoldGrams).toBe(500n);
   });
 });

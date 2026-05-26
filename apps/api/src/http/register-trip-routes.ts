@@ -101,6 +101,8 @@ export function registerTripRoutes(
         return tripToJson(trip, {
           transitRemainingGrams: d.remainingNetTransitGrams.toString(),
           hasShipmentToTrip: d.hasShipmentToTrip,
+          shippedGrams: d.totalShippedGrams.toString(),
+          soldGrams: d.totalSoldGrams.toString(),
         });
       };
 

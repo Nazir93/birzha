@@ -3370,6 +3370,10 @@ main.app-shell--cabinet {
   background: #16a34a;
 }
 
+.birzha-admin-dash__legend-dot--lm {
+  background: #7c3aed;
+}
+
 .birzha-admin-dash__legend-dot--tr {
   background: #f59e0b;
 }
