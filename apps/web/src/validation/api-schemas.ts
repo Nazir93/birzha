@@ -292,7 +292,7 @@ export function expectedLineTotalKopecks(totalKg: number, pricePerKg: number): n
 }
 
 /**
- * Короба в строке накладной: пусто не сюда — в форме.
+ * Ящики в строке накладной: пусто не сюда — в форме.
  * Пробелы убираются, запятая как в десятичной записи, на сервер — целое (округление).
  * `null` — ввод невалиден.
  */
@@ -309,7 +309,7 @@ export function linePackageCountFromNakladnayaString(raw: string): number | null
   return Math.max(0, Math.round(n));
 }
 
-/** Суммирование коробов в итогах: пустая строка → 0, иначе как `linePackageCountFromNakladnayaString` (невалид — 0). */
+/** Суммирование ящиков в итогах: пустая строка → 0, иначе как `linePackageCountFromNakladnayaString` (невалид — 0). */
 export function linePackageCountForNakladnayaSum(raw: string): number {
   const t = raw.trim();
   if (t === "") {
@@ -378,7 +378,7 @@ export function parseCreatePurchaseDocumentForm(input: {
         const parsed = linePackageCountFromNakladnayaString(pkgRaw);
         if (parsed == null) {
           throw new Error(
-            `Строка ${idx + 1}: короба — неотрицательное число, можно с запятой; в заявку — целое (округление)`,
+            `Строка ${idx + 1}: ящики — неотрицательное число, можно с запятой; в заявку — целое (округление)`,
           );
         }
         packageCount = parsed;

@@ -93,10 +93,11 @@ export function LoadingManifestBlock({
   const [stockTableMode, setStockTableMode] = useState<"caliber" | "nakladnaya">("caliber");
   const [writeOffGroupMode, setWriteOffGroupMode] = useState<"caliber" | "nakladnaya">("caliber");
 
-  const includedBatchesFromSelection = useMemo(
-    () => filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, selectedDocIds),
-    [batchesInWh, documentOptions.length, selectedDocIds],
-  );
+  const includedBatchesFromSelection = useMemo(() => {
+    const docCount =
+      documentOptions.length > 0 && selectedDocIds.size === 0 ? 0 : documentOptions.length;
+    return filterBatchesForLoadingManifest(batchesInWh, docCount, selectedDocIds);
+  }, [batchesInWh, documentOptions.length, selectedDocIds]);
   const includedBatches = useMemo(() => {
     if (!manifest) {
       return includedBatchesFromSelection;
@@ -130,7 +131,7 @@ export function LoadingManifestBlock({
   return (
     <section className="loading-manifest-print birzha-loading-manifest" aria-labelledby="loading-manifest-h">
       <h3 id="loading-manifest-h" style={{ fontSize: "1rem", margin: "0 0 0.4rem" }}>
-        Погрузочная накладная
+        {manifest ? "Погрузочная накладная" : "Отбор партий со склада"}
       </h3>
       {manifest ? (
         <p style={{ margin: "0 0 0.55rem", fontSize: "0.92rem" }}>
@@ -207,12 +208,194 @@ export function LoadingManifestBlock({
 
       {includedBatches.length > 0 && (
         <div style={{ marginTop: "0.35rem" }}>
+          {writeOff?.enabled ? (
+            <div style={{ marginBottom: "0.85rem" }} className="no-print">
+              <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Списание со склада</h4>
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
+                Укажите калибр (или накладную) и кг — система спишет массу с партий автоматически, сверх остатка
+                списать нельзя.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.65rem 1.25rem",
+                  alignItems: "baseline",
+                  marginBottom: "0.45rem",
+                  fontSize: "0.86rem",
+                }}
+              >
+                <span className="birzha-text-muted">Списать по:</span>
+                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="radio"
+                    name="lm-writeoff-mode"
+                    checked={writeOffGroupMode === "caliber"}
+                    onChange={() => setWriteOffGroupMode("caliber")}
+                  />
+                  калибрам
+                </label>
+                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="radio"
+                    name="lm-writeoff-mode"
+                    checked={writeOffGroupMode === "nakladnaya"}
+                    onChange={() => setWriteOffGroupMode("nakladnaya")}
+                  />
+                  накладным
+                </label>
+              </div>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 560 }}>
+                  <thead>
+                    <tr>
+                      <th style={thHead}>{writeOffGroupMode === "caliber" ? "Калибр" : "Накладная"}</th>
+                      <th style={thHead}>Остаток, кг</th>
+                      <th style={thHead}>Списать, кг</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {writeOffGroupMode === "caliber"
+                      ? caliberRows.map((row) => {
+                          const inputKey = writeOffKeyCaliber(row.lineLabel);
+                          return (
+                            <tr key={`wo-cal-${row.lineLabel}`}>
+                              <td style={thtd}>
+                                <strong>{row.lineLabel}</strong>
+                                <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
+                                  {row.partCount} парт.
+                                </span>
+                              </td>
+                              <td style={thtd}>
+                                {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                              </td>
+                              <td style={thtd}>
+                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="кг"
+                                    value={writeOff.rejectInput[inputKey] ?? ""}
+                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
+                                    aria-label={`Списать кг, ${row.lineLabel}`}
+                                    style={{ ...fieldStyle, width: "5rem" }}
+                                  />
+                                  <button
+                                    type="button"
+                                    style={btnStyle}
+                                    disabled={writeOff.isPending}
+                                    onClick={() => {
+                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
+                                      const kg = parseFloat(s);
+                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
+                                        return;
+                                      }
+                                      let remaining = kg;
+                                      const items: { batchId: string; kg: number }[] = [];
+                                      for (const batch of row.batches) {
+                                        if (remaining <= 0) {
+                                          break;
+                                        }
+                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
+                                        if (kgFromBatch > 0) {
+                                          items.push({ batchId: batch.id, kg: kgFromBatch });
+                                          remaining -= kgFromBatch;
+                                        }
+                                      }
+                                      if (items.length > 0) {
+                                        writeOff.onSubmitWriteOff(inputKey, items);
+                                      }
+                                    }}
+                                  >
+                                    Списать
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      : documentRows.map((row) => {
+                          const inputKey = writeOffKeyDocument(row.rowKey);
+                          return (
+                            <tr key={`wo-doc-${row.rowKey}`}>
+                              <td style={thtd}>
+                                {row.documentId ? (
+                                  <Link
+                                    to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
+                                    style={{ fontWeight: 600 }}
+                                  >
+                                    {row.displayLabel}
+                                  </Link>
+                                ) : (
+                                  <strong>{row.displayLabel}</strong>
+                                )}
+                                <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
+                                  {row.partCount} парт.
+                                </span>
+                              </td>
+                              <td style={thtd}>
+                                {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                              </td>
+                              <td style={thtd}>
+                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="кг"
+                                    value={writeOff.rejectInput[inputKey] ?? ""}
+                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
+                                    aria-label={`Списать кг, ${row.displayLabel}`}
+                                    style={{ ...fieldStyle, width: "5rem" }}
+                                  />
+                                  <button
+                                    type="button"
+                                    style={btnStyle}
+                                    disabled={writeOff.isPending}
+                                    onClick={() => {
+                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
+                                      const kg = parseFloat(s);
+                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
+                                        return;
+                                      }
+                                      let remaining = kg;
+                                      const items: { batchId: string; kg: number }[] = [];
+                                      for (const batch of row.batches) {
+                                        if (remaining <= 0) {
+                                          break;
+                                        }
+                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
+                                        if (kgFromBatch > 0) {
+                                          items.push({ batchId: batch.id, kg: kgFromBatch });
+                                          remaining -= kgFromBatch;
+                                        }
+                                      }
+                                      if (items.length > 0) {
+                                        writeOff.onSubmitWriteOff(inputKey, items);
+                                      }
+                                    }}
+                                  >
+                                    Списать
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                  </tbody>
+                </table>
+              </div>
+              {writeOff.isError && writeOff.errorMessage ? (
+                <ErrorAlert message={writeOff.errorMessage} title="Списание" />
+              ) : null}
+            </div>
+          ) : null}
+
           <h4
             className="loading-print-subhead"
             style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}
             id={stockTableLabelId}
           >
-            Остаток на складе в отборе и списание (брак)
+            Остаток в отборе (после списания)
           </h4>
           <div
             className="no-print"
@@ -226,7 +409,7 @@ export function LoadingManifestBlock({
               fontSize: "0.86rem",
             }}
           >
-            <span className="birzha-text-muted">Таблица:</span>
+            <span className="birzha-text-muted">Показать:</span>
             <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
               <input
                 type="radio"
@@ -245,32 +428,6 @@ export function LoadingManifestBlock({
               />
               по накладным
             </label>
-            {writeOff?.enabled ? (
-              <>
-                <span style={{ opacity: 0.35 }} aria-hidden>
-                  |
-                </span>
-                <span className="birzha-text-muted">Списать строками:</span>
-                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
-                  <input
-                    type="radio"
-                    name="lm-writeoff-mode"
-                    checked={writeOffGroupMode === "caliber"}
-                    onChange={() => setWriteOffGroupMode("caliber")}
-                  />
-                  по калибрам
-                </label>
-                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
-                  <input
-                    type="radio"
-                    name="lm-writeoff-mode"
-                    checked={writeOffGroupMode === "nakladnaya"}
-                    onChange={() => setWriteOffGroupMode("nakladnaya")}
-                  />
-                  по накладным
-                </label>
-              </>
-            ) : null}
           </div>
 
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
@@ -359,168 +516,6 @@ export function LoadingManifestBlock({
               </tfoot>
             </table>
           </div>
-
-          {writeOff?.enabled ? (
-            <div style={{ marginTop: "0.75rem" }} className="no-print">
-              <h5 style={{ fontSize: "0.88rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Списать со склада (брак)</h5>
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 560 }}>
-                  <thead>
-                    <tr>
-                      <th style={thHead}>{writeOffGroupMode === "caliber" ? "Калибр / строка" : "Накладная"}</th>
-                      <th style={thHead}>Остаток, кг</th>
-                      <th style={thHead}>Списать, кг</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {writeOffGroupMode === "caliber"
-                      ? caliberRows.map((row) => {
-                          const inputKey = writeOffKeyCaliber(row.lineLabel);
-                          return (
-                            <tr key={`wo-cal-${row.lineLabel}`}>
-                              <td style={thtd}>
-                                <strong>{row.lineLabel}</strong>
-                                <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
-                                  {row.partCount} парт.
-                                </span>
-                              </td>
-                              <td style={thtd}>
-                                {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                              </td>
-                              <td style={thtd}>
-                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="кг"
-                                    value={writeOff.rejectInput[inputKey] ?? ""}
-                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать кг, ${row.lineLabel}`}
-                                    style={{ ...fieldStyle, width: "5rem" }}
-                                  />
-                                  <button
-                                    type="button"
-                                    style={btnStyle}
-                                    disabled={writeOff.isPending}
-                                    onClick={() => {
-                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
-                                      const kg = parseFloat(s);
-                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
-                                        return;
-                                      }
-                                      let remaining = kg;
-                                      const items: { batchId: string; kg: number }[] = [];
-                                      for (const batch of row.batches) {
-                                        if (remaining <= 0) {
-                                          break;
-                                        }
-                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
-                                        if (kgFromBatch > 0) {
-                                          items.push({ batchId: batch.id, kg: kgFromBatch });
-                                          remaining -= kgFromBatch;
-                                        }
-                                      }
-                                      if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items);
-                                      }
-                                    }}
-                                  >
-                                    Списать
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      : documentRows.map((row) => {
-                          const inputKey = writeOffKeyDocument(row.rowKey);
-                          return (
-                            <tr key={`wo-doc-${row.rowKey}`}>
-                              <td style={thtd}>
-                                {row.documentId ? (
-                                  <Link to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)} style={{ fontWeight: 600 }}>
-                                    {row.displayLabel}
-                                  </Link>
-                                ) : (
-                                  <strong>{row.displayLabel}</strong>
-                                )}
-                                <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
-                                  {row.partCount} парт.
-                                </span>
-                              </td>
-                              <td style={thtd}>
-                                {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                              </td>
-                              <td style={thtd}>
-                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="кг"
-                                    value={writeOff.rejectInput[inputKey] ?? ""}
-                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать кг, ${row.displayLabel}`}
-                                    style={{ ...fieldStyle, width: "5rem" }}
-                                  />
-                                  <button
-                                    type="button"
-                                    style={btnStyle}
-                                    disabled={writeOff.isPending}
-                                    onClick={() => {
-                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
-                                      const kg = parseFloat(s);
-                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
-                                        return;
-                                      }
-                                      let remaining = kg;
-                                      const items: { batchId: string; kg: number }[] = [];
-                                      for (const batch of row.batches) {
-                                        if (remaining <= 0) {
-                                          break;
-                                        }
-                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
-                                        if (kgFromBatch > 0) {
-                                          items.push({ batchId: batch.id, kg: kgFromBatch });
-                                          remaining -= kgFromBatch;
-                                        }
-                                      }
-                                      if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items);
-                                      }
-                                    }}
-                                  >
-                                    Списать
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th scope="row" style={{ ...thtd, fontWeight: 700, textAlign: "left" }}>
-                        Итого (остаток в строках выше)
-                      </th>
-                      <td style={{ ...thtd, fontWeight: 700 }}>
-                        {writeOffGroupMode === "caliber"
-                          ? caliberRows
-                              .reduce((a, r) => a + r.totalKg, 0)
-                              .toLocaleString("ru-RU", { maximumFractionDigits: 2 })
-                          : documentRows
-                              .reduce((a, r) => a + r.totalKg, 0)
-                              .toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                      </td>
-                      <td style={thtd} />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              {writeOff.isError && writeOff.errorMessage ? (
-                <ErrorAlert message={writeOff.errorMessage} title="Списание" />
-              ) : null}
-            </div>
-          ) : null}
         </div>
       )}
     </section>

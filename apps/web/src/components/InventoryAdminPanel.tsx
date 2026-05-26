@@ -36,7 +36,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
   const [newWarehouseName, setNewWarehouseName] = useState("");
-  const [newWarehouseCode, setNewWarehouseCode] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
   const [newGradeCode, setNewGradeCode] = useState("");
   const [newGradeDisplayName, setNewGradeDisplayName] = useState("");
@@ -203,16 +202,10 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
       if (!name) {
         throw new Error("Введите название склада");
       }
-      const codeRaw = newWarehouseCode.trim();
-      const body: { name: string; code?: string } = { name };
-      if (codeRaw) {
-        body.code = codeRaw;
-      }
-      return apiPostJson("/api/warehouses", body) as Promise<CreateWarehouseResponse>;
+      return apiPostJson("/api/warehouses", { name }) as Promise<CreateWarehouseResponse>;
     },
     onSuccess: () => {
       setNewWarehouseName("");
-      setNewWarehouseCode("");
       invalidate();
     },
     onError: (e: Error) => {
@@ -595,14 +588,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           autoComplete="off"
           aria-label="Название нового склада"
         />
-        <input
-          value={newWarehouseCode}
-          onChange={(e) => setNewWarehouseCode(e.target.value)}
-          style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-          placeholder="Код (опц.)"
-          autoComplete="off"
-          aria-label="Код склада латиницей"
-        />
         <button
           type="button"
           className="birzha-inventory-inline-tools__submit"
@@ -619,7 +604,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           <thead>
             <tr>
               <th style={thHeadDense}>Название</th>
-              <th style={thHeadDense}>Код</th>
               <th style={thHeadDense} />
             </tr>
           </thead>
@@ -627,9 +611,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
             {(warehousesQ.data?.warehouses ?? []).map((w) => (
               <tr key={w.id}>
                 <td style={thtdDense}>{w.name}</td>
-                <td style={thtdDense}>
-                  <code style={{ fontSize: "0.82rem" }}>{w.code}</code>
-                </td>
                 <td style={thtdDense}>
                   <button
                     type="button"

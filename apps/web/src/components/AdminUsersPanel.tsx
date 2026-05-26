@@ -3,8 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
-import { adminRoutes } from "../routes.js";
-import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";

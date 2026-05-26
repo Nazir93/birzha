@@ -212,14 +212,29 @@ html[data-birzha-theme="dark"] .birzha-chart-card--premium {
 }
 
 /* Тёмная тема: продавец (вспышка продажи), KPI вне админ-сводки, карточки кабинета, календарь */
-html[data-birzha-theme="dark"] .birzha-seller-sale-flash {
-  border-color: rgba(34, 197, 94, 0.5);
-  background: linear-gradient(145deg, #14532d 0%, #166534 42%, #27272a 100%);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+html[data-birzha-theme="dark"] .birzha-sold-overlay__backdrop {
+  background: rgba(0, 0, 0, 0.72);
 }
 
-html[data-birzha-theme="dark"] .birzha-seller-sale-flash__title {
+html[data-birzha-theme="dark"] .birzha-sold-overlay__dialog {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: linear-gradient(165deg, #14532d 0%, #27272a 48%, #18181b 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 28px 72px -24px rgba(34, 197, 94, 0.35),
+    0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+html[data-birzha-theme="dark"] .birzha-sold-overlay__eyebrow {
+  color: #86efac;
+}
+
+html[data-birzha-theme="dark"] .birzha-sold-overlay__title {
   color: #bbf7d0;
+}
+
+html[data-birzha-theme="dark"] .birzha-sold-overlay__sum strong {
+  color: #4ade80;
 }
 
 html[data-birzha-theme="dark"] .birzha-seller-kpi-grid .birzha-kpi-tile--premium {
@@ -1039,40 +1054,157 @@ a.birzha-kpi-tile--link:focus-visible {
   padding-bottom: 0;
 }
 
-.birzha-seller-sale-flash {
-  margin: 0 0 1rem;
-  padding: 1rem 1rem 1.05rem;
-  border-radius: var(--birzha-radius);
-  border: 2px solid #15803d;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 55%, #ecfdf5 100%);
-  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.18);
+/* Продавец: полноэкранное «Продано» после сделки */
+.birzha-sold-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: birzha-sold-overlay-in 0.28s ease-out;
 }
 
-.birzha-seller-sale-flash__title {
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #14532d;
-  margin: 0 0 0.45rem;
-}
-
-.birzha-seller-sale-flash__lead {
+.birzha-sold-overlay__backdrop {
+  position: absolute;
+  inset: 0;
   margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.5;
+  padding: 0;
+  border: none;
+  background: rgba(9, 9, 11, 0.62);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.birzha-sold-overlay__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22rem);
+  padding: 1.65rem 1.35rem 1.4rem;
+  border-radius: 20px;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  background: linear-gradient(165deg, #ecfdf5 0%, #ffffff 42%, #f0fdf4 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 24px 64px -28px rgba(21, 128, 61, 0.55),
+    0 8px 32px rgba(0, 0, 0, 0.28);
+  text-align: center;
+  animation: birzha-sold-dialog-pop 0.42s cubic-bezier(0.22, 1.12, 0.36, 1);
+}
+
+.birzha-sold-overlay__glow {
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 70%;
+  background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.35) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.birzha-sold-overlay__icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin: 0 auto 0.65rem;
+  border-radius: 999px;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: linear-gradient(145deg, #22c55e 0%, #15803d 100%);
+  box-shadow:
+    0 0 0 6px rgba(34, 197, 94, 0.2),
+    0 12px 28px rgba(21, 128, 61, 0.45);
+  animation: birzha-sold-icon-pulse 1.6s ease-in-out infinite;
+}
+
+.birzha-sold-overlay__eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #15803d;
+}
+
+.birzha-sold-overlay__title {
+  margin: 0 0 0.55rem;
+  font-size: clamp(2rem, 8vw, 2.45rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  color: #14532d;
+}
+
+.birzha-sold-overlay__lead {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
   color: var(--color-text);
 }
 
-.birzha-seller-sale-flash__sep {
+.birzha-sold-overlay__dot {
+  margin: 0 0.35rem;
   color: var(--color-text-muted);
-  font-weight: 500;
 }
 
-.birzha-seller-sale-flash__meta {
-  margin: 0.5rem 0 0;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  word-break: break-all;
+.birzha-sold-overlay__sum {
+  margin: 0.75rem 0 0;
+  font-size: 1.12rem;
+  color: var(--color-text);
+}
+
+.birzha-sold-overlay__sum strong {
+  font-size: 1.35rem;
+  color: #15803d;
+}
+
+.birzha-sold-overlay__btn {
+  width: 100%;
+  margin-top: 1.15rem !important;
+  margin-bottom: 0 !important;
+  min-height: 2.75rem;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+@keyframes birzha-sold-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes birzha-sold-dialog-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes birzha-sold-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 6px rgba(34, 197, 94, 0.2),
+      0 12px 28px rgba(21, 128, 61, 0.45);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 10px rgba(34, 197, 94, 0.14),
+      0 16px 36px rgba(21, 128, 61, 0.5);
+  }
 }
 
 .birzha-seller-footer-nav {
@@ -1159,21 +1291,60 @@ a.birzha-kpi-tile--link:focus-visible {
   border-radius: 14px;
   background: var(--birzha-surface);
   box-shadow: var(--birzha-shadow-sm);
+  overflow: hidden;
+}
+
+.birzha-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.birzha-data-table--compact {
+  min-width: 520px;
+  font-size: 0.82rem;
+}
+
+.birzha-data-table th,
+.birzha-data-table td {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.48rem 0.55rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.birzha-data-table thead th {
+  background: var(--birzha-accent-soft);
+  color: var(--color-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.birzha-data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.birzha-data-table tbody tr:hover td {
+  background: var(--birzha-surface-muted);
+}
+
+.birzha-data-table__emph {
+  font-weight: 600;
 }
 
 .birzha-nakl-lines-table {
   width: 100%;
   min-width: 760px;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   font-size: 0.84rem;
 }
 
 .birzha-nakl-lines-table th,
 .birzha-nakl-lines-table td {
-  border: 0 !important;
-  border-bottom: 1px solid var(--color-border) !important;
-  padding: 0.48rem 0.55rem !important;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.48rem 0.55rem;
   vertical-align: middle;
 }
 
@@ -1278,10 +1449,23 @@ a.birzha-kpi-tile--link:focus-visible {
   cursor: not-allowed;
 }
 
-.birzha-nakl-lines-table__total-label,
+.birzha-nakl-lines-table__total-label {
+  text-align: right;
+  color: var(--color-text);
+}
+
 .birzha-nakl-lines-table__total-cell,
 .birzha-nakl-lines-table__total-sum {
+  font-weight: 600;
   color: var(--color-text);
+}
+
+.birzha-nakl-lines-table__total-sum {
+  vertical-align: middle;
+}
+
+.birzha-nakl-lines-table__total-actions {
+  font-size: 0.75rem;
 }
 
 .birzha-nakl-lines-table__total-sum span {

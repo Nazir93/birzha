@@ -167,7 +167,7 @@ export function PurchaseNakladnayaDetailSection() {
               <th style={thHeadDense}>№</th>
               <th style={thHeadDense}>Калибр</th>
               <th style={thHeadDense}>Кг</th>
-              <th style={thHeadDense}>Короба</th>
+              <th style={thHeadDense}>Ящики</th>
               <th style={thHeadDense}>₽/кг</th>
               <th style={thHeadDense}>Сумма, ₽</th>
             </tr>
@@ -208,7 +208,7 @@ export function PurchaseNakladnayaDetailSection() {
                     totals.totalPackages,
                   )}{" "}
                   <span className="birzha-text-muted birzha-text-muted--sm">
-                    кор.
+                    ящ.
                   </span>
                 </td>
                 <td className="birzha-text-muted" style={{ ...thtdDense }}>

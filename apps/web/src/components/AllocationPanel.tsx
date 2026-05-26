@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-import { apiPostJson } from "../api/fetch-api.js";
+import { apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { BatchListItem, CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
@@ -165,6 +165,9 @@ export function AllocationPanel() {
   const [manifestNumber, setManifestNumber] = useState("");
   const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
   const [savedManifestId, setSavedManifestId] = useState<string>("");
+  const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
+  /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
+  const [manifestFormOpen, setManifestFormOpen] = useState(false);
 
   const activeManifestId = routeManifestId.trim() || savedManifestId;
   const viewingSaved = Boolean(routeManifestId.trim());
@@ -256,6 +259,24 @@ export function AllocationPanel() {
     },
   });
 
+  const writeOff = useMutation({
+    mutationFn: async ({ items }: { inputKey: string; items: { batchId: string; kg: number }[] }) => {
+      for (const item of items) {
+        await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
+      }
+    },
+    onSuccess: (_d, { inputKey }) => {
+      setRejectScrapInput((prev) => {
+        const next = { ...prev };
+        delete next[inputKey];
+        return next;
+      });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+    },
+  });
+
   const createManifest = useMutation({
     mutationFn: async (payload: {
       warehouseId: string;
@@ -338,6 +359,11 @@ export function AllocationPanel() {
       setSelectedWarehouse(pref);
     }
   }, [allocationWarehouseOptions, selectedWarehouse]);
+
+  useEffect(() => {
+    setManifestFormOpen(false);
+    setRejectScrapInput({});
+  }, [selectedWarehouse]);
 
   useEffect(() => {
     const id = routeManifestId.trim();
@@ -436,11 +462,21 @@ export function AllocationPanel() {
   }, [destAllowed, inferredDestinationCode, manifestDestinationCode]);
 
   const rowsFingerprint = useMemo(() => tableRows.map((b) => b.id).sort().join("|"), [tableRows]);
+  const tableRowsTotalKg = useMemo(
+    () => tableRows.reduce((a, b) => a + b.onWarehouseKg, 0),
+    [tableRows],
+  );
   useEffect(() => {
     if (!viewingSaved) {
       setSavedManifestId("");
     }
   }, [selectedWarehouse, manifestDate, manifestNumber, manifestDestinationCode, rowsFingerprint, viewingSaved]);
+
+  useEffect(() => {
+    if (tableRows.length === 0) {
+      setManifestFormOpen(false);
+    }
+  }, [tableRows.length]);
 
   if (batchesQuery.isError) {
     return (
@@ -452,7 +488,8 @@ export function AllocationPanel() {
     <div role="region" aria-label="Погрузка на машину">
       <h2 style={{ margin: "0 0 0.35rem", fontSize: "1.1rem" }}>Погрузка на машину</h2>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }}>
-        Выберите город, соберите партии со склада и сохраните погрузочную накладную для печати.
+        Шаг 1: склад → списание по калибру → отбор накладных. Шаг 2: город и сохранение погрузочной накладной — только
+        после кнопки «Готово».
       </p>
 
       {warehousesQuery.isError ? (
@@ -550,13 +587,106 @@ export function AllocationPanel() {
 
           {selectedWarehouse && !viewingSaved ? (
             <>
+              <BirzhaDisclosure
+                defaultOpen
+                title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>1. Списание и отбор партий</span>}
+              >
+                {meta?.warehouseWriteOffApi !== "enabled" ? (
+                  <InfoAlert title="Списание недоступно">
+                    Списание со склада работает при подключённой базе PostgreSQL. Пока можно только собрать погрузочную
+                    накладную без списания.
+                  </InfoAlert>
+                ) : null}
+                {documentOptions.length === 0 && batchesInWh.length > 0 && (
+                  <p className="birzha-callout-info" role="status">
+                    На складе нет привязки к номеру накладной — показаны все партии с остатком.
+                  </p>
+                )}
+                <LoadingManifestBlock
+                  documentOptions={manifestDocumentOptions}
+                  selectedDocIds={loadNaklSelection}
+                  onToggleNaklDoc={onToggleNaklDoc}
+                  onSelectAllNakl={onSelectAllNakl}
+                  onClearNakl={onClearNakl}
+                  batchesInWh={batchesInWh}
+                  warehouseName={warehouseName(selectedWarehouse)}
+                  manifest={savedManifestQuery.data?.manifest ?? null}
+                  writeOff={
+                    meta?.warehouseWriteOffApi === "enabled" && batchesInWh.length > 0
+                      ? {
+                          enabled: true,
+                          isPending: writeOff.isPending,
+                          isError: writeOff.isError,
+                          errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
+                          rejectInput: rejectScrapInput,
+                          onRejectInputChange: (key, value) =>
+                            setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
+                          onSubmitWriteOff: (inputKey, items) => writeOff.mutate({ inputKey, items }),
+                        }
+                      : null
+                  }
+                />
+                <div
+                  className="no-print"
+                  style={{
+                    marginTop: "1rem",
+                    paddingTop: "0.85rem",
+                    borderTop: "1px solid var(--color-border)",
+                  }}
+                >
+                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+                    {tableRows.length > 0 ? (
+                      <>
+                        В отборе: <strong>{tableRows.length}</strong> парт.,{" "}
+                        <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
+                        Когда списали лишнее и отметили накладные — переходите к погрузочной.
+                      </>
+                    ) : (
+                      <>Отметьте накладные закупки выше или дождитесь остатка после списания.</>
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    style={btnStyle}
+                    disabled={tableRows.length === 0}
+                    onClick={() => setManifestFormOpen(true)}
+                  >
+                    Готово — погрузочная накладная
+                  </button>
+                </div>
+              </BirzhaDisclosure>
+
+              {!manifestFormOpen ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }} role="status">
+                  Раздел «Погрузочная накладная» откроется после кнопки «Готово».
+                </p>
+              ) : null}
+
+              {manifestFormOpen ? (
               <div
                 className="birzha-callout-info"
-                style={{ marginBottom: "1rem", padding: "0.85rem 1rem" }}
+                style={{ marginBottom: "1rem", marginTop: "1rem", padding: "0.85rem 1rem" }}
                 role="region"
                 aria-label="Новая погрузочная накладная"
               >
-                <h3 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>Новая погрузочная накладная</h3>
+                <p className="no-print" style={{ margin: "0 0 0.5rem" }}>
+                  <button
+                    type="button"
+                    style={{
+                      fontWeight: 600,
+                      padding: 0,
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      color: "var(--birzha-accent)",
+                      textDecoration: "underline",
+                    }}
+                    onClick={() => setManifestFormOpen(false)}
+                  >
+                    ← Вернуться к списанию и отбору
+                  </button>
+                </p>
+                <h3 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>2. Погрузочная накладная</h3>
                 <div className="birzha-form-grid">
                   <label>
                     Город / направление *
@@ -624,7 +754,7 @@ export function AllocationPanel() {
                 ) : null}
                 {tableRows.length === 0 ? (
                   <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-                    Отметьте накладные закупки ниже — в накладную попадут только выбранные партии.
+                    Отметьте накладные закупки выше — в погрузочную попадёт остаток после списания.
                   </p>
                 ) : (
                   <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
@@ -638,27 +768,7 @@ export function AllocationPanel() {
                   </p>
                 )}
               </div>
-
-              <BirzhaDisclosure
-                defaultOpen={tableRows.length > 0}
-                title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Отбор накладных закупки</span>}
-              >
-                {documentOptions.length === 0 && batchesInWh.length > 0 && (
-                  <p className="birzha-callout-info" role="status">
-                    На складе нет привязки к номеру накладной — показаны все партии с остатком.
-                  </p>
-                )}
-                <LoadingManifestBlock
-                  documentOptions={manifestDocumentOptions}
-                  selectedDocIds={loadNaklSelection}
-                  onToggleNaklDoc={onToggleNaklDoc}
-                  onSelectAllNakl={onSelectAllNakl}
-                  onClearNakl={onClearNakl}
-                  batchesInWh={batchesInWh}
-                  warehouseName={warehouseName(selectedWarehouse)}
-                  manifest={savedManifestQuery.data?.manifest ?? null}
-                />
-              </BirzhaDisclosure>
+              ) : null}
             </>
           ) : null}
 

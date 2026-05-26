@@ -1,5 +1,28 @@
 import type { BatchListItem } from "../api/types.js";
 
+/** Подпись калибра в `<select>`: без «№5 — Калибр №5» и «HC+ — HC+». */
+export function productGradeOptionLabel(code: string, displayName: string): string {
+  const c = code.trim();
+  const d = displayName.trim();
+  if (!c && !d) {
+    return "—";
+  }
+  if (!d || c === d) {
+    return c || d;
+  }
+  if (!c) {
+    return d;
+  }
+  const norm = (s: string) => s.replace(/\s+/g, " ").toLowerCase();
+  if (norm(c) === norm(d)) {
+    return c;
+  }
+  if (d === `Калибр ${c}` || norm(d) === `калибр ${c}`) {
+    return c;
+  }
+  return `${c} — ${d}`;
+}
+
 /** Товар и калибр по данным накладной в списке партий. */
 export function formatNakladLineLabel(b: BatchListItem): string {
   const n = b.nakladnaya;

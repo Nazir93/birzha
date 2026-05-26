@@ -1,9 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import type { CreatePurchaseDocumentResponse, ProductGradeJson } from "../api/types.js";
+import type {
+  CreatePurchaseDocumentResponse,
+  ProductGradeJson,
+  PurchaseDocumentSummary,
+  WarehouseJson,
+} from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
@@ -17,25 +22,35 @@ import {
   lineTotalKopecksForNakladnayaSum,
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
+import { filterPurchaseDocumentsInWork } from "../format/archive.js";
+import { productGradeOptionLabel } from "../format/batch-label.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
-import { productGradesFullListQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
+import {
+  batchesFullListQueryOptions,
+  productGradesFullListQueryOptions,
+  purchaseDocumentsFullListQueryOptions,
+  warehousesFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
-import { adminRoutes, login } from "../routes.js";
+import { adminAwarePathForPath, adminRoutes, login, ops, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
-import { LoadingBlock } from "../ui/LoadingIndicator.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
+import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import {
   btnStyle,
   dateFieldStyle,
   fieldStyle,
   successText,
-  thHeadDense,
-  thtdDense,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+
+const NAKLAD_LIST_PAGE_SIZE = 25;
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -66,6 +81,7 @@ function emptyLine(): LineDraft {
 }
 
 export function PurchaseNakladnayaSection() {
+  const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const canManageCatalog = user ? canManageInventoryCatalog(user) : false;
   const queryClient = useQueryClient();
@@ -73,6 +89,8 @@ export function PurchaseNakladnayaSection() {
 
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
+  const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
+  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
 
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
@@ -80,6 +98,7 @@ export function PurchaseNakladnayaSection() {
   const [buyerLabel, setBuyerLabel] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
+  const [nakladListPage, setNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const refreshLists = useCallback(async () => {
@@ -115,6 +134,28 @@ export function PurchaseNakladnayaSection() {
       setFormError(e.message);
     },
   });
+
+  const activePurchaseDocs = useMemo(() => {
+    const docs = listQ.data?.purchaseDocuments ?? [];
+    if (!batchesQ.isSuccess) {
+      return [];
+    }
+    return filterPurchaseDocumentsInWork(docs, batchesQ.data.batches);
+  }, [listQ.data?.purchaseDocuments, batchesQ.isSuccess, batchesQ.data?.batches]);
+
+  const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
+
+  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
+    setNakladListPage((p) => Math.min(p, maxPage));
+  }, [activePurchaseDocs.length]);
+
+  const nakladPageSlice = useMemo(() => {
+    const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
+    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
+  }, [activePurchaseDocs, nakladListPage]);
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -356,23 +397,22 @@ export function PurchaseNakladnayaSection() {
         <table className="birzha-nakl-lines-table">
           <thead>
             <tr>
-              <th className="birzha-nakl-lines-table__grade" style={thHeadDense}>Товар / калибр</th>
-              <th style={thHeadDense}>Кг</th>
-              <th style={thHeadDense}>Короба</th>
-              <th style={thHeadDense}>Цена</th>
+              <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
+              <th>Кг</th>
+              <th>Ящики</th>
+              <th>Цена</th>
               <th
-                style={thHeadDense}
                 title="Сумма строки в ₽: «руб,коп» (например 16470,00) или целое число — копейки без запятой"
               >
                 Сумма, ₽
               </th>
-              <th className="birzha-nakl-lines-table__actions" style={thHeadDense} />
+              <th className="birzha-nakl-lines-table__actions" />
             </tr>
           </thead>
           <tbody>
             {lines.map((line) => (
               <tr key={line.key}>
-                <td style={thtdDense}>
+                <td>
                   <select
                     value={line.productGradeId}
                     onChange={(e) => updateLine(line.key, { productGradeId: e.target.value })}
@@ -385,14 +425,14 @@ export function PurchaseNakladnayaSection() {
                       <optgroup key={grp.key} label={grp.label}>
                         {grp.grades.map((g) => (
                           <option key={g.id} value={g.id}>
-                            {g.code} — {g.displayName}
+                            {productGradeOptionLabel(g.code, g.displayName)}
                           </option>
                         ))}
                       </optgroup>
                     ))}
                   </select>
                 </td>
-                <td style={thtdDense}>
+                <td>
                   <input
                     value={line.totalKg}
                     onChange={(e) => updateLine(line.key, { totalKg: e.target.value })}
@@ -401,7 +441,7 @@ export function PurchaseNakladnayaSection() {
                     inputMode="decimal"
                   />
                 </td>
-                <td style={thtdDense}>
+                <td>
                   <input
                     value={line.packageCount}
                     onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
@@ -409,10 +449,10 @@ export function PurchaseNakladnayaSection() {
                     style={{ ...fieldStyle, width: 72 }}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="Короба, целое; можно 10,5 (округлит)"
+                    title="Ящики, целое; можно 10,5 (округлит)"
                   />
                 </td>
-                <td style={thtdDense}>
+                <td>
                   <input
                     value={line.pricePerKg}
                     onChange={(e) => updateLine(line.key, { pricePerKg: e.target.value })}
@@ -421,7 +461,7 @@ export function PurchaseNakladnayaSection() {
                     inputMode="decimal"
                   />
                 </td>
-                <td style={thtdDense}>
+                <td>
                   <input
                     value={line.lineTotalKopecks}
                     onChange={(e) => updateLine(line.key, { lineTotalKopecks: e.target.value })}
@@ -432,7 +472,7 @@ export function PurchaseNakladnayaSection() {
                     title="«руб,коп» или целое — копейки; кнопка «Рассчитать» подставит ₽ по кг × цена"
                   />
                 </td>
-                <td style={thtdDense} className="birzha-nakl-lines-table__actions-cell">
+                <td className="birzha-nakl-lines-table__actions-cell">
                   <div className="birzha-nakl-line-actions">
                     <button
                       type="button"
@@ -461,14 +501,12 @@ export function PurchaseNakladnayaSection() {
               <th
                 scope="row"
                 className="birzha-nakl-lines-table__total-label"
-                style={{ ...thtdDense, textAlign: "right" }}
                 title="Складываются все строки при вводе"
               >
                 Итого
               </th>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                style={{ ...thtdDense, fontWeight: 600 }}
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
@@ -478,24 +516,19 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                style={{ ...thtdDense, fontWeight: 600 }}
-                title="Сумма коробов; пустое поле = 0"
+                title="Сумма ящиков; пустое поле = 0"
               >
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
                   nakladnayaFormTotals.totalPackages,
                 )}{" "}
                 <span className="birzha-text-muted birzha-text-muted--xs">
-                  кор.
+                  ящ.
                 </span>
               </td>
-              <td className="birzha-text-muted birzha-nakl-lines-table__total-cell" style={thtdDense}>
+              <td className="birzha-text-muted birzha-nakl-lines-table__total-cell">
                 —
               </td>
-              <td
-                colSpan={1}
-                className="birzha-nakl-lines-table__total-sum"
-                style={{ ...thtdDense, fontWeight: 600, verticalAlign: "middle" }}
-              >
+              <td colSpan={1} className="birzha-nakl-lines-table__total-sum">
                 <span>{kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽</span>
                 {extraCostKopecksForTotals > 0 && (
                   <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
@@ -506,10 +539,7 @@ export function PurchaseNakladnayaSection() {
                   </div>
                 )}
               </td>
-              <td
-                className="birzha-text-subtle"
-                style={{ ...thtdDense, fontSize: "0.75rem" }}
-              />
+              <td className="birzha-text-subtle birzha-nakl-lines-table__total-actions" />
             </tr>
           </tfoot>
         </table>
@@ -531,6 +561,123 @@ export function PurchaseNakladnayaSection() {
       {formError ? <ErrorAlert message={formError} title="Создание накладной" /> : null}
       {lastOk && <p style={successText}>{lastOk}</p>}
       </BirzhaDisclosure>
+
+      {listQ.isPending && (
+        <LoadingBlock label="Загрузка списка накладных…" minHeight={80} skeleton skeletonRows={5} />
+      )}
+
+      {listQ.isFetching && !listQ.isPending && (
+        <p style={{ margin: "0.35rem 0" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Обновление списка накладных…" />
+        </p>
+      )}
+
+      {listQ.data && listQ.data.purchaseDocuments.length === 0 && !listQ.isPending && (
+        <div style={{ marginTop: "0.75rem" }}>
+          <BirzhaEmptyState compact title="Сохранённых накладных пока нет" description="Создайте документ формой выше." />
+        </div>
+      )}
+
+      {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
+        <div style={{ marginTop: "0.75rem" }}>
+          <h4 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.92rem" }}>
+            В работе
+            {batchesQ.isSuccess ? (
+              <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
+                {" "}
+                ({activePurchaseDocs.length})
+              </span>
+            ) : null}
+          </h4>
+          {batchesQ.isPending && (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+              Уточняем остатки по партиям…
+            </p>
+          )}
+          {batchesQ.isSuccess && activePurchaseDocs.length === 0 ? (
+            <BirzhaEmptyState
+              compact
+              title="Нет накладных в работе"
+              description={
+                <>
+                  Проданные и без остатка — в разделе{" "}
+                  <Link to={archivePath}>«Архив»</Link>.
+                </>
+              }
+            />
+          ) : null}
+          {batchesQ.isSuccess && activePurchaseDocs.length > 0 ? (
+            <>
+              <PurchaseNakladnayaDocTable
+                docs={nakladPageSlice}
+                pathname={pathname}
+                warehouses={warehousesQ.data?.warehouses ?? []}
+              />
+              <BirzhaPagination
+                pageIndex={nakladListPage}
+                pageCount={nakladPageCount}
+                itemLabel="накладных"
+                onPageChange={setNakladListPage}
+              />
+            </>
+          ) : null}
+
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
+            Накладные без остатка по партиям (после продажи и закрытия рейса) — в разделе{" "}
+            <Link to={archivePath}>«Архив»</Link>.
+          </p>
+        </div>
+      )}
     </section>
+  );
+}
+
+function PurchaseNakladnayaDocTable({
+  docs,
+  pathname,
+  warehouses,
+}: {
+  docs: PurchaseDocumentSummary[];
+  pathname: string;
+  warehouses: WarehouseJson[];
+}) {
+  return (
+    <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+      <table className="birzha-data-table birzha-data-table--compact">
+        <thead>
+          <tr>
+            <th>Номер</th>
+            <th>Дата</th>
+            <th>Склад</th>
+            <th>Строк</th>
+          </tr>
+        </thead>
+        <tbody>
+          {docs.map((d) => {
+            const wh = warehouses.find((w) => w.id === d.warehouseId);
+            return (
+              <tr key={d.id}>
+                <td>
+                  <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
+                    {d.documentNumber}
+                  </Link>
+                </td>
+                <td className="birzha-data-table__emph">{formatPurchaseDocDateRu(d.docDate)}</td>
+                <td>
+                  {wh ? (
+                    <>
+                      {wh.name} <span className="birzha-text-muted">({wh.code})</span>
+                    </>
+                  ) : (
+                    <span className="birzha-text-muted">—</span>
+                  )}
+                </td>
+                <td>{d.lineCount}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

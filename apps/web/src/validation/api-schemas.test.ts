@@ -85,7 +85,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
     ).toThrow(/поставщик/i);
   });
 
-  it("короба с запятой округляются до целого", () => {
+  it("ящики с запятой округляются до целого", () => {
     const body = parseCreatePurchaseDocumentForm({
       docDate: "2026-04-16",
       warehouseId: "wh-1",

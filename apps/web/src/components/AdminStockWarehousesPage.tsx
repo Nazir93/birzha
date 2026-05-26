@@ -20,7 +20,6 @@ export function AdminStockWarehousesPage() {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [gradeSearch, setGradeSearch] = useState("");
   const [newWarehouseName, setNewWarehouseName] = useState("");
-  const [newWarehouseCode, setNewWarehouseCode] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
 
   const invalidate = () => {
@@ -41,16 +40,10 @@ export function AdminStockWarehousesPage() {
       if (!name) {
         throw new Error("Введите название склада");
       }
-      const codeRaw = newWarehouseCode.trim();
-      const body: { name: string; code?: string } = { name };
-      if (codeRaw) {
-        body.code = codeRaw;
-      }
-      return apiPostJson("/api/warehouses", body) as Promise<CreateWarehouseResponse>;
+      return apiPostJson("/api/warehouses", { name }) as Promise<CreateWarehouseResponse>;
     },
     onSuccess: (res) => {
       setNewWarehouseName("");
-      setNewWarehouseCode("");
       setSelectedWarehouseId(res.warehouse.id);
       invalidate();
     },
@@ -142,14 +135,6 @@ export function AdminStockWarehousesPage() {
                 autoComplete="off"
                 aria-label="Название нового склада"
               />
-              <input
-                value={newWarehouseCode}
-                onChange={(e) => setNewWarehouseCode(e.target.value)}
-                style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-                placeholder="Код (опц.)"
-                autoComplete="off"
-                aria-label="Код склада латиницей"
-              />
               <button
                 type="button"
                 className="birzha-inventory-inline-tools__submit"
@@ -166,7 +151,6 @@ export function AdminStockWarehousesPage() {
                 <thead>
                   <tr>
                     <th style={thHeadDense}>Название</th>
-                    <th style={thHeadDense}>Код</th>
                     <th style={thHeadDense}>Остаток на складе</th>
                     <th style={thHeadDense} />
                   </tr>
@@ -196,9 +180,6 @@ export function AdminStockWarehousesPage() {
                           >
                             {w.name}
                           </button>
-                        </td>
-                        <td style={thtdDense}>
-                          <code style={{ fontSize: "0.82rem" }}>{w.code}</code>
                         </td>
                         <td style={thtdDense}>{kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</td>
                         <td style={thtdDense}>

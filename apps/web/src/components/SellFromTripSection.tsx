@@ -45,6 +45,7 @@ import { BirzhaAlert } from "../ui/BirzhaAlert.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { SellerSaleSuccessOverlay } from "./SellerSaleSuccessOverlay.js";
 import { btnStyle, fieldStyle } from "../ui/styles.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
@@ -105,7 +106,6 @@ export function SellFromTripSection() {
   /** Ключ выбранной плитки калибра (группа партий, как в погрузочной накладной). */
   const [sellCaliberKey, setSellCaliberKey] = useState<string | null>(null);
 
-  const sellerFlashDomId = `${idPrefix}-sale-flash`;
   const [sellerSaleFlash, setSellerSaleFlash] = useState<{
     kg: string;
     packages: string | null;
@@ -682,9 +682,6 @@ export function SellFromTripSection() {
       invalidateDomain();
       clearSellerSaleInputs();
       setSellerSaleFlash({ ...data });
-      requestAnimationFrame(() => {
-        document.getElementById(sellerFlashDomId)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
     },
   });
 
@@ -700,37 +697,7 @@ export function SellFromTripSection() {
       }
     >
       {sellerSaleFlash ? (
-        <div
-          id={sellerFlashDomId}
-          className="birzha-seller-sale-flash"
-          role="status"
-          aria-live="assertive"
-        >
-          <div className="birzha-seller-sale-flash__title">Продажа записана</div>
-          <p className="birzha-seller-sale-flash__lead">
-            <strong>{sellerSaleFlash.productLine}</strong>
-            <span className="birzha-seller-sale-flash__sep"> · </span>
-            <span>{sellerSaleFlash.kg} кг</span>
-            {sellerSaleFlash.packages ? (
-              <>
-                <span className="birzha-seller-sale-flash__sep"> · </span>
-                <span>{sellerSaleFlash.packages} ящ</span>
-              </>
-            ) : null}
-            <span className="birzha-seller-sale-flash__sep"> · </span>
-            <span>
-              сумма <strong>{sellerSaleFlash.sumRub} ₽</strong>
-            </span>
-          </p>
-          <button
-            type="button"
-            className="birzha-seller-sale-flash__dismiss"
-            style={{ ...btnStyle, marginTop: "0.55rem", marginBottom: 0 }}
-            onClick={() => setSellerSaleFlash(null)}
-          >
-            Понятно
-          </button>
-        </div>
+        <SellerSaleSuccessOverlay data={sellerSaleFlash} onDismiss={() => setSellerSaleFlash(null)} />
       ) : null}
       <section
         className="birzha-seller-deal-kind"
