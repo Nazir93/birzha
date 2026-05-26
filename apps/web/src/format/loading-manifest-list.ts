@@ -1,5 +1,14 @@
 import type { LoadingManifestSummary } from "../api/types.js";
 
+/** Все активные ПН, новее — выше (блок на странице погрузки). */
+export function sortLoadingManifestsByCreatedAtDesc(
+  manifests: readonly LoadingManifestSummary[],
+): LoadingManifestSummary[] {
+  return manifests
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 /**
  * Погрузочные накладные по одному складу, новее — выше (для блока «Распределение»).
  */

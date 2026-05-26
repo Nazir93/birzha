@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LoadingManifestSummary } from "../api/types.js";
 
-import { manifestsForWarehouseSorted } from "./loading-manifest-list.js";
+import { manifestsForWarehouseSorted, sortLoadingManifestsByCreatedAtDesc } from "./loading-manifest-list.js";
 
 function m(p: Partial<LoadingManifestSummary> & Pick<LoadingManifestSummary, "id" | "warehouseId" | "createdAt">): LoadingManifestSummary {
   return {
@@ -20,6 +20,16 @@ function m(p: Partial<LoadingManifestSummary> & Pick<LoadingManifestSummary, "id
     ...p,
   };
 }
+
+describe("sortLoadingManifestsByCreatedAtDesc", () => {
+  it("сортирует по createdAt по убыванию", () => {
+    const rows = [
+      m({ id: "old", warehouseId: "wh-1", createdAt: "2024-01-01T10:00:00.000Z" }),
+      m({ id: "new", warehouseId: "wh-2", createdAt: "2024-06-01T12:00:00.000Z" }),
+    ];
+    expect(sortLoadingManifestsByCreatedAtDesc(rows).map((x) => x.id)).toEqual(["new", "old"]);
+  });
+});
 
 describe("manifestsForWarehouseSorted", () => {
   it("пустой или пробельный warehouseId — пустой массив", () => {

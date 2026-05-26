@@ -7,14 +7,17 @@ import { apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fet
 import type { BatchListItem, CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
-import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
+import { batchWarehouseId, isEligibleForLoadingAllocation } from "../format/batch-warehouse.js";
 import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
   formatLoadingManifestDisplayName,
   resolveLoadingManifestNumberForSave,
 } from "../format/loading-manifest.js";
-import { manifestsForWarehouseSorted } from "../format/loading-manifest-list.js";
+import {
+  manifestsForWarehouseSorted,
+  sortLoadingManifestsByCreatedAtDesc,
+} from "../format/loading-manifest-list.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   batchesFullListQueryOptions,
@@ -151,10 +154,7 @@ export function AllocationPanel() {
     return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
   }, [shipDestQ.data]);
 
-  const batchesQuery = useQuery({
-    ...batchesFullListQueryOptions(),
-    refetchOnMount: "always",
-  });
+  const batchesQuery = useQuery(batchesFullListQueryOptions());
   const warehousesQuery = useQuery(warehousesFullListQueryOptions());
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const routeDetailQuery = useQuery({
@@ -188,10 +188,7 @@ export function AllocationPanel() {
     enabled: Boolean(savedManifestId) && savedManifestId !== routeManifestId.trim(),
   });
 
-  const manifestsListQuery = useQuery({
-    ...loadingManifestsListQueryOptions(),
-    enabled: Boolean(selectedWarehouse),
-  });
+  const manifestsListQuery = useQuery(loadingManifestsListQueryOptions());
 
   const reservedBatchIdsQuery = useQuery({
     ...loadingManifestReservedBatchIdsQueryOptions(selectedWarehouse),
@@ -209,6 +206,11 @@ export function AllocationPanel() {
   const activeManifests = useMemo(
     () => splitLoadingManifestsByArchive(manifestsListQuery.data?.loadingManifests ?? [], closedIds).active,
     [manifestsListQuery.data?.loadingManifests, closedIds],
+  );
+
+  const allActiveManifestsSorted = useMemo(
+    () => sortLoadingManifestsByCreatedAtDesc(activeManifests),
+    [activeManifests],
   );
 
   const manifestsOnThisWarehouse = useMemo(
@@ -308,7 +310,7 @@ export function AllocationPanel() {
   const list = useMemo(
     () =>
       batchesOnWarehouse
-        .filter(isFromPurchaseNakladnaya)
+        .filter(isEligibleForLoadingAllocation)
         .filter((b) => !reservedBatchIdSet.has(b.id)),
     [batchesOnWarehouse, reservedBatchIdSet],
   );
@@ -357,15 +359,55 @@ export function AllocationPanel() {
     return out;
   }, [warehousesQuery.data?.warehouses, byWarehouse, warehouseOrder]);
 
+  const showWorkspace =
+    !loading && (viewingSaved || list.length > 0 || allocationWarehouseOptions.length > 0);
+
+  const eligibleBatchesOnWarehouse = useMemo(
+    () => batchesOnWarehouse.filter(isEligibleForLoadingAllocation),
+    [batchesOnWarehouse],
+  );
+  const batchesOnWarehouseWithoutWarehouse = useMemo(
+    () => batchesOnWarehouse.filter((b) => !batchWarehouseId(b)),
+    [batchesOnWarehouse],
+  );
+  const allEligibleStockReserved =
+    !viewingSaved &&
+    list.length === 0 &&
+    eligibleBatchesOnWarehouse.length > 0 &&
+    eligibleBatchesOnWarehouse.every((b) => reservedBatchIdSet.has(b.id));
+
   useEffect(() => {
-    if (selectedWarehouse !== "" || allocationWarehouseOptions.length === 0) {
+    if (selectedWarehouse !== "" || allocationWarehouseOptions.length === 0 || viewingSaved) {
+      return;
+    }
+    const withStock = allocationWarehouseOptions.filter((o) => o.batchCount > 0);
+    if (withStock.length === 0) {
       return;
     }
     const pref = readPreferredWarehouseId();
-    if (pref && allocationWarehouseOptions.some((o) => o.id === pref)) {
-      setSelectedWarehouse(pref);
+    const pick =
+      (pref ? withStock.find((o) => o.id === pref) : undefined) ?? withStock[0];
+    if (pick) {
+      setSelectedWarehouse(pick.id);
     }
-  }, [allocationWarehouseOptions, selectedWarehouse]);
+  }, [allocationWarehouseOptions, selectedWarehouse, viewingSaved]);
+
+  const clearWarehouseSelection = useCallback(() => {
+    setSelectedWarehouse("");
+    writePreferredWarehouseId(null);
+    setManifestFormOpen(false);
+    setLoadNaklSelection(new Set());
+    if (routeManifestId.trim()) {
+      void navigate(distributionBase);
+    }
+  }, [distributionBase, navigate, routeManifestId]);
+
+  const selectedWarehouseRow = useMemo(
+    () => allocationWarehouseOptions.find((o) => o.id === selectedWarehouse),
+    [allocationWarehouseOptions, selectedWarehouse],
+  );
+  const selectedWarehouseHasNoBatches =
+    Boolean(selectedWarehouse) && !viewingSaved && (selectedWarehouseRow?.batchCount ?? 0) === 0;
 
   useEffect(() => {
     setManifestFormOpen(false);
@@ -511,16 +553,193 @@ export function AllocationPanel() {
         label="Обновление учёта погрузочных накладных…"
       />
 
+      {!loading && allocationWarehouseOptions.length > 0 ? (
+        <div
+          className="no-print"
+          style={{
+            marginBottom: "1rem",
+            padding: "0.85rem 1rem",
+            borderRadius: 8,
+            border: "1px solid var(--color-border)",
+            background: "var(--birzha-surface-raised, rgba(255,255,255,0.03))",
+          }}
+        >
+          <label
+            htmlFor="alloc-sel-warehouse"
+            className="birzha-form-label birzha-form-label--block birzha-form-label--mb-sm"
+          >
+            Склад *
+          </label>
+          <select
+            id="alloc-sel-warehouse"
+            value={selectedWarehouse}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSelectedWarehouse(v);
+              writePreferredWarehouseId(v === "" ? null : v);
+              if (routeManifestId.trim()) {
+                void navigate(distributionBase);
+              }
+            }}
+            style={{ ...fieldStyle, maxWidth: "100%" }}
+          >
+            <option value="">— выберите склад —</option>
+            {allocationWarehouseOptions.map((row) => (
+              <option key={row.id} value={row.id}>
+                {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+                {row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""}
+                {`, ${row.batchCount} парт.`}
+              </option>
+            ))}
+          </select>
+          {selectedWarehouse ? (
+            <p style={{ margin: "0.65rem 0 0", display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+              <span className="birzha-text-muted birzha-ui-sm">
+                Выбран: <strong>{warehouseName(selectedWarehouse)}</strong>
+                {selectedWarehouseRow != null
+                  ? ` · ${selectedWarehouseRow.batchCount} парт. для отбора`
+                  : null}
+              </span>
+              <button type="button" style={btnStyle} onClick={clearWarehouseSelection}>
+                ← Сменить склад
+              </button>
+            </p>
+          ) : (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+              Выберите склад — в списке указано, сколько партий доступно для погрузки.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {!loading && selectedWarehouseHasNoBatches ? (
+        <InfoAlert title="На этом складе нет партий для погрузки">
+          Склад «{warehouseName(selectedWarehouse)}» выбран, но свободных партий для отбора нет (0 в списке). Выберите
+          другой склад или откройте сохранённую погрузочную накладную ниже.
+          <p style={{ margin: "0.5rem 0 0" }}>
+            <button type="button" style={btnStyle} onClick={clearWarehouseSelection}>
+              ← Выбрать другой склад
+            </button>
+          </p>
+        </InfoAlert>
+      ) : null}
+
       {!loading && selectedWarehouse && reservedBatchIdsQuery.isError && (
         <p className="birzha-callout-warning" role="status">
           Не удалось загрузить список партий, уже внесённых в погрузочные накладные — отбор показывает полный остаток.
         </p>
       )}
-      {!loading && list.length === 0 && batchesOnWarehouse.length > 0 ? (
+      {!loading && manifestsListQuery.isError ? (
+        <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Погрузочные накладные" />
+      ) : null}
+
+      {!loading && allActiveManifestsSorted.length > 0 ? (
+        <BirzhaDisclosure
+          defaultOpen
+          title={
+            <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>
+              Сохранённые погрузочные накладные ({allActiveManifestsSorted.length})
+            </span>
+          }
+        >
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+            Накладные не пропадают после сохранения — откройте для печати или привязки к рейсу. В сводке «погружено» кг
+            появятся после отгрузки партий в рейс (раздел «Отгрузка»).
+          </p>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+            <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Все погрузочные накладные">
+              <thead>
+                <tr>
+                  <th scope="col" style={thHead}>
+                    Накладная
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Дата
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Склад
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Город
+                  </th>
+                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                    Кг
+                  </th>
+                  <th scope="col" style={thHead} />
+                </tr>
+              </thead>
+              <tbody>
+                {allActiveManifestsSorted.map((m) => {
+                  const isCurrent = m.id === activeManifestId;
+                  return (
+                    <tr
+                      key={m.id}
+                      style={isCurrent ? { background: "rgba(59, 130, 246, 0.09)" } : undefined}
+                    >
+                      <td style={thtd}>
+                        <strong>
+                          {formatLoadingManifestDisplayName({
+                            manifestNumber: m.manifestNumber,
+                            destinationName: m.destinationName,
+                          })}
+                        </strong>
+                      </td>
+                      <td style={thtd}>{m.docDate}</td>
+                      <td style={thtd}>
+                        {m.warehouseName} ({m.warehouseCode})
+                      </td>
+                      <td style={thtd}>{m.destinationName}</td>
+                      <td style={{ ...thtd, textAlign: "right" }}>
+                        {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                      </td>
+                      <td style={thtd}>
+                        <Link
+                          to={`${distributionBase}/${encodeURIComponent(m.id)}`}
+                          style={{ fontWeight: 600 }}
+                        >
+                          {isCurrent ? "Открыта" : "Открыть · печать"}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </BirzhaDisclosure>
+      ) : null}
+
+      {!loading && !manifestsListQuery.isPending && allActiveManifestsSorted.length === 0 && !viewingSaved ? (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }} role="status">
+          Сохранённых погрузочных накладных пока нет. После «Сохранить погрузочную накладную» строка появится в таблице
+          на этой странице.
+        </p>
+      ) : null}
+
+      {!loading && allEligibleStockReserved ? (
+        <InfoAlert title="Остаток уже в погрузочных накладных">
+          Свободных партий для нового отбора нет — остаток учтён в сохранённых погрузочных накладных. Откройте нужную в
+          таблице выше.
+        </InfoAlert>
+      ) : null}
+      {!loading && !viewingSaved && batchesOnWarehouseWithoutWarehouse.length > 0 ? (
+        <InfoAlert title="У партий не указан склад">
+          На складе числится остаток ({batchesOnWarehouseWithoutWarehouse.length} парт.) без привязки к складу в системе.
+          Укажите склад при приёмке в <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link>.
+        </InfoAlert>
+      ) : null}
+      {!loading &&
+      !viewingSaved &&
+      !selectedWarehouse &&
+      list.length === 0 &&
+      eligibleBatchesOnWarehouse.length === 0 &&
+      batchesOnWarehouse.length > 0 &&
+      batchesOnWarehouseWithoutWarehouse.length === 0 &&
+      !allEligibleStockReserved ? (
         <InfoAlert title="Нет партий для отбора">
-          На складе есть остаток ({batchesOnWarehouse.length} парт.), но без привязки к{" "}
-          <strong>закупочной накладной</strong>. Оформите приём в{" "}
-          <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link> и нажмите «Обновить список».
+          На складе есть остаток ({batchesOnWarehouse.length} парт.), но без привязки к номеру{" "}
+          <strong>закупочной накладной</strong> (для группировки). Оформите приём в{" "}
+          <Link to={purchaseNakladnayaBasePath}>Закупке товара</Link> или откройте уже сохранённые погрузочные выше.
           <p style={{ margin: "0.5rem 0 0" }}>
             <button
               type="button"
@@ -533,71 +752,54 @@ export function AllocationPanel() {
           </p>
         </InfoAlert>
       ) : null}
-      {!loading && list.length === 0 && batchesOnWarehouse.length === 0 && (
-          <BirzhaEmptyState
-            compact
-            title="Нет партий с остатком на складе"
-            description={
-              <>
-                Сначала оформите закупку товара (раздел <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
-              </>
-            }
-          />
-        )}
+      {!loading && !viewingSaved && !selectedWarehouse && list.length === 0 && batchesOnWarehouse.length === 0 && (
+        <BirzhaEmptyState
+          compact
+          title="Нет партий с остатком на складе"
+          description={
+            <>
+              Сначала оформите закупку товара (раздел <Link to={purchaseNakladnayaBasePath}>Закупка товара</Link>).
+            </>
+          }
+        />
+      )}
 
-      {!loading && list.length > 0 && (
+      {showWorkspace && (
         <>
-          <div style={{ marginBottom: "1rem", width: "100%", maxWidth: "100%" }}>
-            <label
-              htmlFor="alloc-sel-warehouse"
-              className="birzha-form-label birzha-form-label--block birzha-form-label--mb-sm"
-            >
-              Склад *
-            </label>
-            <select
-              id="alloc-sel-warehouse"
-              value={selectedWarehouse}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSelectedWarehouse(v);
-                writePreferredWarehouseId(v === "" ? null : v);
-                if (routeManifestId.trim()) {
-                  void navigate(distributionBase);
-                }
-              }}
-              style={{ ...fieldStyle, maxWidth: "100%" }}
-            >
-              <option value="">— выберите склад —</option>
-              {allocationWarehouseOptions.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
-                  {row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""}
-                  {`, ${row.batchCount} парт.`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {viewingSaved && openManifestSummary ? (
+          {viewingSaved ? (
             <div style={{ marginBottom: "1.1rem" }}>
               <p className="no-print" style={{ margin: "0 0 0.5rem" }}>
                 <Link to={distributionBase} style={{ fontWeight: 600 }}>
                   ← Новая погрузочная накладная
                 </Link>
               </p>
-              <LoadingManifestAccordion
-                m={openManifestSummary}
-                manifestId={routeManifestId.trim()}
-                manifestBasePath={distributionBase}
-                tripNumberById={tripNumberById}
-                detail={routeDetail && routeDetail.id === openManifestSummary.id ? routeDetail : null}
-                detailLoading={routeDetailQuery.isPending}
-                detailError={routeDetailQuery.isError}
-                assignTripId={assignTripId}
-                setAssignTripId={setAssignTripId}
-                assignTrip={assignTrip}
-                trips={openTripsForAssign}
-              />
+              {openManifestSummary ? (
+                <LoadingManifestAccordion
+                  m={openManifestSummary}
+                  manifestId={routeManifestId.trim()}
+                  manifestBasePath={distributionBase}
+                  tripNumberById={tripNumberById}
+                  detail={routeDetail && routeDetail.id === openManifestSummary.id ? routeDetail : null}
+                  detailLoading={routeDetailQuery.isPending}
+                  detailError={routeDetailQuery.isError}
+                  assignTripId={assignTripId}
+                  setAssignTripId={setAssignTripId}
+                  assignTrip={assignTrip}
+                  trips={openTripsForAssign}
+                />
+              ) : routeDetailQuery.isPending ? (
+                <LoadingBlock label="Загрузка погрузочной накладной…" minHeight={80} skeleton skeletonRows={3} />
+              ) : routeDetailQuery.isError ? (
+                <ErrorAlert
+                  error={routeDetailQuery.error}
+                  message="Не удалось открыть погрузочную накладную."
+                  title="Погрузочная накладная"
+                />
+              ) : (
+                <InfoAlert title="Накладная не найдена">
+                  Проверьте ссылку или выберите накладную в списке ниже.
+                </InfoAlert>
+              )}
             </div>
           ) : null}
 

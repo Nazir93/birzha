@@ -6,6 +6,7 @@ import { closeTripById } from "../api/fetch-api.js";
 import {
   batchesFullListQueryOptions,
   counterpartiesFullListQueryOptions,
+  loadingManifestsListQueryOptions,
   productGradesFullListQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
@@ -15,7 +16,7 @@ import {
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
-import { filterTripsInWork } from "../format/archive.js";
+import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
 import {
   batchHasRemainingStockKg,
   countBatchesWithRemainingStock,
@@ -79,6 +80,7 @@ export function AdminCabinetHome() {
   const showCloseTrip = canCreateTrip(user ?? null);
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
+  const loadingManifestsQ = useQuery(loadingManifestsListQueryOptions());
   const batchesQ = useQuery({
     ...batchesFullListQueryOptions(),
     /** Сводка должна видеть свежие остатки после накладной на другой вкладке / из кэша localStorage. */
@@ -170,6 +172,13 @@ export function AdminCabinetHome() {
     const dispatchedKg = transitKg;
     soldKg = sumSoldKgInWorkBatches(batches);
 
+    const closedTripIds = closedTripIdSet(trips);
+    const activeLoadingManifests = splitLoadingManifestsByArchive(
+      loadingManifestsQ.data?.loadingManifests ?? [],
+      closedTripIds,
+    ).active;
+    const loadingManifestKg = activeLoadingManifests.reduce((s, m) => s + m.totalKg, 0);
+
     return {
       tripCount: trips.length,
       tripsOpen,
@@ -179,12 +188,14 @@ export function AdminCabinetHome() {
       transitKg,
       soldKg,
       dispatchedKg,
+      loadingManifestKg,
+      loadingManifestCount: activeLoadingManifests.length,
       writtenOffKg,
       warehouseCatalogCount: whQ.data?.warehouses.length ?? 0,
       warehouseBars,
       groupBars,
     };
-  }, [batchesQ.data?.batches, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
+  }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
 
   const sortedTripsOpen = useMemo(
     () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
@@ -274,12 +285,27 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.transitTrips}
                 className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--amber birzha-admin-stat--link"
-                title="Рейсы с погруженным остатком (в машине)"
+                title="Кг в открытых рейсах (после отгрузки со склада в разделе «Отгрузка»)"
               >
-                <span className="birzha-admin-stat__label">Погружено</span>
+                <span className="birzha-admin-stat__label">Погружено в рейс</span>
                 <span className="birzha-admin-stat__value">
                   {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
                 </span>
+              </Link>
+              <Link
+                to={adminRoutes.distribution}
+                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
+                title="Сохранённые погрузочные накладные (до отгрузки в рейс)"
+              >
+                <span className="birzha-admin-stat__label">В погрузочных ПН</span>
+                <span className="birzha-admin-stat__value">
+                  {aggregates.loadingManifestKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
+                </span>
+                {aggregates.loadingManifestCount > 0 ? (
+                  <span className="birzha-text-muted birzha-ui-sm" style={{ display: "block", marginTop: "0.15rem" }}>
+                    {aggregates.loadingManifestCount} накл.
+                  </span>
+                ) : null}
               </Link>
               <Link
                 to={adminRoutes.soldBySeller}
