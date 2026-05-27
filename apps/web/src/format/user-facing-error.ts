@@ -71,6 +71,9 @@ export function humanizeErrorMessage(error: unknown): string {
   if (/http 5\d{2}/.test(lower)) {
     return "Сервер временно не отвечает. Подождите и повторите.";
   }
+  if (/loading_manifests_manifest_number_unique|duplicate key.*manifest_number/i.test(lower)) {
+    return "Накладная с таким номером уже сохранена. Выберите другой рейс или дату и сохраните снова.";
+  }
 
   return withoutUrl;
 }

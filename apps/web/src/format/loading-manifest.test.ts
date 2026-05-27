@@ -241,8 +241,34 @@ describe("formatLoadingManifestDisplayName", () => {
 });
 
 describe("resolveLoadingManifestNumberForSave", () => {
-  it("пустой ввод → город и дата", () => {
-    expect(resolveLoadingManifestNumberForSave("", "Москва", "2026-05-19")).toBe("Москва · 2026-05-19");
+  it("без рейса → город и дата", () => {
+    expect(
+      resolveLoadingManifestNumberForSave({
+        destinationLabel: "Москва",
+        docDate: "2026-05-19",
+      }),
+    ).toBe("Москва · 2026-05-19");
+  });
+
+  it("с рейсом → номер рейса и дата", () => {
+    expect(
+      resolveLoadingManifestNumberForSave({
+        tripNumber: "Ф-2026-001",
+        destinationLabel: "Москва",
+        docDate: "2026-05-19",
+      }),
+    ).toBe("Ф-2026-001 · 2026-05-19");
+  });
+
+  it("добавляет суффикс при занятом номере", () => {
+    expect(
+      resolveLoadingManifestNumberForSave({
+        tripNumber: "Ф-1",
+        destinationLabel: "Москва",
+        docDate: "2026-05-19",
+        takenNumbers: ["Ф-1 · 2026-05-19"],
+      }),
+    ).toBe("Ф-1 · 2026-05-19 (2)");
   });
 });
 

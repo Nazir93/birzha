@@ -8,8 +8,8 @@ describe("cabinet-nav", () => {
     const links = buildCabinetNavEntries("operations", null, false);
     expect(links).toHaveLength(6);
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
-    expect(links[1]?.to).toBe(ops.distribution);
-    expect(links[2]?.to).toBe(ops.trips);
+    expect(links[1]?.to).toBe(ops.trips);
+    expect(links[2]?.to).toBe(ops.distribution);
     expect(links[3]?.to).toBe(ops.reports);
     expect(links[4]?.to).toBe(ops.operations);
     expect(links[5]?.to).toBe(ops.archive);
@@ -19,8 +19,8 @@ describe("cabinet-nav", () => {
     const links = buildCabinetNavEntries("admin", null, false);
     expect(links[0]).toEqual({ to: adminRoutes.home, label: "Сводка", key: "home" });
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
-    expect(links[2]?.to).toBe(adminRoutes.distribution);
-    expect(links[3]?.to).toBe(adminRoutes.trips);
+    expect(links[2]?.to).toBe(adminRoutes.trips);
+    expect(links[3]?.to).toBe(adminRoutes.distribution);
     expect(links.find((x) => x.key === "assign")?.to).toBe(adminRoutes.assignSeller);
     expect(links.find((x) => x.key === "rep")?.to).toBe(adminRoutes.reports);
     expect(links[links.length - 1]?.to).toBe(adminRoutes.archive);
@@ -37,6 +37,10 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links.find((x) => x.key === "distribution")?.to).toBe(adminRoutes.distribution);
     expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
+    const tripsIdx = links.findIndex((x) => x.key === "trips");
+    const distIdx = links.findIndex((x) => x.key === "distribution");
+    expect(tripsIdx).toBeGreaterThan(-1);
+    expect(distIdx).toBeGreaterThan(tripsIdx);
     expect(links.find((x) => x.key === "archive")?.to).toBe(adminRoutes.archive);
     expect(links.find((x) => x.key === "loadingManifests")).toBeUndefined();
     expect(links.find((x) => x.key === "reports")?.to).toBe(adminRoutes.reports);

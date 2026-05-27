@@ -368,17 +368,35 @@ export function formatLoadingManifestDisplayName(m: LoadingManifestLabelFields):
   return `${destination} · № ${num}`;
 }
 
-/** Номер для сохранения: введённый пользователем или город + дата. */
-export function resolveLoadingManifestNumberForSave(
-  userInput: string,
-  destinationLabel: string,
-  docDate: string,
-): string {
-  const trimmed = userInput.trim();
-  if (trimmed) {
-    return trimmed.slice(0, 80);
+function uniquifyManifestNumber(base: string, taken: Set<string>): string {
+  const trimmed = base.slice(0, 80);
+  if (!taken.has(trimmed)) {
+    return trimmed;
   }
-  const dest = destinationLabel.trim() || "Накладная";
+  for (let n = 2; n < 1000; n++) {
+    const suffix = ` (${n})`;
+    const candidate = `${base.slice(0, Math.max(0, 80 - suffix.length))}${suffix}`;
+    if (!taken.has(candidate)) {
+      return candidate;
+    }
+  }
+  const tail = `${Date.now()}`.slice(-6);
+  return `${base.slice(0, 73)}-${tail}`;
+}
+
+/** Номер для сохранения: рейс + дата (предпочтительно) или город + дата; без коллизий с уже занятыми. */
+export function resolveLoadingManifestNumberForSave(params: {
+  tripNumber?: string;
+  destinationLabel: string;
+  docDate: string;
+  takenNumbers?: readonly string[];
+}): string {
+  const { tripNumber, destinationLabel, docDate, takenNumbers = [] } = params;
+  const taken = new Set(takenNumbers.map((x) => x.trim()).filter(Boolean));
   const date = docDate.trim() || new Date().toISOString().slice(0, 10);
-  return `${dest} · ${date}`.slice(0, 80);
+  const trip = tripNumber?.trim();
+  const base = trip
+    ? `${trip} · ${date}`
+    : `${destinationLabel.trim() || "Накладная"} · ${date}`;
+  return uniquifyManifestNumber(base, taken);
 }

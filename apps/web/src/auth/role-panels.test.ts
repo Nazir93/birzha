@@ -101,6 +101,12 @@ describe("role-panels", () => {
     expect(order[0]).toBe("reports");
   });
 
+  it("operationsPanelOrder: рейсы выше погрузки (создание рейса до ПН)", () => {
+    const order = operationsPanelOrder(userWithRoles("warehouse"));
+    expect(order.indexOf("trips")).toBeGreaterThan(order.indexOf("nakladnaya"));
+    expect(order.indexOf("distribution")).toBeGreaterThan(order.indexOf("trips"));
+  });
+
   it("operationsPanelOrder: только seller — отчёт по рейсу в кабинете продаж", () => {
     expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports", "archive"]);
   });

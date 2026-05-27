@@ -502,7 +502,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("навигация: боковое меню /o (закупка → распределение → операции → рейсы → отчёты)", async ({ page }) => {
+  test("навигация: боковое меню /o (закупка → рейсы → погрузка → недостача → отчёты)", async ({ page }) => {
     await page.goto("/o/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -511,6 +511,10 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/);
     await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
 
+    await nav.getByRole("link", { name: "Рейсы" }).click();
+    await expect(page).toHaveURL(/\/o\/trips$/);
+    await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
+
     await nav.getByRole("link", { name: "Погрузка на машину" }).click();
     await expect(page).toHaveURL(/\/o\/distribution$/);
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
@@ -518,10 +522,6 @@ test.describe("золотой smoke (UI + API)", () => {
     await nav.getByRole("link", { name: "Недостача по рейсу" }).click();
     await expect(page).toHaveURL(/\/o\/operations$/);
     await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible({ timeout: 15_000 });
-
-    await page.goto("/o/trips");
-    await expect(page).toHaveURL(/\/o\/trips$/);
-    await expect(page.getByRole("heading", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
 
     await page.goto("/o/reports");
     await expect(page).toHaveURL(/\/o\/reports$/);

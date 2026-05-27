@@ -249,12 +249,16 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
 /**
  * Href панели с учётом кабинета. Если панель в этом кабинете не показывается — null.
  */
-/** Порядок вкладок в `/o` и в админке для блоков операций: у логиста «Отчёты и рейсы» первыми. */
+/**
+ * Порядок вкладок в `/o` и в админке.
+ * Сначала «Рейсы», затем «Погрузка» — рейс создаётся до привязки ПН.
+ * У логиста «Отчёты» выносятся в начало.
+ */
 export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const base: PanelId[] = [
     "nakladnaya",
-    "distribution",
     "trips",
+    "distribution",
     "assignSeller",
     "reports",
     "operations",
@@ -280,8 +284,8 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
 export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
   return [
     "nakladnaya",
-    "distribution",
     "trips",
+    "distribution",
     "assignSeller",
     "reports",
     "operations",
@@ -293,8 +297,8 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
 const SHARED_OPS_PANELS = [
   "reports",
   "nakladnaya",
-  "distribution",
   "trips",
+  "distribution",
   "archive",
   "sellerDispatch",
   "assignSeller",

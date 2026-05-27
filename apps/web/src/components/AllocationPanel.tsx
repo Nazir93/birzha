@@ -14,10 +14,8 @@ import {
   formatLoadingManifestDisplayName,
   resolveLoadingManifestNumberForSave,
 } from "../format/loading-manifest.js";
-import {
-  manifestsForWarehouseSorted,
-  sortLoadingManifestsByCreatedAtDesc,
-} from "../format/loading-manifest-list.js";
+import { sortLoadingManifestsByCreatedAtDesc } from "../format/loading-manifest-list.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   batchesFullListQueryOptions,
@@ -133,8 +131,10 @@ export function AllocationPanel() {
   const { meta } = useAuth();
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
+  const tripsBase = adminAwarePathForPath(pathname, adminRoutes.trips, ops.trips);
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
+  const [newManifestTripId, setNewManifestTripId] = useState("");
 
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
@@ -165,7 +165,6 @@ export function AllocationPanel() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
   const [manifestDate, setManifestDate] = useState(todayDateOnly);
-  const [manifestNumber, setManifestNumber] = useState("");
   const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
   const [savedManifestId, setSavedManifestId] = useState<string>("");
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
@@ -211,11 +210,6 @@ export function AllocationPanel() {
   const allActiveManifestsSorted = useMemo(
     () => sortLoadingManifestsByCreatedAtDesc(activeManifests),
     [activeManifests],
-  );
-
-  const manifestsOnThisWarehouse = useMemo(
-    () => manifestsForWarehouseSorted(activeManifests, selectedWarehouse),
-    [activeManifests, selectedWarehouse],
   );
 
   const tripNumberById = useMemo(() => {
@@ -290,12 +284,25 @@ export function AllocationPanel() {
       docDate: string;
       manifestNumber: string;
     }) => {
-      return apiPostJson("/api/loading-manifests", payload) as Promise<CreateLoadingManifestResponse>;
+      const res = (await apiPostJson("/api/loading-manifests", payload)) as CreateLoadingManifestResponse;
+      const tripId = newManifestTripId.trim();
+      if (tripId) {
+        await apiPostJson(`/api/loading-manifests/${encodeURIComponent(res.manifestId)}/assign-trip`, {
+          tripId,
+        });
+      }
+      return res;
     },
     onSuccess: (res) => {
+      const tripId = newManifestTripId.trim();
       setSavedManifestId(res.manifestId);
       setLoadNaklSelection(new Set());
+      if (tripId) {
+        setAssignTripId(tripId);
+      }
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
+      void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "list"] });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
       void navigate(`${distributionBase}/${encodeURIComponent(res.manifestId)}`);
@@ -406,9 +413,6 @@ export function AllocationPanel() {
     () => allocationWarehouseOptions.find((o) => o.id === selectedWarehouse),
     [allocationWarehouseOptions, selectedWarehouse],
   );
-  const selectedWarehouseHasNoBatches =
-    Boolean(selectedWarehouse) && !viewingSaved && (selectedWarehouseRow?.batchCount ?? 0) === 0;
-
   useEffect(() => {
     setManifestFormOpen(false);
     setRejectScrapInput({});
@@ -519,7 +523,7 @@ export function AllocationPanel() {
     if (!viewingSaved) {
       setSavedManifestId("");
     }
-  }, [selectedWarehouse, manifestDate, manifestNumber, manifestDestinationCode, rowsFingerprint, viewingSaved]);
+  }, [selectedWarehouse, manifestDate, manifestDestinationCode, rowsFingerprint, viewingSaved]);
 
   useEffect(() => {
     if (tableRows.length === 0) {
@@ -549,7 +553,7 @@ export function AllocationPanel() {
         label="Обновление учёта погрузочных накладных…"
       />
 
-      {!loading && allocationWarehouseOptions.length > 0 ? (
+      {!loading && !viewingSaved && allocationWarehouseOptions.length > 0 ? (
         <div
           className="no-print"
           style={{
@@ -608,19 +612,7 @@ export function AllocationPanel() {
         </div>
       ) : null}
 
-      {!loading && selectedWarehouseHasNoBatches ? (
-        <InfoAlert title="На этом складе нет партий для погрузки">
-          Склад «{warehouseName(selectedWarehouse)}» выбран, но свободных партий для отбора нет (0 в списке). Выберите
-          другой склад или откройте сохранённую погрузочную накладную ниже.
-          <p style={{ margin: "0.5rem 0 0" }}>
-            <button type="button" style={btnStyle} onClick={clearWarehouseSelection}>
-              ← Выбрать другой склад
-            </button>
-          </p>
-        </InfoAlert>
-      ) : null}
-
-      {!loading && selectedWarehouse && reservedBatchIdsQuery.isError && (
+      {!loading && !viewingSaved && selectedWarehouse && reservedBatchIdsQuery.isError && (
         <p className="birzha-callout-warning" role="status">
           Не удалось загрузить список партий, уже внесённых в погрузочные накладные — отбор показывает полный остаток.
         </p>
@@ -629,7 +621,7 @@ export function AllocationPanel() {
         <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Погрузочные накладные" />
       ) : null}
 
-      {!loading && allActiveManifestsSorted.length > 0 ? (
+      {!loading && !viewingSaved && allActiveManifestsSorted.length > 0 ? (
         <BirzhaDisclosure
           defaultOpen
           title={
@@ -638,10 +630,6 @@ export function AllocationPanel() {
             </span>
           }
         >
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-            Накладные не пропадают после сохранения — откройте для печати или привязки к рейсу. В сводке «погружено» кг
-            появятся после привязки погрузочной накладной к рейсу (кг уйдут со склада в рейс).
-          </p>
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Все погрузочные накладные">
               <thead>
@@ -903,6 +891,28 @@ export function AllocationPanel() {
                 <h3 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>2. Погрузочная накладная</h3>
                 <div className="birzha-form-grid">
                   <label>
+                    Рейс *
+                    <select
+                      value={newManifestTripId}
+                      onChange={(e) => setNewManifestTripId(e.target.value)}
+                      style={fieldStyle}
+                      disabled={tripsQuery.isPending}
+                    >
+                      <option value="">
+                        {tripsQuery.isPending
+                          ? "— загрузка рейсов —"
+                          : openTripsForAssign.length === 0
+                            ? "— сначала создайте рейс —"
+                            : "— выберите рейс —"}
+                      </option>
+                      {openTripsForAssign.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {formatTripSelectLabel(t)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
                     Город / направление *
                     <select
                       value={manifestDestinationCode}
@@ -920,17 +930,16 @@ export function AllocationPanel() {
                     Дата *
                     <BirzhaDateField value={manifestDate} onChange={setManifestDate} style={fieldStyle} />
                   </label>
-                  <label>
-                    Название накладной
-                    <input
-                      value={manifestNumber}
-                      onChange={(e) => setManifestNumber(e.target.value)}
-                      style={fieldStyle}
-                      placeholder="Рейс, фура… (необязательно)"
-                      autoComplete="off"
-                    />
-                  </label>
                 </div>
+                {openTripsForAssign.length === 0 && !tripsQuery.isPending ? (
+                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+                    Создайте рейс в разделе{" "}
+                    <Link to={tripsBase} style={{ fontWeight: 600 }}>
+                      «Рейсы»
+                    </Link>
+                    , затем выберите его здесь — кг уйдут в рейс при сохранении.
+                  </p>
+                ) : null}
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
                   <button
                     type="button"
@@ -939,20 +948,25 @@ export function AllocationPanel() {
                       createManifest.isPending ||
                       tableRows.length === 0 ||
                       !manifestDate ||
-                      !manifestDestinationCode
+                      !manifestDestinationCode ||
+                      !newManifestTripId.trim() ||
+                      openTripsForAssign.length === 0
                     }
                     onClick={() => {
                       const destLabel = labelDest[manifestDestinationCode] ?? manifestDestinationCode;
+                      const tripId = newManifestTripId.trim();
+                      const trip = openTripsForAssign.find((t) => t.id === tripId);
                       createManifest.mutate({
                         warehouseId: selectedWarehouse,
                         destinationCode: manifestDestinationCode,
                         batchIds: tableRows.map((b) => b.id),
                         docDate: manifestDate,
-                        manifestNumber: resolveLoadingManifestNumberForSave(
-                          manifestNumber,
-                          destLabel,
-                          manifestDate,
-                        ),
+                        manifestNumber: resolveLoadingManifestNumberForSave({
+                          tripNumber: trip?.tripNumber,
+                          destinationLabel: destLabel,
+                          docDate: manifestDate,
+                          takenNumbers: allActiveManifestsSorted.map((m) => m.manifestNumber),
+                        }),
                       });
                     }}
                   >
@@ -962,7 +976,7 @@ export function AllocationPanel() {
                 {createManifest.isError ? (
                   <ErrorAlert
                     error={createManifest.error}
-                    message="Не удалось сохранить. Проверьте город, дату и выбранные партии."
+                    message="Не удалось сохранить. Выберите рейс, город, дату и отмеченные партии."
                     title="Сохранение"
                   />
                 ) : null}
@@ -985,81 +999,6 @@ export function AllocationPanel() {
               ) : null}
             </>
           ) : null}
-
-          {selectedWarehouse && (
-            <BirzhaDisclosure
-              defaultOpen={!viewingSaved}
-              title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Сохранённые накладные на складе</span>}
-            >
-              {manifestsListQuery.isPending ? (
-                <p className="birzha-text-muted" style={{ fontSize: "0.88rem", margin: 0 }}>
-                  Загрузка списка…
-                </p>
-              ) : null}
-              {manifestsListQuery.isError ? (
-                <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Список ПН" />
-              ) : null}
-              {manifestsOnThisWarehouse.length === 0 && !manifestsListQuery.isPending && !manifestsListQuery.isError ? (
-                <BirzhaEmptyState compact title="Пока нет сохранённых накладных на этом складе" />
-              ) : null}
-              {manifestsOnThisWarehouse.length > 0 ? (
-                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                  <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Погрузочные накладные по складу">
-                    <thead>
-                      <tr>
-                        <th scope="col" style={thHead}>
-                          Накладная
-                        </th>
-                        <th scope="col" style={thHead}>
-                          Дата
-                        </th>
-                        <th scope="col" style={thHead}>
-                          Город
-                        </th>
-                        <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                          Кг
-                        </th>
-                        <th scope="col" style={thHead} />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {manifestsOnThisWarehouse.map((m) => {
-                        const isCurrent = m.id === activeManifestId;
-                        return (
-                          <tr
-                            key={m.id}
-                            style={isCurrent ? { background: "rgba(59, 130, 246, 0.09)" } : undefined}
-                          >
-                            <td style={thtd}>
-                              <strong>
-                                {formatLoadingManifestDisplayName({
-                                  manifestNumber: m.manifestNumber,
-                                  destinationName: m.destinationName,
-                                })}
-                              </strong>
-                            </td>
-                            <td style={thtd}>{m.docDate}</td>
-                            <td style={thtd}>{m.destinationName}</td>
-                            <td style={{ ...thtd, textAlign: "right" }}>
-                              {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                            </td>
-                            <td style={thtd}>
-                              <Link
-                                to={`${distributionBase}/${encodeURIComponent(m.id)}`}
-                                style={{ fontWeight: 600 }}
-                              >
-                                {isCurrent ? "Открыта" : "Открыть · печать"}
-                              </Link>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-            </BirzhaDisclosure>
-          )}
         </>
       )}
     </div>

@@ -8,10 +8,7 @@ function checkForSwUpdate(registration: ServiceWorkerRegistration) {
   void registration.update();
 }
 
-/**
- * Уведомление о новой версии после деплоя (registerType: prompt в vite-plugin-pwa).
- * «Офлайн готов» показываем коротко один раз — без навязчивости.
- */
+/** Уведомление о новой версии после деплоя (registerType: prompt в vite-plugin-pwa). */
 export function PwaUpdateBanner() {
   const swRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const swCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -62,16 +59,14 @@ export function PwaUpdateBanner() {
   );
 
   const {
-    offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW(registerSwOptions);
 
-  if (!needRefresh && !offlineReady) {
+  if (!needRefresh) {
     return null;
   }
 
-  const dismissOffline = () => setOfflineReady(false);
   const dismissRefresh = () => setNeedRefresh(false);
 
   return (
@@ -97,28 +92,17 @@ export function PwaUpdateBanner() {
         lineHeight: 1.4,
       }}
     >
-      {needRefresh ? (
-        <>
-          <p style={{ margin: "0 0 0.5rem" }}>
-            Доступна новая версия приложения. Обновите страницу, чтобы получить последние изменения.
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            <button type="button" className="birzha-btn-primary" onClick={() => void updateServiceWorker(true)}>
-              Обновить
-            </button>
-            <button type="button" className="birzha-btn-ghost" onClick={dismissRefresh}>
-              Позже
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p style={{ margin: "0 0 0.5rem" }}>Приложение готово к работе без сети для уже загруженных страниц.</p>
-          <button type="button" className="birzha-btn-ghost" onClick={dismissOffline}>
-            Понятно
-          </button>
-        </>
-      )}
+      <p style={{ margin: "0 0 0.5rem" }}>
+        Доступна новая версия приложения. Обновите страницу, чтобы получить последние изменения.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+        <button type="button" className="birzha-btn-primary" onClick={() => void updateServiceWorker(true)}>
+          Обновить
+        </button>
+        <button type="button" className="birzha-btn-ghost" onClick={dismissRefresh}>
+          Позже
+        </button>
+      </div>
     </div>
   );
 }
