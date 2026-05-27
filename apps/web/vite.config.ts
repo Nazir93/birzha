@@ -14,8 +14,8 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
-      /** Баннер «Доступна новая версия» через `useRegisterSW` (`PwaUpdateBanner`). */
-      registerType: "prompt",
+      /** Новая сборка подхватывается без баннера (`PwaServiceWorkerRegister`). */
+      registerType: "autoUpdate",
       injectRegister: false,
       includeAssets: [
         "pwa-icon.svg",
