@@ -7,7 +7,7 @@ import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { hasGlobalRole } from "../auth/global-roles.js";
 import { canCreateTrip } from "../auth/role-panels.js";
-import { formatBatchPartyCaption } from "../format/batch-label.js";
+import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { adminRoutes } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -143,6 +143,11 @@ export function AssignSellerPanel() {
   }, [reportByTripId, selectedSellerTrips]);
 
   const activeReport = activeTripId ? reportByTripId.get(activeTripId) ?? null : null;
+
+  const activeSalesByCaliber = useMemo(
+    () => (activeReport ? aggregateTripSalesByProductLine(activeReport, batchById) : []),
+    [activeReport, batchById],
+  );
 
   const closeTripSoldOutMut = useMutation({
     mutationFn: async (tripId: string) => {
@@ -397,16 +402,13 @@ export function AssignSellerPanel() {
               ) : null}
               <div className="birzha-assign-seller__detail-grid">
                 <div className="birzha-assign-seller__detail-block">
-                  <h4 className="birzha-assign-seller__detail-block-title">По партиям (накладная · калибр)</h4>
+                  <h4 className="birzha-assign-seller__detail-block-title">По калибру</h4>
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                    <table style={{ ...tableStyle, minWidth: 780 }} aria-label="Продажи по партиям">
+                    <table style={{ ...tableStyle, minWidth: 680 }} aria-label="Продажи по калибру">
                       <thead>
                         <tr>
                           <th scope="col" style={thHead}>
                             Товар / калибр
-                          </th>
-                          <th scope="col" style={thHead}>
-                            Партия
                           </th>
                           <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                             Продано, кг
@@ -426,42 +428,34 @@ export function AssignSellerPanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {activeReport.sales.byBatch.length === 0 ? (
+                        {activeSalesByCaliber.length === 0 ? (
                           <tr>
-                            <td colSpan={7} style={thtd}>
-                              Продаж по партиям нет.
+                            <td colSpan={6} style={thtd}>
+                              Продаж по калибрам нет.
                             </td>
                           </tr>
                         ) : (
-                          activeReport.sales.byBatch.map((row) => {
-                            const b = batchById.get(row.batchId);
-                            const debtK = BigInt(row.debtKopecks || "0");
-                            const cardK = BigInt(row.cardTransferKopecks || "0");
-                            return (
-                              <tr key={`${activeReport.trip.id}-${row.batchId}`}>
-                                <td style={thtd}>{b?.nakladnaya?.productGradeCode ?? "—"}</td>
-                                <td style={thtd}>
-                                  {formatBatchPartyCaption(b, row.batchId)}
-                                </td>
-                                <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams)}</td>
-                                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
-                                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cashKopecks)} ₽</td>
-                                <td style={{ ...thtd, textAlign: "right" }}>
-                                  {cardK > 0n ? `${kopecksToRubLabel(row.cardTransferKopecks)} ₽` : "—"}
-                                </td>
-                                <td
-                                  style={{
-                                    ...thtd,
-                                    textAlign: "right",
-                                    fontWeight: debtK > 0n ? 600 : undefined,
-                                    color: debtK > 0n ? "var(--birzha-danger, #b91c1c)" : undefined,
-                                  }}
-                                >
-                                  {debtK > 0n ? `${kopecksToRubLabel(row.debtKopecks)} ₽` : "—"}
-                                </td>
-                              </tr>
-                            );
-                          })
+                          activeSalesByCaliber.map((row) => (
+                            <tr key={`${activeReport.trip.id}-${row.lineLabel}`}>
+                              <td style={thtd}>{row.lineLabel}</td>
+                              <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams.toString())}</td>
+                              <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
+                              <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cash.toString())} ₽</td>
+                              <td style={{ ...thtd, textAlign: "right" }}>
+                                {row.card > 0n ? `${kopecksToRubLabel(row.card.toString())} ₽` : "—"}
+                              </td>
+                              <td
+                                style={{
+                                  ...thtd,
+                                  textAlign: "right",
+                                  fontWeight: row.debt > 0n ? 600 : undefined,
+                                  color: row.debt > 0n ? "var(--birzha-danger, #b91c1c)" : undefined,
+                                }}
+                              >
+                                {row.debt > 0n ? `${kopecksToRubLabel(row.debt.toString())} ₽` : "—"}
+                              </td>
+                            </tr>
+                          ))
                         )}
                       </tbody>
                     </table>
