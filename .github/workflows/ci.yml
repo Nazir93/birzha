@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared packages (for typecheck)
+        run: pnpm exec turbo run build --filter=@birzha/contracts --filter=@birzha/domain
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -86,11 +89,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Unit tests (turbo)
-        run: pnpm test
+      - name: Build shared packages
+        run: pnpm exec turbo run build --filter=@birzha/contracts --filter=@birzha/domain
 
       - name: Production build (turbo)
         run: pnpm build
@@ -136,6 +136,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm exec turbo run build --filter=@birzha/contracts --filter=@birzha/domain
 
       - name: Wait for Postgres
         run: pnpm exec wait-on -t 120000 tcp:127.0.0.1:5432
