@@ -25,6 +25,7 @@ const ANON_ADMIN_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: adminRoutes.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "dist", to: adminRoutes.distribution, label: NAV_PANEL_LABELS.distribution },
   { key: "trips", to: adminRoutes.trips, label: NAV_PANEL_LABELS.trips },
+  { key: "assign", to: adminRoutes.assignSeller, label: NAV_PANEL_LABELS.assignSeller },
   { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: adminRoutes.operations, label: NAV_PANEL_LABELS.operations },
   { key: "archive", to: adminRoutes.archive, label: NAV_PANEL_LABELS.archive },

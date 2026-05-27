@@ -5,10 +5,7 @@ import { Link } from "react-router-dom";
 import { closeTripById } from "../api/fetch-api.js";
 import {
   batchesFullListQueryOptions,
-  counterpartiesFullListQueryOptions,
   loadingManifestsListQueryOptions,
-  productGradesFullListQueryOptions,
-  purchaseDocumentsFullListQueryOptions,
   queryRoots,
   tripsFullListQueryOptions,
   warehousesFullListQueryOptions,
@@ -19,10 +16,8 @@ import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-lab
 import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
 import { sumOpenTripsMassKg, sumWarehouseKgFromBatches } from "../format/admin-dashboard-aggregates.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
-import { accounting, adminRoutes } from "../routes.js";
+import { adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
-import { HorizontalBarChart, type HorizontalBarItem } from "../ui/charts/HorizontalBarChart.js";
-import { MassBalanceStrip } from "../ui/charts/MassBalanceStrip.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
@@ -74,7 +69,7 @@ function MassDistributionRing({
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
 export function AdminCabinetHome() {
-  const { meta, user } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const showCloseTrip = canCreateTrip(user ?? null);
 
@@ -86,17 +81,6 @@ export function AdminCabinetHome() {
     refetchOnMount: "always",
   });
   const whQ = useQuery(warehousesFullListQueryOptions());
-  const gradesQ = useQuery(productGradesFullListQueryOptions());
-
-  const purchaseDocsQ = useQuery({
-    ...purchaseDocumentsFullListQueryOptions(),
-    enabled: meta?.purchaseDocumentsApi === "enabled",
-  });
-
-  const counterpartiesQ = useQuery({
-    ...counterpartiesFullListQueryOptions(),
-    enabled: meta?.counterpartyCatalogApi === "enabled",
-  });
 
   const whById = useMemo(() => {
     const m = new Map<string, string>();
@@ -122,26 +106,6 @@ export function AdminCabinetHome() {
       }
     }
 
-    const warehouseBars: HorizontalBarItem[] = [...warehouseSums.byWarehouseKg.entries()]
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([label, value]) => ({
-        label,
-        value,
-        display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
-      }));
-
-    const groupBars: HorizontalBarItem[] = [...warehouseSums.byProductGroupKg.entries()]
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([label, value]) => ({
-        label,
-        value,
-        display: `${value.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг`,
-      }));
-
     const closedTripIds = closedTripIdSet(trips);
     const activeLoadingManifests = splitLoadingManifestsByArchive(
       loadingManifestsQ.data?.loadingManifests ?? [],
@@ -166,10 +130,6 @@ export function AdminCabinetHome() {
       inTripRemainingKg: dispatchedKg,
       loadingManifestKg,
       loadingManifestCount: activeLoadingManifests.length,
-      writtenOffKg: warehouseSums.writtenOffKg,
-      warehouseCatalogCount: whQ.data?.warehouses.length ?? 0,
-      warehouseBars,
-      groupBars,
     };
   }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
 
@@ -213,9 +173,6 @@ export function AdminCabinetHome() {
     },
   });
 
-  const pdErr = purchaseDocsQ.isError && meta?.purchaseDocumentsApi === "enabled";
-  const cpErr = counterpartiesQ.isError && meta?.counterpartyCatalogApi === "enabled";
-
   return (
     <div className="birzha-admin-dash">
       <h2 className="birzha-sr-only">Сводка</h2>
@@ -251,261 +208,68 @@ export function AdminCabinetHome() {
                 </li>
               </ul>
             </Link>
-            <div className="birzha-admin-dash__hero-stats">
-              <Link
-                to={adminRoutes.stockWarehouses}
-                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="Склады и остатки по складам"
-              >
-                <span className="birzha-admin-stat__label">На складах</span>
-                <span className="birzha-admin-stat__value">
-                  {aggregates.warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
-                </span>
-              </Link>
-              <Link
-                to={adminRoutes.transitTrips}
-                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--amber birzha-admin-stat--link"
-                title="Отгружено в открытые рейсы (раздел «Отгрузка в рейс»)"
-              >
-                <span className="birzha-admin-stat__label">Погружено в рейс</span>
-                <span className="birzha-admin-stat__value">
-                  {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
-                </span>
-              </Link>
-              <Link
-                to={adminRoutes.distribution}
-                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="Сохранённые погрузочные накладные (до отгрузки в рейс)"
-              >
-                <span className="birzha-admin-stat__label">В погрузочных ПН</span>
-                <span className="birzha-admin-stat__value">
-                  {aggregates.loadingManifestKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
-                </span>
-                {aggregates.loadingManifestCount > 0 ? (
-                  <span className="birzha-text-muted birzha-ui-sm" style={{ display: "block", marginTop: "0.15rem" }}>
-                    {aggregates.loadingManifestCount} накл.
-                  </span>
-                ) : null}
-              </Link>
-              <Link
-                to={adminRoutes.soldBySeller}
-                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--blue birzha-admin-stat--link"
-                title="Продано с открытых рейсов; после закрытия рейса — в архиве"
-              >
-                <span className="birzha-admin-stat__label">Продано (в работе)</span>
-                <span className="birzha-admin-stat__value">
-                  {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
-                </span>
-              </Link>
-              <Link
-                to={adminRoutes.transitTrips}
-                className="birzha-admin-stat birzha-admin-stat--xl birzha-admin-stat--link"
-                title="В рейсе, ещё не продано (остаток в пути)"
-              >
-                <span className="birzha-admin-stat__label">Отгружено</span>
-                <span className="birzha-admin-stat__value">
-                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} кг
-                </span>
-              </Link>
-            </div>
           </header>
 
-          <nav className="birzha-admin-dash__quick-nav no-print" aria-label="Быстрые разделы">
-            <Link to={adminRoutes.purchaseNakladnaya}>Закупка товара</Link>
-            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
-              ·
-            </span>
-            <Link to={adminRoutes.distribution}>Погрузка на машину</Link>
-            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
-              ·
-            </span>
-            <Link to={adminRoutes.sellerDispatch}>Отгрузка в рейс</Link>
-            <span className="birzha-admin-dash__quick-nav-sep" aria-hidden="true">
-              ·
-            </span>
-            <Link to={adminRoutes.transitTrips}>Рейсы с остатком</Link>
-          </nav>
+          <p className="birzha-text-muted birzha-ui-sm no-print" style={{ margin: "0 0 0.85rem", lineHeight: 1.45 }}>
+            Кольцо — масса по <strong>открытым</strong> рейсам. Детали — в меню слева; закрытые рейсы — в{" "}
+            <Link to={adminRoutes.archive}>Архиве</Link>.
+          </p>
 
           <div className="birzha-dashboard-layout birzha-admin-dash__body">
-            <BirzhaDisclosure title="Сводные показатели" defaultOpen>
+            <BirzhaDisclosure title="Килограммы (открытые рейсы)" defaultOpen={false}>
             <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">
-              <Link
-                to={adminRoutes.tripRegistry}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Реестр рейсов: поиск и погрузочные накладные"
-              >
-                <div className="birzha-kpi-tile__label">Рейсов</div>
-                <div className="birzha-kpi-tile__value">{aggregates.tripCount}</div>
-              </Link>
-              <Link
-                to={`${adminRoutes.tripRegistry}?status=open`}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Открытые рейсы"
-              >
-                <div className="birzha-kpi-tile__label">Открытых</div>
-                <div className="birzha-kpi-tile__value">{aggregates.tripsOpen}</div>
-              </Link>
-              <Link
-                to={adminRoutes.archive}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Закрытые рейсы"
-              >
-                <div className="birzha-kpi-tile__label">Закрытых</div>
-                <div className="birzha-kpi-tile__value">{aggregates.tripsClosed}</div>
-              </Link>
-              <Link
-                to={adminRoutes.distribution}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Партии с остатком на складе или в рейсе; после закрытия рейса и продажи — 0"
-              >
-                <div className="birzha-kpi-tile__label">Партий в работе</div>
-                <div className="birzha-kpi-tile__value">{aggregates.batchCount}</div>
-              </Link>
               <Link
                 to={adminRoutes.stockWarehouses}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
                 title="Склады и остатки"
               >
-                <div className="birzha-kpi-tile__label">На складах, кг</div>
+                <div className="birzha-kpi-tile__label">На складах</div>
                 <div className="birzha-kpi-tile__value">
-                  {aggregates.warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                  {aggregates.warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
                 </div>
               </Link>
               <Link
-                to={adminRoutes.transitTrips}
+                to={adminRoutes.distribution}
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
+                title="Погрузочные накладные до привязки к рейсу"
+              >
+                <div className="birzha-kpi-tile__label">В ПН</div>
+                <div className="birzha-kpi-tile__value">
+                  {aggregates.loadingManifestKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
+                </div>
+              </Link>
+              <Link
+                to={adminRoutes.reports}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
-                title="Отгружено в открытые рейсы (журнал отгрузки)"
+                title="Остаток в открытых рейсах (ещё не продано)"
               >
-                <div className="birzha-kpi-tile__label">Погружено, кг</div>
+                <div className="birzha-kpi-tile__label">В рейсе</div>
                 <div className="birzha-kpi-tile__value">
-                  {aggregates.transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
                 </div>
               </Link>
               <Link
-                to={adminRoutes.transitTrips}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="В рейсе, ещё не продано"
-              >
-                <div className="birzha-kpi-tile__label">Отгружено, кг</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                </div>
-              </Link>
-              <Link
-                to={adminRoutes.soldBySeller}
+                to={adminRoutes.assignSeller}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue birzha-kpi-tile--link"
-                title="Продано с открытых рейсов; закрытый рейс — см. архив"
+                title="Продано с открытых рейсов"
               >
-                <div className="birzha-kpi-tile__label">Продано, кг</div>
+                <div className="birzha-kpi-tile__label">Продано</div>
                 <div className="birzha-kpi-tile__value">
-                  {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                  {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
                 </div>
               </Link>
-              <Link
-                to={
-                  meta?.warehouseWriteOffApi === "enabled"
-                    ? adminRoutes.warehouseWriteOffsLedger
-                    : adminRoutes.distribution
-                }
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title={
-                  meta?.warehouseWriteOffApi === "enabled"
-                    ? "Журнал списаний брака с остатка на складе"
-                    : "Распределение — списание с остатка при PostgreSQL"
-                }
-              >
-                <div className="birzha-kpi-tile__label">Списано, кг</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
-                </div>
-              </Link>
-              <Link
-                to={adminRoutes.settingsCatalog}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Справочник складов"
-              >
-                <div className="birzha-kpi-tile__label">Складов</div>
-                <div className="birzha-kpi-tile__value">{aggregates.warehouseCatalogCount}</div>
-              </Link>
-              <Link
-                to={adminRoutes.settingsCatalog}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Справочник калибров"
-              >
-                <div className="birzha-kpi-tile__label">Калибров</div>
-                <div className="birzha-kpi-tile__value">
-                  {gradesQ.isPending ? "…" : gradesQ.data?.productGrades.length ?? "—"}
-                </div>
-              </Link>
-              {meta?.purchaseDocumentsApi === "enabled" ? (
-                <Link
-                  to={adminRoutes.purchaseNakladnaya}
-                  className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                  title="Список накладных закупки"
-                >
-                  <div className="birzha-kpi-tile__label">Накладных</div>
-                  <div className="birzha-kpi-tile__value">
-                    {purchaseDocsQ.isPending ? "…" : purchaseDocsQ.data?.purchaseDocuments.length ?? "—"}
-                  </div>
-                </Link>
-              ) : null}
-              {meta?.counterpartyCatalogApi === "enabled" ? (
-                <Link
-                  to={accounting.counterparties}
-                  className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                  title="Справочник контрагентов"
-                >
-                  <div className="birzha-kpi-tile__label">Контрагентов</div>
-                  <div className="birzha-kpi-tile__value">
-                    {counterpartiesQ.isPending ? "…" : counterpartiesQ.data?.counterparties.length ?? "—"}
-                  </div>
-                </Link>
-              ) : null}
-            </div>
-
-            {(pdErr || cpErr) && (
-              <p role="status" className="birzha-callout-warning" style={{ margin: 0 }}>
-                {pdErr ? "Накладные закупки: ошибка загрузки." : null}
-                {pdErr && cpErr ? " " : ""}
-                {cpErr ? "Контрагенты: ошибка загрузки." : null}
-              </p>
-            )}
-            </BirzhaDisclosure>
-
-            <BirzhaDisclosure title="Диаграммы" defaultOpen={false}>
-            <div className="birzha-dashboard-row">
-              <div className="birzha-chart-card birzha-chart-card--premium">
-                <h3>Масса: склад · погружено · продано</h3>
-                <MassBalanceStrip
-                  warehouseKg={aggregates.warehouseKg + aggregates.loadingManifestKg}
-                  transitKg={aggregates.inTripRemainingKg}
-                  soldKg={aggregates.soldKg}
-                />
-              </div>
-              <div className="birzha-chart-card birzha-chart-card--premium">
-                <h3>Топ складов по остатку</h3>
-                <HorizontalBarChart
-                  items={aggregates.warehouseBars}
-                  emptyHint="Нет данных."
-                  valueSuffix="кг"
-                />
-              </div>
-              <div className="birzha-chart-card birzha-chart-card--premium">
-                <h3>Виды товара (вес партий)</h3>
-                <HorizontalBarChart
-                  items={aggregates.groupBars}
-                  emptyHint="Нет данных."
-                  valueSuffix="кг"
-                />
-              </div>
             </div>
             </BirzhaDisclosure>
 
             <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
             <div className="birzha-admin-dash__trips">
               <p style={{ margin: "0 0 0.5rem" }}>
-                <Link to={`${adminRoutes.tripRegistry}?status=open`} style={{ fontWeight: 600 }}>
-                  Реестр рейсов
+                <Link to={adminRoutes.trips} style={{ fontWeight: 600 }}>
+                  Все рейсы
+                </Link>
+                {" · "}
+                <Link to={adminRoutes.reports} style={{ fontWeight: 600 }}>
+                  Отчёты
                 </Link>
                 {aggregates.tripsClosed > 0 ? (
                   <>

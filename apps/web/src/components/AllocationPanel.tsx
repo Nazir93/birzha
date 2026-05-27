@@ -640,7 +640,7 @@ export function AllocationPanel() {
         >
           <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
             Накладные не пропадают после сохранения — откройте для печати или привязки к рейсу. В сводке «погружено» кг
-            появятся после отгрузки партий в рейс (раздел «Отгрузка»).
+            появятся после привязки погрузочной накладной к рейсу (кг уйдут со склада в рейс).
           </p>
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Все погрузочные накладные">

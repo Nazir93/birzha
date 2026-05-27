@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { Navigate, Outlet, Route } from "react-router-dom";
 
 import { RedirectLoadingManifestRoute } from "./RedirectLoadingManifestRoute.js";
+import { RedirectSellerDispatchRoute } from "./RedirectSellerDispatchRoute.js";
 
 import { RequirePanel } from "../components/RequirePanel.js";
 
@@ -25,9 +26,6 @@ const AdminTripsLogisticsPanel = lazy(() =>
 const ArchivePage = lazy(() => import("../components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })));
 const OperationsPanel = lazy(() =>
   import("../components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
-);
-const SellerDispatchPanel = lazy(() =>
-  import("../components/SellerDispatchPanel.js").then((m) => ({ default: m.SellerDispatchPanel })),
 );
 const AssignSellerPanel = lazy(() =>
   import("../components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
@@ -122,10 +120,8 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
       <Route
         path="seller-dispatch"
         element={
-          <RequirePanel panel="sellerDispatch">
-            <section className="birzha-card">
-              <SellerDispatchPanel />
-            </section>
+          <RequirePanel panel="assignSeller">
+            <RedirectSellerDispatchRoute />
           </RequirePanel>
         }
       />

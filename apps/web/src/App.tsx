@@ -28,9 +28,6 @@ const AdminCabinetHome = lazy(() =>
 const AdminUsersPanel = lazy(() =>
   import("./components/AdminUsersPanel.js").then((m) => ({ default: m.AdminUsersPanel })),
 );
-const AdminSoldBySellerPage = lazy(() =>
-  import("./components/AdminSoldBySellerPage.js").then((m) => ({ default: m.AdminSoldBySellerPage })),
-);
 const AdminStockWarehousesPage = lazy(() =>
   import("./components/AdminStockWarehousesPage.js").then((m) => ({ default: m.AdminStockWarehousesPage })),
 );
@@ -38,12 +35,6 @@ const AdminWarehouseWriteOffsLedgerPage = lazy(() =>
   import("./components/AdminWarehouseWriteOffsLedgerPage.js").then((m) => ({
     default: m.AdminWarehouseWriteOffsLedgerPage,
   })),
-);
-const AdminTransitTripsPage = lazy(() =>
-  import("./components/AdminTransitTripsPage.js").then((m) => ({ default: m.AdminTransitTripsPage })),
-);
-const AdminTripRegistryPage = lazy(() =>
-  import("./components/AdminTripRegistryPage.js").then((m) => ({ default: m.AdminTripRegistryPage })),
 );
 const CounterpartiesPanel = lazy(() =>
   import("./components/CounterpartiesPanel.js").then((m) => ({ default: m.CounterpartiesPanel })),
@@ -120,36 +111,9 @@ export function App() {
             }
           >
             {sharedOperationsCabinetRouteElements("home")}
-            <Route
-              path="trip-registry"
-              element={
-                <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <AdminTripRegistryPage />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="transit-trips"
-              element={
-                <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <AdminTransitTripsPage />
-                  </section>
-                </RequirePanel>
-              }
-            />
-            <Route
-              path="sold-by-seller"
-              element={
-                <RequirePanel panel="assignSeller">
-                  <section className="birzha-card">
-                    <AdminSoldBySellerPage />
-                  </section>
-                </RequirePanel>
-              }
-            />
+            <Route path="trip-registry" element={<Navigate to="trips" replace />} />
+            <Route path="transit-trips" element={<Navigate to="reports" replace />} />
+            <Route path="sold-by-seller" element={<Navigate to="assign-seller" replace />} />
             <Route
               path="stock-warehouses"
               element={

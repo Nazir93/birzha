@@ -144,8 +144,8 @@ export function SellerDispatchPanel() {
   });
 
   return (
-    <div role="region" aria-label="Отгрузка">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Отгрузка</h2>
+    <div role="region" aria-label="Назначить продавца">
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Назначить продавца</h2>
 
       {canAssignSeller ? (
         <BirzhaDisclosure

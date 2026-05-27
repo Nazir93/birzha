@@ -21,8 +21,10 @@ describe("cabinet-nav", () => {
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.distribution);
     expect(links[3]?.to).toBe(adminRoutes.trips);
+    expect(links.find((x) => x.key === "assign")?.to).toBe(adminRoutes.assignSeller);
+    expect(links.find((x) => x.key === "rep")?.to).toBe(adminRoutes.reports);
     expect(links[links.length - 1]?.to).toBe(adminRoutes.archive);
-    expect(links).toHaveLength(7);
+    expect(links).toHaveLength(8);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {
@@ -37,9 +39,9 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "trips")?.to).toBe(adminRoutes.trips);
     expect(links.find((x) => x.key === "archive")?.to).toBe(adminRoutes.archive);
     expect(links.find((x) => x.key === "loadingManifests")).toBeUndefined();
-    expect(links.find((x) => x.key === "reports")).toBeUndefined();
+    expect(links.find((x) => x.key === "reports")?.to).toBe(adminRoutes.reports);
     expect(links.find((x) => x.key === "operations")?.to).toBe(adminRoutes.operations);
-    expect(links.find((x) => x.key === "sellerDispatch")?.to).toBe(adminRoutes.sellerDispatch);
+    expect(links.find((x) => x.key === "sellerDispatch")).toBeUndefined();
     expect(links.find((x) => x.key === "assignSeller")?.to).toBe(adminRoutes.assignSeller);
     expect(links.find((x) => x.key === "settings")?.to).toBe(adminRoutes.settingsCatalog);
     expect(links.find((x) => x.key === "inventory")).toBeUndefined();

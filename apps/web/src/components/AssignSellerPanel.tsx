@@ -32,6 +32,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { SellerTripAssignBlock } from "./SellerTripAssignBlock.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
@@ -173,8 +174,9 @@ export function AssignSellerPanel() {
   const sellerLabel = resolveUserLogin(sellerLoginById, assignSellerUserId);
 
   return (
-    <div className="birzha-assign-seller" role="region" aria-label="Продажи по продавцу">
-      <header className="birzha-assign-seller__hero">
+    <div className="birzha-assign-seller" role="region" aria-label="Продавец и продажи">
+      <SellerTripAssignBlock />
+      <header className="birzha-assign-seller__hero" style={{ marginTop: "1rem" }}>
         <div>
           <h2 className="birzha-assign-seller__title">Продажи по продавцу</h2>
         </div>
