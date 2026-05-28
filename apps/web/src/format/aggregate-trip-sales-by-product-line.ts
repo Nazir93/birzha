@@ -1,5 +1,5 @@
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
-import { formatNakladLineLabel } from "./batch-label.js";
+import { salesCaliberAggregateKey, salesCaliberLineLabel } from "./batch-label.js";
 import { salesBatchLinesForChannel, type SaleChannelFilter } from "./trip-sales-channel.js";
 
 function bi(x: string | undefined): bigint {
@@ -18,7 +18,7 @@ export type TripSalesByProductLineRow = {
   card: bigint;
 };
 
-/** Схлопывание `sales.byBatch` по подписи товар·калибр из накладной (как в кабинете продавца). */
+/** Схлопывание `sales.byBatch` по калибру (не по накладной/партии). */
 export function aggregateTripSalesByProductLine(
   report: ShipmentReportResponse,
   batchById: Map<string, BatchListItem>,
@@ -31,11 +31,18 @@ export function aggregateTripSalesByProductLine(
       continue;
     }
     const b = batchById.get(s.batchId);
-    const lineLabel = b ? formatNakladLineLabel(b) : "партия без накладной";
-    let row = m.get(lineLabel);
+    const key = salesCaliberAggregateKey(b, s.batchId);
+    let row = m.get(key);
     if (!row) {
-      row = { lineLabel, grams: 0n, revenue: 0n, cash: 0n, debt: 0n, card: 0n };
-      m.set(lineLabel, row);
+      row = {
+        lineLabel: salesCaliberLineLabel(b, key),
+        grams: 0n,
+        revenue: 0n,
+        cash: 0n,
+        debt: 0n,
+        card: 0n,
+      };
+      m.set(key, row);
     }
     row.grams += g;
     row.revenue += bi(s.revenueKopecks);

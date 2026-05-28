@@ -1,5 +1,5 @@
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { formatNakladLineLabel } from "./batch-label.js";
+import { formatNakladLineLabel, salesCaliberAggregateKey } from "./batch-label.js";
 import { kgNumberToGramsBigInt } from "./seller-trip-caliber-groups.js";
 import { inferPaymentKindFromSaleLine } from "./trip-sale-line-payment.js";
 
@@ -7,15 +7,7 @@ import { inferPaymentKindFromSaleLine } from "./trip-sale-line-payment.js";
 const LEGACY_SALE_GROUP_WINDOW_MS = 120_000;
 
 function caliberKeyForBatch(batch: BatchListItem | undefined, batchId: string): string {
-  if (!batch) {
-    return `__id:${batchId}`;
-  }
-  const g = batch.nakladnaya?.productGroup?.trim() ?? "";
-  const c = batch.nakladnaya?.productGradeCode?.trim() ?? "";
-  if (!g && !c) {
-    return `__id:${batchId}`;
-  }
-  return `\0${g}\0${c}`;
+  return salesCaliberAggregateKey(batch, batchId);
 }
 
 function legacySaleGroupKey(line: TripSaleLineJson, batch: BatchListItem | undefined): string {
@@ -119,4 +111,64 @@ export function groupTripSaleLinesForCorrections(
     return a.key.localeCompare(b.key);
   });
   return out;
+}
+
+export type TripSaleLinesByCaliberRow = {
+  key: string;
+  lineLabel: string;
+  totalKg: string;
+  totalPackages: string | null;
+  totalRevenueKopecks: bigint;
+  totalCashKopecks: bigint;
+  totalCardTransferKopecks: bigint;
+  totalDebtKopecks: bigint;
+  dealCount: number;
+};
+
+/** Сводка журнала продаж по калибру (без разбивки по накладным). */
+export function groupTripSaleLinesByCaliberForDisplay(
+  lines: readonly TripSaleLineJson[],
+  batchById: Map<string, BatchListItem>,
+): TripSaleLinesByCaliberRow[] {
+  const m = new Map<
+    string,
+    TripSaleLinesByCaliberRow & { totalGrams: bigint }
+  >();
+  for (const line of lines) {
+    const b = batchById.get(line.batchId);
+    const key = salesCaliberAggregateKey(b, line.batchId);
+    let row = m.get(key);
+    if (!row) {
+      row = {
+        key,
+        lineLabel: b ? formatNakladLineLabel(b) : key,
+        totalKg: "0",
+        totalPackages: null,
+        totalRevenueKopecks: 0n,
+        totalCashKopecks: 0n,
+        totalCardTransferKopecks: 0n,
+        totalDebtKopecks: 0n,
+        dealCount: 0,
+        totalGrams: 0n,
+      };
+      m.set(key, row);
+    }
+    row.totalGrams += kgNumberToGramsBigInt(Number(line.kg.replace(",", ".")));
+    row.totalRevenueKopecks += BigInt(line.revenueKopecks);
+    row.totalCashKopecks += BigInt(line.cashKopecks);
+    row.totalCardTransferKopecks += BigInt(line.cardTransferKopecks ?? "0");
+    row.totalDebtKopecks += BigInt(line.debtKopecks);
+    row.dealCount += 1;
+    if (line.packageCount) {
+      const pkg = BigInt(line.packageCount);
+      const prev = row.totalPackages ? BigInt(row.totalPackages) : 0n;
+      row.totalPackages = String(prev + pkg);
+    }
+  }
+  return [...m.values()]
+    .map(({ totalGrams, ...row }) => ({
+      ...row,
+      totalKg: gramsBigIntToKgDecimalString(totalGrams),
+    }))
+    .sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
 }

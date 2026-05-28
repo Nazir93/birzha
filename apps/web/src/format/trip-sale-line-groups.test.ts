@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { groupTripSaleLinesForCorrections } from "./trip-sale-line-groups.js";
+import { groupTripSaleLinesByCaliberForDisplay, groupTripSaleLinesForCorrections } from "./trip-sale-line-groups.js";
 
 function batch(id: string, group: string, grade: string, doc = "Н-1"): BatchListItem {
   return {
@@ -100,6 +100,21 @@ describe("groupTripSaleLinesForCorrections", () => {
     const g = groupTripSaleLinesForCorrections(lines, batchById);
     expect(g).toHaveLength(1);
     expect(g[0]!.totalKg).toBe("243");
+  });
+
+  it("groupTripSaleLinesByCaliberForDisplay суммирует выручку по калибру", () => {
+    const batchById = new Map<string, BatchListItem>([
+      ["b1", batch("b1", "Помидоры", "№5", "Умар")],
+      ["b2", batch("b2", "Помидоры", "№5", "Абдурахим")],
+    ]);
+    const lines = [
+      line({ id: "l1", batchId: "b1", revenueKopecks: "200000000" }),
+      line({ id: "l2", batchId: "b2", revenueKopecks: "200000000" }),
+    ];
+    const rows = groupTripSaleLinesByCaliberForDisplay(lines, batchById);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.totalRevenueKopecks).toBe(400000000n);
+    expect(rows[0]!.dealCount).toBe(2);
   });
 
   it("разные калибры — две группы", () => {

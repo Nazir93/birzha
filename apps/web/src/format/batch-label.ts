@@ -23,6 +23,36 @@ export function productGradeOptionLabel(code: string, displayName: string): stri
   return `${c} — ${d}`;
 }
 
+/**
+ * Ключ суммирования продаж в отчётах: только калибр, без номера накладной и партии.
+ * Две партии «№5» из разных закупок дают одну строку.
+ */
+export function salesCaliberAggregateKey(batch: BatchListItem | undefined, batchId = ""): string {
+  const code = batch?.nakladnaya?.productGradeCode?.trim();
+  if (code) {
+    return code.toLowerCase();
+  }
+  const group = batch?.nakladnaya?.productGroup?.trim();
+  if (group) {
+    return `group:${group.toLowerCase()}`;
+  }
+  return batchId ? `id:${batchId}` : "unknown";
+}
+
+/** Подпись калибра в сводках продаж. */
+export function salesCaliberLineLabel(batch: BatchListItem | undefined, aggregateKey: string): string {
+  if (batch) {
+    const full = formatNakladLineLabel(batch);
+    if (full !== "—") {
+      return full;
+    }
+  }
+  if (aggregateKey.startsWith("group:")) {
+    return aggregateKey.slice(6);
+  }
+  return aggregateKey;
+}
+
 /** Товар и калибр по данным накладной в списке партий. */
 export function formatNakladLineLabel(b: BatchListItem): string {
   const n = b.nakladnaya;

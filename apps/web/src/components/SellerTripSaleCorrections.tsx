@@ -519,11 +519,7 @@ export function SellerTripSaleCorrections({
   });
 
   if (!tripOpen) {
-    return (
-      <p className="birzha-text-muted birzha-ui-sm" style={{ marginTop: "0.75rem" }}>
-        Рейс закрыт — правки продаж недоступны. Итоги в разделе «Архив».
-      </p>
-    );
+    return null;
   }
 
   return (

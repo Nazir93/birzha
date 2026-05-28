@@ -97,6 +97,41 @@ describe("aggregateTripSalesByProductLine", () => {
     expect(rows[0]!.debt).toBe(5000n);
   });
 
+  it("склеивает партии с одним калибром из разных накладных", () => {
+    const report = minimalReport({
+      sales: {
+        ...minimalReport().sales,
+        byBatch: [
+          {
+            batchId: "b1",
+            grams: "1000000",
+            revenueKopecks: "200000000",
+            cashKopecks: "200000000",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+          {
+            batchId: "b2",
+            grams: "500000",
+            revenueKopecks: "200000000",
+            cashKopecks: "0",
+            debtKopecks: "200000000",
+            cardTransferKopecks: "0",
+          },
+        ],
+      },
+    });
+    const map = new Map<string, BatchListItem>([
+      ["b1", batch("b1", "Помидоры", "№5")],
+      ["b2", batch("b2", "Помидоры", "№5")],
+    ]);
+    map.get("b2")!.nakladnaya!.documentNumber = "Умар";
+    const rows = aggregateTripSalesByProductLine(report, map);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.revenue).toBe(400000000n);
+    expect(rows[0]!.grams).toBe(1500000n);
+  });
+
   it("фильтрует по каналу розница", () => {
     const report = minimalReport({
       sales: {

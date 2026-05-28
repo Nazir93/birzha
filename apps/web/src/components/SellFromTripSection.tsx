@@ -4,7 +4,7 @@ import {
 } from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
@@ -20,6 +20,7 @@ import { buildSellerSellChunks, sellerSellPlanBlockReason } from "../format/sell
 import { randomUuid } from "../lib/random-uuid.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
+import { sales } from "../routes.js";
 import { TRIP_STATUS_CLOSED, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import {
   buildTripBatchRows,
@@ -113,7 +114,11 @@ export function SellFromTripSection() {
     productLine: string;
   } | null>(null);
 
-  const sellerTripsListQ = useQuery(tripsFullListQueryOptions());
+  const sellerTripsListQ = useQuery({
+    ...tripsFullListQueryOptions(),
+    /** Пока продавец в форме — подхватываем закрытие рейса в админке без перезагрузки вкладки. */
+    refetchInterval: () => (typeof document !== "undefined" && document.visibilityState === "visible" ? 20_000 : false),
+  });
 
   useEffect(() => {
     setSellerSaleFlash(null);
@@ -211,14 +216,14 @@ export function SellFromTripSection() {
   const sellTripIdTrim = sellTripId.trim();
   const selectedTripOpen = useMemo(() => {
     if (!sellTripIdTrim) {
-      return true;
+      return false;
     }
-    const t = (sellerTripsListQ.data?.trips ?? []).find((x) => x.id === sellTripIdTrim);
-    return t ? isTripOpenForSellerWorkspace(t) : true;
-  }, [sellTripIdTrim, sellerTripsListQ.data?.trips]);
+    return sellerTripOptions.some((t) => t.id === sellTripIdTrim);
+  }, [sellTripIdTrim, sellerTripOptions]);
+
   const sellReportQuery = useQuery({
     ...shipmentReportQueryOptions(sellTripIdTrim),
-    enabled: sellTripIdTrim.length > 0,
+    enabled: selectedTripOpen,
   });
 
   const sellableOnTripRows = useMemo(() => {
@@ -295,12 +300,14 @@ export function SellFromTripSection() {
 
   const sellBatchSelectDisabled = useMemo(
     () =>
+      !selectedTripOpen ||
       !sellTripIdTrim ||
       (Boolean(sellTripIdTrim) && !sellReportQuery.isFetched) ||
       (sellReportQuery.isSuccess && sellableOnTripRows.length === 0) ||
       (sellReportQuery.isFetched && sellReportQuery.isError) ||
       (batchIdsOnTrip.length > 0 && batchesForTripQuery.isPending),
     [
+      selectedTripOpen,
       sellTripIdTrim,
       sellReportQuery.isFetched,
       sellReportQuery.isSuccess,
@@ -339,6 +346,9 @@ export function SellFromTripSection() {
     if (!sellTripIdTrim) {
       return "Сначала выберите рейс.";
     }
+    if (!selectedTripOpen) {
+      return "Рейс закрыт — выберите другой рейс или откройте итоги в «Архив».";
+    }
     if (!sellReportQuery.isFetched) {
       return "Загрузка остатков…";
     }
@@ -354,6 +364,7 @@ export function SellFromTripSection() {
     return "";
   }, [
     sellTripIdTrim,
+    selectedTripOpen,
     sellReportQuery.isFetched,
     sellReportQuery.isError,
     sellReportQuery.isSuccess,
@@ -429,6 +440,9 @@ export function SellFromTripSection() {
 
   /** Блок «Зафиксировать» у продавца: опт без выбора, сумма карты, лимит к выручке. */
   const sellerSellBlockReason = useMemo(() => {
+    if (sellTripIdTrim && !selectedTripOpen) {
+      return "Рейс закрыт в админке — новые продажи недоступны";
+    }
     if (saleChannel === "wholesale") {
       if (!wholesalersCatalog) {
         return null;
@@ -525,6 +539,8 @@ export function SellFromTripSection() {
     }
     return null;
   }, [
+    sellTripIdTrim,
+    selectedTripOpen,
     saleChannel,
     wholesalersCatalog,
     wholesalersQ.isPending,
@@ -791,14 +807,19 @@ export function SellFromTripSection() {
                   {formatTripSelectLabel(t)}
                 </option>
               ))}
-              {sellTripIdTrim &&
-              !sellerTripOptions.some((t) => t.id === sellTripIdTrim) ? (
-                <option value={sellTripIdTrim}>Рейс из ссылки</option>
-              ) : null}
             </select>
           )}
       </>
-      {sellTripIdTrim && sellReportQuery.isFetching && (
+      {sellTripIdTrim && !selectedTripOpen ? (
+        <BirzhaAlert variant="info" title="Рейс закрыт" role="status" className="birzha-ui-sm" style={{ marginTop: "0.65rem" }}>
+          Продажи и остатки по этому рейсу скрыты. Итоги — в разделе{" "}
+          <Link to={sales.archive} style={{ fontWeight: 600 }}>
+            «Архив»
+          </Link>
+          .
+        </BirzhaAlert>
+      ) : null}
+      {selectedTripOpen && sellReportQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
           <LoadingIndicator
             size="sm"
@@ -808,12 +829,12 @@ export function SellFromTripSection() {
           />
         </p>
       )}
-      {sellTripIdTrim && sellReportQuery.isError ? (
+      {selectedTripOpen && sellReportQuery.isError ? (
         <WarningAlert title="Данные рейса">
           Не удалось загрузить остатки по рейсу. Повторите позже или обратитесь к администратору.
         </WarningAlert>
       ) : null}
-      {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
+      {selectedTripOpen && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
         <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
           <BirzhaEmptyState
             compact
@@ -821,11 +842,12 @@ export function SellFromTripSection() {
           />
         </div>
       )}
-      {sellTripIdTrim && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
+      {selectedTripOpen && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
           <LoadingIndicator size="sm" label="Загрузка калибров…" />
         </p>
       )}
+      {selectedTripOpen ? (
       <fieldset
           className="birzha-seller-caliber-fieldset"
           style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
@@ -876,6 +898,9 @@ export function SellFromTripSection() {
             </>
           )}
         </fieldset>
+      ) : null}
+      {selectedTripOpen ? (
+        <>
       {sellSelectionSummary && (
         <p
           className="birzha-callout-info"
@@ -1063,7 +1088,9 @@ export function SellFromTripSection() {
         {sell.isPending ? "Сохранение…" : "Зафиксировать продажу"}
       </button>
       <FieldError error={sell.error as Error | null} />
-      {sellTripIdTrim ? (
+        </>
+      ) : null}
+      {selectedTripOpen && sellTripIdTrim ? (
         <SellerTripSaleCorrections
           tripId={sellTripIdTrim}
           tripOpen={selectedTripOpen}

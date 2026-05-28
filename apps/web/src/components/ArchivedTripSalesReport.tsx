@@ -3,14 +3,8 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { formatNakladLineLabel } from "../format/batch-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { sortTripSaleLinesNewestFirst } from "../format/trip-sale-line-order.js";
-import {
-  formatSellerCorrectionSaleMeta,
-  formatTripSaleLinePaymentLabel,
-} from "../format/trip-sale-line-display.js";
-import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
+import { groupTripSaleLinesByCaliberForDisplay } from "../format/trip-sale-line-groups.js";
 import {
   batchesByIdsQueryOptions,
   batchesFullListQueryOptions,
@@ -23,43 +17,32 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
-function formatSaleRecordedAtRu(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) {
-    return iso;
-  }
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function TripSaleLinesReadOnlyTable({
+function TripSalesByCaliberTable({
   lines,
   batchById,
 }: {
   lines: readonly TripSaleLineJson[];
   batchById: Map<string, BatchListItem>;
 }) {
-  const sorted = useMemo(() => sortTripSaleLinesNewestFirst([...lines]), [lines]);
+  const rows = useMemo(
+    () => groupTripSaleLinesByCaliberForDisplay(lines, batchById),
+    [lines, batchById],
+  );
 
-  if (sorted.length === 0) {
+  if (rows.length === 0) {
     return <BirzhaEmptyState compact title="По этому рейсу нет зафиксированных продаж" />;
   }
 
   return (
     <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-      <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Журнал продаж по рейсу">
+      <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Продажи по калибру">
         <thead>
           <tr>
             <th scope="col" style={thHead}>
-              Когда
+              Калибр
             </th>
             <th scope="col" style={thHead}>
-              Калибр
+              Сделок
             </th>
             <th scope="col" style={thHead}>
               кг
@@ -71,35 +54,25 @@ function TripSaleLinesReadOnlyTable({
               Сумма
             </th>
             <th scope="col" style={thHead}>
-              Оплата
-            </th>
-            <th scope="col" style={thHead}>
-              Канал / клиент
+              Нал / карта / долг
             </th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((line) => {
-            const b = batchById.get(line.batchId);
-            const headline = b ? formatNakladLineLabel(b) : "—";
-            const client =
-              line.saleChannel === "wholesale"
-                ? formatTripSaleClientDisplayLabel(line.clientLabel, "wholesale")
-                : "Розница";
-            return (
-              <tr key={line.id}>
-                <td style={thtd}>{formatSaleRecordedAtRu(line.recordedAt)}</td>
-                <td style={thtd}>
-                  <span title={formatSellerCorrectionSaleMeta(line)}>{headline}</span>
-                </td>
-                <td style={thtd}>{line.kg}</td>
-                <td style={thtd}>{line.packageCount ?? "—"}</td>
-                <td style={thtd}>{kopecksToRubLabel(line.revenueKopecks)} ₽</td>
-                <td style={thtd}>{formatTripSaleLinePaymentLabel(line)}</td>
-                <td style={thtd}>{client}</td>
-              </tr>
-            );
-          })}
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td style={thtd}>{row.lineLabel}</td>
+              <td style={thtd}>{row.dealCount}</td>
+              <td style={thtd}>{row.totalKg}</td>
+              <td style={thtd}>{row.totalPackages ?? "—"}</td>
+              <td style={thtd}>{kopecksToRubLabel(row.totalRevenueKopecks.toString())} ₽</td>
+              <td style={thtd}>
+                {kopecksToRubLabel(row.totalCashKopecks.toString())} /{" "}
+                {kopecksToRubLabel(row.totalCardTransferKopecks.toString())} /{" "}
+                {kopecksToRubLabel(row.totalDebtKopecks.toString())}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -197,15 +170,15 @@ export function ArchivedTripSalesReport({
       <FieldSellerTripReport report={report} batchById={batchById} />
 
       <h4 className="birzha-form-label" style={{ margin: "1.25rem 0 0.5rem", fontSize: "0.95rem" }}>
-        Журнал продаж (каждая сделка)
+        Продажи по калибру (сумма по рейсу)
       </h4>
       {linesQ.isError ? (
         <ErrorAlert
-          title="Журнал продаж"
+          title="Продажи по калибру"
           message="Не удалось загрузить список сделок. Сводка выше может быть неполной."
         />
       ) : (
-        <TripSaleLinesReadOnlyTable lines={linesQ.data?.lines ?? []} batchById={batchById} />
+        <TripSalesByCaliberTable lines={linesQ.data?.lines ?? []} batchById={batchById} />
       )}
     </div>
   );
