@@ -111,9 +111,6 @@ export function SellerTripAssignBlock() {
         </h3>
       }
     >
-      <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
-        Свободный рейс (ещё без продавца). После закрепления продавец увидит рейс в кабинете <strong>/s</strong>.
-      </p>
       <label htmlFor="assign-block-seller" className="birzha-form-label birzha-form-label--block">
         Продавец *
       </label>

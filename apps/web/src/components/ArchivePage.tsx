@@ -399,14 +399,9 @@ export function ArchivePage() {
 
   return (
     <section className="birzha-card" aria-labelledby="archive-heading">
-      <h2 id="archive-heading" style={{ margin: "0 0 0.35rem", fontSize: "1.1rem" }}>
+      <h2 id="archive-heading" style={{ margin: "0 0 1rem", fontSize: "1.1rem" }}>
         Архив
       </h2>
-      <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 1rem" }}>
-        {salesMode
-          ? "Закрытые рейсы, закреплённые за вами: в таблице — итог продаж, по ссылке «Все продажи» — полный отчёт и журнал сделок."
-          : "Закрытые рейсы: все продажи сохраняются здесь после закрытия. В таблице — итог; «Все продажи» или номер рейса — сводка и каждая сделка."}
-      </p>
 
       {loading && <LoadingBlock label="Загрузка архива…" minHeight={80} skeleton skeletonRows={5} />}
 

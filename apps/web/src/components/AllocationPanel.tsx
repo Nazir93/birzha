@@ -700,12 +700,6 @@ export function AllocationPanel() {
         </p>
       ) : null}
 
-      {!loading && allEligibleStockReserved ? (
-        <InfoAlert title="Остаток уже в погрузочных накладных">
-          Свободных партий для нового отбора нет — остаток учтён в сохранённых погрузочных накладных. Откройте нужную в
-          таблице выше.
-        </InfoAlert>
-      ) : null}
       {!loading && !viewingSaved && batchesOnWarehouseWithoutWarehouse.length > 0 ? (
         <InfoAlert title="У партий не указан склад">
           На складе числится остаток ({batchesOnWarehouseWithoutWarehouse.length} парт.) без привязки к складу в системе.
@@ -836,17 +830,12 @@ export function AllocationPanel() {
                     borderTop: "1px solid var(--color-border)",
                   }}
                 >
-                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-                    {tableRows.length > 0 ? (
-                      <>
-                        В отборе: <strong>{tableRows.length}</strong> парт.,{" "}
-                        <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
-                        Когда списали лишнее и отметили накладные — переходите к погрузочной.
-                      </>
-                    ) : (
-                      <>Отметьте накладные закупки выше или дождитесь остатка после списания.</>
-                    )}
-                  </p>
+                  {tableRows.length > 0 ? (
+                    <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+                      В отборе: <strong>{tableRows.length}</strong> парт.,{" "}
+                      <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
+                    </p>
+                  ) : null}
                   <button
                     type="button"
                     style={btnStyle}
@@ -857,12 +846,6 @@ export function AllocationPanel() {
                   </button>
                 </div>
               </BirzhaDisclosure>
-
-              {!manifestFormOpen ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }} role="status">
-                  Раздел «Погрузочная накладная» откроется после кнопки «Готово».
-                </p>
-              ) : null}
 
               {manifestFormOpen ? (
               <div
@@ -980,11 +963,7 @@ export function AllocationPanel() {
                     title="Сохранение"
                   />
                 ) : null}
-                {tableRows.length === 0 ? (
-                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-                    Отметьте накладные закупки выше — в погрузочную попадёт остаток после списания.
-                  </p>
-                ) : (
+                {tableRows.length > 0 ? (
                   <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
                     В накладную: <strong>{tableRows.length}</strong> парт.,{" "}
                     <strong>
@@ -994,7 +973,7 @@ export function AllocationPanel() {
                     </strong>{" "}
                     кг · {labelDest[manifestDestinationCode] ?? manifestDestinationCode}
                   </p>
-                )}
+                ) : null}
               </div>
               ) : null}
             </>
