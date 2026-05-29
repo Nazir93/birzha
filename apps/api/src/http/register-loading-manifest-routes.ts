@@ -16,6 +16,7 @@ import {
   loadingManifestTripAssignLock,
   loadingManifestTripAssignLockMessage,
 } from "../application/trip/loading-manifest-trip-assign-lock.js";
+import { DeleteLoadingManifestUseCase } from "../application/trip/delete-loading-manifest.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
 import {
@@ -54,6 +55,7 @@ export function registerLoadingManifestRoutes(
   /** Для POST assign-trip: синхронизация отгрузки в рейс по строкам ПН (иначе только запись trip_id). */
   tripRead?: TripRepository,
 ): void {
+  const deleteLoadingManifest = new DeleteLoadingManifestUseCase(db);
   app.post("/loading-manifests", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
       const body = createLoadingManifestBodySchema.parse(req.body);
@@ -422,4 +424,18 @@ export function registerLoadingManifestRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.delete(
+    "/loading-manifests/:manifestId",
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const { manifestId } = z.object({ manifestId: z.string().min(1) }).parse(req.params);
+        await deleteLoadingManifest.execute(manifestId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 }

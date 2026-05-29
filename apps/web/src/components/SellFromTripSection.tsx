@@ -811,13 +811,15 @@ export function SellFromTripSection() {
           )}
       </>
       {sellTripIdTrim && !selectedTripOpen ? (
-        <BirzhaAlert variant="info" title="Рейс закрыт" role="status" className="birzha-ui-sm" style={{ marginTop: "0.65rem" }}>
-          Продажи и остатки по этому рейсу скрыты. Итоги — в разделе{" "}
-          <Link to={sales.archive} style={{ fontWeight: 600 }}>
-            «Архив»
-          </Link>
-          .
-        </BirzhaAlert>
+        <div style={{ marginTop: "0.65rem" }}>
+          <BirzhaAlert variant="info" title="Рейс закрыт" role="status" className="birzha-ui-sm">
+            Продажи и остатки по этому рейсу скрыты. Итоги — в разделе{" "}
+            <Link to={sales.archive} style={{ fontWeight: 600 }}>
+              «Архив»
+            </Link>
+            .
+          </BirzhaAlert>
+        </div>
       ) : null}
       {selectedTripOpen && sellReportQuery.isFetching && (
         <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">

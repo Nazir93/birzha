@@ -9,14 +9,13 @@ import type {
 } from "../api/types.js";
 import {
   productGradesFullListQueryOptions,
-  purchaseDocumentsFullListQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
   warehousesFullListQueryOptions,
   wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { adminRoutes, purchaseNakladnayaDocumentPath } from "../routes.js";
+import { adminRoutes } from "../routes.js";
 import { Link } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -49,8 +48,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const [wholesalerFormError, setWholesalerFormError] = useState<string | null>(null);
   const [newWholesalerName, setNewWholesalerName] = useState("");
   const [newWholesalerOrder, setNewWholesalerOrder] = useState("");
-  const [nakladError, setNakladError] = useState<string | null>(null);
-
   useEffect(() => {
     if (hash !== "#inv-product-grades") {
       return;
@@ -77,7 +74,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
 
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
   const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
-  const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
     enabled: enabled && shipDestEnabled,
@@ -85,22 +81,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const wholesalersQ = useQuery({
     ...wholesalersFullListQueryOptions(),
     enabled: enabled && wholesalersEnabled,
-  });
-
-  const deletePurchaseDocument = useMutation({
-    mutationFn: async (documentId: string) => {
-      setNakladError(null);
-      await apiDeleteOr403(
-        `/api/purchase-documents/${encodeURIComponent(documentId)}`,
-        "Недостаточно прав: удаление накладных — только admin/manager (инвентарь).",
-      );
-    },
-    onSuccess: () => {
-      invalidate();
-    },
-    onError: (e: Error) => {
-      setNakladError(e.message);
-    },
   });
 
   const createShipDest = useMutation({
@@ -298,69 +278,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           </nav>
         </header>
       ) : null}
-
-      <BirzhaDisclosure
-        defaultOpen
-        title={
-          <span className="birzha-disclosure__title-stack">
-            <span className="birzha-section-heading__eyebrow">Закупки</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Закупочные накладные (удаление)</span>
-          </span>
-        }
-      >
-      {nakladError ? <ErrorAlert message={nakladError} title="Накладная" /> : null}
-      {purchaseDocsQ.isError ? <ErrorAlert error={purchaseDocsQ.error} title="Накладные" /> : null}
-      {purchaseDocsQ.isPending && (
-        <LoadingBlock label="Список накладных…" minHeight={48} skeleton skeletonRows={3} />
-      )}
-      {purchaseDocsQ.isSuccess && (
-        <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.75rem" }}>
-          <table style={{ ...tableStyle, minWidth: 520 }}>
-            <thead>
-              <tr>
-                <th style={thHeadDense}>№</th>
-                <th style={thHeadDense}>Дата</th>
-                <th style={thHeadDense}>Строк</th>
-                <th style={thHeadDense} />
-              </tr>
-            </thead>
-            <tbody>
-              {(purchaseDocsQ.data.purchaseDocuments ?? [])
-                .slice()
-                .sort((a, b) => a.documentNumber.localeCompare(b.documentNumber, "ru", { numeric: true }))
-                .map((d) => (
-                  <tr key={d.id}>
-                    <td style={thtdDense}>№ {d.documentNumber}</td>
-                    <td style={thtdDense}>{d.docDate}</td>
-                    <td style={thtdDense}>{d.lineCount}</td>
-                    <td style={thtdDense}>
-                      <button
-                        type="button"
-                        className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                        disabled={deletePurchaseDocument.isPending}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Удалить накладную № ${d.documentNumber} и все связанные партии/движения? Неотвратимо для учёта.`,
-                            )
-                          ) {
-                            void deletePurchaseDocument.mutate(d.id);
-                          }
-                        }}
-                      >
-                        Удалить
-                      </button>{" "}
-                      <Link to={purchaseNakladnayaDocumentPath(d.id, "admin")} style={{ fontSize: "0.86rem" }}>
-                        карточка
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      </BirzhaDisclosure>
 
       {shipDestEnabled && (
         <>

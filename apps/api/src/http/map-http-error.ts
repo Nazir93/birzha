@@ -11,6 +11,8 @@ import {
   InsufficientStockForTripError,
   ProductGradeCodeConflictError,
   ProductGradeNotFoundError,
+  LoadingManifestNotEmptyError,
+  LoadingManifestNotFoundError,
   PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
   ResourceInUseError,
@@ -62,6 +64,19 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "purchase_document_not_found",
       documentId: error.documentId,
+    });
+  }
+  if (error instanceof LoadingManifestNotFoundError) {
+    return reply.code(404).send({
+      error: "loading_manifest_not_found",
+      manifestId: error.manifestId,
+    });
+  }
+  if (error instanceof LoadingManifestNotEmptyError) {
+    return reply.code(409).send({
+      error: "loading_manifest_not_empty",
+      manifestId: error.manifestId,
+      message: error.message,
     });
   }
   if (error instanceof SeededResourceDeleteForbiddenError) {

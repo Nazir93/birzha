@@ -45,6 +45,9 @@ const InventoryAdminPanel = lazy(() =>
 const SettingsAdminLayout = lazy(() =>
   import("./components/SettingsAdminLayout.js").then((m) => ({ default: m.SettingsAdminLayout })),
 );
+const SettingsDocumentsAdminPanel = lazy(() =>
+  import("./components/SettingsDocumentsAdminPanel.js").then((m) => ({ default: m.SettingsDocumentsAdminPanel })),
+);
 const SellerCabinetHome = lazy(() =>
   import("./components/SellerCabinetHome.js").then((m) => ({ default: m.SellerCabinetHome })),
 );
@@ -146,6 +149,7 @@ export function App() {
             >
               <Route index element={<Navigate to="catalog" replace />} />
               <Route path="catalog" element={<InventoryAdminPanel embedded />} />
+              <Route path="documents" element={<SettingsDocumentsAdminPanel embedded />} />
               <Route path="team" element={<AdminUsersPanel embedded />} />
             </Route>
             <Route path="inventory" element={<Navigate to="../settings/catalog" replace />} />

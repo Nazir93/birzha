@@ -23,6 +23,9 @@ export function SettingsAdminLayout() {
         <NavLink to={adminRoutes.settingsCatalog} className={tabClassName} end>
           Склады и калибры
         </NavLink>
+        <NavLink to={adminRoutes.settingsDocuments} className={tabClassName}>
+          Накладные
+        </NavLink>
         <NavLink to={adminRoutes.settingsTeam} className={tabClassName}>
           Сотрудники
         </NavLink>

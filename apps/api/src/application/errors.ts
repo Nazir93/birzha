@@ -163,6 +163,33 @@ export class PurchaseDocumentNotFoundError extends Error {
   }
 }
 
+export class LoadingManifestNotFoundError extends Error {
+  readonly manifestId: string;
+
+  constructor(manifestId: string) {
+    super(`Погрузочная накладная не найдена: ${manifestId}`);
+    this.name = "LoadingManifestNotFoundError";
+    this.manifestId = manifestId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/** Удаление запрещено: по накладной уже есть отгрузка в рейс. */
+export class LoadingManifestNotEmptyError extends Error {
+  readonly manifestId: string;
+  readonly reason: string;
+
+  constructor(manifestId: string, reason: string) {
+    super(
+      `Погрузочную накладную ${manifestId} нельзя удалить: ${reason}`,
+    );
+    this.name = "LoadingManifestNotEmptyError";
+    this.manifestId = manifestId;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /**
  * Сущность нельзя удалить: на неё ссылаются накладные, партии, рейс и т.п.
  * Текст для пользователя/логов.

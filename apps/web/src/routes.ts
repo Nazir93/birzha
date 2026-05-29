@@ -57,6 +57,7 @@ export const adminRoutes = {
   /** Настройки: справочники и сотрудники. */
   settings: `${prefix.admin}/settings`,
   settingsCatalog: `${prefix.admin}/settings/catalog`,
+  settingsDocuments: `${prefix.admin}/settings/documents`,
   settingsTeam: `${prefix.admin}/settings/team`,
   /** Редиректы со старых URL. */
   inventory: `${prefix.admin}/inventory`,

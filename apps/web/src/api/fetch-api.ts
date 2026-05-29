@@ -260,3 +260,25 @@ export async function deleteTripById(tripId: string, messageOn403: string): Prom
   }
   await assertOkResponse(res, url);
 }
+
+/**
+ * `DELETE /api/loading-manifests/:id` — только admin; 409 если товар уже в рейсе.
+ */
+export async function deleteLoadingManifestById(manifestId: string, messageOn403: string): Promise<void> {
+  const url = `/api/loading-manifests/${encodeURIComponent(manifestId)}`;
+  const res = await apiFetch(url, { method: "DELETE" });
+  if (res.status === 403) {
+    throw new Error(messageOn403);
+  }
+  if (res.status === 409) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    if (j.error === "loading_manifest_not_empty" && j.message) {
+      throw new Error(j.message);
+    }
+    if (j.message) {
+      throw new Error(j.message);
+    }
+    throw new Error("Погрузочную накладную нельзя удалить: товар уже отгружен в рейс.");
+  }
+  await assertOkResponse(res, url);
+}
