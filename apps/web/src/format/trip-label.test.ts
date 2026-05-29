@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatTripListStatusLabel, formatTripSelectLabel, formatTripStatusLabel } from "./trip-label.js";
+import { formatTripListStatusLabel, formatTripSelectLabel, formatTripStatusLabel, buildTripDisplayNumber } from "./trip-label.js";
 
 const baseTrip = {
   id: "trip-1",
@@ -82,7 +82,19 @@ describe("trip-label", () => {
     });
     expect(label).toContain("10.05.2026");
     expect(label).toContain("Иванов");
+    expect(label).toContain("А111");
+    expect(label).not.toContain("М-7");
     expect(label).not.toContain("trip-1");
+  });
+
+  it("buildTripDisplayNumber собирает водитель · машина · дата", () => {
+    expect(
+      buildTripDisplayNumber({
+        driverName: "Петров",
+        vehicleLabel: "К123АА",
+        departedAt: "2026-05-10T08:00:00.000Z",
+      }),
+    ).toBe("Петров · К123АА · 10.05.2026");
   });
 
   it("по умолчанию без технического id", () => {
@@ -97,10 +109,11 @@ describe("trip-label", () => {
         ...baseTrip,
         tripNumber: "Р-12",
         vehicleLabel: "Камаз",
+        driverName: "Сидоров",
         departedAt: "2026-05-10T08:00:00.000Z",
       },
       { includeTechnicalId: true },
     );
-    expect(label).toBe("Р-12 (Открыт) 10.05.2026 Камаз — trip-1");
+    expect(label).toBe("Сидоров · Камаз · 10.05.2026 (Открыт) — trip-1");
   });
 });

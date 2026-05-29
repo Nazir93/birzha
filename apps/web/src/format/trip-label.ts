@@ -61,19 +61,26 @@ export function formatTripStatusLabel(status: string): string {
   return status;
 }
 
-/** Опции подписи рейса в `<select>` и списках. */
-export type FormatTripSelectLabelOptions = {
-  /** Показывать технический id в конце (только для отладки; в UI не используем). */
-  includeTechnicalId?: boolean;
-};
-
-/** Подпись рейса в селекторах: номер, статус, дата выезда (если есть), ТС/водитель. */
-export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
-  const bits: string[] = [t.tripNumber, `(${formatTripListStatusLabel(t)})`];
-  if (t.departedAt) {
-    const ms = Date.parse(t.departedAt);
+/** Подпись рейса для UI: водитель · машина · дата (без отдельного «номера рейса»). */
+export function buildTripDisplayNumber(input: {
+  driverName?: string | null;
+  vehicleLabel?: string | null;
+  departedAt?: string | null;
+}): string {
+  const parts: string[] = [];
+  const dr = input.driverName?.trim();
+  const vl = input.vehicleLabel?.trim();
+  if (dr) {
+    parts.push(dr);
+  }
+  if (vl) {
+    parts.push(vl);
+  }
+  const dep = input.departedAt?.trim();
+  if (dep) {
+    const ms = Date.parse(dep);
     if (!Number.isNaN(ms)) {
-      bits.push(
+      parts.push(
         new Date(ms).toLocaleDateString("ru-RU", {
           day: "2-digit",
           month: "2-digit",
@@ -82,15 +89,43 @@ export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelO
       );
     }
   }
-  if (t.vehicleLabel) {
-    bits.push(t.vehicleLabel);
+  if (parts.length === 0) {
+    return "Рейс";
   }
-  if (t.driverName) {
-    bits.push(t.driverName);
+  return parts.join(" · ");
+}
+
+/** Дата/время отправления для таблиц. */
+export function formatTripDepartedAtRu(iso: string | null | undefined): string {
+  if (!iso?.trim()) {
+    return "—";
   }
-  const head = bits.join(" ");
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) {
+    return "—";
+  }
+  return new Date(ms).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Опции подписи рейса в `<select>` и списках. */
+export type FormatTripSelectLabelOptions = {
+  /** Показывать технический id в конце (только для отладки; в UI не используем). */
+  includeTechnicalId?: boolean;
+};
+
+/** Подпись рейса в селекторах: водитель, машина, дата, статус. */
+export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
+  const display = buildTripDisplayNumber(t);
+  const head = display === "Рейс" ? t.tripNumber : display;
+  const label = `${head} (${formatTripListStatusLabel(t)})`;
   if (opts?.includeTechnicalId === true) {
-    return `${head} — ${t.id}`;
+    return `${label} — ${t.id}`;
   }
-  return head;
+  return label;
 }

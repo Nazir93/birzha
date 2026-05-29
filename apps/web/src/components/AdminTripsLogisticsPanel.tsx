@@ -3,9 +3,9 @@ import { useCallback, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
-import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
+import { formatTripDepartedAtRu, formatTripListStatusLabel, tripListFullySold, buildTripDisplayNumber } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
-import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
+import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
@@ -27,7 +27,6 @@ export function AdminTripsLogisticsPanel() {
   const showCloseTrip = canCreateTrip(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
-  const [newTripNumber, setNewTripNumber] = useState("");
   const [newTripVehicle, setNewTripVehicle] = useState("");
   const [newTripDriver, setNewTripDriver] = useState("");
   const [newTripDeparted, setNewTripDeparted] = useState("");
@@ -47,7 +46,7 @@ export function AdminTripsLogisticsPanel() {
 
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const openTrips = useMemo(
-    () => sortTripsByTripNumberNumericAsc(filterTripsInWork(tripsQ.data?.trips ?? [])),
+    () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
     [tripsQ.data?.trips],
   );
 
@@ -55,40 +54,40 @@ export function AdminTripsLogisticsPanel() {
     mutationFn: async () => {
       setTripError(null);
       const id = randomUuid();
-      const tripNumber = newTripNumber.trim();
-      if (!tripNumber) {
-        throw new Error("Укажите номер рейса");
-      }
-      const body: {
-        id: string;
-        tripNumber: string;
-        vehicleLabel?: string | null;
-        driverName?: string | null;
-        departedAt?: string | null;
-      } = { id, tripNumber };
-      const vl = newTripVehicle.trim();
-      if (vl) {
-        body.vehicleLabel = vl;
-      }
       const dr = newTripDriver.trim();
-      if (dr) {
-        body.driverName = dr;
+      const vl = newTripVehicle.trim();
+      if (!dr) {
+        throw new Error("Укажите водителя");
       }
-      if (newTripDeparted) {
-        const t = new Date(newTripDeparted);
-        if (Number.isNaN(t.getTime())) {
-          throw new Error("Неверная дата/время отправления");
-        }
-        body.departedAt = t.toISOString();
+      if (!vl) {
+        throw new Error("Укажите номер машины");
       }
+      if (!newTripDeparted) {
+        throw new Error("Укажите дату отправления");
+      }
+      const t = new Date(newTripDeparted);
+      if (Number.isNaN(t.getTime())) {
+        throw new Error("Неверная дата/время отправления");
+      }
+      const departedAt = t.toISOString();
+      const tripNumber = buildTripDisplayNumber({
+        driverName: dr,
+        vehicleLabel: vl,
+        departedAt,
+      });
       await apiPostJsonOr403(
         "/api/trips",
-        body,
+        {
+          id,
+          tripNumber,
+          vehicleLabel: vl,
+          driverName: dr,
+          departedAt,
+        },
         "Нет прав: создание рейса — роли admin, manager, logistics",
       );
     },
     onSuccess: () => {
-      setNewTripNumber("");
       setNewTripVehicle("");
       setNewTripDriver("");
       setNewTripDeparted("");
@@ -168,38 +167,28 @@ export function AdminTripsLogisticsPanel() {
         {tripError ? <ErrorAlert message={tripError} title="Рейс" /> : null}
         <div className="birzha-inventory-logistics-form">
           <div className="birzha-inventory-logistics-form__field">
-            <label className="birzha-field-label">№ рейса</label>
-            <input
-              value={newTripNumber}
-              onChange={(e) => setNewTripNumber(e.target.value)}
-              style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-              placeholder="Ф-12"
-              autoComplete="off"
-            />
-          </div>
-          <div className="birzha-inventory-logistics-form__field">
-            <label className="birzha-field-label">ТС</label>
-            <input
-              value={newTripVehicle}
-              onChange={(e) => setNewTripVehicle(e.target.value)}
-              style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-              placeholder="опц."
-              autoComplete="off"
-            />
-          </div>
-          <div className="birzha-inventory-logistics-form__field">
             <label className="birzha-field-label">Водитель</label>
             <input
               value={newTripDriver}
               onChange={(e) => setNewTripDriver(e.target.value)}
               style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
-              placeholder="опц."
+              placeholder="Фамилия"
+              autoComplete="off"
+            />
+          </div>
+          <div className="birzha-inventory-logistics-form__field">
+            <label className="birzha-field-label">Номер машины</label>
+            <input
+              value={newTripVehicle}
+              onChange={(e) => setNewTripVehicle(e.target.value)}
+              style={{ ...fieldStyle, width: "100%", maxWidth: "100%", minWidth: 0 }}
+              placeholder="А123ВС 77"
               autoComplete="off"
             />
           </div>
           <div className="birzha-inventory-logistics-form__field birzha-inventory-logistics-form__field--datetime">
             <label htmlFor="trips-log-new-departed" className="birzha-field-label">
-              Отправление
+              Дата отправления
             </label>
             <BirzhaDateTimeField
               id="trips-log-new-departed"
@@ -233,10 +222,10 @@ export function AdminTripsLogisticsPanel() {
             <table style={{ ...tableStyle, minWidth: 720 }}>
               <thead>
                 <tr>
-                  <th style={thHeadDense}>№ (борт)</th>
-                  <th style={thHeadDense}>Статус</th>
-                  <th style={thHeadDense}>ТС</th>
                   <th style={thHeadDense}>Водитель</th>
+                  <th style={thHeadDense}>Машина</th>
+                  <th style={thHeadDense}>Отправление</th>
+                  <th style={thHeadDense}>Статус</th>
                   <th style={thHeadDense}>Действия</th>
                 </tr>
               </thead>
@@ -250,12 +239,9 @@ export function AdminTripsLogisticsPanel() {
                 ) : null}
                 {openTrips.map((t) => (
                   <tr key={t.id}>
-                    <td style={thtdDense}>
-                      <strong>№ {t.tripNumber}</strong>{" "}
-                      <Link to={operationsPath} style={{ fontSize: "0.8rem" }}>
-                        к операциям
-                      </Link>
-                    </td>
+                    <td style={thtdDense}>{t.driverName ?? "—"}</td>
+                    <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
+                    <td style={thtdDense}>{formatTripDepartedAtRu(t.departedAt)}</td>
                     <td style={thtdDense}>
                       <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
                       {tripListFullySold(t) ? (
@@ -266,9 +252,10 @@ export function AdminTripsLogisticsPanel() {
                           Остаток погруженного 0
                         </span>
                       ) : null}
+                      <Link to={operationsPath} style={{ display: "block", fontSize: "0.8rem", marginTop: "0.2rem" }}>
+                        к операциям
+                      </Link>
                     </td>
-                    <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
-                    <td style={thtdDense}>{t.driverName ?? "—"}</td>
                     <td style={thtdDense}>
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
                         {showCloseTrip && t.status === "open" ? (
@@ -286,9 +273,10 @@ export function AdminTripsLogisticsPanel() {
                           className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                           disabled={deleteTrip.isPending}
                           onClick={() => {
+                            const caption = buildTripDisplayNumber(t);
                             if (
                               window.confirm(
-                                `Удалить пустой рейс «${t.tripNumber}»? Если в нём были отгрузки — ответит ошибкой.`,
+                                `Удалить рейс «${caption === "Рейс" ? t.tripNumber : caption}»? Если в нём были отгрузки — ответит ошибкой.`,
                               )
                             ) {
                               void deleteTrip.mutate(t.id);

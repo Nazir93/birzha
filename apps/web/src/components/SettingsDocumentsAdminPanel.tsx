@@ -20,8 +20,8 @@ import {
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes } from "../routes.js";
-import { formatTripListStatusLabel } from "../format/trip-label.js";
-import { sortTripsByTripNumberNumericAsc } from "../format/trip-sort.js";
+import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/trip-label.js";
+import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -191,28 +191,22 @@ type TripRowProps = {
   trip: TripJson;
   saving: boolean;
   deleting: boolean;
-  onSave: (
-    id: string,
-    draft: { tripNumber: string; vehicleLabel: string; driverName: string; departedLocal: string },
-  ) => void;
+  onSave: (id: string, draft: { vehicleLabel: string; driverName: string; departedLocal: string }) => void;
   onDelete: (trip: TripJson, busy: boolean) => void;
 };
 
 function TripRow({ trip, saving, deleting, onSave, onDelete }: TripRowProps) {
-  const [tripNumber, setTripNumber] = useState(trip.tripNumber);
   const [vehicleLabel, setVehicleLabel] = useState(trip.vehicleLabel ?? "");
   const [driverName, setDriverName] = useState(trip.driverName ?? "");
   const [departedLocal, setDepartedLocal] = useState(isoToDatetimeLocal(trip.departedAt));
 
   useEffect(() => {
-    setTripNumber(trip.tripNumber);
     setVehicleLabel(trip.vehicleLabel ?? "");
     setDriverName(trip.driverName ?? "");
     setDepartedLocal(isoToDatetimeLocal(trip.departedAt));
-  }, [trip.tripNumber, trip.vehicleLabel, trip.driverName, trip.departedAt]);
+  }, [trip.vehicleLabel, trip.driverName, trip.departedAt]);
 
   const dirty =
-    tripNumber.trim() !== trip.tripNumber ||
     vehicleLabel.trim() !== (trip.vehicleLabel ?? "").trim() ||
     driverName.trim() !== (trip.driverName ?? "").trim() ||
     departedLocal !== isoToDatetimeLocal(trip.departedAt);
@@ -222,22 +216,19 @@ function TripRow({ trip, saving, deleting, onSave, onDelete }: TripRowProps) {
   return (
     <tr>
       <td style={thtdDense}>
-        <input value={tripNumber} onChange={(e) => setTripNumber(e.target.value)} style={compactField} />
+        <input
+          value={driverName}
+          onChange={(e) => setDriverName(e.target.value)}
+          style={compactField}
+          placeholder="Водитель"
+        />
       </td>
       <td style={thtdDense}>
         <input
           value={vehicleLabel}
           onChange={(e) => setVehicleLabel(e.target.value)}
           style={compactField}
-          placeholder="ТС"
-        />
-      </td>
-      <td style={thtdDense}>
-        <input
-          value={driverName}
-          onChange={(e) => setDriverName(e.target.value)}
-          style={compactField}
-          placeholder="Водитель"
+          placeholder="Машина"
         />
       </td>
       <td style={thtdDense}>
@@ -256,7 +247,6 @@ function TripRow({ trip, saving, deleting, onSave, onDelete }: TripRowProps) {
           disabled={!dirty || saving || deleting}
           onClick={() =>
             onSave(trip.id, {
-              tripNumber: tripNumber.trim(),
               vehicleLabel: vehicleLabel.trim(),
               driverName: driverName.trim(),
               departedLocal,
@@ -384,34 +374,43 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
 
   const handleSaveTrip = async (
     id: string,
-    draft: { tripNumber: string; vehicleLabel: string; driverName: string; departedLocal: string },
+    draft: { vehicleLabel: string; driverName: string; departedLocal: string },
   ) => {
-    if (!draft.tripNumber) {
-      setPageError("Укажите номер рейса.");
+    if (!draft.driverName.trim()) {
+      setPageError("Укажите водителя.");
+      return;
+    }
+    if (!draft.vehicleLabel.trim()) {
+      setPageError("Укажите номер машины.");
       return;
     }
     setPageError(null);
     setSavingTripId(id);
     try {
       const t = tripsQ.data?.trips.find((x) => x.id === id);
+      const vl = draft.vehicleLabel.trim();
+      const dr = draft.driverName.trim();
+      const depIso = draft.departedLocal.trim() ? datetimeLocalToIso(draft.departedLocal) : null;
       const body: {
         tripNumber?: string;
         vehicleLabel?: string | null;
         driverName?: string | null;
         departedAt?: string | null;
       } = {};
-      if (t && draft.tripNumber !== t.tripNumber) {
-        body.tripNumber = draft.tripNumber;
+      const displayNumber = buildTripDisplayNumber({
+        driverName: dr,
+        vehicleLabel: vl,
+        departedAt: depIso,
+      });
+      if (t && displayNumber !== t.tripNumber) {
+        body.tripNumber = displayNumber;
       }
-      const vl = draft.vehicleLabel.trim() || null;
-      if (t && vl !== (t.vehicleLabel?.trim() || null)) {
+      if (t && vl !== (t.vehicleLabel?.trim() || "")) {
         body.vehicleLabel = vl;
       }
-      const dr = draft.driverName.trim() || null;
-      if (t && dr !== (t.driverName?.trim() || null)) {
+      if (t && dr !== (t.driverName?.trim() || "")) {
         body.driverName = dr;
       }
-      const depIso = datetimeLocalToIso(draft.departedLocal);
       const origIso = t?.departedAt?.trim() ? t.departedAt : null;
       if (depIso !== origIso) {
         body.departedAt = depIso;
@@ -425,7 +424,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
     }
   };
 
-  const sortedTrips = sortTripsByTripNumberNumericAsc(tripsQ.data?.trips ?? []);
+  const sortedTrips = sortTripsByDepartedDesc(tripsQ.data?.trips ?? []);
 
   return (
     <>
@@ -568,12 +567,11 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
         {tripsQ.isSuccess && (
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-            <table style={{ ...tableStyle, minWidth: 920 }}>
+            <table style={{ ...tableStyle, minWidth: 820 }}>
               <thead>
                 <tr>
-                  <th style={thHeadDense}>№</th>
-                  <th style={thHeadDense}>ТС</th>
                   <th style={thHeadDense}>Водитель</th>
+                  <th style={thHeadDense}>Машина</th>
                   <th style={thHeadDense}>Отправление</th>
                   <th style={thHeadDense}>Статус</th>
                   <th style={thHeadDense} />
@@ -596,7 +594,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
                       }
                       if (
                         window.confirm(
-                          `Удалить рейс № ${trip.tripNumber}? Только если по нему нет отгрузок и продаж.`,
+                          `Удалить рейс «${buildTripDisplayNumber(trip) === "Рейс" ? trip.tripNumber : buildTripDisplayNumber(trip)}»? Только если по нему нет отгрузок и продаж.`,
                         )
                       ) {
                         void deleteTrip.mutate(trip.id);
