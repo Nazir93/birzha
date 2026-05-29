@@ -282,3 +282,59 @@ export async function deleteLoadingManifestById(manifestId: string, messageOn403
   }
   await assertOkResponse(res, url);
 }
+
+/** PATCH JSON: при **403** — своё сообщение; **409** — message из API. */
+export async function apiPatchJsonOr403(url: string, body: unknown, messageOn403: string): Promise<void> {
+  const res = await apiFetch(url, {
+    method: "PATCH",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(body),
+  });
+  if (res.status === 403) {
+    throw new Error(messageOn403);
+  }
+  if (res.status === 409) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    if (j.message) {
+      throw new Error(j.message);
+    }
+  }
+  await assertOkResponse(res, url);
+}
+
+export async function patchPurchaseDocumentHeader(
+  documentId: string,
+  body: { documentNumber?: string; docDate?: string },
+  messageOn403: string,
+): Promise<void> {
+  await apiPatchJsonOr403(
+    `/api/purchase-documents/${encodeURIComponent(documentId)}`,
+    body,
+    messageOn403,
+  );
+}
+
+export async function patchLoadingManifestHeader(
+  manifestId: string,
+  body: { manifestNumber?: string; docDate?: string },
+  messageOn403: string,
+): Promise<void> {
+  await apiPatchJsonOr403(
+    `/api/loading-manifests/${encodeURIComponent(manifestId)}`,
+    body,
+    messageOn403,
+  );
+}
+
+export async function patchTripHeader(
+  tripId: string,
+  body: {
+    tripNumber?: string;
+    vehicleLabel?: string | null;
+    driverName?: string | null;
+    departedAt?: string | null;
+  },
+  messageOn403: string,
+): Promise<void> {
+  await apiPatchJsonOr403(`/api/trips/${encodeURIComponent(tripId)}`, body, messageOn403);
+}

@@ -63,6 +63,22 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
     this.linesByDoc.delete(documentId);
   }
 
+  async updateHeader(
+    documentId: string,
+    patch: { documentNumber?: string; docDate?: Date },
+  ): Promise<void> {
+    const header = this.headers.find((h) => h.id === documentId);
+    if (!header) {
+      throw new PurchaseDocumentNotFoundError(documentId);
+    }
+    if (patch.documentNumber !== undefined) {
+      header.documentNumber = patch.documentNumber;
+    }
+    if (patch.docDate !== undefined) {
+      header.docDate = patch.docDate;
+    }
+  }
+
   async listSummaries(): Promise<PurchaseDocumentSummary[]> {
     return this.headers
       .map((d) => ({

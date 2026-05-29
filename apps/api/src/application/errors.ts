@@ -190,6 +190,18 @@ export class LoadingManifestNotEmptyError extends Error {
   }
 }
 
+/** Уникальный номер погрузочной накладной уже занят. */
+export class LoadingManifestNumberConflictError extends Error {
+  readonly manifestNumber: string;
+
+  constructor(manifestNumber: string) {
+    super(`Номер погрузочной накладной уже занят: ${manifestNumber}`);
+    this.name = "LoadingManifestNumberConflictError";
+    this.manifestNumber = manifestNumber;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /**
  * Сущность нельзя удалить: на неё ссылаются накладные, партии, рейс и т.п.
  * Текст для пользователя/логов.

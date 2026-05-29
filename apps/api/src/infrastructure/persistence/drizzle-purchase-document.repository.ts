@@ -117,6 +117,28 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
     });
   }
 
+  async updateHeader(
+    documentId: string,
+    patch: { documentNumber?: string; docDate?: Date },
+  ): Promise<void> {
+    const id = documentId.trim();
+    const rows = await this.db.select({ id: purchaseDocuments.id }).from(purchaseDocuments).where(eq(purchaseDocuments.id, id)).limit(1);
+    if (rows.length === 0) {
+      throw new PurchaseDocumentNotFoundError(id);
+    }
+    const set: { documentNumber?: string; docDate?: Date } = {};
+    if (patch.documentNumber !== undefined) {
+      set.documentNumber = patch.documentNumber;
+    }
+    if (patch.docDate !== undefined) {
+      set.docDate = patch.docDate;
+    }
+    if (Object.keys(set).length === 0) {
+      return;
+    }
+    await this.db.update(purchaseDocuments).set(set).where(eq(purchaseDocuments.id, id));
+  }
+
   async findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null> {
     const docRows = await this.db.select().from(purchaseDocuments).where(eq(purchaseDocuments.id, id)).limit(1);
     const doc = docRows[0];

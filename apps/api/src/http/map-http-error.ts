@@ -13,6 +13,7 @@ import {
   ProductGradeNotFoundError,
   LoadingManifestNotEmptyError,
   LoadingManifestNotFoundError,
+  LoadingManifestNumberConflictError,
   PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
   ResourceInUseError,
@@ -76,6 +77,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "loading_manifest_not_empty",
       manifestId: error.manifestId,
+      message: error.message,
+    });
+  }
+  if (error instanceof LoadingManifestNumberConflictError) {
+    return reply.code(409).send({
+      error: "loading_manifest_number_conflict",
+      manifestNumber: error.manifestNumber,
       message: error.message,
     });
   }

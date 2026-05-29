@@ -86,6 +86,42 @@ describe("Trip HTTP", () => {
     await app.close();
   });
 
+  it("PATCH /trips/:id обновляет шапку рейса", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+      tripRepository: trips,
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "http-t-patch", tripNumber: "Ф-пatch", vehicleLabel: "А1" },
+    });
+
+    const patch = await app.inject({
+      method: "PATCH",
+      url: "/trips/http-t-patch",
+      payload: {
+        tripNumber: "Ф-пatch-2",
+        driverName: "Сидоров",
+        vehicleLabel: null,
+      },
+    });
+    expect(patch.statusCode).toBe(204);
+
+    const res = await app.inject({ method: "GET", url: "/trips/http-t-patch" });
+    const one = JSON.parse(res.body) as { trip: { tripNumber: string; driverName: string | null; vehicleLabel: string | null } };
+    expect(one.trip.tripNumber).toBe("Ф-пatch-2");
+    expect(one.trip.driverName).toBe("Сидоров");
+    expect(one.trip.vehicleLabel).toBeNull();
+
+    await app.close();
+  });
+
   it("GET /trips?limit=&search= — подборщик и listMeta", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const trips = new InMemoryTripRepository();

@@ -5,6 +5,7 @@ import {
   assignLoadingManifestTripBodySchema,
   createLoadingManifestBodySchema,
   loadingManifestReservedBatchIdsQuerySchema,
+  updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -17,6 +18,7 @@ import {
   loadingManifestTripAssignLockMessage,
 } from "../application/trip/loading-manifest-trip-assign-lock.js";
 import { DeleteLoadingManifestUseCase } from "../application/trip/delete-loading-manifest.use-case.js";
+import { UpdateLoadingManifestHeaderUseCase } from "../application/trip/update-loading-manifest-header.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
 import {
@@ -56,6 +58,7 @@ export function registerLoadingManifestRoutes(
   tripRead?: TripRepository,
 ): void {
   const deleteLoadingManifest = new DeleteLoadingManifestUseCase(db);
+  const updateLoadingManifestHeader = new UpdateLoadingManifestHeaderUseCase(db);
   app.post("/loading-manifests", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
       const body = createLoadingManifestBodySchema.parse(req.body);
@@ -432,6 +435,21 @@ export function registerLoadingManifestRoutes(
       try {
         const { manifestId } = z.object({ manifestId: z.string().min(1) }).parse(req.params);
         await deleteLoadingManifest.execute(manifestId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
+
+  app.patch(
+    "/loading-manifests/:manifestId",
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const { manifestId } = z.object({ manifestId: z.string().min(1) }).parse(req.params);
+        const body = updateLoadingManifestHeaderBodySchema.parse(req.body);
+        await updateLoadingManifestHeader.execute(manifestId, body);
         return reply.code(204).send();
       } catch (error) {
         return sendMappedError(reply, error);

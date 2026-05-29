@@ -10,6 +10,7 @@ import {
   createProductGradeBodySchema,
   createPurchaseDocumentBodySchema,
   createWarehouseBodySchema,
+  updatePurchaseDocumentHeaderBodySchema,
 } from "@birzha/contracts";
 import { z } from "zod";
 
@@ -19,6 +20,7 @@ import type { WarehouseRepository } from "../application/ports/warehouse-reposit
 import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "../application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "../application/purchase/delete-purchase-document.use-case.js";
+import { UpdatePurchaseDocumentHeaderUseCase } from "../application/purchase/update-purchase-document-header.use-case.js";
 import { DeleteWarehouseUseCase } from "../application/warehouse/delete-warehouse.use-case.js";
 
 import { sendMappedError } from "./map-http-error.js";
@@ -34,6 +36,7 @@ export function registerPurchaseDocumentRoutes(
     purchaseDocuments: PurchaseDocumentRepository;
     createPurchaseDocument: CreatePurchaseDocumentUseCase;
     deletePurchaseDocument: DeletePurchaseDocumentUseCase;
+    updatePurchaseDocumentHeader: UpdatePurchaseDocumentHeaderUseCase;
     deleteWarehouse: DeleteWarehouseUseCase;
     deleteProductGrade: DeleteProductGradeUseCase;
   },
@@ -45,6 +48,7 @@ export function registerPurchaseDocumentRoutes(
     purchaseDocuments,
     createPurchaseDocument,
     deletePurchaseDocument,
+    updatePurchaseDocumentHeader,
     deleteWarehouse,
     deleteProductGrade,
   } = deps;
@@ -173,6 +177,21 @@ export function registerPurchaseDocumentRoutes(
       try {
         const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
         await deletePurchaseDocument.execute(params.documentId);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
+
+  app.patch(
+    "/purchase-documents/:documentId",
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
+        const body = updatePurchaseDocumentHeaderBodySchema.parse(req.body);
+        await updatePurchaseDocumentHeader.execute(params.documentId, body);
         return reply.code(204).send();
       } catch (error) {
         return sendMappedError(reply, error);

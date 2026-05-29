@@ -63,5 +63,10 @@ export interface PurchaseDocumentRepository {
   findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null>;
   /** Удаляет шапку, строки, партии, записи рейса по `batch_id`. */
   deleteById(documentId: string): Promise<void>;
+  /** Шапка накладной: номер и/или дата. */
+  updateHeader(
+    documentId: string,
+    patch: { documentNumber?: string; docDate?: Date },
+  ): Promise<void>;
   hasProductGradeInAnyLine(productGradeId: string): Promise<boolean>;
 }

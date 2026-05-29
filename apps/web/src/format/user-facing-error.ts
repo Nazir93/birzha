@@ -4,6 +4,7 @@ const ERROR_CODE_RU: Record<string, string> = {
   trip_not_empty: "Нельзя удалить рейс: есть отгрузка, продажа или недостача.",
   loading_manifest_not_empty: "Нельзя удалить погрузочную накладную: товар уже отгружен в рейс.",
   loading_manifest_not_found: "Погрузочная накладная не найдена.",
+  loading_manifest_number_conflict: "Накладная с таким номером уже есть — укажите другой.",
   batch_not_found: "Партия не найдена.",
   forbidden: "Недостаточно прав для этого действия.",
   wholesaler_not_found: "Оптовик не найден — выберите другого из списка.",

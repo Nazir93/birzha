@@ -11,11 +11,11 @@ function normText(s: string | null | undefined): string | null {
 export class Trip {
   private constructor(
     private readonly id: string,
-    private readonly tripNumber: string,
+    private tripNumber: string,
     private status: TripStatus,
-    private readonly vehicleLabel: string | null,
-    private readonly driverName: string | null,
-    private readonly departedAt: Date | null,
+    private vehicleLabel: string | null,
+    private driverName: string | null,
+    private departedAt: Date | null,
     private assignedSellerUserId: string | null,
   ) {}
 
@@ -79,6 +79,32 @@ export class Trip {
       throw new Error("assignedSellerUserId не может быть пустым");
     }
     this.assignedSellerUserId = normalized;
+  }
+
+  /** Исправление опечаток в шапке рейса (номер, ТС, водитель, дата). */
+  updateHeader(input: {
+    tripNumber?: string;
+    vehicleLabel?: string | null;
+    driverName?: string | null;
+    departedAt?: Date | null;
+  }): void {
+    if (input.tripNumber !== undefined) {
+      const n = input.tripNumber.trim();
+      if (!n) {
+        throw new Error("tripNumber не может быть пустым");
+      }
+      this.tripNumber = n;
+    }
+    if (input.vehicleLabel !== undefined) {
+      this.vehicleLabel = normText(input.vehicleLabel);
+    }
+    if (input.driverName !== undefined) {
+      this.driverName = normText(input.driverName);
+    }
+    if (input.departedAt !== undefined) {
+      this.departedAt =
+        input.departedAt == null || Number.isNaN(input.departedAt.getTime()) ? null : input.departedAt;
+    }
   }
 
   canAcceptShipments(): boolean {

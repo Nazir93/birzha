@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { assignTripSellerBodySchema, createTripBodySchema } from "@birzha/contracts";
+import { assignTripSellerBodySchema, createTripBodySchema, updateTripHeaderBodySchema } from "@birzha/contracts";
 import { z } from "zod";
 
 import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
@@ -15,6 +15,7 @@ import { CloseTripUseCase } from "../application/trip/close-trip.use-case.js";
 import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
 import { DeleteTripUseCase } from "../application/trip/delete-trip.use-case.js";
 import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-case.js";
+import { UpdateTripHeaderUseCase } from "../application/trip/update-trip-header.use-case.js";
 import { computeTripTransitDigest } from "../application/trip/trip-transit-digest.js";
 
 import { sendMappedError } from "./map-http-error.js";
@@ -43,6 +44,7 @@ export function registerTripRoutes(
   const assignTripSeller = new AssignTripSellerUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
+  const updateTripHeader = new UpdateTripHeaderUseCase(trips);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
   const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
 
@@ -210,6 +212,17 @@ export function registerTripRoutes(
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await deleteTrip.execute(tripId);
+      return reply.code(204).send();
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.patch("/trips/:tripId", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+    try {
+      const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      const body = updateTripHeaderBodySchema.parse(req.body);
+      await updateTripHeader.execute(tripId, body);
       return reply.code(204).send();
     } catch (error) {
       return sendMappedError(reply, error);

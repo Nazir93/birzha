@@ -43,6 +43,9 @@ export {
   sellFromTripBodySchema,
   sellFromTripSyncPayloadSchema,
   updateTripSaleBodySchema,
+  updatePurchaseDocumentHeaderBodySchema,
+  updateLoadingManifestHeaderBodySchema,
+  updateTripHeaderBodySchema,
   shipBodySchema,
   shipToTripSyncPayloadSchema,
 } from "./http-bodies.js";

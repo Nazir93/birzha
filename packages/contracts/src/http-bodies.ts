@@ -169,6 +169,50 @@ export const assignTripSellerBodySchema = z.object({
   sellerUserId: z.string().min(1).max(200).transform((s) => s.trim()),
 });
 
+const isoDateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "docDate: YYYY-MM-DD");
+
+function patchBodyAtLeastOne<T extends z.ZodRawShape>(shape: T) {
+  return z.object(shape).refine((o) => Object.values(o).some((v) => v !== undefined), {
+    message: "empty_patch",
+  });
+}
+
+/** PATCH /purchase-documents/:id — шапка накладной (номер, дата). */
+export const updatePurchaseDocumentHeaderBodySchema = patchBodyAtLeastOne({
+  documentNumber: z.string().min(1).max(80).transform((s) => s.trim()).optional(),
+  docDate: isoDateOnlySchema.optional(),
+});
+
+/** PATCH /loading-manifests/:id — шапка погрузочной (номер, дата). */
+export const updateLoadingManifestHeaderBodySchema = patchBodyAtLeastOne({
+  manifestNumber: z.string().min(1).max(80).transform((s) => s.trim()).optional(),
+  docDate: isoDateOnlySchema.optional(),
+});
+
+const departedAtPatchSchema = z
+  .union([z.string().max(50), z.null()])
+  .optional()
+  .transform((s) => {
+    if (s === undefined) {
+      return undefined;
+    }
+    if (s === null || s.trim() === "") {
+      return null;
+    }
+    return s.trim();
+  })
+  .refine((s) => s === undefined || s === null || !Number.isNaN(Date.parse(s)), {
+    message: "departedAt: неверная дата",
+  });
+
+/** PATCH /trips/:id — шапка рейса. */
+export const updateTripHeaderBodySchema = patchBodyAtLeastOne({
+  tripNumber: z.string().min(1).max(80).transform((s) => s.trim()).optional(),
+  vehicleLabel: z.string().max(200).optional().nullable().transform(optionalTrim),
+  driverName: z.string().max(200).optional().nullable().transform(optionalTrim),
+  departedAt: departedAtPatchSchema,
+});
+
 export const createLoadingManifestBodySchema = z.object({
   id: z.string().min(1).max(200).optional(),
   manifestNumber: z.string().min(1).max(80).transform((s) => s.trim()),

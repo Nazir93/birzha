@@ -61,4 +61,19 @@ describe("Trip", () => {
     expect(t.getAssignedSellerUserId()).toBe("seller-1");
     expect(() => t.assignSeller(" ")).toThrow("assignedSellerUserId");
   });
+
+  it("updateHeader меняет номер, ТС и дату", () => {
+    const t = Trip.create({ id: "t-8", tripNumber: "Ф-06", vehicleLabel: "А111" });
+    const d = new Date("2026-05-01T08:00:00.000Z");
+    t.updateHeader({
+      tripNumber: "Ф-06-испр",
+      vehicleLabel: "В222",
+      driverName: "Петров",
+      departedAt: d,
+    });
+    expect(t.getTripNumber()).toBe("Ф-06-испр");
+    expect(t.getVehicleLabel()).toBe("В222");
+    expect(t.getDriverName()).toBe("Петров");
+    expect(t.getDepartedAt()?.getTime()).toBe(d.getTime());
+  });
 });

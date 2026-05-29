@@ -48,6 +48,7 @@ import { NullPurchaseLinePackageMetaPort } from "./infrastructure/persistence/nu
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "./application/purchase/delete-purchase-document.use-case.js";
+import { UpdatePurchaseDocumentHeaderUseCase } from "./application/purchase/update-purchase-document-header.use-case.js";
 import { DeleteCounterpartyUseCase } from "./application/counterparty/delete-counterparty.use-case.js";
 import { DeleteWarehouseUseCase } from "./application/warehouse/delete-warehouse.use-case.js";
 import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/drizzle-counterparty.repository.js";
@@ -300,6 +301,10 @@ export async function buildApp(options: {
     ? new DeletePurchaseDocumentUseCase(purchaseDocumentRepository)
     : null;
 
+  const updatePurchaseDocumentHeaderUseCase = purchaseDocumentRepository
+    ? new UpdatePurchaseDocumentHeaderUseCase(purchaseDocumentRepository)
+    : null;
+
   const deleteWarehouseUseCase =
     warehouseRepository && purchaseDocumentRepository && batchRepository
       ? new DeleteWarehouseUseCase(warehouseRepository, purchaseDocumentRepository, batchRepository)
@@ -368,6 +373,7 @@ export async function buildApp(options: {
     purchaseDocumentRepository &&
     createPurchaseDocumentUseCase &&
     deletePurchaseDocumentUseCase &&
+    updatePurchaseDocumentHeaderUseCase &&
     deleteWarehouseUseCase &&
     deleteProductGradeUseCase
   ) {
@@ -379,6 +385,7 @@ export async function buildApp(options: {
         purchaseDocuments: purchaseDocumentRepository,
         createPurchaseDocument: createPurchaseDocumentUseCase,
         deletePurchaseDocument: deletePurchaseDocumentUseCase,
+        updatePurchaseDocumentHeader: updatePurchaseDocumentHeaderUseCase,
         deleteWarehouse: deleteWarehouseUseCase,
         deleteProductGrade: deleteProductGradeUseCase,
       },
