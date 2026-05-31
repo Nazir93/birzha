@@ -37,6 +37,7 @@ export function AdminTripsLogisticsPanel() {
   const invalidateTrips = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.loadingManifest });
   }, [queryClient]);
 
   const tripsQ = useQuery({

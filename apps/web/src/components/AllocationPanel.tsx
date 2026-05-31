@@ -18,6 +18,12 @@ import { sortLoadingManifestsByCreatedAtDesc } from "../format/loading-manifest-
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
+  readPreferredLoadingDestinationCode,
+  readPreferredLoadingTripId,
+  writePreferredLoadingDestinationCode,
+  writePreferredLoadingTripId,
+} from "../preferences/ops-preferred-loading-trip.js";
+import {
   batchesFullListQueryOptions,
   loadingManifestDetailQueryOptions,
   loadingManifestReservedBatchIdsQueryOptions,
@@ -131,10 +137,11 @@ export function AllocationPanel() {
   const { meta } = useAuth();
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
+  const archiveBase = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const tripsBase = adminAwarePathForPath(pathname, adminRoutes.trips, ops.trips);
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
-  const [newManifestTripId, setNewManifestTripId] = useState("");
+  const [newManifestTripId, setNewManifestTripId] = useState(() => readPreferredLoadingTripId() ?? "");
 
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
@@ -202,10 +209,12 @@ export function AllocationPanel() {
   }, [reservedBatchIdsQuery.data?.batchIds, reservedBatchIdsQuery.isError]);
 
   const closedIds = useMemo(() => closedTripIdSet(tripsQuery.data?.trips ?? []), [tripsQuery.data?.trips]);
-  const activeManifests = useMemo(
-    () => splitLoadingManifestsByArchive(manifestsListQuery.data?.loadingManifests ?? [], closedIds).active,
+  const { active: activeManifests, archived: archivedManifests } = useMemo(
+    () => splitLoadingManifestsByArchive(manifestsListQuery.data?.loadingManifests ?? [], closedIds),
     [manifestsListQuery.data?.loadingManifests, closedIds],
   );
+  /** Без списка рейсов нельзя отделить архив — иначе накладные закрытых рейсов мелькают в «Погрузке». */
+  const distributionManifestListReady = tripsQuery.isSuccess && manifestsListQuery.isSuccess;
 
   const allActiveManifestsSorted = useMemo(
     () => sortLoadingManifestsByCreatedAtDesc(activeManifests),
@@ -225,6 +234,41 @@ export function AllocationPanel() {
     [tripsQuery.data?.trips],
   );
 
+  const selectedLoadingTrip = useMemo(
+    () => openTripsForAssign.find((t) => t.id === newManifestTripId.trim()),
+    [openTripsForAssign, newManifestTripId],
+  );
+
+  const startAnotherWarehouseLoad = useCallback(
+    (tripId: string) => {
+      const id = tripId.trim();
+      if (!id) {
+        return;
+      }
+      setNewManifestTripId(id);
+      writePreferredLoadingTripId(id);
+      setSelectedWarehouse("");
+      writePreferredWarehouseId(null);
+      setManifestFormOpen(false);
+      setLoadNaklSelection(new Set());
+      setSavedManifestId("");
+      if (routeManifestId.trim()) {
+        void navigate(distributionBase);
+      }
+    },
+    [navigate, distributionBase, routeManifestId],
+  );
+
+  useEffect(() => {
+    if (!tripsQuery.isSuccess || !newManifestTripId.trim()) {
+      return;
+    }
+    if (!openTripsForAssign.some((t) => t.id === newManifestTripId.trim())) {
+      setNewManifestTripId("");
+      writePreferredLoadingTripId(null);
+    }
+  }, [tripsQuery.isSuccess, openTripsForAssign, newManifestTripId]);
+
   const routeDetail = routeDetailQuery.data?.manifest;
   const openManifestSummary = useMemo((): LoadingManifestSummary | null => {
     const id = routeManifestId.trim();
@@ -235,11 +279,23 @@ export function AllocationPanel() {
     if (fromList) {
       return fromList;
     }
+    const fromArchive = archivedManifests.find((x) => x.id === id);
+    if (fromArchive) {
+      return fromArchive;
+    }
     if (routeDetail && routeDetail.id === id) {
       return loadingSummaryFromDetail(routeDetail);
     }
     return null;
-  }, [routeManifestId, activeManifests, routeDetail]);
+  }, [routeManifestId, activeManifests, archivedManifests, routeDetail]);
+
+  const viewingArchivedManifest = useMemo(() => {
+    const id = routeManifestId.trim();
+    if (!id || !distributionManifestListReady) {
+      return false;
+    }
+    return archivedManifests.some((m) => m.id === id);
+  }, [routeManifestId, distributionManifestListReady, archivedManifests]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -299,6 +355,10 @@ export function AllocationPanel() {
       setLoadNaklSelection(new Set());
       if (tripId) {
         setAssignTripId(tripId);
+        writePreferredLoadingTripId(tripId);
+      }
+      if (manifestDestinationCode) {
+        writePreferredLoadingDestinationCode(manifestDestinationCode);
       }
       void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
       void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
@@ -387,17 +447,19 @@ export function AllocationPanel() {
     if (selectedWarehouse !== "" || allocationWarehouseOptions.length === 0 || viewingSaved) {
       return;
     }
+    const pref = readPreferredWarehouseId();
+    if (!pref && newManifestTripId.trim()) {
+      return;
+    }
     const withStock = allocationWarehouseOptions.filter((o) => o.batchCount > 0);
     if (withStock.length === 0) {
       return;
     }
-    const pref = readPreferredWarehouseId();
-    const pick =
-      (pref ? withStock.find((o) => o.id === pref) : undefined) ?? withStock[0];
+    const pick = (pref ? withStock.find((o) => o.id === pref) : undefined) ?? withStock[0];
     if (pick) {
       setSelectedWarehouse(pick.id);
     }
-  }, [allocationWarehouseOptions, selectedWarehouse, viewingSaved]);
+  }, [allocationWarehouseOptions, selectedWarehouse, viewingSaved, newManifestTripId]);
 
   const clearWarehouseSelection = useCallback(() => {
     setSelectedWarehouse("");
@@ -505,6 +567,13 @@ export function AllocationPanel() {
   }, [destAllowed, tableRows]);
 
   useEffect(() => {
+    const preferred = readPreferredLoadingDestinationCode();
+    if (preferred && destAllowed.includes(preferred)) {
+      if (manifestDestinationCode !== preferred) {
+        setManifestDestinationCode(preferred);
+      }
+      return;
+    }
     const fallback = inferredDestinationCode || destAllowed[0] || "";
     if (!fallback) {
       return;
@@ -552,6 +621,13 @@ export function AllocationPanel() {
         show={Boolean(selectedWarehouse) && reservedBatchIdsQuery.isFetching && !reservedBatchIdsQuery.isPending}
         label="Обновление учёта погрузочных накладных…"
       />
+
+      {!loading && !viewingSaved && selectedLoadingTrip ? (
+        <InfoAlert title="Один рейс — несколько складов">
+          Рейс <strong>{formatTripSelectLabel(selectedLoadingTrip)}</strong> запомнен. Сохраните погрузочную с выбранного
+          склада, затем нажмите «Сменить склад» или выберите другой склад — и сохраните ещё одну накладную в тот же рейс.
+        </InfoAlert>
+      ) : null}
 
       {!loading && !viewingSaved && allocationWarehouseOptions.length > 0 ? (
         <div
@@ -620,8 +696,14 @@ export function AllocationPanel() {
       {!loading && manifestsListQuery.isError ? (
         <ErrorAlert message="Не удалось загрузить список погрузочных накладных." title="Погрузочные накладные" />
       ) : null}
+      {!loading && !viewingSaved && tripsQuery.isError ? (
+        <ErrorAlert error={tripsQuery.error} message="Не удалось загрузить рейсы — список накладных скрыт." title="Рейсы" />
+      ) : null}
+      {!loading && !viewingSaved && !distributionManifestListReady && !tripsQuery.isError && !manifestsListQuery.isError ? (
+        <LoadingBlock label="Список погрузочных накладных…" minHeight={48} skeleton skeletonRows={2} />
+      ) : null}
 
-      {!loading && !viewingSaved && allActiveManifestsSorted.length > 0 ? (
+      {!loading && !viewingSaved && distributionManifestListReady && allActiveManifestsSorted.length > 0 ? (
         <BirzhaDisclosure
           defaultOpen
           title={
@@ -693,10 +775,10 @@ export function AllocationPanel() {
         </BirzhaDisclosure>
       ) : null}
 
-      {!loading && !manifestsListQuery.isPending && allActiveManifestsSorted.length === 0 && !viewingSaved ? (
+      {!loading && distributionManifestListReady && !viewingSaved && allActiveManifestsSorted.length === 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }} role="status">
           Сохранённых погрузочных накладных пока нет. После «Сохранить погрузочную накладную» строка появится в таблице
-          на этой странице.
+          на этой странице. Накладные закрытых рейсов — в разделе <Link to={archiveBase}>«Архив»</Link>.
         </p>
       ) : null}
 
@@ -751,6 +833,23 @@ export function AllocationPanel() {
                   ← Новая погрузочная накладная
                 </Link>
               </p>
+              {viewingArchivedManifest ? (
+                <InfoAlert title="Накладная в архиве">
+                  Рейс по этой погрузочной закрыт — в рабочем списке «Погрузки» она не показывается. Открыть все архивные
+                  накладные: <Link to={archiveBase}>Архив</Link>.
+                </InfoAlert>
+              ) : null}
+              {openManifestSummary?.tripId && !viewingArchivedManifest ? (
+                <p className="no-print" style={{ margin: "0 0 0.75rem" }}>
+                  <button
+                    type="button"
+                    style={btnStyle}
+                    onClick={() => startAnotherWarehouseLoad(openManifestSummary.tripId!)}
+                  >
+                    Загрузить ещё с другого склада в этот рейс
+                  </button>
+                </p>
+              ) : null}
               {openManifestSummary ? (
                 <LoadingManifestAccordion
                   m={openManifestSummary}
@@ -877,7 +976,11 @@ export function AllocationPanel() {
                     Рейс *
                     <select
                       value={newManifestTripId}
-                      onChange={(e) => setNewManifestTripId(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNewManifestTripId(v);
+                        writePreferredLoadingTripId(v.trim() || null);
+                      }}
                       style={fieldStyle}
                       disabled={tripsQuery.isPending}
                     >
@@ -899,7 +1002,11 @@ export function AllocationPanel() {
                     Город / направление *
                     <select
                       value={manifestDestinationCode}
-                      onChange={(e) => setManifestDestinationCode(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setManifestDestinationCode(v);
+                        writePreferredLoadingDestinationCode(v || null);
+                      }}
                       style={fieldStyle}
                     >
                       {destAllowed.map((d) => (

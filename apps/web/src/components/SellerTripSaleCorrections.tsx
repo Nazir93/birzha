@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useAuth } from "../auth/auth-context.js";
 import { apiDelete, apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { formatNakladLineLabel } from "../format/batch-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { kgNumberToGramsBigInt } from "../format/seller-trip-caliber-groups.js";
 import {
@@ -22,7 +21,6 @@ import {
   groupTripSaleLinesForCorrections,
   type TripSaleLineCorrectionsGroup,
 } from "../format/trip-sale-line-groups.js";
-import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
 import { parseUpdateTripSaleForm } from "../validation/api-schemas.js";
 import {
@@ -90,11 +88,20 @@ async function apiPatchJson(url: string, body: unknown): Promise<void> {
   await assertOkResponse(res, url);
 }
 
+function formatCorrectionPartLabel(groupLabel: string, line: TripSaleLineJson): string {
+  const parts = [groupLabel, `${line.kg} кг`];
+  if (line.packageCount) {
+    parts.push(`${line.packageCount} ящ`);
+  }
+  return parts.join(" · ");
+}
+
 function SellerTripSaleEditForm({
   line,
   batchById,
   sellableRows,
   wholesalersCatalog,
+  displayLabel,
   onDone,
   onCancel,
 }: {
@@ -102,11 +109,10 @@ function SellerTripSaleEditForm({
   batchById: Map<string, BatchListItem>;
   sellableRows: TripBatchTableRow[];
   wholesalersCatalog: boolean;
+  displayLabel: string;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const b = batchById.get(line.batchId);
-  const label = b ? formatNakladLineLabel(b) : "партия";
   const requirePkg = lineHasPkgData(line.batchId, sellableRows, batchById);
   const payment0 = inferPaymentKindFromSaleLine(line);
 
@@ -183,10 +189,10 @@ function SellerTripSaleEditForm({
       className="birzha-callout-info"
       style={{ marginTop: "0.65rem", padding: "0.75rem" }}
       role="form"
-      aria-label={`Правка продажи ${label}`}
+      aria-label={`Правка продажи ${displayLabel}`}
     >
       <p className="birzha-form-label" style={{ margin: "0 0 0.5rem" }}>
-        Правка: <strong>{label}</strong>
+        Правка: <strong>{displayLabel}</strong>
       </p>
       <label className="birzha-form-label birzha-form-label--block">кг *</label>
       <input
@@ -318,9 +324,6 @@ function formatGroupCorrectionMeta(group: TripSaleLineCorrectionsGroup): string 
     const name = sample.clientLabel?.trim();
     parts.push(name ? `Опт: ${name}` : "Опт");
   }
-  if (group.lines.length > 1) {
-    parts.push(`по ${group.lines.length} накладным`);
-  }
   return parts.join(" · ");
 }
 
@@ -329,10 +332,8 @@ function SellerTripSaleCorrectionsGroupRow({
   batchById,
   sellableRows,
   wholesalersCatalog,
-  editingId,
-  expanded,
-  onToggleExpand,
-  onEditLine,
+  editingGroupKey,
+  onEditGroup,
   onCancelEdit,
   onDoneEdit,
   remove,
@@ -341,10 +342,8 @@ function SellerTripSaleCorrectionsGroupRow({
   batchById: Map<string, BatchListItem>;
   sellableRows: TripBatchTableRow[];
   wholesalersCatalog: boolean;
-  editingId: string | null;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onEditLine: (lineId: string) => void;
+  editingGroupKey: string | null;
+  onEditGroup: (groupKey: string) => void;
   onCancelEdit: () => void;
   onDoneEdit: () => void;
   remove: { isPending: boolean; mutate: (lineId: string) => void };
@@ -352,7 +351,7 @@ function SellerTripSaleCorrectionsGroupRow({
   const sum = kopecksToRubLabel(String(group.totalRevenueKopecks));
   const meta = formatGroupCorrectionMeta(group);
   const multi = group.lines.length > 1;
-  const anyEditing = group.lines.some((l) => editingId === l.id);
+  const isEditing = editingGroupKey === group.key;
 
   const deleteGroup = () => {
     const msg = multi
@@ -388,67 +387,45 @@ function SellerTripSaleCorrectionsGroupRow({
             · {meta} · {sum} ₽
           </span>
         </span>
-        {!anyEditing ? (
+        {!isEditing ? (
           <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            {multi ? (
-              <button type="button" style={btnStyle} onClick={onToggleExpand}>
-                {expanded ? "Скрыть накладные" : "По накладным"}
-              </button>
-            ) : (
-              <button type="button" style={btnStyle} onClick={() => onEditLine(group.lines[0]!.id)}>
-                Исправить
-              </button>
-            )}
+            <button type="button" style={btnStyle} onClick={() => onEditGroup(group.key)}>
+              Исправить
+            </button>
             <button type="button" style={btnStyle} disabled={remove.isPending} onClick={deleteGroup}>
               Удалить
             </button>
           </span>
-        ) : null}
+        ) : (
+          <button type="button" style={btnStyle} disabled={remove.isPending} onClick={onCancelEdit}>
+            Отмена правки
+          </button>
+        )}
       </div>
-      {multi && expanded && !anyEditing ? (
-        <ul
-          className="birzha-text-muted birzha-ui-sm"
-          style={{ listStyle: "none", margin: "0.4rem 0 0", padding: "0 0 0 0.75rem" }}
-        >
-          {group.lines.map((line) => {
-            const b = batchById.get(line.batchId);
-            const caption = b ? formatBatchPartyCaption(b) : "партия";
-            const partSum = kopecksToRubLabel(line.revenueKopecks);
-            return (
-              <li
-                key={line.id}
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.35rem 0.5rem",
-                  alignItems: "baseline",
-                  marginTop: "0.25rem",
-                }}
-              >
-                <span style={{ flex: "1 1 10rem" }}>
-                  {caption} · {formatSellerCorrectionSaleMeta(line)} · {partSum} ₽
-                </span>
-                <button type="button" style={btnStyle} onClick={() => onEditLine(line.id)}>
-                  Исправить
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+      {isEditing ? (
+        <>
+          {multi ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
+              Одна продажа по калибру «{group.lineLabel}» — {group.totalKg} кг. Если нужно изменить массу, правьте строки
+              ниже (без номеров закупочных накладных).
+            </p>
+          ) : null}
+          {group.lines.map((line) => (
+            <SellerTripSaleEditForm
+              key={line.id}
+              line={line}
+              batchById={batchById}
+              sellableRows={sellableRows}
+              wholesalersCatalog={wholesalersCatalog}
+              displayLabel={
+                multi ? formatCorrectionPartLabel(group.lineLabel, line) : group.lineLabel
+              }
+              onDone={onDoneEdit}
+              onCancel={onCancelEdit}
+            />
+          ))}
+        </>
       ) : null}
-      {group.lines.map((line) =>
-        editingId === line.id ? (
-          <SellerTripSaleEditForm
-            key={line.id}
-            line={line}
-            batchById={batchById}
-            sellableRows={sellableRows}
-            wholesalersCatalog={wholesalersCatalog}
-            onDone={onDoneEdit}
-            onCancel={onCancelEdit}
-          />
-        ) : null,
-      )}
     </li>
   );
 }
@@ -465,7 +442,7 @@ export function SellerTripSaleCorrections({
   const { meta } = useAuth();
   const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const queryClient = useQueryClient();
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
   const linesQ = useQuery({
     ...tripSaleLinesQueryOptions(tripId),
     enabled: tripId.trim().length > 0 && tripOpen,
@@ -499,8 +476,6 @@ export function SellerTripSaleCorrections({
     return groupTripSaleLinesForCorrections(sortedLines, batchById);
   }, [sortedLines, batchById, correctionsGroupsReady]);
 
-  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
-
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
@@ -513,7 +488,7 @@ export function SellerTripSaleCorrections({
       await apiDelete(`/api/trip-sales/${encodeURIComponent(lineId)}`);
     },
     onSuccess: () => {
-      setEditingId(null);
+      setEditingGroupKey(null);
       invalidate();
     },
   });
@@ -533,7 +508,8 @@ export function SellerTripSaleCorrections({
       }
     >
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-        Можно изменить или отменить свою продажу, пока рейс не закрыт в админке.
+        Можно изменить или отменить свою продажу, пока рейс не закрыт в админке. Список по калибрам из погрузочной
+        накладной — без разбивки по закупочным накладным.
       </p>
       {linesQ.isPending || (sortedLines.length > 0 && !correctionsGroupsReady) ? (
         <LoadingIndicator size="sm" label="Загрузка продаж…" />
@@ -550,15 +526,11 @@ export function SellerTripSaleCorrections({
               batchById={batchById}
               sellableRows={sellableRows}
               wholesalersCatalog={wholesalersCatalog}
-              editingId={editingId}
-              expanded={expandedGroupKey === group.key}
-              onToggleExpand={() =>
-                setExpandedGroupKey((k) => (k === group.key ? null : group.key))
-              }
-              onEditLine={setEditingId}
-              onCancelEdit={() => setEditingId(null)}
+              editingGroupKey={editingGroupKey}
+              onEditGroup={setEditingGroupKey}
+              onCancelEdit={() => setEditingGroupKey(null)}
               onDoneEdit={() => {
-                setEditingId(null);
+                setEditingGroupKey(null);
                 invalidate();
               }}
               remove={remove}
