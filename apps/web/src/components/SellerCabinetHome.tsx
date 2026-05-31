@@ -15,8 +15,8 @@ export function SellerCabinetHome() {
   const fieldSellerOnly = user ? isFieldSellerOnly(user) : false;
 
   return (
-    <div className="birzha-seller-workspace birzha-home-premium" aria-labelledby="seller-cabinet-h">
-      <header className="birzha-home-hero birzha-home-hero--sales">
+    <div className="birzha-seller-workspace birzha-home-premium birzha-section-shell" aria-labelledby="seller-cabinet-h">
+      <header className="birzha-home-hero birzha-home-hero--sales birzha-section-hero">
         <div>
           <p className="birzha-home-hero__eyebrow">Продажи</p>
           <h2 id="seller-cabinet-h" className="birzha-home-hero__title">

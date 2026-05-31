@@ -9,8 +9,8 @@ import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
  */
 export function AccountingCabinetHome() {
   return (
-    <section className="birzha-home-premium" aria-labelledby="acc-home-h">
-      <header className="birzha-home-hero birzha-home-hero--accounting">
+    <section className="birzha-home-premium birzha-section-shell" aria-labelledby="acc-home-h">
+      <header className="birzha-home-hero birzha-home-hero--accounting birzha-section-hero">
         <div>
           <p className="birzha-home-hero__eyebrow">Бухгалтерия</p>
           <h2 id="acc-home-h" className="birzha-home-hero__title">

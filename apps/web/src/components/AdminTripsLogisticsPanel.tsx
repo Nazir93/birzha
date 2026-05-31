@@ -139,8 +139,8 @@ export function AdminTripsLogisticsPanel() {
 
   if (!tripsApiEnabled) {
     return (
-      <section className="birzha-card" aria-labelledby="admin-trips-log-h">
-        <h2 id="admin-trips-log-h" style={{ margin: "0 0 0.65rem", fontSize: "1.08rem" }}>
+      <section className="birzha-card birzha-section-shell" aria-labelledby="admin-trips-log-h">
+        <h2 id="admin-trips-log-h" className="birzha-section-title-main">
           Рейсы
         </h2>
         <p className="birzha-callout-warning" role="status">
@@ -151,8 +151,11 @@ export function AdminTripsLogisticsPanel() {
   }
 
   return (
-    <section className="birzha-card birzha-home-premium birzha-inventory-admin" aria-labelledby="admin-trips-log-h">
-      <h2 id="admin-trips-log-h" style={{ margin: "0 0 0.75rem", fontSize: "1.08rem" }}>
+    <section
+      className="birzha-card birzha-home-premium birzha-inventory-admin birzha-section-shell"
+      aria-labelledby="admin-trips-log-h"
+    >
+      <h2 id="admin-trips-log-h" className="birzha-section-title-main">
         Рейсы
       </h2>
 
@@ -161,7 +164,7 @@ export function AdminTripsLogisticsPanel() {
         title={
           <span className="birzha-disclosure__title-stack">
             <span className="birzha-section-heading__eyebrow">Логистика</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Рейсы</span>
+            <span className="birzha-section-title-inline">Рейсы</span>
           </span>
         }
       >
@@ -216,86 +219,86 @@ export function AdminTripsLogisticsPanel() {
         {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
         {tripsQ.isSuccess && (
           <>
-          <p className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem" }}>
-            В работе ({openTrips.length})
-          </p>
-          <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.9rem" }}>
-            <table style={{ ...tableStyle, minWidth: 720 }}>
-              <thead>
-                <tr>
-                  <th style={thHeadDense}>Водитель</th>
-                  <th style={thHeadDense}>Машина</th>
-                  <th style={thHeadDense}>Отправление</th>
-                  <th style={thHeadDense}>Статус</th>
-                  <th style={thHeadDense}>Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openTrips.length === 0 ? (
+            <p className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.9rem" }}>
+              В работе ({openTrips.length})
+            </p>
+            <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.9rem" }}>
+              <table style={{ ...tableStyle, minWidth: 720 }}>
+                <thead>
                   <tr>
-                    <td colSpan={5} style={thtdDense} className="birzha-text-muted">
-                      Нет рейсов в работе
-                    </td>
+                    <th style={thHeadDense}>Водитель</th>
+                    <th style={thHeadDense}>Машина</th>
+                    <th style={thHeadDense}>Отправление</th>
+                    <th style={thHeadDense}>Статус</th>
+                    <th style={thHeadDense}>Действия</th>
                   </tr>
-                ) : null}
-                {openTrips.map((t) => (
-                  <tr key={t.id}>
-                    <td style={thtdDense}>{t.driverName ?? "—"}</td>
-                    <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
-                    <td style={thtdDense}>{formatTripDepartedAtRu(t.departedAt)}</td>
-                    <td style={thtdDense}>
-                      <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
-                      {tripListFullySold(t) ? (
-                        <span
-                          className="birzha-text-muted"
-                          style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}
-                        >
-                          Остаток погруженного 0
-                        </span>
-                      ) : null}
-                      <Link to={operationsPath} style={{ display: "block", fontSize: "0.8rem", marginTop: "0.2rem" }}>
-                        к операциям
-                      </Link>
-                    </td>
-                    <td style={thtdDense}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
-                        {showCloseTrip && t.status === "open" ? (
+                </thead>
+                <tbody>
+                  {openTrips.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={thtdDense} className="birzha-text-muted">
+                        Нет рейсов в работе
+                      </td>
+                    </tr>
+                  ) : null}
+                  {openTrips.map((t) => (
+                    <tr key={t.id}>
+                      <td style={thtdDense}>{t.driverName ?? "—"}</td>
+                      <td style={thtdDense}>{t.vehicleLabel ?? "—"}</td>
+                      <td style={thtdDense}>{formatTripDepartedAtRu(t.departedAt)}</td>
+                      <td style={thtdDense}>
+                        <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
+                        {tripListFullySold(t) ? (
+                          <span
+                            className="birzha-text-muted"
+                            style={{ display: "block", fontSize: "0.75rem", marginTop: "0.15rem" }}
+                          >
+                            Остаток погруженного 0
+                          </span>
+                        ) : null}
+                        <Link to={operationsPath} style={{ display: "block", fontSize: "0.8rem", marginTop: "0.2rem" }}>
+                          к операциям
+                        </Link>
+                      </td>
+                      <td style={thtdDense}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
+                          {showCloseTrip && t.status === "open" ? (
+                            <button
+                              type="button"
+                              style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                              disabled={closeTrip.isPending}
+                              onClick={() => void closeTrip.mutate(t.id)}
+                            >
+                              {closeTrip.isPending ? "…" : "Закрыть рейс"}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
-                            style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
-                            disabled={closeTrip.isPending}
-                            onClick={() => void closeTrip.mutate(t.id)}
+                            className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                            disabled={deleteTrip.isPending}
+                            onClick={() => {
+                              const caption = buildTripDisplayNumber(t);
+                              if (
+                                window.confirm(
+                                  `Удалить рейс «${caption === "Рейс" ? t.tripNumber : caption}»? Если в нём были отгрузки — ответит ошибкой.`,
+                                )
+                              ) {
+                                void deleteTrip.mutate(t.id);
+                              }
+                            }}
                           >
-                            {closeTrip.isPending ? "…" : "Закрыть рейс"}
+                            Удалить
                           </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                          disabled={deleteTrip.isPending}
-                          onClick={() => {
-                            const caption = buildTripDisplayNumber(t);
-                            if (
-                              window.confirm(
-                                `Удалить рейс «${caption === "Рейс" ? t.tripNumber : caption}»? Если в нём были отгрузки — ответит ошибкой.`,
-                              )
-                            ) {
-                              void deleteTrip.mutate(t.id);
-                            }
-                          }}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
-            Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
-          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
+              Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
+            </p>
           </>
         )}
       </BirzhaDisclosure>

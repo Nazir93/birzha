@@ -141,10 +141,10 @@ export function AdminSoldBySellerPage() {
   const sellerLabel = resolveUserLogin(sellerLoginById, assignSellerUserId);
 
   return (
-    <div className="birzha-assign-seller" role="region" aria-labelledby="sold-by-seller-h">
-      <header className="birzha-assign-seller__hero">
+    <div className="birzha-assign-seller birzha-section-shell" role="region" aria-labelledby="sold-by-seller-h">
+      <header className="birzha-assign-seller__hero birzha-section-hero">
         <div>
-          <p style={{ margin: "0 0 0.25rem", fontSize: "0.82rem" }}>
+          <p className="birzha-section-backlink">
             <Link to={adminRoutes.home} className="birzha-ui-sm">
               ← Сводка
             </Link>
@@ -158,7 +158,7 @@ export function AdminSoldBySellerPage() {
       {tripsQuery.isPending ? (
         <LoadingBlock label="Загрузка…" minHeight={64} skeleton skeletonRows={3} />
       ) : (
-        <>
+        <section className="birzha-section-filters">
           <label className="birzha-field-label" htmlFor="seller-pick-search">
             Поиск продавца (логин)
           </label>
@@ -187,7 +187,7 @@ export function AdminSoldBySellerPage() {
               </option>
             ))}
           </select>
-        </>
+        </section>
       )}
 
       {!assignSellerUserId ? (
@@ -199,15 +199,7 @@ export function AdminSoldBySellerPage() {
             <span className="birzha-assign-seller__seller-meta">рейсов закреплено: {selectedSellerTrips.length}</span>
           </p>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(11rem, 1fr))",
-              gap: "0.5rem 0.75rem",
-              marginBottom: "0.65rem",
-              maxWidth: "40rem",
-            }}
-          >
+          <div className="birzha-filter-grid birzha-filter-grid--narrow">
             <div>
               <label className="birzha-field-label" htmlFor="sold-from">
                 Дата выезда с
@@ -272,7 +264,7 @@ export function AdminSoldBySellerPage() {
           <BirzhaDisclosure
             nested
             defaultOpen
-            title={<h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>Рейсы продавца ({tripsForTable.length})</h3>}
+            title={<h3 className="birzha-section-title-inline">Рейсы продавца ({tripsForTable.length})</h3>}
           >
             {tripsForTable.length === 0 ? (
               <BirzhaEmptyState compact title="Нет рейсов в фильтре" />

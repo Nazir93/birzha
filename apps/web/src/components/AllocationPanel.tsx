@@ -607,8 +607,8 @@ export function AllocationPanel() {
   }
 
   return (
-    <div role="region" aria-label="Погрузка на машину">
-      <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.1rem" }}>Погрузка на машину</h2>
+    <div className="birzha-section-shell" role="region" aria-label="Погрузка на машину">
+      <h2 className="birzha-section-title-main">Погрузка на машину</h2>
 
       {warehousesQuery.isError ? (
         <WarningAlert title="Склады">Справочник складов не загрузился — подписи к складу могут быть неполны.</WarningAlert>
@@ -630,16 +630,7 @@ export function AllocationPanel() {
       ) : null}
 
       {!loading && !viewingSaved && allocationWarehouseOptions.length > 0 ? (
-        <div
-          className="no-print"
-          style={{
-            marginBottom: "1rem",
-            padding: "0.85rem 1rem",
-            borderRadius: 8,
-            border: "1px solid var(--color-border)",
-            background: "var(--birzha-surface-raised, rgba(255,255,255,0.03))",
-          }}
-        >
+        <div className="no-print birzha-section-filters">
           <label
             htmlFor="alloc-sel-warehouse"
             className="birzha-form-label birzha-form-label--block birzha-form-label--mb-sm"
@@ -947,12 +938,7 @@ export function AllocationPanel() {
               </BirzhaDisclosure>
 
               {manifestFormOpen ? (
-              <div
-                className="birzha-callout-info"
-                style={{ marginBottom: "1rem", marginTop: "1rem", padding: "0.85rem 1rem" }}
-                role="region"
-                aria-label="Новая погрузочная накладная"
-              >
+              <div className="birzha-section-filters" role="region" aria-label="Новая погрузочная накладная">
                 <p className="no-print" style={{ margin: "0 0 0.5rem" }}>
                   <button
                     type="button"
@@ -970,7 +956,7 @@ export function AllocationPanel() {
                     ← Вернуться к списанию и отбору
                   </button>
                 </p>
-                <h3 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>2. Погрузочная накладная</h3>
+                <h3 className="birzha-section-title-inline">2. Погрузочная накладная</h3>
                 <div className="birzha-form-grid">
                   <label>
                     Рейс *

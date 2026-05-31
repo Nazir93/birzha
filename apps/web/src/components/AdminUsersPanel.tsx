@@ -320,8 +320,8 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
       return <div className="birzha-settings-admin__embedded">{unavailable}</div>;
     }
     return (
-      <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
-        <header className="birzha-home-hero">
+      <section className="birzha-home-premium birzha-section-shell" aria-labelledby="admin-users-heading">
+        <header className="birzha-home-hero birzha-section-hero">
           <div>
             <p className="birzha-home-hero__eyebrow">Доступ</p>
             <h2 id="admin-users-heading" className="birzha-home-hero__title">
@@ -336,7 +336,7 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
 
   const body = (
     <>
-      <div className="birzha-home-work-card">
+      <div className="birzha-home-work-card birzha-section-shell">
         <BirzhaDisclosure
           nested
           defaultOpen
@@ -426,7 +426,7 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
         </BirzhaDisclosure>
       </div>
 
-      <div className="birzha-home-work-card">
+      <div className="birzha-home-work-card birzha-section-shell">
         <BirzhaDisclosure
           nested
           defaultOpen
@@ -501,8 +501,8 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
   }
 
   return (
-    <section className="birzha-home-premium" aria-labelledby="admin-users-heading">
-      <header className="birzha-home-hero">
+    <section className="birzha-home-premium birzha-section-shell" aria-labelledby="admin-users-heading">
+      <header className="birzha-home-hero birzha-section-hero">
         <div>
           <p className="birzha-home-hero__eyebrow">Команда</p>
           <h2 id="admin-users-heading" className="birzha-home-hero__title">

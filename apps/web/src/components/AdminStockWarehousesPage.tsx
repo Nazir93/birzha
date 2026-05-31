@@ -100,9 +100,9 @@ export function AdminStockWarehousesPage() {
   const loading = warehousesQ.isPending || batchesQ.isPending;
 
   return (
-    <div className="birzha-admin-dash" role="region" aria-labelledby="stock-wh-h">
-      <header style={{ marginBottom: "0.85rem" }}>
-        <p style={{ margin: "0 0 0.25rem", fontSize: "0.82rem" }}>
+    <div className="birzha-admin-dash birzha-section-shell" role="region" aria-labelledby="stock-wh-h">
+      <header className="birzha-section-hero">
+        <p className="birzha-section-backlink">
           <Link to={adminRoutes.home} className="birzha-ui-sm">
             ← Сводка
           </Link>{" "}
@@ -111,10 +111,10 @@ export function AdminStockWarehousesPage() {
             Калибры в справочнике
           </Link>
         </p>
-        <h2 id="stock-wh-h" style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+        <h2 id="stock-wh-h" className="birzha-section-title-main" style={{ marginBottom: 0 }}>
           Склады и остатки
         </h2>
-        <p style={{ margin: "0.35rem 0 0", fontSize: "0.88rem", color: "var(--color-muted)", maxWidth: 52 * 16 }}>
+        <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: 52 * 16 }}>
           Справочник складов, добавление и удаление. Выберите склад — внизу итоги по калибру (все накладные суммируются в
           одну строку на калибр). Поиск — по калибру и виду товара.
         </p>
@@ -125,7 +125,7 @@ export function AdminStockWarehousesPage() {
 
       {!loading && !warehousesQ.isError ? (
         <>
-          <BirzhaDisclosure defaultOpen title={<span style={{ fontWeight: 600 }}>Склады</span>}>
+          <BirzhaDisclosure defaultOpen title={<span className="birzha-section-title-inline">Склады</span>}>
             <div className="birzha-inventory-inline-tools birzha-inventory-inline-tools--catalog" style={{ marginBottom: "0.65rem" }}>
               <input
                 value={newWarehouseName}
@@ -206,7 +206,7 @@ export function AdminStockWarehousesPage() {
 
           <BirzhaDisclosure
             defaultOpen
-            title={<span style={{ fontWeight: 600 }}>Остатки по выбранному складу</span>}
+            title={<span className="birzha-section-title-inline">Остатки по выбранному складу</span>}
           >
             {!selectedWarehouseId ? null : (
               <>

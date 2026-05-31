@@ -427,9 +427,9 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
   const sortedTrips = sortTripsByDepartedDesc(tripsQ.data?.trips ?? []);
 
   return (
-    <>
+    <div className="birzha-section-shell">
       {!embedded ? (
-        <header className="birzha-home-hero birzha-settings-documents__hero">
+        <header className="birzha-home-hero birzha-settings-documents__hero birzha-section-hero">
           <div>
             <p className="birzha-home-hero__eyebrow">Администрирование</p>
             <h2 className="birzha-home-hero__title">Накладные и рейсы</h2>
@@ -437,7 +437,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         </header>
       ) : null}
 
-      <p className="birzha-ui-sm" style={{ marginTop: 0 }}>
+      <p className="birzha-ui-sm birzha-section-note">
         Измените поля прямо в таблице и нажмите «Сохранить». Строки накладных и состав партий здесь не редактируются.
       </p>
 
@@ -448,7 +448,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         title={
           <span className="birzha-disclosure__title-stack">
             <span className="birzha-section-heading__eyebrow">Закупки</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Закупочные накладные</span>
+            <span className="birzha-section-title-inline">Закупочные накладные</span>
           </span>
         }
       >
@@ -500,7 +500,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         title={
           <span className="birzha-disclosure__title-stack">
             <span className="birzha-section-heading__eyebrow">Склад</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Погрузочные накладные</span>
+            <span className="birzha-section-title-inline">Погрузочные накладные</span>
           </span>
         }
       >
@@ -555,7 +555,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         title={
           <span className="birzha-disclosure__title-stack">
             <span className="birzha-section-heading__eyebrow">Логистика</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Рейсы</span>
+            <span className="birzha-section-title-inline">Рейсы</span>
           </span>
         }
       >
@@ -607,6 +607,6 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
           </div>
         )}
       </BirzhaDisclosure>
-    </>
+    </div>
   );
 }

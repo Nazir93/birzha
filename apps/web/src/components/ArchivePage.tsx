@@ -398,8 +398,8 @@ export function ArchivePage() {
   }, [archiveReportQueries, tripIdsForArchiveSummaries]);
 
   return (
-    <section className="birzha-card" aria-labelledby="archive-heading">
-      <h2 id="archive-heading" style={{ margin: "0 0 1rem", fontSize: "1.1rem" }}>
+    <section className="birzha-card birzha-section-shell" aria-labelledby="archive-heading">
+      <h2 id="archive-heading" className="birzha-section-title-main">
         Архив
       </h2>
 
