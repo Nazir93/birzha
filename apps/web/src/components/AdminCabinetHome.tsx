@@ -208,27 +208,20 @@ export function AdminCabinetHome() {
         <>
           <header className="birzha-admin-dash-modern__hero">
             <div>
-              <p className="birzha-home-hero__eyebrow">Админка</p>
-              <h3 className="birzha-admin-dash-modern__title">Понятная сводка по работе за сегодня</h3>
-              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
-                Сначала главные цифры и действия, ниже — подробности по рейсам.
-              </p>
+              <p className="birzha-home-hero__eyebrow">Панель управления</p>
+              <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
             </div>
             <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
               <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
-                <span>Шаг 1</span>
                 <strong>Закупка</strong>
               </Link>
               <Link to={adminRoutes.trips} className="birzha-home-action">
-                <span>Шаг 2</span>
                 <strong>Рейсы</strong>
               </Link>
               <Link to={adminRoutes.distribution} className="birzha-home-action">
-                <span>Шаг 3</span>
                 <strong>Погрузка</strong>
               </Link>
               <Link to={adminRoutes.assignSeller} className="birzha-home-action">
-                <span>Шаг 4</span>
                 <strong>Продажи</strong>
               </Link>
             </nav>
@@ -242,7 +235,6 @@ export function AdminCabinetHome() {
               >
                 <div className="birzha-kpi-tile__label">Остаток на складе</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.warehouseKg)}</div>
-                <div className="birzha-text-muted birzha-ui-sm">Активных партий: {aggregates.batchCount}</div>
               </Link>
               <Link
                 to={adminRoutes.distribution}
@@ -251,7 +243,6 @@ export function AdminCabinetHome() {
               >
                 <div className="birzha-kpi-tile__label">В погрузочных</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.loadingManifestKg)}</div>
-                <div className="birzha-text-muted birzha-ui-sm">Накладных: {aggregates.loadingManifestCount}</div>
               </Link>
               <Link
                 to={adminRoutes.reports}
@@ -260,7 +251,6 @@ export function AdminCabinetHome() {
               >
                 <div className="birzha-kpi-tile__label">В открытых рейсах</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.dispatchedKg)}</div>
-                <div className="birzha-text-muted birzha-ui-sm">Открытых рейсов: {aggregates.tripsOpen}</div>
               </Link>
               <Link
                 to={adminRoutes.assignSeller}
@@ -269,7 +259,6 @@ export function AdminCabinetHome() {
               >
                 <div className="birzha-kpi-tile__label">Продано</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.soldKg)}</div>
-                <div className="birzha-text-muted birzha-ui-sm">Всего рейсов: {aggregates.tripCount}</div>
               </Link>
           </section>
 
@@ -334,9 +323,7 @@ export function AdminCabinetHome() {
 
               <h5 className="birzha-admin-dash-modern__subhead">Топ складов по остатку</h5>
               {topWarehouses.length === 0 ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>
-                  Пока нет остатков по складам.
-                </p>
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>
               ) : (
                 <div className="birzha-admin-dash-modern__warehouse-bars" aria-label="Топ складов по остатку">
                   {topWarehouses.map((row) => (
@@ -385,28 +372,8 @@ export function AdminCabinetHome() {
 
           <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
             <div className="birzha-admin-dash__trips">
-              <p style={{ margin: "0 0 0.5rem" }}>
-                <Link to={adminRoutes.trips} style={{ fontWeight: 600 }}>
-                  Все рейсы
-                </Link>
-                {" · "}
-                <Link to={adminRoutes.reports} style={{ fontWeight: 600 }}>
-                  Отчёты
-                </Link>
-                {aggregates.tripsClosed > 0 ? (
-                  <>
-                    {" "}
-                    ·{" "}
-                    <Link to={adminRoutes.archive} className="birzha-text-muted">
-                      архив ({aggregates.tripsClosed})
-                    </Link>
-                  </>
-                ) : null}
-              </p>
               {sortedTripsOpen.length === 0 ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-                  Нет открытых рейсов. Закрытые — в разделе <Link to={adminRoutes.archive}>«Архив»</Link>.
-                </p>
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>—</p>
               ) : null}
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Рейсы в работе">
