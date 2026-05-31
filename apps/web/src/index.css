@@ -3554,6 +3554,9 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.05),
     0 26px 70px -44px rgba(37, 99, 235, 0.45);
+  position: relative;
+  overflow: hidden;
+  animation: birzha-admin-fade-up 280ms ease-out both;
 }
 
 .birzha-admin-dash-modern__title {
@@ -3575,6 +3578,29 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   justify-content: center;
   align-items: center;
   text-align: center;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.98));
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 16px 34px -30px rgba(37, 99, 235, 0.42);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.birzha-admin-dash-modern__actions .birzha-home-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.36);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.09),
+    0 22px 44px -30px rgba(37, 99, 235, 0.5);
+}
+
+.birzha-admin-dash-modern__actions .birzha-home-action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .birzha-admin-dash-modern__actions .birzha-home-action span {
@@ -3587,6 +3613,38 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 
 .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
   min-height: 7.2rem;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+  animation: birzha-admin-fade-up 320ms ease-out both;
+}
+
+.birzha-admin-dash-modern__kpi .birzha-kpi-tile:nth-child(1) {
+  animation-delay: 50ms;
+}
+
+.birzha-admin-dash-modern__kpi .birzha-kpi-tile:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.birzha-admin-dash-modern__kpi .birzha-kpi-tile:nth-child(3) {
+  animation-delay: 130ms;
+}
+
+.birzha-admin-dash-modern__kpi .birzha-kpi-tile:nth-child(4) {
+  animation-delay: 170ms;
+}
+
+.birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow:
+    0 3px 10px rgba(15, 23, 42, 0.12),
+    0 24px 56px -36px rgba(37, 99, 235, 0.45);
 }
 
 .birzha-admin-dash-modern__kpi .birzha-kpi-tile__label {
@@ -3616,6 +3674,15 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 18px 52px -38px rgba(37, 99, 235, 0.38);
   padding: 1rem 1.1rem;
+  animation: birzha-admin-fade-up 360ms ease-out both;
+}
+
+.birzha-admin-dash-modern__chart-card {
+  animation-delay: 120ms;
+}
+
+.birzha-admin-dash-modern__ops-card {
+  animation-delay: 160ms;
 }
 
 .birzha-admin-dash-modern__chart-head {
@@ -3661,6 +3728,7 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   height: 100%;
   min-width: 3px;
   border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
 }
 
 .birzha-admin-dash-modern__bar-fill--wh {
@@ -3719,6 +3787,7 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   min-width: 3px;
   border-radius: 999px;
   background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
 
 .birzha-admin-dash-modern__warehouse-value {
@@ -3767,6 +3836,93 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 
 .birzha-admin-dash-modern__ops-links a:hover {
   text-decoration: underline;
+}
+
+.birzha-admin-dash__trips {
+  animation: birzha-admin-fade-up 420ms ease-out both;
+  animation-delay: 190ms;
+}
+
+@keyframes birzha-admin-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__hero {
+  border-color: rgba(100, 116, 139, 0.45);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.22), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.18), transparent 40%),
+    linear-gradient(140deg, #181c2a 0%, #161b26 54%, #1a2234 100%);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 28px 70px -46px rgba(30, 64, 175, 0.6);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__title {
+  color: #f8fafc;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__actions .birzha-home-action {
+  border-color: rgba(100, 116, 139, 0.48);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.94), rgba(17, 24, 39, 0.96));
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 20px 40px -30px rgba(30, 64, 175, 0.5);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__actions .birzha-home-action:hover {
+  border-color: rgba(96, 165, 250, 0.58);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 24px 48px -30px rgba(30, 64, 175, 0.62);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__chart-card,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__ops-card {
+  border-color: rgba(100, 116, 139, 0.5);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.96));
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 22px 50px -38px rgba(30, 64, 175, 0.5);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__bar-track,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-track {
+  background: rgba(51, 65, 85, 0.85);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__bar-label,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-value,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__ops-list li span {
+  color: #cbd5e1;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__ops-list li strong,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__bar-value,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
+  color: #f8fafc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birzha-admin-dash-modern__hero,
+  .birzha-admin-dash-modern__kpi .birzha-kpi-tile,
+  .birzha-admin-dash-modern__chart-card,
+  .birzha-admin-dash-modern__ops-card,
+  .birzha-admin-dash__trips {
+    animation: none;
+  }
+
+  .birzha-admin-dash-modern__actions .birzha-home-action,
+  .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
+    transition: none;
+  }
 }
 
 @media (max-width: 64rem) {
