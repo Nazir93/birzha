@@ -65,6 +65,17 @@ function MassDistributionRing({
   );
 }
 
+function formatKg(v: number): string {
+  return `${v.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг`;
+}
+
+function ratioPart(value: number, total: number): number {
+  if (total <= 0) {
+    return 0;
+  }
+  return (value / total) * 100;
+}
+
 /**
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
@@ -130,6 +141,7 @@ export function AdminCabinetHome() {
       inTripRemainingKg: dispatchedKg,
       loadingManifestKg,
       loadingManifestCount: activeLoadingManifests.length,
+      byWarehouseKg: warehouseSums.byWarehouseKg,
     };
   }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
 
@@ -150,6 +162,19 @@ export function AdminCabinetHome() {
     const start = tripsPage * ADMIN_TRIPS_PAGE_SIZE;
     return sortedTripsOpen.slice(start, start + ADMIN_TRIPS_PAGE_SIZE);
   }, [sortedTripsOpen, tripsPage]);
+
+  const topWarehouses = useMemo(
+    () =>
+      [...aggregates.byWarehouseKg.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, kg]) => ({ name, kg })),
+    [aggregates.byWarehouseKg],
+  );
+
+  const topWarehouseKgMax = topWarehouses[0]?.kg ?? 0;
+  const totalVisibleMass =
+    aggregates.warehouseKg + aggregates.loadingManifestKg + aggregates.inTripRemainingKg + aggregates.soldKg;
 
   const loading = tripsQ.isPending || batchesQ.isPending || whQ.isPending;
   const err = tripsQ.isError || batchesQ.isError || whQ.isError;
@@ -175,78 +200,67 @@ export function AdminCabinetHome() {
 
   return (
     <div className="birzha-admin-dash">
-      <h2 className="birzha-sr-only">Сводка</h2>
+      <h2 className="birzha-sr-only">Сводка админки</h2>
 
       {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} skeleton skeletonRows={5} />}
       {err ? <ErrorAlert message="Ошибка загрузки данных." title="Сводка" /> : null}
       {!loading && !err && (
         <>
-          <header className="birzha-admin-dash__hero">
-            <Link
-              to={adminRoutes.distribution}
-              className="birzha-admin-dash__hero-ring birzha-admin-dash__hero-ring--link"
-              title="Погрузка на машину — распределение по складам"
-            >
-              <MassDistributionRing
-                warehouseKg={aggregates.warehouseKg}
-                loadingManifestKg={aggregates.loadingManifestKg}
-                inTripKg={aggregates.inTripRemainingKg}
-                soldKg={aggregates.soldKg}
-              />
-              <ul className="birzha-admin-dash__legend" aria-hidden>
-                <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--wh" /> На складе
-                </li>
-                <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--lm" /> В ПН
-                </li>
-                <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--tr" /> В рейсе
-                </li>
-                <li>
-                  <span className="birzha-admin-dash__legend-dot birzha-admin-dash__legend-dot--sl" /> Продано
-                </li>
-              </ul>
-            </Link>
+          <header className="birzha-admin-dash-modern__hero">
+            <div>
+              <p className="birzha-home-hero__eyebrow">Админка</p>
+              <h3 className="birzha-admin-dash-modern__title">Понятная сводка по работе за сегодня</h3>
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
+                Сначала главные цифры и действия, ниже — подробности по рейсам.
+              </p>
+            </div>
+            <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
+              <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
+                <span>Шаг 1</span>
+                <strong>Закупка</strong>
+              </Link>
+              <Link to={adminRoutes.trips} className="birzha-home-action">
+                <span>Шаг 2</span>
+                <strong>Рейсы</strong>
+              </Link>
+              <Link to={adminRoutes.distribution} className="birzha-home-action">
+                <span>Шаг 3</span>
+                <strong>Погрузка</strong>
+              </Link>
+              <Link to={adminRoutes.assignSeller} className="birzha-home-action">
+                <span>Шаг 4</span>
+                <strong>Продажи</strong>
+              </Link>
+            </nav>
           </header>
 
-          <p className="birzha-text-muted birzha-ui-sm no-print" style={{ margin: "0 0 0.85rem", lineHeight: 1.45 }}>
-            Кольцо — масса по <strong>открытым</strong> рейсам. Детали — в меню слева; закрытые рейсы — в{" "}
-            <Link to={adminRoutes.archive}>Архиве</Link>.
-          </p>
-
-          <div className="birzha-dashboard-layout birzha-admin-dash__body">
-            <BirzhaDisclosure title="Килограммы (открытые рейсы)" defaultOpen={false}>
-            <div className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash__kpi">
+          <section className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash-modern__kpi">
               <Link
                 to={adminRoutes.stockWarehouses}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
-                title="Склады и остатки"
+                title="Остаток на складах"
               >
-                <div className="birzha-kpi-tile__label">На складах</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
-                </div>
+                <div className="birzha-kpi-tile__label">Остаток на складе</div>
+                <div className="birzha-kpi-tile__value">{formatKg(aggregates.warehouseKg)}</div>
+                <div className="birzha-text-muted birzha-ui-sm">Активных партий: {aggregates.batchCount}</div>
               </Link>
               <Link
                 to={adminRoutes.distribution}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
-                title="Погрузочные накладные до привязки к рейсу"
+                title="Погрузочные накладные в работе"
               >
-                <div className="birzha-kpi-tile__label">В ПН</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.loadingManifestKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
-                </div>
+                <div className="birzha-kpi-tile__label">В погрузочных</div>
+                <div className="birzha-kpi-tile__value">{formatKg(aggregates.loadingManifestKg)}</div>
+                <div className="birzha-text-muted birzha-ui-sm">Накладных: {aggregates.loadingManifestCount}</div>
               </Link>
               <Link
                 to={adminRoutes.reports}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
                 title="Остаток в открытых рейсах (ещё не продано)"
               >
-                <div className="birzha-kpi-tile__label">В рейсе</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.dispatchedKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
-                </div>
+                <div className="birzha-kpi-tile__label">В открытых рейсах</div>
+                <div className="birzha-kpi-tile__value">{formatKg(aggregates.dispatchedKg)}</div>
+                <div className="birzha-text-muted birzha-ui-sm">Открытых рейсов: {aggregates.tripsOpen}</div>
               </Link>
               <Link
                 to={adminRoutes.assignSeller}
@@ -254,14 +268,122 @@ export function AdminCabinetHome() {
                 title="Продано с открытых рейсов"
               >
                 <div className="birzha-kpi-tile__label">Продано</div>
-                <div className="birzha-kpi-tile__value">
-                  {aggregates.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
-                </div>
+                <div className="birzha-kpi-tile__value">{formatKg(aggregates.soldKg)}</div>
+                <div className="birzha-text-muted birzha-ui-sm">Всего рейсов: {aggregates.tripCount}</div>
               </Link>
-            </div>
-            </BirzhaDisclosure>
+          </section>
 
-            <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
+          <div className="birzha-admin-dash-modern__layout">
+            <section className="birzha-admin-dash-modern__chart-card">
+              <div className="birzha-admin-dash-modern__chart-head">
+                <h4 style={{ margin: 0, fontSize: "1rem" }}>Распределение массы</h4>
+                <Link to={adminRoutes.distribution} className="birzha-ui-sm" style={{ fontWeight: 600 }}>
+                  Погрузка
+                </Link>
+              </div>
+              <div className="birzha-admin-dash-modern__mass-row">
+                <MassDistributionRing
+                  warehouseKg={aggregates.warehouseKg}
+                  loadingManifestKg={aggregates.loadingManifestKg}
+                  inTripKg={aggregates.inTripRemainingKg}
+                  soldKg={aggregates.soldKg}
+                />
+                <div className="birzha-admin-dash-modern__mass-bars">
+                  <div className="birzha-admin-dash-modern__bar-row">
+                    <div className="birzha-admin-dash-modern__bar-label">На складе</div>
+                    <div className="birzha-admin-dash-modern__bar-track">
+                      <div
+                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--wh"
+                        style={{ width: `${ratioPart(aggregates.warehouseKg, totalVisibleMass)}%` }}
+                      />
+                    </div>
+                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.warehouseKg)}</div>
+                  </div>
+                  <div className="birzha-admin-dash-modern__bar-row">
+                    <div className="birzha-admin-dash-modern__bar-label">В ПН</div>
+                    <div className="birzha-admin-dash-modern__bar-track">
+                      <div
+                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--lm"
+                        style={{ width: `${ratioPart(aggregates.loadingManifestKg, totalVisibleMass)}%` }}
+                      />
+                    </div>
+                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.loadingManifestKg)}</div>
+                  </div>
+                  <div className="birzha-admin-dash-modern__bar-row">
+                    <div className="birzha-admin-dash-modern__bar-label">В рейсе</div>
+                    <div className="birzha-admin-dash-modern__bar-track">
+                      <div
+                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--tr"
+                        style={{ width: `${ratioPart(aggregates.inTripRemainingKg, totalVisibleMass)}%` }}
+                      />
+                    </div>
+                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.inTripRemainingKg)}</div>
+                  </div>
+                  <div className="birzha-admin-dash-modern__bar-row">
+                    <div className="birzha-admin-dash-modern__bar-label">Продано</div>
+                    <div className="birzha-admin-dash-modern__bar-track">
+                      <div
+                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--sl"
+                        style={{ width: `${ratioPart(aggregates.soldKg, totalVisibleMass)}%` }}
+                      />
+                    </div>
+                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.soldKg)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <h5 className="birzha-admin-dash-modern__subhead">Топ складов по остатку</h5>
+              {topWarehouses.length === 0 ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>
+                  Пока нет остатков по складам.
+                </p>
+              ) : (
+                <div className="birzha-admin-dash-modern__warehouse-bars" aria-label="Топ складов по остатку">
+                  {topWarehouses.map((row) => (
+                    <div key={row.name} className="birzha-admin-dash-modern__warehouse-row">
+                      <div className="birzha-admin-dash-modern__warehouse-name">{row.name}</div>
+                      <div className="birzha-admin-dash-modern__warehouse-track">
+                        <div
+                          className="birzha-admin-dash-modern__warehouse-fill"
+                          style={{ width: `${ratioPart(row.kg, topWarehouseKgMax)}%` }}
+                        />
+                      </div>
+                      <div className="birzha-admin-dash-modern__warehouse-value">{formatKg(row.kg)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <aside className="birzha-admin-dash-modern__ops-card">
+              <h4 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>Операции сейчас</h4>
+              <ul className="birzha-admin-dash-modern__ops-list">
+                <li>
+                  <span>Открытые рейсы</span>
+                  <strong>{aggregates.tripsOpen}</strong>
+                </li>
+                <li>
+                  <span>Закрытые рейсы</span>
+                  <strong>{aggregates.tripsClosed}</strong>
+                </li>
+                <li>
+                  <span>Погрузочные в работе</span>
+                  <strong>{aggregates.loadingManifestCount}</strong>
+                </li>
+                <li>
+                  <span>Остаток на складе</span>
+                  <strong>{formatKg(aggregates.warehouseKg)}</strong>
+                </li>
+              </ul>
+              <div className="birzha-admin-dash-modern__ops-links no-print">
+                <Link to={adminRoutes.trips}>Рейсы</Link>
+                <Link to={adminRoutes.reports}>Отчёты</Link>
+                <Link to={adminRoutes.archive}>Архив</Link>
+              </div>
+            </aside>
+          </div>
+
+          <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
             <div className="birzha-admin-dash__trips">
               <p style={{ margin: "0 0 0.5rem" }}>
                 <Link to={adminRoutes.trips} style={{ fontWeight: 600 }}>
@@ -371,8 +493,7 @@ export function AdminCabinetHome() {
                 />
               ) : null}
             </div>
-            </BirzhaDisclosure>
-          </div>
+          </BirzhaDisclosure>
         </>
       )}
     </div>
