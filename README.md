@@ -65,7 +65,7 @@ Next.js по умолчанию не используем. Клиентский 
 | `POST` | `/counterparties` | `displayName` — создать контрагента (**201** `{ counterparty }`) |
 | `POST` | `/batches/:batchId/record-trip-shortage` | `tripId`, `kg`, `reason` — недостача при приёмке рейса; списание из «в пути», запись в `trip_batch_shortages` |
 | `POST` | `/sync` | Офлайн-синхронизация одного действия: `deviceId`, `localActionId`, `actionType`, `payload`. Типы: `sell_from_trip`, `ship_to_trip`, `record_trip_shortage`, `receive_on_warehouse`, `create_trip` (тело `payload` как у соответствующих REST-операций). Ответ **200**: `{ status: "ok", actionId, duplicate? }` или `{ status: "rejected", actionId, reason, resolution, errorCode?, details? }`. Идемпотентность по паре `(deviceId, localActionId)` — повтор после успеха даёт `duplicate: true`. |
-| `POST` | `/auth/login` | `login`, `password` — при успехе **200**: `{ token, user }`, cookie `birzha_access` (HttpOnly). Неверные данные — **401** (`invalid_credentials`), отключённая учётная запись — **403** (`account_disabled`). Требуются PostgreSQL, миграции с таблицей `users` и **`JWT_SECRET`** в окружении. |
+| `POST` | `/auth/login` | `login`, `password` — при успехе **200**: `{ token, user }`, cookie `birzha_access` (HttpOnly). Любой неуспешный вход — **401** (`invalid_credentials`) без раскрытия причины (включая отключённые учётные записи). Требуются PostgreSQL, миграции с таблицей `users` и **`JWT_SECRET`** в окружении. |
 | `POST` | `/auth/logout` | **200** `{ ok: true }`, сброс cookie доступа. |
 | `GET` | `/auth/me` | Текущий пользователь по `Authorization: Bearer <token>` или cookie; **401** без/с невалидным токеном. |
 

@@ -243,8 +243,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const j = JSON.parse(t) as { error?: string };
           if (j.error === "invalid_credentials") {
             msg = "Неверный логин или пароль";
-          } else if (j.error === "account_disabled") {
-            msg = "Учётная запись отключена";
           }
         } catch {
           /* use msg as is */

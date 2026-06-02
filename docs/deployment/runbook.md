@@ -111,3 +111,33 @@ pg_restore --dbname=birzha_restore_check "birzha-YYYY-MM-DD-HHMM.dump"
 DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/birzha_restore_check pnpm --filter @birzha/api test
 dropdb birzha_restore_check
 ```
+
+## 10. Быстрый security smoke (после выката/ребута)
+
+Проверяем, что базовая защита и доступность не деградировали:
+
+```bash
+# Сервисы
+systemctl is-active ssh nginx birzha-api fail2ban
+
+# Ядро и флаг reboot
+uname -r
+test -f /var/run/reboot-required && cat /var/run/reboot-required || echo "reboot_required=no"
+
+# Сетевой периметр
+ufw status verbose
+fail2ban-client status
+fail2ban-client status sshd
+fail2ban-client status nginx-birzha-auth-limit
+
+# API health
+curl -sS http://127.0.0.1:3000/health
+
+# Анти-брутфорс login (ожидаемо: 401...401, затем 429)
+for i in 1 2 3 4 5 6; do
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -H "content-type: application/json" \
+    -d '{"login":"smoke-user","password":"bad-pass"}' \
+    http://127.0.0.1:3000/auth/login
+done
+```

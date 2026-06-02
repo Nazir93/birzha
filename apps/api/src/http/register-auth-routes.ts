@@ -10,6 +10,51 @@ import type { AppEnv } from "../config.js";
 import type { DbClient } from "../db/client.js";
 import { findUserWithRolesByLogin, touchUserLastLogin } from "../infrastructure/persistence/drizzle-user-auth.repository.js";
 
+const LOGIN_LOCK_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
+
+type LoginLockState = {
+  failedAttempts: number;
+  lockedUntilMs: number;
+};
+
+const loginLockByIdentity = new Map<string, LoginLockState>();
+
+function loginIdentityKey(rawLogin: string): string {
+  return rawLogin.trim().toLocaleLowerCase("en-US");
+}
+
+function resetLoginLock(identityKey: string): void {
+  loginLockByIdentity.delete(identityKey);
+}
+
+function getActiveLock(identityKey: string, nowMs: number): LoginLockState | null {
+  const current = loginLockByIdentity.get(identityKey);
+  if (!current) {
+    return null;
+  }
+  if (current.lockedUntilMs > nowMs) {
+    return current;
+  }
+  if (current.failedAttempts === 0) {
+    loginLockByIdentity.delete(identityKey);
+    return null;
+  }
+  return current;
+}
+
+function registerFailedLoginAttempt(identityKey: string, nowMs: number): LoginLockState {
+  const current = getActiveLock(identityKey, nowMs) ?? { failedAttempts: 0, lockedUntilMs: 0 };
+  const nextAttempts = current.failedAttempts + 1;
+  const shouldLock = nextAttempts >= LOGIN_LOCK_MAX_ATTEMPTS;
+  const nextState: LoginLockState = {
+    failedAttempts: shouldLock ? 0 : nextAttempts,
+    lockedUntilMs: shouldLock ? nowMs + LOGIN_LOCK_WINDOW_MS : 0,
+  };
+  loginLockByIdentity.set(identityKey, nextState);
+  return nextState;
+}
+
 function accessCookieOptions(env: AppEnv) {
   return {
     path: "/",
@@ -49,13 +94,33 @@ export async function registerAuthRoutes(app: FastifyInstance, opts: { db: DbCli
     },
     async (req, reply) => {
       const body = loginBodySchema.parse(req.body);
-      const row = await findUserWithRolesByLogin(db, body.login);
+      const identityKey = loginIdentityKey(body.login);
+      const nowMs = Date.now();
+      const activeLock = getActiveLock(identityKey, nowMs);
+      if (activeLock && activeLock.lockedUntilMs > nowMs) {
+        const retryAfterSec = Math.max(1, Math.ceil((activeLock.lockedUntilMs - nowMs) / 1000));
+        reply.header("Retry-After", String(retryAfterSec));
+        return reply.code(429).send({ error: "too_many_attempts" });
+      }
+      let row: Awaited<ReturnType<typeof findUserWithRolesByLogin>> = null;
+      try {
+        row = await findUserWithRolesByLogin(db, body.login);
+      } catch {
+        return reply.code(503).send({ error: "auth_unavailable" });
+      }
       if (!row || !verifyPassword(body.password, row.passwordHash)) {
+        const nextState = registerFailedLoginAttempt(identityKey, nowMs);
+        if (nextState.lockedUntilMs > nowMs) {
+          const retryAfterSec = Math.max(1, Math.ceil((nextState.lockedUntilMs - nowMs) / 1000));
+          reply.header("Retry-After", String(retryAfterSec));
+          return reply.code(429).send({ error: "too_many_attempts" });
+        }
         return reply.code(401).send({ error: "invalid_credentials" });
       }
       if (!row.isActive) {
-        return reply.code(403).send({ error: "account_disabled" });
+        return reply.code(401).send({ error: "invalid_credentials" });
       }
+      resetLoginLock(identityKey);
       await touchUserLastLogin(db, row.id);
       const payload = { sub: row.id, login: row.login, roles: row.roles };
       const token = await reply.jwtSign(payload);
