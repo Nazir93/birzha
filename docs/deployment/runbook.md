@@ -141,3 +141,29 @@ for i in 1 2 3 4 5 6; do
     http://127.0.0.1:3000/auth/login
 done
 ```
+
+## 11. Анти-цикл: когда остановить повторные проверки
+
+Чтобы не гонять одно и то же по кругу, считаем систему **стабильной**, если одновременно выполнены все пункты:
+
+- `systemctl is-active ssh nginx birzha-api fail2ban` -> везде `active`
+- `curl -sS http://127.0.0.1:3000/health` -> `status: ok`
+- `/auth/login` для неверных данных -> `401,401,401,401,429,429`
+- `fail2ban-client status sshd` и `fail2ban-client status nginx-birzha-auth-limit` -> нет вашего админского IP в `Banned IP list`
+- TCP доступ с вашей машины: `22` и `443` открыты
+
+Если все пункты выше зелёные, **повторять smoke не нужно**. Следующий smoke — только:
+
+- после изменений конфигов `sshd`/`nginx`/`fail2ban`/`ufw`
+- после `apt upgrade` + reboot
+- после деплоя, который меняет auth или сетевой периметр
+
+### Если снова «не подключается сервер»
+
+1. Сначала проверяем сеть (`22/443`) с локальной машины.
+2. Если TCP закрыт — это периметр (fail2ban/ufw/cloud firewall), а не API.
+3. Через web-console:
+   - `fail2ban-client set sshd unbanip <YOUR_IP>`
+   - `fail2ban-client set nginx-birzha-auth-limit unbanip <YOUR_IP>`
+   - убедиться, что `<YOUR_IP>` в `ignoreip` (`/etc/fail2ban/jail.d/00-allow-admin.local`)
+4. После восстановления доступа — один контрольный smoke и стоп.
