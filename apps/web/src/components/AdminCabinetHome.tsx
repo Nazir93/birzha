@@ -24,6 +24,8 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
+type SummaryChartMode = "mass" | "warehouses" | "products";
+type SummaryPeriod = "today" | "7d" | "30d" | "all";
 
 function MassDistributionRing({
   warehouseKg,
@@ -76,6 +78,33 @@ function ratioPart(value: number, total: number): number {
   return (value / total) * 100;
 }
 
+function periodStartDate(period: SummaryPeriod): Date | null {
+  if (period === "all") {
+    return null;
+  }
+  const now = new Date();
+  if (period === "today") {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  const d = new Date(now);
+  d.setDate(d.getDate() - (period === "7d" ? 7 : 30));
+  return d;
+}
+
+function dateLikeInPeriod(raw: string | null | undefined, start: Date | null): boolean {
+  if (!start) {
+    return true;
+  }
+  if (!raw?.trim()) {
+    return false;
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) {
+    return false;
+  }
+  return dt >= start;
+}
+
 /**
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
@@ -83,6 +112,9 @@ export function AdminCabinetHome() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const showCloseTrip = canCreateTrip(user ?? null);
+  const [summaryChartMode, setSummaryChartMode] = useState<SummaryChartMode>("mass");
+  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("30d");
+  const [hoveredChartLabel, setHoveredChartLabel] = useState<string | null>(null);
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const loadingManifestsQ = useQuery(loadingManifestsListQueryOptions());
@@ -100,10 +132,12 @@ export function AdminCabinetHome() {
     }
     return m;
   }, [whQ.data?.warehouses]);
+  const periodStart = useMemo(() => periodStartDate(summaryPeriod), [summaryPeriod]);
 
   const aggregates = useMemo(() => {
     const batches = batchesQ.data?.batches ?? [];
-    const trips = tripsQ.data?.trips ?? [];
+    const tripsAll = tripsQ.data?.trips ?? [];
+    const trips = tripsAll.filter((t) => dateLikeInPeriod(t.departedAt, periodStart));
     const warehouseSums = sumWarehouseKgFromBatches(batches, whById);
     const openTripsMass = sumOpenTripsMassKg(trips);
 
@@ -118,10 +152,11 @@ export function AdminCabinetHome() {
     }
 
     const closedTripIds = closedTripIdSet(trips);
-    const activeLoadingManifests = splitLoadingManifestsByArchive(
-      loadingManifestsQ.data?.loadingManifests ?? [],
-      closedTripIds,
-    ).active;
+    const loadingManifests = (loadingManifestsQ.data?.loadingManifests ?? []).filter((m) =>
+      dateLikeInPeriod(m.docDate, periodStart),
+    );
+    const activeLoadingManifests = splitLoadingManifestsByArchive(loadingManifests, closedTripIds).active;
+    const loadingManifestsWithoutTrip = activeLoadingManifests.filter((m) => !m.tripId).length;
     const loadingManifestKg = activeLoadingManifests.reduce((s, m) => s + m.totalKg, 0);
 
     /** Открытые рейсы: отгрузка / остаток в машине / продажи — из журналов рейса, не из полей партии. */
@@ -141,9 +176,11 @@ export function AdminCabinetHome() {
       inTripRemainingKg: dispatchedKg,
       loadingManifestKg,
       loadingManifestCount: activeLoadingManifests.length,
+      loadingManifestsWithoutTrip,
       byWarehouseKg: warehouseSums.byWarehouseKg,
+      byProductGroupKg: warehouseSums.byProductGroupKg,
     };
-  }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById]);
+  }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById, periodStart]);
 
   const sortedTripsOpen = useMemo(
     () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
@@ -171,10 +208,53 @@ export function AdminCabinetHome() {
         .map(([name, kg]) => ({ name, kg })),
     [aggregates.byWarehouseKg],
   );
+  const topProductGroups = useMemo(
+    () =>
+      [...aggregates.byProductGroupKg.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([name, kg]) => ({ name, kg })),
+    [aggregates.byProductGroupKg],
+  );
 
   const topWarehouseKgMax = topWarehouses[0]?.kg ?? 0;
+  const topProductGroupKgMax = topProductGroups[0]?.kg ?? 0;
   const totalVisibleMass =
     aggregates.warehouseKg + aggregates.loadingManifestKg + aggregates.inTripRemainingKg + aggregates.soldKg;
+  const chartRows = useMemo(
+    () => [
+      { label: "На складе", kg: aggregates.warehouseKg, color: "#16a34a" },
+      { label: "В ПН", kg: aggregates.loadingManifestKg, color: "#7c3aed" },
+      { label: "В рейсе", kg: aggregates.inTripRemainingKg, color: "#f59e0b" },
+      { label: "Продано", kg: aggregates.soldKg, color: "#2563eb" },
+    ],
+    [aggregates.warehouseKg, aggregates.loadingManifestKg, aggregates.inTripRemainingKg, aggregates.soldKg],
+  );
+  const pieGradient = useMemo(() => {
+    const total = chartRows.reduce((s, row) => s + row.kg, 0);
+    if (total <= 0) {
+      return null;
+    }
+    let from = 0;
+    const parts: string[] = [];
+    for (const row of chartRows) {
+      if (row.kg <= 0) {
+        continue;
+      }
+      const span = (row.kg / total) * 360;
+      const to = from + span;
+      parts.push(`${row.color} ${from}deg ${to}deg`);
+      from = to;
+    }
+    if (parts.length === 0) {
+      return null;
+    }
+    return `conic-gradient(${parts.join(", ")})`;
+  }, [chartRows]);
+  const openTripsReadyToClose = useMemo(
+    () => sortedTripsOpen.filter((t) => t.status === "open" && tripListFullySold(t)).length,
+    [sortedTripsOpen],
+  );
 
   const loading = tripsQ.isPending || batchesQ.isPending || whQ.isPending;
   const err = tripsQ.isError || batchesQ.isError || whQ.isError;
@@ -210,6 +290,40 @@ export function AdminCabinetHome() {
             <div>
               <p className="birzha-home-hero__eyebrow">Панель управления</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryPeriod === "today" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => setSummaryPeriod("today")}
+                >
+                  Сегодня
+                </button>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryPeriod === "7d" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => setSummaryPeriod("7d")}
+                >
+                  7 дней
+                </button>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryPeriod === "30d" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => setSummaryPeriod("30d")}
+                >
+                  30 дней
+                </button>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryPeriod === "all" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => setSummaryPeriod("all")}
+                >
+                  Всё время
+                </button>
+              </div>
             </div>
             <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
               <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
@@ -265,12 +379,48 @@ export function AdminCabinetHome() {
           <div className="birzha-admin-dash-modern__layout">
             <section className="birzha-admin-dash-modern__chart-card">
               <div className="birzha-admin-dash-modern__chart-head">
-                <h4 style={{ margin: 0, fontSize: "1rem" }}>Распределение массы</h4>
+                <h4 style={{ margin: 0, fontSize: "1rem" }}>Интерактивная сводка</h4>
                 <Link to={adminRoutes.distribution} className="birzha-ui-sm" style={{ fontWeight: 600 }}>
                   Погрузка
                 </Link>
               </div>
-              <div className="birzha-admin-dash-modern__mass-row">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginBottom: "0.65rem" }}>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryChartMode === "mass" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => {
+                    setSummaryChartMode("mass");
+                    setHoveredChartLabel(null);
+                  }}
+                >
+                  Баланс массы
+                </button>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryChartMode === "warehouses" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => {
+                    setSummaryChartMode("warehouses");
+                    setHoveredChartLabel(null);
+                  }}
+                >
+                  По складам
+                </button>
+                <button
+                  type="button"
+                  style={btnStyleInline}
+                  className={summaryChartMode === "products" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  onClick={() => {
+                    setSummaryChartMode("products");
+                    setHoveredChartLabel(null);
+                  }}
+                >
+                  По видам товара
+                </button>
+              </div>
+              {summaryChartMode === "mass" ? (
+                <div className="birzha-admin-dash-modern__mass-row">
                 <MassDistributionRing
                   warehouseKg={aggregates.warehouseKg}
                   loadingManifestKg={aggregates.loadingManifestKg}
@@ -278,7 +428,7 @@ export function AdminCabinetHome() {
                   soldKg={aggregates.soldKg}
                 />
                 <div className="birzha-admin-dash-modern__mass-bars">
-                  <div className="birzha-admin-dash-modern__bar-row">
+                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("На складе")}>
                     <div className="birzha-admin-dash-modern__bar-label">На складе</div>
                     <div className="birzha-admin-dash-modern__bar-track">
                       <div
@@ -288,7 +438,7 @@ export function AdminCabinetHome() {
                     </div>
                     <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.warehouseKg)}</div>
                   </div>
-                  <div className="birzha-admin-dash-modern__bar-row">
+                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("В погрузочных")}>
                     <div className="birzha-admin-dash-modern__bar-label">В ПН</div>
                     <div className="birzha-admin-dash-modern__bar-track">
                       <div
@@ -298,7 +448,7 @@ export function AdminCabinetHome() {
                     </div>
                     <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.loadingManifestKg)}</div>
                   </div>
-                  <div className="birzha-admin-dash-modern__bar-row">
+                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("В открытых рейсах")}>
                     <div className="birzha-admin-dash-modern__bar-label">В рейсе</div>
                     <div className="birzha-admin-dash-modern__bar-track">
                       <div
@@ -308,7 +458,7 @@ export function AdminCabinetHome() {
                     </div>
                     <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.inTripRemainingKg)}</div>
                   </div>
-                  <div className="birzha-admin-dash-modern__bar-row">
+                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("Продано")}>
                     <div className="birzha-admin-dash-modern__bar-label">Продано</div>
                     <div className="birzha-admin-dash-modern__bar-track">
                       <div
@@ -319,20 +469,35 @@ export function AdminCabinetHome() {
                     <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.soldKg)}</div>
                   </div>
                 </div>
-              </div>
+                </div>
+              ) : null}
 
-              <h5 className="birzha-admin-dash-modern__subhead">Топ складов по остатку</h5>
-              {topWarehouses.length === 0 ? (
+              <h5 className="birzha-admin-dash-modern__subhead">
+                {summaryChartMode === "warehouses" ? "Топ складов по остатку" : "Виды товара по массе"}
+              </h5>
+              {(summaryChartMode === "warehouses" ? topWarehouses.length : topProductGroups.length) === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>
               ) : (
-                <div className="birzha-admin-dash-modern__warehouse-bars" aria-label="Топ складов по остатку">
-                  {topWarehouses.map((row) => (
-                    <div key={row.name} className="birzha-admin-dash-modern__warehouse-row">
+                <div
+                  className="birzha-admin-dash-modern__warehouse-bars"
+                  aria-label={summaryChartMode === "warehouses" ? "Топ складов по остатку" : "Виды товара по массе"}
+                >
+                  {(summaryChartMode === "warehouses" ? topWarehouses : topProductGroups).map((row) => (
+                    <div
+                      key={row.name}
+                      className="birzha-admin-dash-modern__warehouse-row"
+                      onMouseEnter={() => setHoveredChartLabel(row.name)}
+                    >
                       <div className="birzha-admin-dash-modern__warehouse-name">{row.name}</div>
                       <div className="birzha-admin-dash-modern__warehouse-track">
                         <div
                           className="birzha-admin-dash-modern__warehouse-fill"
-                          style={{ width: `${ratioPart(row.kg, topWarehouseKgMax)}%` }}
+                          style={{
+                            width: `${ratioPart(
+                              row.kg,
+                              summaryChartMode === "warehouses" ? topWarehouseKgMax : topProductGroupKgMax,
+                            )}%`,
+                          }}
                         />
                       </div>
                       <div className="birzha-admin-dash-modern__warehouse-value">{formatKg(row.kg)}</div>
@@ -340,6 +505,52 @@ export function AdminCabinetHome() {
                   ))}
                 </div>
               )}
+              {hoveredChartLabel ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.6rem 0 0" }}>
+                  Наведение: <strong>{hoveredChartLabel}</strong>
+                </p>
+              ) : (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.6rem 0 0" }}>
+                  Наведите на сегмент или строку графика.
+                </p>
+              )}
+
+              {pieGradient ? (
+                <div style={{ marginTop: "0.8rem" }}>
+                  <h5 className="birzha-admin-dash-modern__subhead" style={{ marginTop: 0 }}>Круговая диаграмма (доли)</h5>
+                  <div className="birzha-admin-dash-modern__mass-row" style={{ alignItems: "center" }}>
+                    <div
+                      className="birzha-admin-mass-ring"
+                      style={{ background: pieGradient }}
+                      role="img"
+                      aria-label="Круговая диаграмма долей массы по категориям"
+                    >
+                      <div className="birzha-admin-mass-ring__hole" />
+                    </div>
+                    <div className="birzha-admin-dash-modern__mass-bars">
+                      {chartRows
+                        .filter((row) => row.kg > 0)
+                        .map((row) => (
+                          <div
+                            key={row.label}
+                            className="birzha-admin-dash-modern__bar-row"
+                            onMouseEnter={() => setHoveredChartLabel(`${row.label}: ${ratioPart(row.kg, totalVisibleMass).toFixed(1)}%`)}
+                            title={`${row.label}: ${ratioPart(row.kg, totalVisibleMass).toFixed(1)}% (${formatKg(row.kg)})`}
+                          >
+                            <div className="birzha-admin-dash-modern__bar-label">{row.label}</div>
+                            <div className="birzha-admin-dash-modern__bar-track">
+                              <div
+                                className="birzha-admin-dash-modern__bar-fill"
+                                style={{ width: `${ratioPart(row.kg, totalVisibleMass)}%`, background: row.color }}
+                              />
+                            </div>
+                            <div className="birzha-admin-dash-modern__bar-value">{ratioPart(row.kg, totalVisibleMass).toFixed(1)}%</div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <aside className="birzha-admin-dash-modern__ops-card">
@@ -354,12 +565,16 @@ export function AdminCabinetHome() {
                   <strong>{aggregates.tripsClosed}</strong>
                 </li>
                 <li>
+                  <span>Готовы к закрытию</span>
+                  <strong>{openTripsReadyToClose}</strong>
+                </li>
+                <li>
                   <span>Погрузочные в работе</span>
                   <strong>{aggregates.loadingManifestCount}</strong>
                 </li>
                 <li>
-                  <span>Остаток на складе</span>
-                  <strong>{formatKg(aggregates.warehouseKg)}</strong>
+                  <span>ПН без рейса</span>
+                  <strong>{aggregates.loadingManifestsWithoutTrip}</strong>
                 </li>
               </ul>
               <div className="birzha-admin-dash-modern__ops-links no-print">

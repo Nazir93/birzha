@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 
-import { accounting } from "../routes.js";
+import { useAuth } from "../auth/auth-context.js";
+import { canAccessCabinet } from "../auth/role-panels.js";
+import { accounting, adminRoutes } from "../routes.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
@@ -8,6 +10,9 @@ import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
  * Главная бухкабинета: остатки, выручка и прибыль по данным API; без форм ввода рейса/партий.
  */
 export function AccountingCabinetHome() {
+  const { user } = useAuth();
+  const canGoToAdminPanel = user ? canAccessCabinet(user, "admin") : false;
+
   return (
     <section className="birzha-home-premium birzha-section-shell" aria-labelledby="acc-home-h">
       <header className="birzha-home-hero birzha-home-hero--accounting birzha-section-hero">
@@ -34,6 +39,12 @@ export function AccountingCabinetHome() {
             <span>Клиенты</span>
             <strong>Контрагенты</strong>
           </Link>
+          {canGoToAdminPanel ? (
+            <Link to={adminRoutes.home} className="birzha-home-action">
+              <span>Переход</span>
+              <strong>В админ-панель</strong>
+            </Link>
+          ) : null}
         </nav>
       </header>
 
