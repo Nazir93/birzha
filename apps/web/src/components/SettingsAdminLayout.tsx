@@ -21,7 +21,7 @@ export function SettingsAdminLayout() {
 
       <nav className="birzha-settings-tabs no-print" aria-label="Разделы настроек">
         <NavLink to={adminRoutes.settingsCatalog} className={tabClassName} end>
-          Склады и калибры
+          Справочники
         </NavLink>
         <NavLink to={adminRoutes.settingsDocuments} className={tabClassName}>
           Накладные

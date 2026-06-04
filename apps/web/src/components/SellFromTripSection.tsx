@@ -97,6 +97,7 @@ export function SellFromTripSection() {
   const [sellKg, setSellKg] = useState("");
   const [sellPackages, setSellPackages] = useState("");
   const [sellPrice, setSellPrice] = useState("");
+  const [sellClientLabel, setSellClientLabel] = useState("");
   const [saleChannel, setSaleChannel] = useState<"retail" | "wholesale">("retail");
   const [wholesaleBuyerId, setWholesaleBuyerId] = useState("");
   const [paymentKind, setPaymentKind] = useState<"cash" | "debt" | "mixed" | "card_transfer">("cash");
@@ -122,7 +123,7 @@ export function SellFromTripSection() {
 
   useEffect(() => {
     setSellerSaleFlash(null);
-  }, [sellTripId, sellBatchId]);
+  }, [sellTripId]);
 
   useEffect(() => {
     const p = searchParams.get("trip")?.trim() ?? "";
@@ -335,6 +336,7 @@ export function SellFromTripSection() {
     setSellKg("");
     setSellPackages("");
     setSellPrice("");
+    setSellClientLabel("");
     setCashMixed("");
     setCardTransferKopecks("");
     setWholesaleBuyerId("");
@@ -457,6 +459,11 @@ export function SellFromTripSection() {
         return "Выберите оптовика из списка";
       }
     }
+    if (saleChannel === "retail" && (paymentKind === "debt" || paymentKind === "mixed")) {
+      if (!sellClientLabel.trim()) {
+        return "Укажите имя клиента для долга";
+      }
+    }
     if (paymentKind === "card_transfer") {
       const raw = cardTransferKopecks.trim();
       if (!raw) {
@@ -542,6 +549,7 @@ export function SellFromTripSection() {
     sellTripIdTrim,
     selectedTripOpen,
     saleChannel,
+    sellClientLabel,
     wholesalersCatalog,
     wholesalersQ.isPending,
     wholesalersQ.isSuccess,
@@ -621,6 +629,7 @@ export function SellFromTripSection() {
         pricePerKg: sellPrice,
         saleChannel,
         paymentKind,
+        clientLabel: saleChannel === "retail" ? sellClientLabel : undefined,
         cashMixed,
         cardTransferKopecks,
         wholesaleBuyerId: saleChannel === "wholesale" ? wholesaleBuyerId : undefined,
@@ -746,6 +755,7 @@ export function SellFromTripSection() {
                 return;
               }
               setSaleChannel("wholesale");
+              setSellClientLabel("");
             }}
           >
             Опт
@@ -1004,6 +1014,25 @@ export function SellFromTripSection() {
         <option value="mixed">Наличные + долг (сумма наличными — в рублях ниже)</option>
         <option value="card_transfer">Онлайн-перевод на карту + наличные (остаток наличными, не терминал)</option>
       </select>
+      {saleChannel === "retail" && (paymentKind === "debt" || paymentKind === "mixed") ? (
+        <>
+          <label
+            htmlFor={`${idPrefix}-in-client-name`}
+            className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+          >
+            Кому в долг (имя клиента) *
+          </label>
+          <input
+            id={`${idPrefix}-in-client-name`}
+            value={sellClientLabel}
+            onChange={(e) => setSellClientLabel(e.target.value)}
+            className={sellerFieldClass}
+            style={sellerFieldMb}
+            autoComplete="off"
+            placeholder="например: Магазин Салих, ИП Магомедов"
+          />
+        </>
+      ) : null}
       {paymentKind === "card_transfer" && (
         <>
           <label

@@ -173,17 +173,20 @@ function NakladnayaArchiveTable({
   docs,
   pathname,
   warehouses,
+  startIndex,
 }: {
   docs: readonly PurchaseDocumentSummary[];
   pathname: string;
   warehouses: readonly WarehouseJson[];
+  startIndex: number;
 }) {
   const whById = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name || w.code])), [warehouses]);
   return (
     <ArchiveDataTable
       ariaLabel="Архив закупочных накладных"
-      headers={["Дата", "№ документа", "Склад", ""]}
-      rows={docs.map((d) => [
+      headers={["№", "Дата", "№ документа", "Склад", ""]}
+      rows={docs.map((d, idx) => [
+        String(startIndex + idx),
         formatPurchaseDocDateRu(d.docDate),
         <Link key="doc" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 700 }}>
           {d.documentNumber}
@@ -201,16 +204,19 @@ function ManifestArchiveTable({
   manifests,
   pathname,
   tripNumberById,
+  startIndex,
 }: {
   manifests: readonly LoadingManifestSummary[];
   pathname: string;
   tripNumberById: Map<string, string>;
+  startIndex: number;
 }) {
   return (
     <ArchiveDataTable
       ariaLabel="Архив погрузочных накладных"
-      headers={["Дата", "№", "Склад", "Рейс", ""]}
-      rows={manifests.map((m) => [
+      headers={["№", "Дата", "№", "Склад", "Рейс", ""]}
+      rows={manifests.map((m, idx) => [
+        String(startIndex + idx),
         formatPurchaseDocDateRu(m.docDate),
         <Link key="n" to={manifestPathFor(pathname, m.id)} style={{ fontWeight: 700 }}>
           {formatLoadingManifestDisplayName({
@@ -233,20 +239,23 @@ function TripsArchiveTable({
   reportTo,
   reportByTripId,
   reportLoadingTripIds,
+  startIndex,
 }: {
   trips: readonly TripJson[];
   reportTo: (tripId: string) => string;
   reportByTripId: ReadonlyMap<string, ShipmentReportResponse>;
   reportLoadingTripIds: ReadonlySet<string>;
+  startIndex: number;
 }) {
   return (
     <ArchiveDataTable
       ariaLabel="Архив рейсов"
-      headers={["Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""]}
-      rows={trips.map((t) => {
+      headers={["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""]}
+      rows={trips.map((t, idx) => {
         const rep = reportByTripId.get(t.id);
         const loading = reportLoadingTripIds.has(t.id);
         return [
+          String(startIndex + idx),
           formatTripDepartedRu(t.departedAt),
           <Link key="n" to={reportTo(t.id)} style={{ fontWeight: 700 }}>
             {t.tripNumber}
@@ -441,6 +450,7 @@ export function ArchivePage() {
               reportTo={reportTo}
               reportByTripId={reportByTripId}
               reportLoadingTripIds={reportLoadingTripIds}
+              startIndex={tripsPage * PAGE_SIZE + 1}
             />
           </PaginatedSection>
 
@@ -459,6 +469,7 @@ export function ArchivePage() {
                 docs={nakladPaged.slice}
                 pathname={pathname}
                 warehouses={warehousesQ.data?.warehouses ?? []}
+                startIndex={nakladPage * PAGE_SIZE + 1}
               />
             </PaginatedSection>
           ) : null}
@@ -478,6 +489,7 @@ export function ArchivePage() {
                 manifests={manifestPaged.slice}
                 pathname={pathname}
                 tripNumberById={tripNumberById}
+                startIndex={manifestPage * PAGE_SIZE + 1}
               />
             </PaginatedSection>
           ) : null}

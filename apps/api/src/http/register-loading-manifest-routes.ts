@@ -7,7 +7,7 @@ import {
   loadingManifestReservedBatchIdsQuerySchema,
   updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
@@ -29,6 +29,7 @@ import {
   purchaseDocumentLines,
   purchaseDocuments,
   shipDestinations,
+  tripBatchShipments,
   warehouses,
 } from "../db/schema.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
@@ -376,6 +377,7 @@ export function registerLoadingManifestRoutes(
           .select({
             batchId: loadingManifestLines.batchId,
             grams: loadingManifestLines.grams,
+            packageCount: loadingManifestLines.packageCount,
           })
           .from(loadingManifestLines)
           .where(eq(loadingManifestLines.manifestId, manifestId));
@@ -386,6 +388,17 @@ export function registerLoadingManifestRoutes(
 
         for (const line of lines) {
           const ledger = await shipRepo.totalGramsForTripAndBatch(body.tripId, line.batchId);
+          const [linePkgAgg] = await exec
+            .select({
+              totalPackageCount: sql<bigint>`coalesce(sum(${tripBatchShipments.packageCount}), 0::bigint)`,
+            })
+            .from(tripBatchShipments)
+            .where(
+              and(
+                eq(tripBatchShipments.tripId, body.tripId),
+                eq(tripBatchShipments.batchId, line.batchId),
+              ),
+            );
           const [br] = await exec
             .select({
               onWarehouseGrams: batches.onWarehouseGrams,
@@ -396,7 +409,9 @@ export function registerLoadingManifestRoutes(
             .limit(1);
           const plan = planLoadingManifestAssignTripShipment({
             lineGrams: line.grams,
+            linePackageCount: line.packageCount,
             ledgerGramsForTripBatch: ledger,
+            ledgerPackageCountForTripBatch: linePkgAgg?.totalPackageCount ?? 0n,
             onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
             inTransitGrams: br?.inTransitGrams ?? 0n,
           });
@@ -409,7 +424,7 @@ export function registerLoadingManifestRoutes(
               tripId: body.tripId,
               batchId: line.batchId,
               grams: plan.grams,
-              packageCount: null,
+              packageCount: plan.packageCount,
             });
             continue;
           }
@@ -418,6 +433,7 @@ export function registerLoadingManifestRoutes(
             batchId: line.batchId,
             tripId: body.tripId,
             kg,
+            packageCount: plan.packageCount == null ? undefined : Number(plan.packageCount),
           });
         }
       });

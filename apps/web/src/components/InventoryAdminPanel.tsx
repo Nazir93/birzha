@@ -17,23 +17,34 @@ import {
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes } from "../routes.js";
 import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 /**
- * Справочники «склад» и «калибр» — admin/manager. Закуп вводит накладные в /o, не создавая сущности здесь.
+ * Справочники админки: склады, калибры, направления логистики и оптовики.
  */
 type InventoryAdminPanelProps = {
   /** Внутри раздела «Настройки» — без отдельного заголовка страницы. */
   embedded?: boolean;
 };
 
+type CatalogSection = "warehouses" | "grades" | "logistics" | "wholesalers";
+
+function sectionTabClassName(active: boolean): string {
+  return `birzha-settings-tabs__tab${active ? " birzha-settings-tabs__tab--active" : ""}`;
+}
+
 export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelProps = {}) {
   const { hash } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { meta } = useAuth();
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
+  const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
+  const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
+  const [activeSection, setActiveSection] = useState<CatalogSection>("warehouses");
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
   const [newGradeCode, setNewGradeCode] = useState("");
@@ -48,10 +59,31 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const [wholesalerFormError, setWholesalerFormError] = useState<string | null>(null);
   const [newWholesalerName, setNewWholesalerName] = useState("");
   const [newWholesalerOrder, setNewWholesalerOrder] = useState("");
+
+  const sectionFromUrl = searchParams.get("section");
+
+  useEffect(() => {
+    const v = (sectionFromUrl ?? "").trim();
+    if (v === "warehouses" || v === "grades" || v === "logistics" || v === "wholesalers") {
+      setActiveSection(v);
+    }
+  }, [sectionFromUrl]);
+
+  useEffect(() => {
+    const current = (searchParams.get("section") ?? "").trim();
+    if (current === activeSection) {
+      return;
+    }
+    const next = new URLSearchParams(searchParams);
+    next.set("section", activeSection);
+    setSearchParams(next, { replace: true });
+  }, [activeSection, searchParams, setSearchParams]);
+
   useEffect(() => {
     if (hash !== "#inv-product-grades") {
       return;
     }
+    setActiveSection("grades");
     const el = document.getElementById("inv-product-grades");
     if (el instanceof HTMLElement) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -60,6 +92,16 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
       }
     }
   }, [hash]);
+
+  useEffect(() => {
+    if (activeSection === "logistics" && !shipDestEnabled) {
+      setActiveSection("warehouses");
+      return;
+    }
+    if (activeSection === "wholesalers" && !wholesalersEnabled) {
+      setActiveSection("warehouses");
+    }
+  }, [activeSection, shipDestEnabled, wholesalersEnabled]);
 
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.warehouses });
@@ -72,8 +114,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
 
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
 
-  const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
-  const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
     enabled: enabled && shipDestEnabled,
@@ -263,7 +303,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           <div>
             <p className="birzha-home-hero__eyebrow">Справочники</p>
             <h2 id="inv-adm-heading" className="birzha-home-hero__title">
-              Склады и калибры
+              Справочники системы
             </h2>
           </div>
           <nav className="birzha-home-actions no-print" aria-label="Быстрые действия справочников">
@@ -279,7 +319,42 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         </header>
       ) : null}
 
-      {shipDestEnabled && (
+      <nav className="birzha-settings-tabs no-print" aria-label="Разделы справочников">
+        <button
+          type="button"
+          className={sectionTabClassName(activeSection === "warehouses")}
+          onClick={() => setActiveSection("warehouses")}
+        >
+          Склады
+        </button>
+        <button
+          type="button"
+          className={sectionTabClassName(activeSection === "grades")}
+          onClick={() => setActiveSection("grades")}
+        >
+          Калибры
+        </button>
+        {shipDestEnabled ? (
+          <button
+            type="button"
+            className={sectionTabClassName(activeSection === "logistics")}
+            onClick={() => setActiveSection("logistics")}
+          >
+            Логистика
+          </button>
+        ) : null}
+        {wholesalersEnabled ? (
+          <button
+            type="button"
+            className={sectionTabClassName(activeSection === "wholesalers")}
+            onClick={() => setActiveSection("wholesalers")}
+          >
+            Оптовики
+          </button>
+        ) : null}
+      </nav>
+
+      {shipDestEnabled && activeSection === "logistics" && (
         <>
           <BirzhaDisclosure
             defaultOpen
@@ -388,7 +463,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         </>
       )}
 
-      {wholesalersEnabled && (
+      {wholesalersEnabled && activeSection === "wholesalers" && (
         <>
           <BirzhaDisclosure
             defaultOpen
@@ -483,15 +558,16 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         </>
       )}
 
-      <BirzhaDisclosure
-        defaultOpen
-        title={
-          <span className="birzha-disclosure__title-stack">
-            <span className="birzha-section-heading__eyebrow">Справочник</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Склады</span>
-          </span>
-        }
-      >
+      {activeSection === "warehouses" ? (
+        <BirzhaDisclosure
+          defaultOpen
+          title={
+            <span className="birzha-disclosure__title-stack">
+              <span className="birzha-section-heading__eyebrow">Справочник</span>
+              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Склады</span>
+            </span>
+          }
+        >
       {warehousesQ.isError ? <ErrorAlert error={warehousesQ.error} title="Склады" /> : null}
       {warehousesQ.isPending && (
         <LoadingBlock label="Загрузка складов…" minHeight={48} skeleton skeletonRows={3} />
@@ -547,18 +623,20 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           </tbody>
         </table>
       </div>
-      </BirzhaDisclosure>
+        </BirzhaDisclosure>
+      ) : null}
 
-      <BirzhaDisclosure
-        id="inv-product-grades"
-        defaultOpen
-        title={
-          <span className="birzha-disclosure__title-stack">
-            <span className="birzha-section-heading__eyebrow">Справочник</span>
-            <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Калибры (сорта)</span>
-          </span>
-        }
-      >
+      {activeSection === "grades" ? (
+        <BirzhaDisclosure
+          id="inv-product-grades"
+          defaultOpen
+          title={
+            <span className="birzha-disclosure__title-stack">
+              <span className="birzha-section-heading__eyebrow">Справочник</span>
+              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Калибры (сорта)</span>
+            </span>
+          }
+        >
       {gradesQ.isError ? <ErrorAlert error={gradesQ.error} title="Калибры" /> : null}
       {gradesQ.isPending && (
         <LoadingBlock label="Загрузка калибров…" minHeight={48} skeleton skeletonRows={3} />
@@ -648,13 +726,14 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           </tbody>
         </table>
       </div>
-      </BirzhaDisclosure>
+        </BirzhaDisclosure>
+      ) : null}
     </>
   );
 
   if (embedded) {
     return (
-      <div className="birzha-inventory-admin birzha-settings-admin__embedded" aria-label="Склады и калибры">
+      <div className="birzha-inventory-admin birzha-settings-admin__embedded" aria-label="Справочники системы">
         {content}
       </div>
     );

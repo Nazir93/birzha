@@ -101,17 +101,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     [tripsAllowedForReport],
   );
 
-  /** Список для select: открытые + выбранный закрытый (переход из архива с ?trip=). */
-  const tripsForSelect = useMemo(() => {
-    if (!tripId) {
-      return openTripsForSelect;
-    }
-    const pinned = tripsAllowedForReport.find((t) => t.id === tripId);
-    if (!pinned || isTripOpenForSellerWorkspace(pinned)) {
-      return openTripsForSelect;
-    }
-    return [pinned, ...openTripsForSelect];
-  }, [openTripsForSelect, tripsAllowedForReport, tripId]);
+  /** В отчётах показываем только открытые рейсы; закрытые — только в «Архив». */
+  const tripsForSelect = openTripsForSelect;
 
   const archivePath =
     viewContext === "sales"
@@ -131,20 +122,25 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     if (!p || !tripsQuery.data) {
       return;
     }
-    if (tripsAllowedForReport.some((t) => t.id === p)) {
+    if (openTripsForSelect.some((t) => t.id === p)) {
       setTripId(p);
       initialTripFromUrl.current = true;
     }
-  }, [searchParams, tripsAllowedForReport, tripsQuery.data]);
+  }, [searchParams, openTripsForSelect, tripsQuery.data]);
 
   useEffect(() => {
     if (!tripId || !tripsQuery.data) {
       return;
     }
-    if (!tripsAllowedForReport.some((t) => t.id === tripId)) {
-      setTripId("");
+    if (openTripsForSelect.some((t) => t.id === tripId)) {
+      return;
     }
-  }, [tripsQuery.data, tripsAllowedForReport, tripId]);
+    setTripId("");
+    const next = new URLSearchParams(searchParams);
+    next.delete("trip");
+    const qs = next.toString();
+    void navigate({ pathname, search: qs ? `?${qs}` : "" }, { replace: true });
+  }, [tripId, tripsQuery.data, openTripsForSelect, searchParams, navigate, pathname]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),

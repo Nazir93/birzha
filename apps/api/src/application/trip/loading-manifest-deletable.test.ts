@@ -12,13 +12,13 @@ describe("loadingManifestDeletable", () => {
     ).toEqual({ deletable: true });
   });
 
-  it("blocks when any batch has in-transit mass", () => {
+  it("allows delete even if batches have in-transit mass", () => {
     expect(
       loadingManifestDeletable({
         lineMasses: [{ onWarehouseGrams: 0n, inTransitGrams: 1000n }],
         shipmentGramsOnLinkedTrip: 0n,
       }),
-    ).toEqual({ deletable: false, reason: "shipped_to_trip" });
+    ).toEqual({ deletable: true });
   });
 
   it("blocks when linked trip has shipment rows for manifest batches", () => {
