@@ -167,3 +167,19 @@ done
    - `fail2ban-client set nginx-birzha-auth-limit unbanip <YOUR_IP>`
    - убедиться, что `<YOUR_IP>` в `ignoreip` (`/etc/fail2ban/jail.d/00-allow-admin.local`)
 4. После восстановления доступа — один контрольный smoke и стоп.
+
+## 12. Ежедневный ops-check (1 команда)
+
+Для ежедневного контроля без ручного набора множества команд:
+
+```bash
+cd /opt/birzha
+bash deploy/daily-ops-check.sh
+```
+
+Скрипт проверяет:
+
+- `birzha-api`, `nginx`, `fail2ban`
+- `GET /health`
+- статус jail'ов `sshd` и `nginx-birzha-auth-limit`
+- свободное место на диске `/`
