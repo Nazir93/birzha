@@ -172,6 +172,20 @@ export function canAccessCabinet(user: AuthUser, id: CabinetId): boolean {
   if (codes.has("admin")) {
     return true;
   }
+  /**
+   * Заместитель (manager) работает в кабинете операций `/o` и не переключается
+   * в другие кабинеты (`/a`, `/s`, `/b`).
+   */
+  if (codes.has("manager")) {
+    return id === "operations";
+  }
+  /**
+   * Бухгалтерский вход изолирован в отдельный кабинет: без переходов в /a, /o, /s.
+   * Исключение — admin, который обработан выше.
+   */
+  if (codes.has("accountant")) {
+    return id === "accounting";
+  }
   if (id === "admin") {
     return false;
   }
@@ -215,14 +229,17 @@ export function cabinetForUser(user: AuthUser | null): CabinetId {
   if (codes.has("admin")) {
     return "admin";
   }
+  if (codes.has("manager")) {
+    return "operations";
+  }
+  if (codes.has("accountant")) {
+    return "accounting";
+  }
   if (isSellerOnly(codes)) {
     return "sales";
   }
   if (hasOperationsCabinetAccess(user)) {
     return "operations";
-  }
-  if (codes.has("accountant")) {
-    return "accounting";
   }
   if (codes.has("seller")) {
     return "sales";

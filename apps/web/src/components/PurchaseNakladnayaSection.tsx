@@ -622,10 +622,6 @@ export function PurchaseNakladnayaSection() {
             </>
           ) : null}
 
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
-            Накладные без остатка по партиям (после продажи и закрытия рейса) — в разделе{" "}
-            <Link to={archivePath}>«Архив»</Link>.
-          </p>
         </div>
       )}
     </section>

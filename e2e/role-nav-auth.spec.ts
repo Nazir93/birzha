@@ -5,7 +5,7 @@ const E2E_DEFAULT_TEST_PASSWORD = "E2e-birzha-test-99";
 
 /**
  * Только при **`E2E_DATABASE_URL`** + JWT: сервер `e2e-server.ts` поднимает Postgres,
- * `REQUIRE_API_AUTH`, сид `e2e_accountant` / `e2e_warehouse` / `e2e_seller`.
+ * `REQUIRE_API_AUTH`, сид `e2e_accountant` / `e2e_warehouse` / `e2e_manager` / `e2e_seller`.
  * В обычном CI без БД весь describe пропускается.
  */
 const authPg = !!process.env.E2E_DATABASE_URL;
@@ -34,6 +34,25 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Операции" })).toHaveCount(0);
   });
 
+  test("бухгалтер: прямой переход в чужие кабинеты возвращает в /b", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible({ timeout: 30_000 });
+    await page.locator("#login-user").fill("e2e_accountant");
+    await page.locator("#login-pass").fill(password);
+    await page.getByRole("button", { name: "Войти" }).click();
+    await expect(page).toHaveURL(/\/b\/?$/, { timeout: 20_000 });
+
+    await page.goto("/a/reports");
+    await expect(page).toHaveURL(/\/b\/?$/, { timeout: 20_000 });
+
+    await page.goto("/o/reports");
+    await expect(page).toHaveURL(/\/b\/?$/, { timeout: 20_000 });
+
+    await page.goto("/s/reports");
+    await expect(page).toHaveURL(/\/b\/?$/, { timeout: 20_000 });
+  });
+
   test("кладовщик: отчёты, операции; без служебных разделов админки", async ({ page }) => {
     await page.context().clearCookies();
     await page.goto("/login");
@@ -46,6 +65,25 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Недостача по рейсу" })).toBeVisible();
+  });
+
+  test("заместитель (manager): прямой переход в чужие кабинеты возвращает в /o", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible({ timeout: 30_000 });
+    await page.locator("#login-user").fill("e2e_manager");
+    await page.locator("#login-pass").fill(password);
+    await page.getByRole("button", { name: "Войти" }).click();
+    await expect(page).toHaveURL(/\/o\/(purchase-nakladnaya|reports)$/, { timeout: 20_000 });
+
+    await page.goto("/a/reports");
+    await expect(page).toHaveURL(/\/o\/(purchase-nakladnaya|reports)$/, { timeout: 20_000 });
+
+    await page.goto("/b/reports");
+    await expect(page).toHaveURL(/\/o\/(purchase-nakladnaya|reports)$/, { timeout: 20_000 });
+
+    await page.goto("/s/reports");
+    await expect(page).toHaveURL(/\/o\/(purchase-nakladnaya|reports)$/, { timeout: 20_000 });
   });
 
   test("продавец: /s — только продажа; без накладной и контрагентов", async ({ page }) => {

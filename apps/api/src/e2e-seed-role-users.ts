@@ -10,6 +10,7 @@ export const E2E_DEFAULT_TEST_PASSWORD = "E2e-birzha-test-99";
 const E2E_USERS: { id: string; login: string; roleCode: string }[] = [
   { id: "e2e-user-accountant", login: "e2e_accountant", roleCode: "accountant" },
   { id: "e2e-user-warehouse", login: "e2e_warehouse", roleCode: "warehouse" },
+  { id: "e2e-user-manager", login: "e2e_manager", roleCode: "manager" },
   { id: "e2e-user-seller", login: "e2e_seller", roleCode: "seller" },
 ];
 

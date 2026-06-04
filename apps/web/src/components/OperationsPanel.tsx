@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
@@ -18,16 +17,13 @@ import {
   queryRoots,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { isAdminCabinetPath, sharedOpsPath } from "../routes.js";
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { parseRecordTripShortageForm, parseShipForm } from "../validation/api-schemas.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 
 export function OperationsPanel() {
-  const location = useLocation();
   const queryClient = useQueryClient();
-  const reportsPath = sharedOpsPath(isAdminCabinetPath(location.pathname) ? "admin" : "operations", "reports");
 
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
@@ -200,10 +196,6 @@ export function OperationsPanel() {
           </span>
         }
       >
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
-          Укажите ту же партию и рейс, что в отчёте; кг — не больше остатка «в пути» по строке. Проверка — в{" "}
-          <Link to={reportsPath}>отчёте по рейсу</Link>.
-        </p>
         <label htmlFor="op-in-short-batch" className="birzha-form-label">
           Партия *
         </label>

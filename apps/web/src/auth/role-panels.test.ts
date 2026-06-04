@@ -144,9 +144,33 @@ describe("role-panels", () => {
   it("кабинет: бух не /o, продавец не /o, закуп — /o", () => {
     expect(canAccessCabinet(userWithRoles("accountant"), "accounting")).toBe(true);
     expect(canAccessCabinet(userWithRoles("accountant"), "operations")).toBe(false);
+    expect(canAccessCabinet(userWithRoles("accountant"), "sales")).toBe(false);
+    expect(canAccessCabinet(userWithRoles("accountant"), "admin")).toBe(false);
+    expect(canAccessCabinet(userWithRoles("manager"), "operations")).toBe(true);
+    expect(canAccessCabinet(userWithRoles("manager"), "admin")).toBe(false);
+    expect(canAccessCabinet(userWithRoles("manager"), "sales")).toBe(false);
+    expect(canAccessCabinet(userWithRoles("manager"), "accounting")).toBe(false);
     expect(canAccessCabinet(userWithRoles("seller"), "sales")).toBe(true);
     expect(canAccessCabinet(userWithRoles("seller"), "operations")).toBe(false);
     expect(canAccessCabinet(userWithRoles("warehouse"), "operations")).toBe(true);
+  });
+
+  it("если есть accountant (без admin и manager), старт и доступ только в /b", () => {
+    const mixed = userWithRoles("accountant", "seller");
+    expect(defaultRouteForUser(mixed)).toBe(accounting.home);
+    expect(canAccessCabinet(mixed, "accounting")).toBe(true);
+    expect(canAccessCabinet(mixed, "operations")).toBe(false);
+    expect(canAccessCabinet(mixed, "sales")).toBe(false);
+    expect(canAccessCabinet(mixed, "admin")).toBe(false);
+  });
+
+  it("если есть manager (без admin), старт и доступ только в /o", () => {
+    const mixed = userWithRoles("manager", "seller", "warehouse");
+    expect(defaultRouteForUser(mixed)).toBe(ops.purchaseNakladnaya);
+    expect(canAccessCabinet(mixed, "operations")).toBe(true);
+    expect(canAccessCabinet(mixed, "accounting")).toBe(false);
+    expect(canAccessCabinet(mixed, "sales")).toBe(false);
+    expect(canAccessCabinet(mixed, "admin")).toBe(false);
   });
 
   it("панель users (сотрудники) — только admin", () => {

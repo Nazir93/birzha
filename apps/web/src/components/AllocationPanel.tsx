@@ -234,11 +234,6 @@ export function AllocationPanel() {
     [tripsQuery.data?.trips],
   );
 
-  const selectedLoadingTrip = useMemo(
-    () => openTripsForAssign.find((t) => t.id === newManifestTripId.trim()),
-    [openTripsForAssign, newManifestTripId],
-  );
-
   const startAnotherWarehouseLoad = useCallback(
     (tripId: string) => {
       const id = tripId.trim();
@@ -622,13 +617,6 @@ export function AllocationPanel() {
         label="Обновление учёта погрузочных накладных…"
       />
 
-      {!loading && !viewingSaved && selectedLoadingTrip ? (
-        <InfoAlert title="Один рейс — несколько складов">
-          Рейс <strong>{formatTripSelectLabel(selectedLoadingTrip)}</strong> запомнен. Сохраните погрузочную с выбранного
-          склада, затем нажмите «Сменить склад» или выберите другой склад — и сохраните ещё одну накладную в тот же рейс.
-        </InfoAlert>
-      ) : null}
-
       {!loading && !viewingSaved && allocationWarehouseOptions.length > 0 ? (
         <div className="no-print birzha-section-filters">
           <label
@@ -671,11 +659,7 @@ export function AllocationPanel() {
                 ← Сменить склад
               </button>
             </p>
-          ) : (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-              Выберите склад — в списке указано, сколько партий доступно для погрузки.
-            </p>
-          )}
+          ) : null}
         </div>
       ) : null}
 
