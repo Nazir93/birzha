@@ -221,36 +221,9 @@ export function AdminCabinetHome() {
   const topProductGroupKgMax = topProductGroups[0]?.kg ?? 0;
   const totalVisibleMass =
     aggregates.warehouseKg + aggregates.loadingManifestKg + aggregates.inTripRemainingKg + aggregates.soldKg;
-  const chartRows = useMemo(
-    () => [
-      { label: "На складе", kg: aggregates.warehouseKg, color: "#16a34a" },
-      { label: "В ПН", kg: aggregates.loadingManifestKg, color: "#7c3aed" },
-      { label: "В рейсе", kg: aggregates.inTripRemainingKg, color: "#f59e0b" },
-      { label: "Продано", kg: aggregates.soldKg, color: "#2563eb" },
-    ],
-    [aggregates.warehouseKg, aggregates.loadingManifestKg, aggregates.inTripRemainingKg, aggregates.soldKg],
-  );
-  const pieGradient = useMemo(() => {
-    const total = chartRows.reduce((s, row) => s + row.kg, 0);
-    if (total <= 0) {
-      return null;
-    }
-    let from = 0;
-    const parts: string[] = [];
-    for (const row of chartRows) {
-      if (row.kg <= 0) {
-        continue;
-      }
-      const span = (row.kg / total) * 360;
-      const to = from + span;
-      parts.push(`${row.color} ${from}deg ${to}deg`);
-      from = to;
-    }
-    if (parts.length === 0) {
-      return null;
-    }
-    return `conic-gradient(${parts.join(", ")})`;
-  }, [chartRows]);
+  const showMassChart = summaryChartMode === "mass";
+  const showWarehouseChart = summaryChartMode === "warehouses";
+  const showProductChart = summaryChartMode === "products";
   const openTripsReadyToClose = useMemo(
     () => sortedTripsOpen.filter((t) => t.status === "open" && tripListFullySold(t)).length,
     [sortedTripsOpen],
@@ -294,7 +267,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryPeriod === "today" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryPeriod === "today" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("today")}
                 >
                   Сегодня
@@ -302,7 +275,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryPeriod === "7d" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryPeriod === "7d" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("7d")}
                 >
                   7 дней
@@ -310,7 +283,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryPeriod === "30d" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryPeriod === "30d" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("30d")}
                 >
                   30 дней
@@ -318,7 +291,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryPeriod === "all" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryPeriod === "all" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("all")}
                 >
                   Всё время
@@ -388,7 +361,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryChartMode === "mass" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryChartMode === "mass" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => {
                     setSummaryChartMode("mass");
                     setHoveredChartLabel(null);
@@ -399,7 +372,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryChartMode === "warehouses" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryChartMode === "warehouses" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => {
                     setSummaryChartMode("warehouses");
                     setHoveredChartLabel(null);
@@ -410,7 +383,7 @@ export function AdminCabinetHome() {
                 <button
                   type="button"
                   style={btnStyleInline}
-                  className={summaryChartMode === "products" ? "birzha-btn-solid" : "birzha-btn-outline"}
+                  className={`birzha-admin-summary-toggle${summaryChartMode === "products" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => {
                     setSummaryChartMode("products");
                     setHoveredChartLabel(null);
@@ -419,7 +392,7 @@ export function AdminCabinetHome() {
                   По видам товара
                 </button>
               </div>
-              {summaryChartMode === "mass" ? (
+              {showMassChart ? (
                 <div className="birzha-admin-dash-modern__mass-row">
                 <MassDistributionRing
                   warehouseKg={aggregates.warehouseKg}
@@ -472,17 +445,20 @@ export function AdminCabinetHome() {
                 </div>
               ) : null}
 
-              <h5 className="birzha-admin-dash-modern__subhead">
-                {summaryChartMode === "warehouses" ? "Топ складов по остатку" : "Виды товара по массе"}
-              </h5>
-              {(summaryChartMode === "warehouses" ? topWarehouses.length : topProductGroups.length) === 0 ? (
+              {(showWarehouseChart || showProductChart) ? (
+                <h5 className="birzha-admin-dash-modern__subhead">
+                  {showWarehouseChart ? "Топ складов по остатку" : "Виды товара по массе"}
+                </h5>
+              ) : null}
+              {(showWarehouseChart || showProductChart) && (showWarehouseChart ? topWarehouses.length : topProductGroups.length) === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>
-              ) : (
+              ) : null}
+              {(showWarehouseChart || showProductChart) && (showWarehouseChart ? topWarehouses.length : topProductGroups.length) > 0 ? (
                 <div
                   className="birzha-admin-dash-modern__warehouse-bars"
-                  aria-label={summaryChartMode === "warehouses" ? "Топ складов по остатку" : "Виды товара по массе"}
+                  aria-label={showWarehouseChart ? "Топ складов по остатку" : "Виды товара по массе"}
                 >
-                  {(summaryChartMode === "warehouses" ? topWarehouses : topProductGroups).map((row) => (
+                  {(showWarehouseChart ? topWarehouses : topProductGroups).map((row) => (
                     <div
                       key={row.name}
                       className="birzha-admin-dash-modern__warehouse-row"
@@ -495,7 +471,7 @@ export function AdminCabinetHome() {
                           style={{
                             width: `${ratioPart(
                               row.kg,
-                              summaryChartMode === "warehouses" ? topWarehouseKgMax : topProductGroupKgMax,
+                              showWarehouseChart ? topWarehouseKgMax : topProductGroupKgMax,
                             )}%`,
                           }}
                         />
@@ -504,7 +480,7 @@ export function AdminCabinetHome() {
                     </div>
                   ))}
                 </div>
-              )}
+              ) : null}
               {hoveredChartLabel ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.6rem 0 0" }}>
                   Наведение: <strong>{hoveredChartLabel}</strong>
@@ -514,43 +490,6 @@ export function AdminCabinetHome() {
                   Наведите на сегмент или строку графика.
                 </p>
               )}
-
-              {pieGradient ? (
-                <div style={{ marginTop: "0.8rem" }}>
-                  <h5 className="birzha-admin-dash-modern__subhead" style={{ marginTop: 0 }}>Круговая диаграмма (доли)</h5>
-                  <div className="birzha-admin-dash-modern__mass-row" style={{ alignItems: "center" }}>
-                    <div
-                      className="birzha-admin-mass-ring"
-                      style={{ background: pieGradient }}
-                      role="img"
-                      aria-label="Круговая диаграмма долей массы по категориям"
-                    >
-                      <div className="birzha-admin-mass-ring__hole" />
-                    </div>
-                    <div className="birzha-admin-dash-modern__mass-bars">
-                      {chartRows
-                        .filter((row) => row.kg > 0)
-                        .map((row) => (
-                          <div
-                            key={row.label}
-                            className="birzha-admin-dash-modern__bar-row"
-                            onMouseEnter={() => setHoveredChartLabel(`${row.label}: ${ratioPart(row.kg, totalVisibleMass).toFixed(1)}%`)}
-                            title={`${row.label}: ${ratioPart(row.kg, totalVisibleMass).toFixed(1)}% (${formatKg(row.kg)})`}
-                          >
-                            <div className="birzha-admin-dash-modern__bar-label">{row.label}</div>
-                            <div className="birzha-admin-dash-modern__bar-track">
-                              <div
-                                className="birzha-admin-dash-modern__bar-fill"
-                                style={{ width: `${ratioPart(row.kg, totalVisibleMass)}%`, background: row.color }}
-                              />
-                            </div>
-                            <div className="birzha-admin-dash-modern__bar-value">{ratioPart(row.kg, totalVisibleMass).toFixed(1)}%</div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </section>
 
             <aside className="birzha-admin-dash-modern__ops-card">

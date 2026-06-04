@@ -174,6 +174,7 @@ export function AllocationPanel() {
   const [manifestDate, setManifestDate] = useState(todayDateOnly);
   const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
   const [savedManifestId, setSavedManifestId] = useState<string>("");
+  const [createManifestWarning, setCreateManifestWarning] = useState<string | null>(null);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
   /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
@@ -337,17 +338,24 @@ export function AllocationPanel() {
     }) => {
       const res = (await apiPostJson("/api/loading-manifests", payload)) as CreateLoadingManifestResponse;
       const tripId = newManifestTripId.trim();
+      let assignTripWarning: string | null = null;
       if (tripId) {
-        await apiPostJson(`/api/loading-manifests/${encodeURIComponent(res.manifestId)}/assign-trip`, {
-          tripId,
-        });
+        try {
+          await apiPostJson(`/api/loading-manifests/${encodeURIComponent(res.manifestId)}/assign-trip`, {
+            tripId,
+          });
+        } catch (error) {
+          const text = error instanceof Error && error.message.trim() ? error.message.trim() : "Не удалось привязать рейс.";
+          assignTripWarning = `Накладная сохранена, но рейс не привязался автоматически: ${text}`;
+        }
       }
-      return res;
+      return { ...res, assignTripWarning };
     },
     onSuccess: (res) => {
       const tripId = newManifestTripId.trim();
       setSavedManifestId(res.manifestId);
       setLoadNaklSelection(new Set());
+      setCreateManifestWarning(res.assignTripWarning ?? null);
       if (tripId) {
         setAssignTripId(tripId);
         writePreferredLoadingTripId(tripId);
@@ -586,6 +594,7 @@ export function AllocationPanel() {
   useEffect(() => {
     if (!viewingSaved) {
       setSavedManifestId("");
+      setCreateManifestWarning(null);
     }
   }, [selectedWarehouse, manifestDate, manifestDestinationCode, rowsFingerprint, viewingSaved]);
 
@@ -695,6 +704,9 @@ export function AllocationPanel() {
                     Накладная
                   </th>
                   <th scope="col" style={thHead}>
+                    Рейс
+                  </th>
+                  <th scope="col" style={thHead}>
                     Дата
                   </th>
                   <th scope="col" style={thHead}>
@@ -725,6 +737,7 @@ export function AllocationPanel() {
                           })}
                         </strong>
                       </td>
+                      <td style={thtd}>{m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—"}</td>
                       <td style={thtd}>{m.docDate}</td>
                       <td style={thtd}>
                         {m.warehouseName} ({m.warehouseCode})
@@ -813,6 +826,9 @@ export function AllocationPanel() {
                   Рейс по этой погрузочной закрыт — в рабочем списке «Погрузки» она не показывается. Открыть все архивные
                   накладные: <Link to={archiveBase}>Архив</Link>.
                 </InfoAlert>
+              ) : null}
+              {createManifestWarning ? (
+                <WarningAlert title="Проверьте привязку рейса">{createManifestWarning}</WarningAlert>
               ) : null}
               {openManifestSummary?.tripId && !viewingArchivedManifest ? (
                 <p className="no-print" style={{ margin: "0 0 0.75rem" }}>
@@ -1025,7 +1041,7 @@ export function AllocationPanel() {
                           tripNumber: trip?.tripNumber,
                           destinationLabel: destLabel,
                           docDate: manifestDate,
-                          takenNumbers: allActiveManifestsSorted.map((m) => m.manifestNumber),
+                          takenNumbers: (manifestsListQuery.data?.loadingManifests ?? []).map((m) => m.manifestNumber),
                         }),
                       });
                     }}

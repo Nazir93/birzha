@@ -238,6 +238,15 @@ describe("formatLoadingManifestDisplayName", () => {
       }),
     ).toBe("Москва · № Фура-12");
   });
+
+  it("не дублирует направление, если оно уже есть в номере", () => {
+    expect(
+      formatLoadingManifestDisplayName({
+        manifestNumber: "Москва · Ф-5656 05 · 2026-06-05",
+        destinationName: "Москва",
+      }),
+    ).toBe("№ Москва · Ф-5656 05 · 2026-06-05");
+  });
 });
 
 describe("resolveLoadingManifestNumberForSave", () => {
@@ -257,7 +266,7 @@ describe("resolveLoadingManifestNumberForSave", () => {
         destinationLabel: "Москва",
         docDate: "2026-05-19",
       }),
-    ).toBe("Ф-2026-001 · 2026-05-19");
+    ).toBe("Ф-2026-001 · Москва · 2026-05-19");
   });
 
   it("добавляет суффикс при занятом номере", () => {
@@ -266,9 +275,9 @@ describe("resolveLoadingManifestNumberForSave", () => {
         tripNumber: "Ф-1",
         destinationLabel: "Москва",
         docDate: "2026-05-19",
-        takenNumbers: ["Ф-1 · 2026-05-19"],
+        takenNumbers: ["Ф-1 · Москва · 2026-05-19"],
       }),
-    ).toBe("Ф-1 · 2026-05-19 (2)");
+    ).toBe("Ф-1 · Москва · 2026-05-19 (2)");
   });
 });
 

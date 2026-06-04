@@ -321,9 +321,6 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
                 {sidebarNav}
               </nav>
               <footer className="birzha-cabinet-drawer__footer">
-                <div className="birzha-cabinet-drawer__footer-block">
-                  <ThemeToggle variant="labeled" />
-                </div>
                 {showUser ? (
                   <div className="birzha-cabinet-drawer__footer-block birzha-cabinet-drawer__footer-block--session">
                     {user ? (
