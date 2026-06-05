@@ -73,6 +73,19 @@ try {
       extra: `whKg=${r.warehouse.warehouseKg.toFixed(0)}`,
     };
   });
+
+  await bench("dashboard summary 30d", async () => {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const sinceStr = since.toISOString().slice(0, 10);
+    const t0 = performance.now();
+    const r = await getAdminDashboardSummary(db, { since: sinceStr });
+    return {
+      count: r.trips.openCount,
+      ms: Math.round(performance.now() - t0),
+      extra: `since=${sinceStr}`,
+    };
+  });
 } finally {
   await sql.end({ timeout: 5 });
 }

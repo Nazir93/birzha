@@ -7,7 +7,6 @@ import {
   adminDashboardSummaryQueryOptions,
   queryRoots,
   tripsPickerQueryOptions,
-  warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
@@ -108,7 +107,6 @@ export function AdminCabinetHome() {
     refetchOnMount: "always",
   });
   const tripsQ = useQuery(tripsPickerQueryOptions({ limit: 500, status: "open" }));
-  const whQ = useQuery(warehousesFullListQueryOptions());
 
   const aggregates = useMemo(() => {
     const summary = summaryQ.data;
@@ -201,8 +199,9 @@ export function AdminCabinetHome() {
     [sortedTripsOpen],
   );
 
-  const loading = summaryQ.isPending || tripsQ.isPending || whQ.isPending;
-  const err = summaryQ.isError || tripsQ.isError || whQ.isError;
+  const loading = summaryQ.isPending;
+  const summaryFailed = summaryQ.isError;
+  const tripsFailed = tripsQ.isError;
 
   const closeTripMut = useMutation({
     mutationFn: async (tripId: string) => {
@@ -228,8 +227,10 @@ export function AdminCabinetHome() {
       <h2 className="birzha-sr-only">Сводка админки</h2>
 
       {loading && <LoadingBlock label="Загрузка сводки…" minHeight={80} skeleton skeletonRows={5} />}
-      {err ? <ErrorAlert message="Ошибка загрузки данных." title="Сводка" /> : null}
-      {!loading && !err && (
+      {summaryFailed ? (
+        <ErrorAlert error={summaryQ.error} message="Не удалось загрузить сводку. Обновите страницу (Ctrl+Shift+R)." title="Сводка" />
+      ) : null}
+      {!loading && !summaryFailed && (
         <>
           <header className="birzha-admin-dash-modern__hero">
             <div>
@@ -452,6 +453,9 @@ export function AdminCabinetHome() {
           </div>
 
           <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
+            {tripsFailed ? (
+              <ErrorAlert error={tripsQ.error} message="Не удалось загрузить список рейсов." title="Рейсы" />
+            ) : null}
             <div className="birzha-admin-dash__trips">
               {sortedTripsOpen.length === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>—</p>

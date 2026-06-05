@@ -4,5 +4,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.integration.test.ts"],
+    pool: "threads",
+    maxWorkers: 1,
+    fileParallelism: false,
   },
 });

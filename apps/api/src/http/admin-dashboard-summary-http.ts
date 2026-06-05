@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
@@ -36,8 +36,7 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
   const since = query.since?.trim();
   const sinceDate = since ? new Date(`${since}T00:00:00.000Z`) : null;
 
-  const tripPeriod =
-    sinceDate != null ? sql`${trips.departedAt} >= ${sinceDate}` : undefined;
+  const tripPeriod = sinceDate != null ? gte(trips.departedAt, sinceDate) : undefined;
 
   const openTripWhere = tripPeriod ? and(eq(trips.status, "open"), tripPeriod) : eq(trips.status, "open");
   const allTripWhere = tripPeriod ?? undefined;
@@ -116,7 +115,7 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
 
   const manifestWhere = and(
     or(isNull(loadingManifests.tripId), isNull(trips.status), ne(trips.status, "closed")),
-    sinceDate != null ? sql`${loadingManifests.docDate} >= ${sinceDate}` : undefined,
+    sinceDate != null ? gte(loadingManifests.docDate, sinceDate) : undefined,
   );
 
   const [manifestStats] = await db
