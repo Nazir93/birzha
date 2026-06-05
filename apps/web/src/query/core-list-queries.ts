@@ -2,6 +2,7 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
 import { apiFetch, apiGetJson } from "../api/fetch-api.js";
 import type {
+  AdminDashboardSummaryResponse,
   BatchesListResponse,
   CounterpartiesListResponse,
   FieldSellerOptionsResponse,
@@ -13,6 +14,7 @@ import type {
   LoadingManifestsListResponse,
   ShipmentReportResponse,
   ShipDestinationsListResponse,
+  StockBalancesResponse,
   TripSaleLinesResponse,
   TripsListResponse,
   WarehouseWriteOffsRecentResponse,
@@ -26,7 +28,6 @@ import {
 
 /**
  * Корни `queryKey` для списков и для `invalidateQueries` (префиксный матч).
- * Синхронизированы с фабриками `*QueryOptions` ниже.
  */
 export const queryRoots = {
   trips: ["trips"] as const,
@@ -38,39 +39,51 @@ export const queryRoots = {
   wholesalers: ["wholesalers"] as const,
   shipDestinations: ["ship-destinations"] as const,
   loadingManifest: ["loading-manifest"] as const,
-  /** Журнал списаний с остатка (брак) — `GET /warehouse-write-offs` без purchaseDocumentId. */
+  adminDashboard: ["admin-dashboard-summary"] as const,
+  stockBalances: ["stock-balances"] as const,
   warehouseWriteOffsLedger: ["warehouse-write-offs-ledger"] as const,
-  /** Префикс всех `GET …/shipment-report` по рейсам */
   shipmentReport: ["shipment-report"] as const,
   tripSaleLines: ["trip-sale-lines"] as const,
 } as const;
 
-/**
- * Полный `GET /api/trips` без параметров подборщика — один queryKey для кеша по всему приложению.
- */
-export const tripsFullListQueryOptions = () =>
-  queryOptions({
-    queryKey: queryRoots.trips,
-    queryFn: () => apiGetJson<TripsListResponse>("/api/trips"),
-    staleTime: QUERY_STALE_LISTS_MS,
-    refetchOnWindowFocus: true,
-    /** Меньше «мигания» таблиц при invalidate после мутаций (Operations, отчёт, распределение). */
-    placeholderData: keepPreviousData,
-  });
+export type TripListStatus = "open" | "closed";
+export type TripListOrder = "tripNumber" | "departedAtDesc";
+export type LoadingManifestListScope = "active" | "archived" | "all";
+export type PurchaseDocumentListScope = "inWork" | "archived" | "all";
 
-/** Подборщик рейсов: `GET /api/trips?limit=&offset=` — без тяжёлой сводки у закрытых. */
-export const tripsPickerQueryOptions = (opts: { limit?: number; offset?: number; search?: string } = {}) => {
-  const limit = opts.limit ?? 500;
+/** @deprecated Используйте `tripsPickerQueryOptions` с нужным `status`. */
+export const tripsFullListQueryOptions = () =>
+  tripsPickerQueryOptions({ limit: 500, status: "open" });
+
+/** Подборщик рейсов: `GET /api/trips?limit=&offset=&search=&status=&order=`. */
+export const tripsPickerQueryOptions = (
+  opts: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    status?: TripListStatus;
+    order?: TripListOrder;
+  } = {},
+) => {
+  const limit = opts.limit ?? 100;
   const offset = opts.offset ?? 0;
   const search = opts.search?.trim() ?? "";
+  const status = opts.status ?? "";
+  const order = opts.order ?? "departedAtDesc";
   return queryOptions({
-    queryKey: [...queryRoots.trips, "picker", limit, offset, search] as const,
+    queryKey: [...queryRoots.trips, "picker", limit, offset, search, status, order] as const,
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("limit", String(limit));
       p.set("offset", String(offset));
       if (search) {
         p.set("search", search);
+      }
+      if (status) {
+        p.set("status", status);
+      }
+      if (order === "tripNumber") {
+        p.set("order", "tripNumber");
       }
       return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
     },
@@ -79,7 +92,6 @@ export const tripsPickerQueryOptions = (opts: { limit?: number; offset?: number;
   });
 };
 
-/** Список полевых продавцов для назначения на рейс: `GET /api/trips/field-seller-options`. */
 export const tripsFieldSellerOptionsQueryOptions = () =>
   queryOptions({
     queryKey: [...queryRoots.trips, "field-seller-options"] as const,
@@ -87,19 +99,9 @@ export const tripsFieldSellerOptionsQueryOptions = () =>
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
-/**
- * Полный `GET /api/batches` без фильтров — один queryKey для кеша по всему приложению.
- */
-export const batchesFullListQueryOptions = () =>
-  queryOptions({
-    queryKey: queryRoots.batches,
-    queryFn: () => apiGetJson<BatchesListResponse>("/api/batches"),
-    staleTime: QUERY_STALE_LISTS_MS,
-    refetchOnWindowFocus: true,
-    placeholderData: keepPreviousData,
-  });
+/** @deprecated Используйте `batchesStockOnlyQueryOptions`, `batchesForWarehouseQueryOptions` или `batchesByIdsQueryOptions`. */
+export const batchesFullListQueryOptions = () => batchesStockOnlyQueryOptions(500);
 
-/** Выборка партий по id: `GET /api/batches?ids=`. */
 export const batchesByIdsQueryOptions = (ids: readonly string[]) => {
   const sorted = [...ids].sort();
   const keyPart = sorted.join("|");
@@ -116,7 +118,6 @@ export const batchesByIdsQueryOptions = (ids: readonly string[]) => {
   });
 };
 
-/** Поиск партий для подсказки: `GET /api/batches?search=&limit=`. */
 export const batchesSearchQueryOptions = (search: string, limit = 20) => {
   const q = search.trim();
   return queryOptions({
@@ -132,7 +133,21 @@ export const batchesSearchQueryOptions = (search: string, limit = 20) => {
   });
 };
 
-/** Партии склада с остатком — для «Распределения» без полной выборки. */
+/** Партии с остатком на складе — для «Операций» и отгрузки. */
+export const batchesStockOnlyQueryOptions = (limit = 500, offset = 0) =>
+  queryOptions({
+    queryKey: [...queryRoots.batches, "stock-only", limit, offset] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("stockOnly", "1");
+      p.set("limit", String(limit));
+      p.set("offset", String(offset));
+      return apiGetJson<BatchesListResponse>(`/api/batches?${p}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
+  });
+
 export const batchesForWarehouseQueryOptions = (warehouseId: string, limit = 500) => {
   const wh = warehouseId.trim();
   return queryOptions({
@@ -165,10 +180,56 @@ export const productGradesFullListQueryOptions = () =>
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
+/** @deprecated Используйте `purchaseDocumentsPagedQueryOptions`. */
 export const purchaseDocumentsFullListQueryOptions = () =>
+  purchaseDocumentsPagedQueryOptions({ limit: 500, offset: 0, scope: "inWork" });
+
+export const purchaseDocumentsPagedQueryOptions = (opts: {
+  limit: number;
+  offset: number;
+  scope?: PurchaseDocumentListScope;
+  search?: string;
+}) =>
   queryOptions({
-    queryKey: queryRoots.purchaseDocuments,
-    queryFn: () => apiGetJson<PurchaseDocumentsListResponse>("/api/purchase-documents"),
+    queryKey: [
+      ...queryRoots.purchaseDocuments,
+      "paged",
+      opts.scope ?? "all",
+      opts.limit,
+      opts.offset,
+      opts.search?.trim() ?? "",
+    ] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("limit", String(opts.limit));
+      p.set("offset", String(opts.offset));
+      if (opts.scope) {
+        p.set("scope", opts.scope);
+      }
+      const q = opts.search?.trim();
+      if (q) {
+        p.set("search", q);
+      }
+      return apiGetJson<PurchaseDocumentsListResponse>(`/api/purchase-documents?${p}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
+  });
+
+export const adminDashboardSummaryQueryOptions = (since?: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.adminDashboard, since ?? "all"] as const,
+    queryFn: () => {
+      const p = since?.trim() ? `?since=${encodeURIComponent(since.trim())}` : "";
+      return apiGetJson<AdminDashboardSummaryResponse>(`/api/admin/dashboard-summary${p}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+export const stockBalancesQueryOptions = () =>
+  queryOptions({
+    queryKey: queryRoots.stockBalances,
+    queryFn: () => apiGetJson<StockBalancesResponse>("/api/stock-balances"),
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
@@ -201,16 +262,10 @@ export const loadingManifestDetailQueryOptions = (manifestId: string) =>
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
+/** @deprecated Используйте `loadingManifestsPagedQueryOptions`. */
 export const loadingManifestsListQueryOptions = () =>
-  queryOptions({
-    queryKey: [...queryRoots.loadingManifest, "list"] as const,
-    queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
-    staleTime: QUERY_STALE_LISTS_MS,
-  });
+  loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" });
 
-export type LoadingManifestListScope = "active" | "archived" | "all";
-
-/** Пагинированный список погрузочных: `GET /api/loading-manifests?limit=&offset=&scope=`. */
 export const loadingManifestsPagedQueryOptions = (opts: {
   limit: number;
   offset: number;
@@ -244,7 +299,6 @@ export const loadingManifestsPagedQueryOptions = (opts: {
     placeholderData: keepPreviousData,
   });
 
-/** Партии, уже внесённые в погрузочные накладные на складе (не показывать в отборе распределения). */
 export const loadingManifestReservedBatchIdsQueryOptions = (warehouseId: string) =>
   queryOptions({
     queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids", warehouseId] as const,
@@ -257,7 +311,6 @@ export const loadingManifestReservedBatchIdsQueryOptions = (warehouseId: string)
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
-/** Журнал списаний брака с остатка: `GET /warehouse-write-offs?limit=&warehouseId=`. */
 export const warehouseWriteOffsLedgerQueryOptions = (opts: { warehouseId?: string; limit?: number }) =>
   queryOptions({
     queryKey: [...queryRoots.warehouseWriteOffsLedger, opts.warehouseId ?? "", opts.limit ?? 300] as const,
@@ -272,7 +325,6 @@ export const warehouseWriteOffsLedgerQueryOptions = (opts: { warehouseId?: strin
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
-/** `GET /api/trips/:id/shipment-report` — один queryKey на рейс для кеша во всех экранах. */
 export const shipmentReportQueryOptions = (tripId: string) =>
   queryOptions({
     queryKey: [...queryRoots.shipmentReport, tripId] as const,
@@ -284,7 +336,6 @@ export const shipmentReportQueryOptions = (tripId: string) =>
     refetchOnWindowFocus: true,
   });
 
-/** Строки продаж по рейсу (чтение — архив и отчёт; правки — пока рейс открыт). */
 export const tripSaleLinesQueryOptions = (tripId: string) =>
   queryOptions({
     queryKey: [...queryRoots.tripSaleLines, tripId] as const,
@@ -296,9 +347,6 @@ export const tripSaleLinesQueryOptions = (tripId: string) =>
     enabled: tripId.trim().length > 0,
   });
 
-/**
- * Деталь накладной: при 404 возвращает `null` (как раньше в экране карточки).
- */
 export const purchaseDocumentDetailQueryOptions = (documentId: string) =>
   queryOptions({
     queryKey: ["purchase-document", documentId] as const,

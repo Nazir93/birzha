@@ -30,6 +30,7 @@ import { registerBatchRoutes } from "./http/register-batch-routes.js";
 import { registerWholesalerRoutes } from "./http/register-wholesaler-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
+import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
@@ -380,6 +381,7 @@ export async function buildApp(options: {
     registerPurchaseDocumentRoutes(
       app,
       {
+        db: db ?? null,
         warehouses: warehouseRepository,
         grades: productGradeRepository,
         purchaseDocuments: purchaseDocumentRepository,
@@ -421,6 +423,7 @@ export async function buildApp(options: {
       registerShipDestinationRoutes(app, db, routeAuth);
       registerLoadingManifestRoutes(app, db, routeAuth, tripRepository ?? undefined);
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
+      registerAdminSummaryRoutes(app, db, routeAuth);
     }
 
     const purchaseLinePackages = db

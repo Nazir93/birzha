@@ -4,17 +4,15 @@ import { Link } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
 import {
-  batchesFullListQueryOptions,
-  loadingManifestsListQueryOptions,
+  adminDashboardSummaryQueryOptions,
   queryRoots,
-  tripsFullListQueryOptions,
+  tripsPickerQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
-import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
-import { sumOpenTripsMassKg, sumWarehouseKgFromBatches } from "../format/admin-dashboard-aggregates.js";
+import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { adminRoutes } from "../routes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -91,20 +89,6 @@ function periodStartDate(period: SummaryPeriod): Date | null {
   return d;
 }
 
-function dateLikeInPeriod(raw: string | null | undefined, start: Date | null): boolean {
-  if (!start) {
-    return true;
-  }
-  if (!raw?.trim()) {
-    return false;
-  }
-  const dt = new Date(raw);
-  if (Number.isNaN(dt.getTime())) {
-    return false;
-  }
-  return dt >= start;
-}
-
 /**
  * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
  */
@@ -116,71 +100,61 @@ export function AdminCabinetHome() {
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("30d");
   const [hoveredChartLabel, setHoveredChartLabel] = useState<string | null>(null);
 
-  const tripsQ = useQuery(tripsFullListQueryOptions());
-  const loadingManifestsQ = useQuery(loadingManifestsListQueryOptions());
-  const batchesQ = useQuery({
-    ...batchesFullListQueryOptions(),
-    /** Сводка должна видеть свежие остатки после накладной на другой вкладке / из кэша localStorage. */
+  const periodStart = useMemo(() => periodStartDate(summaryPeriod), [summaryPeriod]);
+  const sinceParam = periodStart ? periodStart.toISOString().slice(0, 10) : undefined;
+
+  const summaryQ = useQuery({
+    ...adminDashboardSummaryQueryOptions(sinceParam),
     refetchOnMount: "always",
   });
+  const tripsQ = useQuery(tripsPickerQueryOptions({ limit: 500, status: "open" }));
   const whQ = useQuery(warehousesFullListQueryOptions());
 
-  const whById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const w of whQ.data?.warehouses ?? []) {
-      m.set(w.id, w.name || w.code);
-    }
-    return m;
-  }, [whQ.data?.warehouses]);
-  const periodStart = useMemo(() => periodStartDate(summaryPeriod), [summaryPeriod]);
-
   const aggregates = useMemo(() => {
-    const batches = batchesQ.data?.batches ?? [];
-    const tripsAll = tripsQ.data?.trips ?? [];
-    const trips = tripsAll.filter((t) => dateLikeInPeriod(t.departedAt, periodStart));
-    const warehouseSums = sumWarehouseKgFromBatches(batches, whById);
-    const openTripsMass = sumOpenTripsMassKg(trips);
-
-    let tripsOpen = 0;
-    let tripsClosed = 0;
-    for (const t of trips) {
-      if (t.status === "closed") {
-        tripsClosed += 1;
-      } else {
-        tripsOpen += 1;
-      }
+    const summary = summaryQ.data;
+    if (!summary) {
+      return {
+        tripCount: 0,
+        tripsOpen: 0,
+        tripsClosed: 0,
+        batchCount: 0,
+        warehouseKg: 0,
+        transitKg: 0,
+        soldKg: 0,
+        dispatchedKg: 0,
+        inTripRemainingKg: 0,
+        loadingManifestKg: 0,
+        loadingManifestCount: 0,
+        loadingManifestsWithoutTrip: 0,
+        byWarehouseKg: new Map<string, number>(),
+        byProductGroupKg: new Map<string, number>(),
+      };
     }
-
-    const closedTripIds = closedTripIdSet(trips);
-    const loadingManifests = (loadingManifestsQ.data?.loadingManifests ?? []).filter((m) =>
-      dateLikeInPeriod(m.docDate, periodStart),
-    );
-    const activeLoadingManifests = splitLoadingManifestsByArchive(loadingManifests, closedTripIds).active;
-    const loadingManifestsWithoutTrip = activeLoadingManifests.filter((m) => !m.tripId).length;
-    const loadingManifestKg = activeLoadingManifests.reduce((s, m) => s + m.totalKg, 0);
-
-    /** Открытые рейсы: отгрузка / остаток в машине / продажи — из журналов рейса, не из полей партии. */
-    const transitKg = openTripsMass.shippedKg;
-    const dispatchedKg = openTripsMass.remainingInTripKg;
-    const soldKg = openTripsMass.soldKg;
-
+    const byWarehouseKg = new Map<string, number>();
+    for (const [k, v] of Object.entries(summary.warehouse.byWarehouseKg)) {
+      byWarehouseKg.set(k, v);
+    }
+    const byProductGroupKg = new Map<string, number>();
+    for (const [k, v] of Object.entries(summary.warehouse.byProductGroupKg)) {
+      byProductGroupKg.set(k, v);
+    }
     return {
-      tripCount: trips.length,
-      tripsOpen,
-      tripsClosed,
-      batchCount: warehouseSums.batchCount,
-      warehouseKg: warehouseSums.warehouseKg,
-      transitKg,
-      soldKg,
-      dispatchedKg,
-      inTripRemainingKg: dispatchedKg,
-      loadingManifestKg,
-      loadingManifestCount: activeLoadingManifests.length,
-      loadingManifestsWithoutTrip,
-      byWarehouseKg: warehouseSums.byWarehouseKg,
-      byProductGroupKg: warehouseSums.byProductGroupKg,
+      tripCount: summary.trips.openCount + summary.trips.closedCount,
+      tripsOpen: summary.trips.openCount,
+      tripsClosed: summary.trips.closedCount,
+      batchCount: summary.warehouse.batchCount,
+      warehouseKg: summary.warehouse.warehouseKg,
+      transitKg: summary.trips.shippedKg,
+      soldKg: summary.trips.soldKg,
+      dispatchedKg: summary.trips.remainingInTripKg,
+      inTripRemainingKg: summary.trips.remainingInTripKg,
+      loadingManifestKg: summary.loadingManifests.activeKg,
+      loadingManifestCount: summary.loadingManifests.activeCount,
+      loadingManifestsWithoutTrip: summary.loadingManifests.withoutTripCount,
+      byWarehouseKg,
+      byProductGroupKg,
     };
-  }, [batchesQ.data?.batches, loadingManifestsQ.data?.loadingManifests, tripsQ.data?.trips, whQ.data?.warehouses.length, whById, periodStart]);
+  }, [summaryQ.data]);
 
   const sortedTripsOpen = useMemo(
     () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
@@ -227,8 +201,8 @@ export function AdminCabinetHome() {
     [sortedTripsOpen],
   );
 
-  const loading = tripsQ.isPending || batchesQ.isPending || whQ.isPending;
-  const err = tripsQ.isError || batchesQ.isError || whQ.isError;
+  const loading = summaryQ.isPending || tripsQ.isPending || whQ.isPending;
+  const err = summaryQ.isError || tripsQ.isError || whQ.isError;
 
   const closeTripMut = useMutation({
     mutationFn: async (tripId: string) => {

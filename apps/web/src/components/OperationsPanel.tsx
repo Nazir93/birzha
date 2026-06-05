@@ -13,7 +13,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import {
-  batchesFullListQueryOptions,
+  batchesStockOnlyQueryOptions,
   queryRoots,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -30,7 +30,7 @@ export function OperationsPanel() {
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   };
 
-  const batchesQuery = useQuery(batchesFullListQueryOptions());
+  const batchesQuery = useQuery(batchesStockOnlyQueryOptions(500));
 
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const tripSelectOptions = useMemo(

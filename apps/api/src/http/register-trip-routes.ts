@@ -53,44 +53,36 @@ export function registerTripRoutes(
     limit: z.coerce.number().int().min(1).max(500).optional(),
     offset: z.coerce.number().int().min(0).optional(),
     order: z.enum(["tripNumber", "departedAtDesc"]).optional(),
+    status: z.enum(["open", "closed"]).optional(),
   });
 
   app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const raw = req.query as Record<string, string | undefined>;
-      const pickerKeys = ["search", "limit", "offset", "order"] as const;
-      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
-
-      let list;
-      let listMeta: { limit: number; offset: number; hasMore: boolean } | undefined;
-
-      if (!isPicker) {
-        list = await trips.list();
-      } else {
-        const parsed = tripsListQuerySchema.safeParse(raw);
-        if (!parsed.success) {
-          return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
-        }
-        const d = parsed.data;
-        const limit = d.limit ?? 100;
-        const offset = d.offset ?? 0;
-        const filter: TripListFilter = {
-          search: d.search?.trim() || undefined,
-          limit,
-          offset,
-          order: d.order === "tripNumber" ? "tripNumberAsc" : "departedAtDesc",
-        };
-        list = await trips.list(filter);
-        listMeta = { limit, offset, hasMore: list.length === limit };
+      const parsed = tripsListQuerySchema.safeParse(raw);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
       }
+      const d = parsed.data;
+      const limit = d.limit ?? 100;
+      const offset = d.offset ?? 0;
+      const filter: TripListFilter = {
+        search: d.search?.trim() || undefined,
+        limit,
+        offset,
+        order: d.order === "tripNumber" ? "tripNumberAsc" : "departedAtDesc",
+        status: d.status,
+      };
+      const [list, totalCount] = await Promise.all([trips.list(filter), trips.count(filter)]);
+      const listMeta = { limit, offset, hasMore: offset + list.length < totalCount, totalCount };
 
       const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      let filteredList = list;
       if (u && isGlobalSellerOnly(u.roles)) {
-        list = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
+        filteredList = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
       }
-      const toJson = async (trip: (typeof list)[number]) => {
-        /** В подборщике закрытые рейсы без тяжёлой сводки; полный список — всегда с остатком в рейсе. */
-        if (isPicker && trip.getStatus() === "closed") {
+      const toJson = async (trip: (typeof filteredList)[number]) => {
+        if (trip.getStatus() === "closed") {
           return tripToJson(trip);
         }
         const tripId = trip.getId();
@@ -99,21 +91,17 @@ export function registerTripRoutes(
           sales.aggregateByTripId(tripId),
           shortages.aggregateByTripId(tripId),
         ]);
-        const d = computeTripTransitDigest(shipment, saleAgg, shortageAgg);
+        const digest = computeTripTransitDigest(shipment, saleAgg, shortageAgg);
         return tripToJson(trip, {
-          transitRemainingGrams: d.remainingNetTransitGrams.toString(),
-          hasShipmentToTrip: d.hasShipmentToTrip,
-          shippedGrams: d.totalShippedGrams.toString(),
-          soldGrams: d.totalSoldGrams.toString(),
+          transitRemainingGrams: digest.remainingNetTransitGrams.toString(),
+          hasShipmentToTrip: digest.hasShipmentToTrip,
+          shippedGrams: digest.totalShippedGrams.toString(),
+          soldGrams: digest.totalSoldGrams.toString(),
         });
       };
 
-      const tripsPayload = await Promise.all(list.map(toJson));
-
-      if (listMeta) {
-        return reply.send({ trips: tripsPayload, listMeta });
-      }
-      return reply.send({ trips: tripsPayload });
+      const tripsPayload = await Promise.all(filteredList.map(toJson));
+      return reply.send({ trips: tripsPayload, listMeta });
     } catch (error) {
       return sendMappedError(reply, error);
     }

@@ -67,6 +67,52 @@ export type BatchesListResponse = {
   listMeta?: BatchesListMeta;
 };
 
+export type AdminDashboardSummaryResponse = {
+  trips: {
+    openCount: number;
+    closedCount: number;
+    shippedKg: number;
+    soldKg: number;
+    remainingInTripKg: number;
+  };
+  warehouse: {
+    warehouseKg: number;
+    batchCount: number;
+    byWarehouseKg: Record<string, number>;
+    byProductGroupKg: Record<string, number>;
+  };
+  loadingManifests: {
+    activeCount: number;
+    withoutTripCount: number;
+    activeKg: number;
+  };
+};
+
+export type StockBalancesResponse = {
+  totals: {
+    onWarehouseKg: number;
+    inTransitKg: number;
+    valueWarehouseKopecks: string;
+    valueTransitKopecks: string;
+  };
+  byWarehouse: {
+    warehouseId: string;
+    warehouseName: string;
+    warehouseCode: string;
+    onWarehouseKg: number;
+    inTransitKg: number;
+    valueWarehouseKopecks: string;
+    valueTransitKopecks: string;
+  }[];
+};
+
+export type PurchaseDocumentsListMeta = {
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+  totalCount: number;
+};
+
 export type WarehouseJson = { id: string; code: string; name: string };
 export type WarehousesListResponse = { warehouses: WarehouseJson[] };
 export type CreateWarehouseResponse = { warehouse: WarehouseJson };
@@ -117,7 +163,10 @@ export type PurchaseDocumentDetail = {
   lines: PurchaseDocumentLineDetail[];
 };
 
-export type PurchaseDocumentsListResponse = { purchaseDocuments: PurchaseDocumentSummary[] };
+export type PurchaseDocumentsListResponse = {
+  purchaseDocuments: PurchaseDocumentSummary[];
+  listMeta?: PurchaseDocumentsListMeta;
+};
 
 /** Справочник направлений/«городов» (`GET /ship-destinations`) — `code` в `batches.destination`. */
 export type ShipDestinationJson = {
@@ -226,6 +275,7 @@ export type TripsListMeta = {
   limit: number;
   offset: number;
   hasMore: boolean;
+  totalCount?: number;
 };
 
 export type TripsListResponse = {

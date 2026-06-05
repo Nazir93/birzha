@@ -10,11 +10,7 @@ import type {
   WarehouseJson,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import {
-  filterPurchaseDocumentsArchived,
-  filterTripsArchived,
-  isTripArchived,
-} from "../format/archive.js";
+import { isTripArchived } from "../format/archive.js";
 import {
   formatTripArchiveSalesRevenue,
   formatTripArchiveSalesSoldKg,
@@ -24,9 +20,8 @@ import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
 import { formatTripListStatusLabel } from "../format/trip-label.js";
 import {
-  batchesFullListQueryOptions,
   loadingManifestsPagedQueryOptions,
-  purchaseDocumentsFullListQueryOptions,
+  purchaseDocumentsPagedQueryOptions,
   shipmentReportQueryOptions,
   tripsPickerQueryOptions,
   warehousesFullListQueryOptions,
@@ -161,12 +156,6 @@ function PaginatedSection({
   );
 }
 
-function paginate<T>(items: readonly T[], pageIndex: number, pageSize: number) {
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
-  const start = pageIndex * pageSize;
-  return { slice: items.slice(start, start + pageSize), pageCount };
-}
-
 function NakladnayaArchiveTable({
   docs,
   pathname,
@@ -283,10 +272,19 @@ export function ArchivePage() {
   const [nakladPage, setNakladPage] = useState(0);
   const [manifestPage, setManifestPage] = useState(0);
 
-  const tripsQ = useQuery(tripsPickerQueryOptions({ limit: 500, offset: 0 }));
-  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const tripsQ = useQuery(
+    tripsPickerQueryOptions({
+      limit: PAGE_SIZE,
+      offset: tripsPage * PAGE_SIZE,
+      status: "closed",
+    }),
+  );
   const purchaseQ = useQuery({
-    ...purchaseDocumentsFullListQueryOptions(),
+    ...purchaseDocumentsPagedQueryOptions({
+      limit: PAGE_SIZE,
+      offset: nakladPage * PAGE_SIZE,
+      scope: "archived",
+    }),
     enabled: !salesMode && meta?.purchaseDocumentsApi === "enabled",
   });
   const manifestsQ = useQuery({
@@ -304,19 +302,16 @@ export function ArchivePage() {
 
 
   const archivedTrips = useMemo(() => {
-    let list = filterTripsArchived(tripsQ.data?.trips ?? []);
+    let list = tripsQ.data?.trips ?? [];
     if (salesMode && user) {
       list = filterTripsAssignedToSellerForReports(list, user.id);
     }
     return list;
   }, [tripsQ.data?.trips, salesMode, user]);
 
-  const archivedNaklad = useMemo(() => {
-    if (salesMode || !batchesQ.isSuccess || !purchaseQ.data) {
-      return [];
-    }
-    return filterPurchaseDocumentsArchived(purchaseQ.data.purchaseDocuments, batchesQ.data.batches);
-  }, [salesMode, batchesQ.isSuccess, batchesQ.data?.batches, purchaseQ.data]);
+  const archivedNaklad = purchaseQ.data?.purchaseDocuments ?? [];
+  const archivedTripTotal = tripsQ.data?.listMeta?.totalCount ?? archivedTrips.length;
+  const archivedNakladTotal = purchaseQ.data?.listMeta?.totalCount ?? archivedNaklad.length;
 
   const archivedManifests = manifestsQ.data?.loadingManifests ?? [];
   const archivedManifestTotal = manifestsQ.data?.listMeta?.totalCount ?? archivedManifests.length;
@@ -330,8 +325,20 @@ export function ArchivePage() {
     return m;
   }, [tripsQ.data?.trips]);
 
-  const tripsPaged = useMemo(() => paginate(archivedTrips, tripsPage, PAGE_SIZE), [archivedTrips, tripsPage]);
-  const nakladPaged = useMemo(() => paginate(archivedNaklad, nakladPage, PAGE_SIZE), [archivedNaklad, nakladPage]);
+  const tripsPaged = useMemo(
+    () => ({
+      slice: archivedTrips,
+      pageCount: Math.max(1, Math.ceil(archivedTripTotal / PAGE_SIZE)),
+    }),
+    [archivedTrips, archivedTripTotal],
+  );
+  const nakladPaged = useMemo(
+    () => ({
+      slice: archivedNaklad,
+      pageCount: Math.max(1, Math.ceil(archivedNakladTotal / PAGE_SIZE)),
+    }),
+    [archivedNaklad, archivedNakladTotal],
+  );
 
   useEffect(() => {
     setTripsPage((p) => Math.min(p, Math.max(0, tripsPaged.pageCount - 1)));
@@ -343,7 +350,7 @@ export function ArchivePage() {
     setManifestPage((p) => Math.min(p, Math.max(0, archivedManifestPageCount - 1)));
   }, [archivedManifestTotal, archivedManifestPageCount]);
 
-  const loading = tripsQ.isPending || batchesQ.isPending || (!salesMode && manifestsQ.isPending);
+  const loading = tripsQ.isPending || (!salesMode && (manifestsQ.isPending || purchaseQ.isPending));
   const reportTo = (tripId: string) => archiveSalesReportPath(pathname, tripId, salesMode);
 
   const selectedArchivedTrip = useMemo(() => {
@@ -430,7 +437,7 @@ export function ArchivePage() {
 
           <PaginatedSection
             title="Рейсы"
-            count={archivedTrips.length}
+            count={archivedTripTotal}
             defaultOpen
             emptyTitle="Архив рейсов пуст"
             emptyDescription="После закрытия рейса он появится здесь с полным отчётом по продажам."
@@ -451,7 +458,7 @@ export function ArchivePage() {
           {!salesMode ? (
             <PaginatedSection
               title="Закупочные накладные"
-              count={archivedNaklad.length}
+              count={archivedNakladTotal}
               emptyTitle="Нет накладных в архиве"
               emptyDescription="Когда по накладной не останется остатка по партиям, документ перенесётся сюда."
               pageCount={nakladPaged.pageCount}

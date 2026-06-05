@@ -134,41 +134,37 @@ export function registerBatchRoutes(
   app.get("/batches", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const raw = req.query as Record<string, string | undefined>;
-      const pickerKeys = ["ids", "search", "limit", "offset", "warehouseId", "stockOnly"] as const;
-      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
+      const parsed = batchesListQuerySchema.safeParse(raw);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
+      }
+      const d = parsed.data;
+      const ids =
+        d.ids
+          ?.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean) ?? undefined;
 
-      let filter: BatchListFilter | undefined;
-      let listMeta: { limit: number; offset: number; hasMore: boolean } | undefined;
+      let filter: BatchListFilter;
+      let listMeta: { limit: number; offset: number; hasMore: boolean; totalCount?: number } | undefined;
 
-      if (isPicker) {
-        const parsed = batchesListQuerySchema.safeParse(raw);
-        if (!parsed.success) {
-          return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
-        }
-        const d = parsed.data;
-        const ids =
-          d.ids
-            ?.split(",")
-            .map((s) => s.trim())
-            .filter(Boolean) ?? undefined;
-        if (ids && ids.length > 0) {
-          filter = { ids };
-        } else {
-          const limit = d.limit ?? 100;
-          const offset = d.offset ?? 0;
-          filter = {
-            search: d.search?.trim() || undefined,
-            limit,
-            offset,
-            warehouseId: d.warehouseId?.trim() || undefined,
-            stockOnly: d.stockOnly || undefined,
-          };
-          listMeta = { limit, offset, hasMore: false };
-        }
+      if (ids && ids.length > 0) {
+        filter = { ids };
+      } else {
+        const limit = d.limit ?? 100;
+        const offset = d.offset ?? 0;
+        filter = {
+          search: d.search?.trim() || undefined,
+          limit,
+          offset,
+          warehouseId: d.warehouseId?.trim() || undefined,
+          stockOnly: d.stockOnly || undefined,
+        };
+        listMeta = { limit, offset, hasMore: false };
       }
 
       let payload = await listBatchesForHttp(batches, db, filter);
-      if (listMeta && filter && !filter.ids) {
+      if (listMeta && !filter.ids) {
         listMeta = {
           ...listMeta,
           hasMore: payload.length === (filter.limit ?? 100),

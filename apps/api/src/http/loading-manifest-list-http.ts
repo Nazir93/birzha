@@ -198,36 +198,30 @@ export async function listLoadingManifestsForHttp(
   },
 ): Promise<{
   loadingManifests: Awaited<ReturnType<typeof enrichManifestRows>>;
-  listMeta?: { limit: number; offset: number; hasMore: boolean; totalCount: number };
+  listMeta: { limit: number; offset: number; hasMore: boolean; totalCount: number };
 }> {
   const where = listWhere(options?.search, options?.scope);
+  const limit = options?.limit ?? 100;
+  const offset = options?.offset ?? 0;
 
-  if (options?.limit != null || options?.offset != null || options?.search || options?.scope) {
-    const limit = options.limit ?? 100;
-    const offset = options.offset ?? 0;
+  const countRow = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(loadingManifests)
+    .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
+    .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
+    .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
+    .where(where);
 
-    const countRow = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(loadingManifests)
-      .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
-      .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
-      .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
-      .where(where);
+  const totalCount = countRow[0]?.count ?? 0;
 
-    const totalCount = countRow[0]?.count ?? 0;
-
-    let q = baseSelect(db);
-    if (where) {
-      q = q.where(where) as typeof q;
-    }
-    const rows = await q.orderBy(desc(loadingManifests.createdAt)).limit(limit).offset(offset);
-    const items = await enrichManifestRows(db, rows);
-    return {
-      loadingManifests: items,
-      listMeta: { limit, offset, hasMore: offset + rows.length < totalCount, totalCount },
-    };
+  let q = baseSelect(db);
+  if (where) {
+    q = q.where(where) as typeof q;
   }
-
-  const rows = await baseSelect(db).orderBy(desc(loadingManifests.createdAt));
-  return { loadingManifests: await enrichManifestRows(db, rows) };
+  const rows = await q.orderBy(desc(loadingManifests.createdAt)).limit(limit).offset(offset);
+  const items = await enrichManifestRows(db, rows);
+  return {
+    loadingManifests: items,
+    listMeta: { limit, offset, hasMore: offset + rows.length < totalCount, totalCount },
+  };
 }

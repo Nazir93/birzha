@@ -55,4 +55,22 @@ pnpm load:distribution
 
 Скрипт меряет latency и размер ответа для `GET /loading-manifests`, `/trips`, `/batches`, `/loading-manifests/reserved-batch-ids` и `/warehouses`. В отчёте смотрите `itemCount`, `responseBytesMax`, `latencyMs.p95`.
 
+## Масштабирование списков (10k+ записей)
+
+С **2026-06** API по умолчанию не отдаёт полные таблицы без лимита:
+
+| Эндпоинт | По умолчанию | Параметры |
+|----------|--------------|-----------|
+| `GET /loading-manifests` | 100 строк + `listMeta.totalCount` | `limit`, `offset`, `scope=active\|archived\|all`, `search` |
+| `GET /trips` | 100 строк + `listMeta.totalCount` | `limit`, `offset`, `status=open\|closed`, `search`, `order` |
+| `GET /batches` | 100 строк + `listMeta.hasMore` | `limit`, `offset`, `warehouseId`, `stockOnly`, `ids`, `search` |
+| `GET /purchase-documents` | 100 строк + `listMeta.totalCount` | `limit`, `offset`, `scope=inWork\|archived\|all`, `search` |
+
+Сводки без полной выборки:
+
+- `GET /admin/dashboard-summary?since=YYYY-MM-DD` — KPI главной админа
+- `GET /stock-balances` — остатки для бухгалтерии
+
+UI «Распределение», «Архив» и «Настройки → документы» используют пагинацию; при добавлении новых экранов со списками — только постраничные запросы, не `GET` без параметров в цикле по всей таблице.
+
 Для более серьёзных сценариев (сценарии, SLA, отчёты) можно подключить [k6](https://k6.io/) или аналог и описать сценарии отдельно; в CI по умолчанию полный load-тест не гоняется — только unit/integration тесты API.

@@ -15,14 +15,12 @@ import {
 } from "./core-list-queries.js";
 
 describe("core-list-queries / queryRoots", () => {
-  it("совпадает с корнями фабрик полных списков", () => {
-    expect(tripsFullListQueryOptions().queryKey).toEqual(queryRoots.trips);
-    expect(batchesFullListQueryOptions().queryKey).toEqual(queryRoots.batches);
+  it("picker и legacy-фабрики используют корни или осмысленные префиксы", () => {
+    expect(tripsFullListQueryOptions().queryKey[0]).toBe(queryRoots.trips[0]);
+    expect(batchesFullListQueryOptions().queryKey[0]).toBe(queryRoots.batches[0]);
     expect(warehousesFullListQueryOptions().queryKey).toEqual(queryRoots.warehouses);
-    expect(productGradesFullListQueryOptions().queryKey).toEqual(queryRoots.productGrades);
-    expect(purchaseDocumentsFullListQueryOptions().queryKey).toEqual(queryRoots.purchaseDocuments);
+    expect(purchaseDocumentsFullListQueryOptions().queryKey[0]).toEqual(queryRoots.purchaseDocuments[0]);
     expect(counterpartiesFullListQueryOptions().queryKey).toEqual(queryRoots.counterparties);
-    expect(shipDestinationsFullListQueryOptions().queryKey).toEqual(queryRoots.shipDestinations);
   });
 
   it("shipment-report начинается с общего префикса", () => {

@@ -1,107 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 
-import type { BatchListItem, WarehousesListResponse } from "../api/types.js";
-import { batchesFullListQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
+import { stockBalancesQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
-/** Копейки: кг × руб/кг с округлением по строке партии. */
-function inventoryValueKopecks(batches: readonly BatchListItem[], kgOf: (b: BatchListItem) => number): bigint {
-  let t = 0n;
-  for (const b of batches) {
-    const kg = kgOf(b);
-    if (!Number.isFinite(kg) || kg <= 0) {
-      continue;
-    }
-    const kop = Math.round(kg * b.pricePerKg * 100);
-    if (kop !== 0) {
-      t += BigInt(kop);
-    }
-  }
-  return t;
+function warehouseLabel(name: string, code: string): string {
+  return `${name} (${code})`;
 }
 
-function warehouseLabel(
-  warehouses: WarehousesListResponse["warehouses"] | undefined,
-  id: string | null | undefined,
-): string {
-  if (!id || !warehouses) {
-    return "Склад не указан в строке";
-  }
-  const w = warehouses.find((x) => x.id === id);
-  return w ? `${w.name} (${w.code})` : id;
-}
-
-/**
- * Остатки товара в штуках учёта: кг на складе, погружено в рейс, оценка закупочной стоимости по цене партии из накладной.
- */
+/** Остатки товара: кг на складе, погружено в рейс, оценка закупочной стоимости. */
 export function AccountingStockBalances() {
-  const batchesQ = useQuery(batchesFullListQueryOptions());
+  const balancesQ = useQuery(stockBalancesQueryOptions());
   const whQ = useQuery(warehousesFullListQueryOptions());
 
-  const totals = useMemo(() => {
-    const batches = batchesQ.data?.batches ?? [];
-    let whKg = 0;
-    let trKg = 0;
-    for (const b of batches) {
-      if (Number.isFinite(b.onWarehouseKg) && b.onWarehouseKg > 0) {
-        whKg += b.onWarehouseKg;
-      }
-      if (Number.isFinite(b.inTransitKg) && b.inTransitKg > 0) {
-        trKg += b.inTransitKg;
-      }
-    }
-    const valWhKop = inventoryValueKopecks(batches, (b) => b.onWarehouseKg);
-    const valTrKop = inventoryValueKopecks(batches, (b) => b.inTransitKg);
-    return { whKg, trKg, valWhKop, valTrKop };
-  }, [batchesQ.data?.batches]);
-
-  const byWarehouse = useMemo(() => {
-    const batches = batchesQ.data?.batches ?? [];
-    const m = new Map<
-      string,
-      { warehouseId: string | null; whKg: number; trKg: number; valWhKop: bigint; lines: number }
-    >();
-    for (const b of batches) {
-      const wid = b.nakladnaya?.warehouseId?.trim() || null;
-      const key = wid ?? "_none";
-      if (!m.has(key)) {
-        m.set(key, { warehouseId: wid, whKg: 0, trKg: 0, valWhKop: 0n, lines: 0 });
-      }
-      const row = m.get(key)!;
-      row.lines += 1;
-      if (Number.isFinite(b.onWarehouseKg) && b.onWarehouseKg > 0) {
-        row.whKg += b.onWarehouseKg;
-        const kop = Math.round(b.onWarehouseKg * b.pricePerKg * 100);
-        if (kop !== 0) {
-          row.valWhKop += BigInt(kop);
-        }
-      }
-      if (Number.isFinite(b.inTransitKg) && b.inTransitKg > 0) {
-        row.trKg += b.inTransitKg;
-      }
-    }
-    return [...m.entries()]
-      .map(([k, v]) => ({ key: k, ...v }))
-      .sort((a, b) => {
-        const la = warehouseLabel(whQ.data?.warehouses, a.warehouseId);
-        const lb = warehouseLabel(whQ.data?.warehouses, b.warehouseId);
-        return la.localeCompare(lb, "ru");
-      });
-  }, [batchesQ.data?.batches, whQ.data?.warehouses]);
-
-  if (batchesQ.isPending) {
+  if (balancesQ.isPending) {
     return <LoadingBlock label="Загрузка остатков…" minHeight={72} skeleton skeletonRows={6} />;
   }
-  if (batchesQ.isError) {
+  if (balancesQ.isError || !balancesQ.data) {
     return (
       <ErrorAlert message="Остатки не загрузились. Проверьте связь и повторите." title="Остатки" />
     );
   }
+
+  const { totals, byWarehouse } = balancesQ.data;
 
   return (
     <BirzhaDisclosure
@@ -120,22 +44,26 @@ export function AccountingStockBalances() {
         <div className="birzha-kpi-tile birzha-kpi-tile--premium">
           <div className="birzha-kpi-tile__label">На складе, кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
-            {totals.whKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+            {totals.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium">
           <div className="birzha-kpi-tile__label">Оценка остатка на складе</div>
-          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valWhKop.toString())}</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+            {kopecksToRubLabel(totals.valueWarehouseKopecks)}
+          </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
           <div className="birzha-kpi-tile__label">Погружено, кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
-            {totals.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+            {totals.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
           <div className="birzha-kpi-tile__label">Оценка погруженного, ₽</div>
-          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{kopecksToRubLabel(totals.valTrKop.toString())}</div>
+          <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+            {kopecksToRubLabel(totals.valueTransitKopecks)}
+          </div>
         </div>
       </div>
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
@@ -144,9 +72,6 @@ export function AccountingStockBalances() {
             <tr>
               <th scope="col" style={thHead}>
                 Склад поступления (из накладной)
-              </th>
-              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Партий
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 На складе, кг
@@ -161,19 +86,18 @@ export function AccountingStockBalances() {
           </thead>
           <tbody>
             {byWarehouse.map((row) => (
-              <tr key={row.key}>
+              <tr key={row.warehouseId}>
                 <th scope="row" style={thtd}>
-                  {warehouseLabel(whQ.data?.warehouses, row.warehouseId)}
+                  {warehouseLabel(row.warehouseName, row.warehouseCode)}
                 </th>
-                <td style={{ ...thtd, textAlign: "right" }}>{row.lines}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>
-                  {row.whKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+                  {row.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
                 </td>
                 <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
-                  {kopecksToRubLabel(row.valWhKop.toString())}
+                  {kopecksToRubLabel(row.valueWarehouseKopecks)}
                 </td>
                 <td style={{ ...thtd, textAlign: "right" }}>
-                  {row.trKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+                  {row.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
                 </td>
               </tr>
             ))}
@@ -182,7 +106,7 @@ export function AccountingStockBalances() {
       </div>
       {whQ.isError && (
         <p className="birzha-callout-warning" role="status" style={{ marginTop: "0.5rem", marginBottom: 0, fontSize: "0.82rem" }}>
-          Справочник складов не загрузился — в первой колонке показаны id.
+          Справочник складов не загрузился — названия из сводки API.
         </p>
       )}
     </BirzhaDisclosure>

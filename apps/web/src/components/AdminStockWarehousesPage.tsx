@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
 import type { CreateWarehouseResponse } from "../api/types.js";
 import {
-  batchesFullListQueryOptions,
+  batchesForWarehouseQueryOptions,
   queryRoots,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -29,7 +29,8 @@ export function AdminStockWarehousesPage() {
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
   const batchesQ = useQuery({
-    ...batchesFullListQueryOptions(),
+    ...batchesForWarehouseQueryOptions(selectedWarehouseId, 500),
+    enabled: selectedWarehouseId.trim().length > 0,
     refetchOnMount: "always",
   });
 

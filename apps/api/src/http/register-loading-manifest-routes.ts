@@ -175,14 +175,6 @@ export function registerLoadingManifestRoutes(
   app.get("/loading-manifests", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const raw = req.query as Record<string, string | undefined>;
-      const pickerKeys = ["search", "limit", "offset", "scope"] as const;
-      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
-
-      if (!isPicker) {
-        const payload = await listLoadingManifestsForHttp(db);
-        return reply.send({ loadingManifests: payload.loadingManifests });
-      }
-
       const parsed = loadingManifestsListQuerySchema.safeParse(raw);
       if (!parsed.success) {
         return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });

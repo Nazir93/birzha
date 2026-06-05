@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { ProductGradeRepository } from "../application/ports/product-grade-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
 import type { WarehouseRepository } from "../application/ports/warehouse-repository.port.js";
+import type { DbClient } from "../db/client.js";
 import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "../application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "../application/purchase/delete-purchase-document.use-case.js";
@@ -24,6 +25,10 @@ import { UpdatePurchaseDocumentHeaderUseCase } from "../application/purchase/upd
 import { DeleteWarehouseUseCase } from "../application/warehouse/delete-warehouse.use-case.js";
 
 import { sendMappedError } from "./map-http-error.js";
+import {
+  listPurchaseDocumentsForHttp,
+  purchaseDocumentsListQuerySchema,
+} from "./purchase-document-list-http.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
 type JwtUser = { sub: string; roles: AuthRoleGrant[] };
@@ -31,6 +36,7 @@ type JwtUser = { sub: string; roles: AuthRoleGrant[] };
 export function registerPurchaseDocumentRoutes(
   app: FastifyInstance,
   deps: {
+    db?: DbClient | null;
     warehouses: WarehouseRepository;
     grades: ProductGradeRepository;
     purchaseDocuments: PurchaseDocumentRepository;
@@ -43,6 +49,7 @@ export function registerPurchaseDocumentRoutes(
   routeAuth: BusinessRouteAuth,
 ): void {
   const {
+    db,
     warehouses,
     grades,
     purchaseDocuments,
@@ -126,13 +133,44 @@ export function registerPurchaseDocumentRoutes(
 
   app.get("/purchase-documents", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
-      const documents = await purchaseDocuments.listSummaries();
+      const parsed = purchaseDocumentsListQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
+      }
+      const limit = parsed.data.limit ?? 100;
+      const offset = parsed.data.offset ?? 0;
+
+      let purchaseDocumentsOut;
+      let listMeta: { limit: number; offset: number; hasMore: boolean; totalCount: number };
+
+      if (db) {
+        const payload = await listPurchaseDocumentsForHttp(db, {
+          search: parsed.data.search,
+          limit,
+          offset,
+          scope: parsed.data.scope,
+        });
+        purchaseDocumentsOut = payload.purchaseDocuments;
+        listMeta = payload.listMeta;
+      } else {
+        const documents = await purchaseDocuments.listSummaries();
+        purchaseDocumentsOut = documents.slice(offset, offset + limit);
+        listMeta = {
+          limit,
+          offset,
+          hasMore: offset + purchaseDocumentsOut.length < documents.length,
+          totalCount: documents.length,
+        };
+      }
+
       const user = req.user as JwtUser | undefined;
       const scope = user ? warehouseReadScopeIds(user) : null;
       let filtered =
-        scope && scope.size > 0 ? documents.filter((d) => scope.has(d.warehouseId.trim())) : documents;
+        scope && scope.size > 0
+          ? purchaseDocumentsOut.filter((d) => scope.has(d.warehouseId.trim()))
+          : purchaseDocumentsOut;
       filtered = filterPurchaseSummariesForPurchaserScope(filtered, user, user?.sub);
-      return reply.send({ purchaseDocuments: filtered });
+      return reply.send({ purchaseDocuments: filtered, listMeta });
     } catch (error) {
       return sendMappedError(reply, error);
     }

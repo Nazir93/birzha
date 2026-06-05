@@ -1,5 +1,5 @@
 import { Trip, type TripStatus } from "@birzha/domain";
-import { asc, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, sql } from "drizzle-orm";
 
 import type { TripListFilter, TripRepository } from "../../application/ports/trip-repository.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -61,24 +61,44 @@ export class DrizzleTripRepository implements TripRepository {
     return rowToTrip(row);
   }
 
+  private tripListWhere(filter?: Omit<TripListFilter, "limit" | "offset">) {
+    const parts = [];
+    if (filter?.search?.trim()) {
+      parts.push(ilike(trips.tripNumber, `%${filter.search.trim()}%`));
+    }
+    if (filter?.status) {
+      parts.push(eq(trips.status, filter.status));
+    }
+    if (parts.length === 0) {
+      return undefined;
+    }
+    if (parts.length === 1) {
+      return parts[0];
+    }
+    return and(...parts);
+  }
+
+  async count(filter?: Omit<TripListFilter, "limit" | "offset">): Promise<number> {
+    const where = this.tripListWhere(filter);
+    const base = this.db.select({ count: sql<number>`count(*)::int` }).from(trips);
+    const row = where ? await base.where(where) : await base;
+    return row[0]?.count ?? 0;
+  }
+
   async list(filter?: TripListFilter): Promise<Trip[]> {
-    if (!filter) {
-      const rows = await this.db.select().from(trips).orderBy(asc(trips.tripNumber));
-      return rows.map(rowToTrip);
+    const limit = Math.min(Math.max(filter?.limit ?? 100, 1), 500);
+    const offset = Math.max(filter?.offset ?? 0, 0);
+
+    let base = this.db.select().from(trips);
+    const where = this.tripListWhere(filter);
+    if (where) {
+      base = base.where(where) as typeof base;
     }
 
-    const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
-    const offset = Math.max(filter.offset ?? 0, 0);
-
-    const base = this.db.select().from(trips);
-    const filtered = filter.search?.trim()
-      ? base.where(ilike(trips.tripNumber, `%${filter.search.trim()}%`))
-      : base;
-
     const ordered =
-      filter.order === "tripNumberAsc"
-        ? filtered.orderBy(asc(trips.tripNumber))
-        : filtered.orderBy(sql`${trips.departedAt} DESC NULLS LAST`, asc(trips.tripNumber));
+      filter?.order === "tripNumberAsc"
+        ? base.orderBy(asc(trips.tripNumber))
+        : base.orderBy(sql`${trips.departedAt} DESC NULLS LAST`, asc(trips.tripNumber));
 
     const rows = await ordered.limit(limit).offset(offset);
     return rows.map(rowToTrip);
