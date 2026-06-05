@@ -45,6 +45,34 @@ function formatPgDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+function toBigIntOrZero(value: unknown): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? BigInt(Math.trunc(value)) : 0n;
+  }
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t) {
+      return 0n;
+    }
+    try {
+      return BigInt(t);
+    } catch {
+      return 0n;
+    }
+  }
+  return 0n;
+}
+
+function toNullableBigInt(value: unknown): bigint | null {
+  if (value == null) {
+    return null;
+  }
+  return toBigIntOrZero(value);
+}
+
 function packageCountForShelf(totalGrams: bigint, onWarehouseGrams: bigint, linePackageCount: bigint | null): bigint | null {
   if (linePackageCount == null || linePackageCount <= 0n || totalGrams <= 0n || onWarehouseGrams <= 0n) {
     return null;
@@ -419,10 +447,10 @@ export function registerLoadingManifestRoutes(
             .where(eq(batches.id, line.batchId))
             .limit(1);
           const plan = planLoadingManifestAssignTripShipment({
-            lineGrams: line.grams,
-            linePackageCount: line.packageCount,
+            lineGrams: toBigIntOrZero(line.grams),
+            linePackageCount: toNullableBigInt(line.packageCount),
             ledgerGramsForTripBatch: ledger,
-            ledgerPackageCountForTripBatch: linePkgAgg?.totalPackageCount ?? 0n,
+            ledgerPackageCountForTripBatch: toBigIntOrZero(linePkgAgg?.totalPackageCount),
             onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
             inTransitGrams: br?.inTransitGrams ?? 0n,
           });
