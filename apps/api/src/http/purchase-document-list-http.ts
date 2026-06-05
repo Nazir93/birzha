@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, inArray, not, notExists, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, notExists, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
@@ -43,7 +43,15 @@ function scopeWhere(db: DbClient, scope: PurchaseDocumentListScope | undefined):
     return and(documentHasLines(db), notExists(documentHasRemainingStock(db)));
   }
   if (scope === "inWork") {
-    return or(not(documentHasLines(db)), documentHasRemainingStock(db));
+    return or(
+      notExists(
+        db
+          .select({ one: sql<number>`1` })
+          .from(purchaseDocumentLines)
+          .where(eq(purchaseDocumentLines.documentId, purchaseDocuments.id)),
+      ),
+      documentHasRemainingStock(db),
+    );
   }
   return undefined;
 }
