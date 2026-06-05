@@ -19,39 +19,35 @@ const batchHasStock = or(
   gt(batches.inTransitGrams, 0n),
 );
 
+function remainingStockSubquery(db: DbClient) {
+  return db
+    .select({ one: sql<number>`1` })
+    .from(purchaseDocumentLines)
+    .innerJoin(batches, eq(purchaseDocumentLines.batchId, batches.id))
+    .where(and(eq(purchaseDocumentLines.documentId, purchaseDocuments.id), batchHasStock));
+}
+
+function linesSubquery(db: DbClient) {
+  return db
+    .select({ one: sql<number>`1` })
+    .from(purchaseDocumentLines)
+    .where(eq(purchaseDocumentLines.documentId, purchaseDocuments.id));
+}
+
 function documentHasLines(db: DbClient) {
-  return exists(
-    db
-      .select({ one: sql<number>`1` })
-      .from(purchaseDocumentLines)
-      .where(eq(purchaseDocumentLines.documentId, purchaseDocuments.id)),
-  );
+  return exists(linesSubquery(db));
 }
 
 function documentHasRemainingStock(db: DbClient) {
-  return exists(
-    db
-      .select({ one: sql<number>`1` })
-      .from(purchaseDocumentLines)
-      .innerJoin(batches, eq(purchaseDocumentLines.batchId, batches.id))
-      .where(and(eq(purchaseDocumentLines.documentId, purchaseDocuments.id), batchHasStock)),
-  );
+  return exists(remainingStockSubquery(db));
 }
 
 function scopeWhere(db: DbClient, scope: PurchaseDocumentListScope | undefined): SQL | undefined {
   if (scope === "archived") {
-    return and(documentHasLines(db), notExists(documentHasRemainingStock(db)));
+    return and(documentHasLines(db), notExists(remainingStockSubquery(db)));
   }
   if (scope === "inWork") {
-    return or(
-      notExists(
-        db
-          .select({ one: sql<number>`1` })
-          .from(purchaseDocumentLines)
-          .where(eq(purchaseDocumentLines.documentId, purchaseDocuments.id)),
-      ),
-      documentHasRemainingStock(db),
-    );
+    return or(notExists(linesSubquery(db)), documentHasRemainingStock(db));
   }
   return undefined;
 }
