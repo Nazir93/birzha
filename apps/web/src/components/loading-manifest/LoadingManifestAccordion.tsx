@@ -93,7 +93,7 @@ export function LoadingManifestAccordion({
               destinationName: m.destinationName,
             })}
           </strong>{" "}
-          · {m.docDate} · {m.warehouseName} ({m.warehouseCode}) · рейс: {tripLabel}
+          · {m.docDate} · {m.warehouseName} · рейс: {tripLabel}
         </span>
         <span className="birzha-disclosure__hint">
           {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг · {m.lineCount} парт. · ящ. ≈{" "}
@@ -124,7 +124,7 @@ export function LoadingManifestAccordion({
                     destinationName: detail.destinationName,
                   })}
                 </strong>{" "}
-                · {detail.docDate} · {detail.warehouseName} ({detail.warehouseCode})
+                · {detail.docDate} · {detail.warehouseName}
                 {detail.tripId ? (
                   <>
                     {" "}
@@ -184,7 +184,7 @@ export function LoadingManifestAccordion({
                     const csv = loadingManifestRoadCsvContent({
                       manifestNumber: detail.manifestNumber,
                       docDate: detail.docDate,
-                      warehouseLabel: `${detail.warehouseName} (${detail.warehouseCode})`,
+                      warehouseLabel: detail.warehouseName,
                       destinationName: detail.destinationName,
                       tripLabel: roadTripLabel || "—",
                       rows: caliberRows,

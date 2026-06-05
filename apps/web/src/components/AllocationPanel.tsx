@@ -142,6 +142,7 @@ export function AllocationPanel() {
   const queryClient = useQueryClient();
   const [assignTripId, setAssignTripId] = useState("");
   const [newManifestTripId, setNewManifestTripId] = useState(() => readPreferredLoadingTripId() ?? "");
+  const [appendTargetManifestId, setAppendTargetManifestId] = useState<string | null>(null);
 
   const shipDestQ = useQuery({
     ...shipDestinationsFullListQueryOptions(),
@@ -185,7 +186,7 @@ export function AllocationPanel() {
   const warehouseName = useCallback(
     (id: string) => {
       const w = warehousesQuery.data?.warehouses.find((x) => x.id === id);
-      return w ? `${w.name} (${w.code})` : id;
+      return w?.name?.trim() ? w.name.trim() : "Неизвестный склад";
     },
     [warehousesQuery.data?.warehouses],
   );
@@ -234,20 +235,29 @@ export function AllocationPanel() {
     () => filterTripsInWork(tripsQuery.data?.trips ?? []),
     [tripsQuery.data?.trips],
   );
+  const appendTargetManifest = useMemo(
+    () => (appendTargetManifestId ? activeManifests.find((m) => m.id === appendTargetManifestId) ?? null : null),
+    [activeManifests, appendTargetManifestId],
+  );
+  const appendMode = Boolean(appendTargetManifest);
 
   const startAnotherWarehouseLoad = useCallback(
-    (tripId: string) => {
+    (tripId: string, manifestId: string, destinationCode: string) => {
       const id = tripId.trim();
       if (!id) {
         return;
       }
       setNewManifestTripId(id);
+      setAppendTargetManifestId(manifestId.trim() || null);
       writePreferredLoadingTripId(id);
       setSelectedWarehouse("");
       writePreferredWarehouseId(null);
       setManifestFormOpen(false);
       setLoadNaklSelection(new Set());
       setSavedManifestId("");
+      if (destinationCode.trim()) {
+        setManifestDestinationCode(destinationCode.trim());
+      }
       if (routeManifestId.trim()) {
         void navigate(distributionBase);
       }
@@ -261,6 +271,7 @@ export function AllocationPanel() {
     }
     if (!openTripsForAssign.some((t) => t.id === newManifestTripId.trim())) {
       setNewManifestTripId("");
+      setAppendTargetManifestId(null);
       writePreferredLoadingTripId(null);
     }
   }, [tripsQuery.isSuccess, openTripsForAssign, newManifestTripId]);
@@ -330,6 +341,7 @@ export function AllocationPanel() {
 
   const createManifest = useMutation({
     mutationFn: async (payload: {
+      appendToManifestId?: string;
       warehouseId: string;
       destinationCode: string;
       batchIds: string[];
@@ -371,6 +383,13 @@ export function AllocationPanel() {
         }
       };
 
+      if (payload.appendToManifestId?.trim()) {
+        await apiPostJson(`/api/loading-manifests/${encodeURIComponent(payload.appendToManifestId)}/add-batches`, {
+          batchIds: payload.batchIds,
+        });
+        return { manifestId: payload.appendToManifestId, assignTripWarning: null };
+      }
+
       const res = (await apiPostJson("/api/loading-manifests", payload)) as CreateLoadingManifestResponse;
       const tripId = newManifestTripId.trim();
       let assignTripWarning: string | null = null;
@@ -383,6 +402,7 @@ export function AllocationPanel() {
       const tripId = newManifestTripId.trim();
       setSavedManifestId(res.manifestId);
       setLoadNaklSelection(new Set());
+      setAppendTargetManifestId(null);
       setCreateManifestWarning(res.assignTripWarning ?? null);
       if (tripId) {
         setAssignTripId(tripId);
@@ -497,6 +517,7 @@ export function AllocationPanel() {
     writePreferredWarehouseId(null);
     setManifestFormOpen(false);
     setLoadNaklSelection(new Set());
+    setAppendTargetManifestId(null);
     if (routeManifestId.trim()) {
       void navigate(distributionBase);
     }
@@ -767,9 +788,7 @@ export function AllocationPanel() {
                       </td>
                       <td style={thtd}>{m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—"}</td>
                       <td style={thtd}>{m.docDate}</td>
-                      <td style={thtd}>
-                        {m.warehouseName} ({m.warehouseCode})
-                      </td>
+                      <td style={thtd}>{m.warehouseName}</td>
                       <td style={thtd}>{m.destinationName}</td>
                       <td style={{ ...thtd, textAlign: "right" }}>
                         {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
@@ -863,7 +882,13 @@ export function AllocationPanel() {
                   <button
                     type="button"
                     style={btnStyle}
-                    onClick={() => startAnotherWarehouseLoad(openManifestSummary.tripId!)}
+                    onClick={() =>
+                      startAnotherWarehouseLoad(
+                        openManifestSummary.tripId!,
+                        openManifestSummary.id,
+                        openManifestSummary.destinationCode,
+                      )
+                    }
                   >
                     Загрузить ещё с другого склада в этот рейс
                   </button>
@@ -985,6 +1010,18 @@ export function AllocationPanel() {
                   </button>
                 </p>
                 <h3 className="birzha-section-title-inline">2. Погрузочная накладная</h3>
+                {appendMode && appendTargetManifest ? (
+                  <InfoAlert title="Добавление в существующую погрузочную">
+                    Товар будет добавлен в уже открытую погрузочную:{" "}
+                    <strong>
+                      {formatLoadingManifestDisplayName({
+                        manifestNumber: appendTargetManifest.manifestNumber,
+                        destinationName: appendTargetManifest.destinationName,
+                      })}
+                    </strong>
+                    . Новая погрузочная создана не будет.
+                  </InfoAlert>
+                ) : null}
                 <div className="birzha-form-grid">
                   <label>
                     Рейс *
@@ -996,7 +1033,7 @@ export function AllocationPanel() {
                         writePreferredLoadingTripId(v.trim() || null);
                       }}
                       style={fieldStyle}
-                      disabled={tripsQuery.isPending}
+                      disabled={tripsQuery.isPending || appendMode}
                     >
                       <option value="">
                         {tripsQuery.isPending
@@ -1022,6 +1059,7 @@ export function AllocationPanel() {
                         writePreferredLoadingDestinationCode(v || null);
                       }}
                       style={fieldStyle}
+                      disabled={appendMode}
                     >
                       {destAllowed.map((d) => (
                         <option key={d} value={d}>
@@ -1051,12 +1089,24 @@ export function AllocationPanel() {
                     disabled={
                       createManifest.isPending ||
                       tableRows.length === 0 ||
-                      !manifestDate ||
-                      !manifestDestinationCode ||
-                      !newManifestTripId.trim() ||
-                      openTripsForAssign.length === 0
+                      (!appendMode &&
+                        (!manifestDate ||
+                          !manifestDestinationCode ||
+                          !newManifestTripId.trim() ||
+                          openTripsForAssign.length === 0))
                     }
                     onClick={() => {
+                      if (appendMode && appendTargetManifest) {
+                        createManifest.mutate({
+                          appendToManifestId: appendTargetManifest.id,
+                          warehouseId: selectedWarehouse,
+                          destinationCode: appendTargetManifest.destinationCode,
+                          batchIds: tableRows.map((b) => b.id),
+                          docDate: appendTargetManifest.docDate,
+                          manifestNumber: appendTargetManifest.manifestNumber,
+                        });
+                        return;
+                      }
                       const destLabel = labelDest[manifestDestinationCode] ?? manifestDestinationCode;
                       const tripId = newManifestTripId.trim();
                       const trip = openTripsForAssign.find((t) => t.id === tripId);
@@ -1074,7 +1124,11 @@ export function AllocationPanel() {
                       });
                     }}
                   >
-                    {createManifest.isPending ? "Сохранение…" : "Сохранить погрузочную накладную"}
+                    {createManifest.isPending
+                      ? "Сохранение…"
+                      : appendMode
+                        ? "Добавить в текущую погрузочную"
+                        : "Сохранить погрузочную накладную"}
                   </button>
                 </div>
                 {createManifest.isError ? (

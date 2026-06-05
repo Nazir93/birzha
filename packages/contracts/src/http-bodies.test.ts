@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  appendLoadingManifestBatchesBodySchema,
   assignLoadingManifestTripBodySchema,
   assignTripSellerBodySchema,
   createLoadingManifestBodySchema,
@@ -442,5 +443,14 @@ describe("assignLoadingManifestTripBodySchema", () => {
   it("requires trip id", () => {
     expect(assignLoadingManifestTripBodySchema.parse({ tripId: " trip-1 " })).toEqual({ tripId: "trip-1" });
     expect(() => assignLoadingManifestTripBodySchema.parse({ tripId: "" })).toThrow();
+  });
+});
+
+describe("appendLoadingManifestBatchesBodySchema", () => {
+  it("requires at least one batch id", () => {
+    expect(appendLoadingManifestBatchesBodySchema.parse({ batchIds: ["b1", "b2"] })).toEqual({
+      batchIds: ["b1", "b2"],
+    });
+    expect(() => appendLoadingManifestBatchesBodySchema.parse({ batchIds: [] })).toThrow();
   });
 });

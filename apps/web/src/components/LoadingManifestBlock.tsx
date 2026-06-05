@@ -141,7 +141,7 @@ export function LoadingManifestBlock({
               destinationName: manifest.destinationName,
             })}
           </strong>{" "}
-          от {manifest.docDate} · {manifest.warehouseName} ({manifest.warehouseCode})
+          от {manifest.docDate} · {manifest.warehouseName}
         </p>
       ) : (
         <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>

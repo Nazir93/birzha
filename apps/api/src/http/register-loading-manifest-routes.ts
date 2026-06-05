@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { FastifyInstance } from "fastify";
 import {
+  appendLoadingManifestBatchesBodySchema,
   assignLoadingManifestTripBodySchema,
   createLoadingManifestBodySchema,
   loadingManifestReservedBatchIdsQuerySchema,
@@ -78,6 +79,13 @@ function packageCountForShelf(totalGrams: bigint, onWarehouseGrams: bigint, line
     return null;
   }
   return (onWarehouseGrams * linePackageCount + totalGrams / 2n) / totalGrams;
+}
+
+function packageCountForPart(totalGrams: bigint, partGrams: bigint, linePackageCount: bigint | null): bigint | null {
+  if (linePackageCount == null || linePackageCount <= 0n || totalGrams <= 0n || partGrams <= 0n) {
+    return null;
+  }
+  return (partGrams * linePackageCount + totalGrams / 2n) / totalGrams;
 }
 
 export function registerLoadingManifestRoutes(
@@ -474,6 +482,99 @@ export function registerLoadingManifestRoutes(
             kg,
             packageCount: plan.packageCount == null ? undefined : Number(plan.packageCount),
           });
+        }
+      });
+
+      return reply.send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/loading-manifests/:manifestId/add-batches", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
+    try {
+      const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
+      const body = appendLoadingManifestBatchesBodySchema.parse(req.body);
+      const manifestId = params.manifestId;
+      const batchIds: string[] = [...new Set(body.batchIds.map((x) => x.trim()).filter(Boolean))];
+      if (batchIds.length === 0) {
+        return reply.code(400).send({ error: "empty_manifest" });
+      }
+
+      const [manifest] = await db
+        .select({
+          id: loadingManifests.id,
+          warehouseId: loadingManifests.warehouseId,
+          destinationCode: loadingManifests.destinationCode,
+          tripId: loadingManifests.tripId,
+        })
+        .from(loadingManifests)
+        .where(eq(loadingManifests.id, manifestId))
+        .limit(1);
+      if (!manifest) {
+        return reply.code(404).send({ error: "loading_manifest_not_found" });
+      }
+      if (manifest.tripId) {
+        return reply.code(400).send({ error: "loading_manifest_trip_assign_forbidden", message: loadingManifestTripAssignLockMessage("already_assigned") });
+      }
+
+      const selected = await db
+        .select({
+          batchId: batches.id,
+          warehouseId: batches.warehouseId,
+          totalGrams: batches.totalGrams,
+          onWarehouseGrams: batches.onWarehouseGrams,
+          destination: batches.destination,
+          linePackageCount: purchaseDocumentLines.packageCount,
+        })
+        .from(batches)
+        .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
+        .where(inArray(batches.id, batchIds));
+      if (selected.length !== batchIds.length) {
+        return reply.code(400).send({ error: "unknown_batch_in_manifest" });
+      }
+      const badWarehouse = selected.find((r) => r.warehouseId !== manifest.warehouseId);
+      if (badWarehouse) {
+        return reply.code(400).send({ error: "batch_not_in_warehouse", batchId: badWarehouse.batchId });
+      }
+      const noStock = selected.find((r) => r.onWarehouseGrams <= 0n);
+      if (noStock) {
+        return reply.code(400).send({ error: "batch_without_stock", batchId: noStock.batchId });
+      }
+
+      const existingRows = await db
+        .select({ batchId: loadingManifestLines.batchId, lineNo: loadingManifestLines.lineNo, grams: loadingManifestLines.grams })
+        .from(loadingManifestLines)
+        .where(eq(loadingManifestLines.manifestId, manifestId));
+      const existingByBatch = new Map(existingRows.map((r) => [r.batchId, r]));
+      const maxLineNo = existingRows.reduce((m, r) => (r.lineNo > m ? r.lineNo : m), 0);
+      let nextLineNo = maxLineNo + 1;
+
+      await db.transaction(async (tx) => {
+        const exec = tx as unknown as DbClient;
+        for (const row of selected) {
+          const already = existingByBatch.get(row.batchId);
+          const targetGrams = row.onWarehouseGrams;
+          const packageCount = packageCountForPart(row.totalGrams, targetGrams, row.linePackageCount);
+          if (already) {
+            if (targetGrams > already.grams) {
+              await exec
+                .update(loadingManifestLines)
+                .set({ grams: targetGrams, packageCount })
+                .where(and(eq(loadingManifestLines.manifestId, manifestId), eq(loadingManifestLines.batchId, row.batchId)));
+            }
+          } else {
+            await exec.insert(loadingManifestLines).values({
+              manifestId,
+              batchId: row.batchId,
+              lineNo: nextLineNo++,
+              grams: targetGrams,
+              packageCount,
+            });
+          }
+          if (row.destination !== manifest.destinationCode) {
+            await exec.update(batches).set({ destination: manifest.destinationCode }).where(eq(batches.id, row.batchId));
+          }
         }
       });
 
