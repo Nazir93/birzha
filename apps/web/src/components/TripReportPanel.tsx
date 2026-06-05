@@ -449,7 +449,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 {!fieldSellerSalesReport ? (
                   <tr>
                     <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
-                    <td style={thtd}>{r.shipment.totalPackageCount}</td>
+                    <td style={thtd}>
+                      {(() => {
+                        const raw = r.shipment.totalPackageCount?.trim() || "0";
+                        const n = BigInt(raw);
+                        return n > 0n ? raw : "—";
+                      })()}
+                    </td>
                   </tr>
                 ) : null}
                 <tr>

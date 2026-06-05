@@ -693,11 +693,27 @@ export function SellFromTripSection() {
       const summaryLine = sellSelectionSummary?.line?.trim();
       const productLine = summaryLine && summaryLine !== "—" ? summaryLine : "Товар";
       const pkgTrim = sellPackages.trim();
+      const paymentLabels: Record<string, string> = {
+        cash: "Наличные",
+        debt: "В долг",
+        mixed: "Смешанная оплата",
+        card_transfer: "Перевод на карту",
+      };
+      let clientLabel: string | null = null;
+      if (saleChannel === "retail" && (paymentKind === "debt" || paymentKind === "mixed")) {
+        const name = sellClientLabel.trim();
+        clientLabel = name ? `Долг: ${name}` : null;
+      } else if (saleChannel === "wholesale") {
+        const buyer = activeWholesalers.find((w) => w.id === wholesaleBuyerId.trim());
+        clientLabel = buyer ? `Опт: ${buyer.name}` : null;
+      }
       return {
         kg: sellKg.trim(),
         packages: pkgTrim || null,
         sumRub,
         productLine,
+        paymentLabel: paymentLabels[paymentKind] ?? null,
+        clientLabel,
       };
     },
     onMutate: () => {

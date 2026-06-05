@@ -14,6 +14,7 @@
     "db:push": "drizzle-kit push",
     "db:reset-test-data": "tsx scripts/reset-test-data.ts",
     "db:seed-demo": "tsx scripts/seed-demo-dataset.ts",
+    "db:seed-load-test": "tsx scripts/seed-load-test-dataset.ts",
     "create-user": "tsx scripts/create-user.ts"
   },
   "dependencies": {

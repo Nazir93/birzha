@@ -1,11 +1,14 @@
 import type { Batch } from "@birzha/domain";
 
-/** Фильтр списка партий (GET /api/batches?ids=&search=&limit=&offset=). Без аргумента — полный список. */
+/** Фильтр списка партий (GET /api/batches?ids=&search=&limit=&offset=&warehouseId=&stockOnly=). Без аргумента — полный список. */
 export type BatchListFilter = {
   ids?: string[];
   search?: string;
   limit?: number;
   offset?: number;
+  warehouseId?: string;
+  /** Только партии с остатком на складе > 0. */
+  stockOnly?: boolean;
 };
 
 export interface BatchRepository {

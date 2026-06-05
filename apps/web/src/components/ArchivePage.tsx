@@ -11,11 +11,9 @@ import type {
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
-  closedTripIdSet,
   filterPurchaseDocumentsArchived,
   filterTripsArchived,
   isTripArchived,
-  splitLoadingManifestsByArchive,
 } from "../format/archive.js";
 import {
   formatTripArchiveSalesRevenue,
@@ -27,10 +25,10 @@ import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js"
 import { formatTripListStatusLabel } from "../format/trip-label.js";
 import {
   batchesFullListQueryOptions,
-  loadingManifestsListQueryOptions,
+  loadingManifestsPagedQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   shipmentReportQueryOptions,
-  tripsFullListQueryOptions,
+  tripsPickerQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import {
@@ -214,7 +212,7 @@ function ManifestArchiveTable({
   return (
     <ArchiveDataTable
       ariaLabel="Архив погрузочных накладных"
-      headers={["№", "Дата", "№", "Склад", "Рейс", ""]}
+      headers={["№", "Дата", "Накладная", "Склад", "Рейс", ""]}
       rows={manifests.map((m, idx) => [
         String(startIndex + idx),
         formatPurchaseDocDateRu(m.docDate),
@@ -224,7 +222,7 @@ function ManifestArchiveTable({
             destinationName: m.destinationName,
           })}
         </Link>,
-        `${m.warehouseName} (${m.warehouseCode})`,
+        `${m.warehouseName}`,
         m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—",
         <Link key="o" to={manifestPathFor(pathname, m.id)}>
           Открыть
@@ -281,14 +279,22 @@ export function ArchivePage() {
   const salesMode = pathname === prefix.sales || pathname.startsWith(`${prefix.sales}/`);
   const reportTripId = searchParams.get("trip")?.trim() ?? "";
 
-  const tripsQ = useQuery(tripsFullListQueryOptions());
+  const [tripsPage, setTripsPage] = useState(0);
+  const [nakladPage, setNakladPage] = useState(0);
+  const [manifestPage, setManifestPage] = useState(0);
+
+  const tripsQ = useQuery(tripsPickerQueryOptions({ limit: 500, offset: 0 }));
   const batchesQ = useQuery(batchesFullListQueryOptions());
   const purchaseQ = useQuery({
     ...purchaseDocumentsFullListQueryOptions(),
     enabled: !salesMode && meta?.purchaseDocumentsApi === "enabled",
   });
   const manifestsQ = useQuery({
-    ...loadingManifestsListQueryOptions(),
+    ...loadingManifestsPagedQueryOptions({
+      limit: PAGE_SIZE,
+      offset: manifestPage * PAGE_SIZE,
+      scope: "archived",
+    }),
     enabled: !salesMode,
   });
   const warehousesQ = useQuery({
@@ -296,7 +302,6 @@ export function ArchivePage() {
     enabled: !salesMode,
   });
 
-  const closedIds = useMemo(() => closedTripIdSet(tripsQ.data?.trips ?? []), [tripsQ.data?.trips]);
 
   const archivedTrips = useMemo(() => {
     let list = filterTripsArchived(tripsQ.data?.trips ?? []);
@@ -313,12 +318,9 @@ export function ArchivePage() {
     return filterPurchaseDocumentsArchived(purchaseQ.data.purchaseDocuments, batchesQ.data.batches);
   }, [salesMode, batchesQ.isSuccess, batchesQ.data?.batches, purchaseQ.data]);
 
-  const archivedManifests = useMemo(() => {
-    if (salesMode) {
-      return [];
-    }
-    return splitLoadingManifestsByArchive(manifestsQ.data?.loadingManifests ?? [], closedIds).archived;
-  }, [salesMode, manifestsQ.data?.loadingManifests, closedIds]);
+  const archivedManifests = manifestsQ.data?.loadingManifests ?? [];
+  const archivedManifestTotal = manifestsQ.data?.listMeta?.totalCount ?? archivedManifests.length;
+  const archivedManifestPageCount = Math.max(1, Math.ceil(archivedManifestTotal / PAGE_SIZE));
 
   const tripNumberById = useMemo(() => {
     const m = new Map<string, string>();
@@ -328,16 +330,8 @@ export function ArchivePage() {
     return m;
   }, [tripsQ.data?.trips]);
 
-  const [tripsPage, setTripsPage] = useState(0);
-  const [nakladPage, setNakladPage] = useState(0);
-  const [manifestPage, setManifestPage] = useState(0);
-
   const tripsPaged = useMemo(() => paginate(archivedTrips, tripsPage, PAGE_SIZE), [archivedTrips, tripsPage]);
   const nakladPaged = useMemo(() => paginate(archivedNaklad, nakladPage, PAGE_SIZE), [archivedNaklad, nakladPage]);
-  const manifestPaged = useMemo(
-    () => paginate(archivedManifests, manifestPage, PAGE_SIZE),
-    [archivedManifests, manifestPage],
-  );
 
   useEffect(() => {
     setTripsPage((p) => Math.min(p, Math.max(0, tripsPaged.pageCount - 1)));
@@ -346,10 +340,10 @@ export function ArchivePage() {
     setNakladPage((p) => Math.min(p, Math.max(0, nakladPaged.pageCount - 1)));
   }, [archivedNaklad.length, nakladPaged.pageCount]);
   useEffect(() => {
-    setManifestPage((p) => Math.min(p, Math.max(0, manifestPaged.pageCount - 1)));
-  }, [archivedManifests.length, manifestPaged.pageCount]);
+    setManifestPage((p) => Math.min(p, Math.max(0, archivedManifestPageCount - 1)));
+  }, [archivedManifestTotal, archivedManifestPageCount]);
 
-  const loading = tripsQ.isPending || batchesQ.isPending;
+  const loading = tripsQ.isPending || batchesQ.isPending || (!salesMode && manifestsQ.isPending);
   const reportTo = (tripId: string) => archiveSalesReportPath(pathname, tripId, salesMode);
 
   const selectedArchivedTrip = useMemo(() => {
@@ -477,16 +471,16 @@ export function ArchivePage() {
           {!salesMode ? (
             <PaginatedSection
               title="Погрузочные накладные"
-              count={archivedManifests.length}
+              count={archivedManifestTotal}
               emptyTitle="Нет погрузочных в архиве"
               emptyDescription="Погрузочные, привязанные к закрытому рейсу, отображаются здесь."
-              pageCount={manifestPaged.pageCount}
+              pageCount={archivedManifestPageCount}
               pageIndex={manifestPage}
               itemLabel="документов"
               onPageChange={setManifestPage}
             >
               <ManifestArchiveTable
-                manifests={manifestPaged.slice}
+                manifests={archivedManifests}
                 pathname={pathname}
                 tripNumberById={tripNumberById}
                 startIndex={manifestPage * PAGE_SIZE + 1}

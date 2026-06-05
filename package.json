@@ -16,7 +16,8 @@
     "e2e:roles": "pnpm --filter @birzha/web build && playwright test e2e/role-nav-auth.spec.ts",
     "dev:api": "pnpm --filter @birzha/api dev",
     "dev:web": "pnpm --filter @birzha/web dev",
-    "load:smoke": "node scripts/load-smoke.mjs"
+    "load:smoke": "node scripts/load-smoke.mjs",
+    "load:distribution": "node scripts/load-distribution.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

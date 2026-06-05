@@ -151,7 +151,17 @@ export type LoadingManifestSummary = {
   calibers: { label: string; kg: number; packagesApprox: number }[];
 };
 
-export type LoadingManifestsListResponse = { loadingManifests: LoadingManifestSummary[] };
+export type LoadingManifestsListMeta = {
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+  totalCount: number;
+};
+
+export type LoadingManifestsListResponse = {
+  loadingManifests: LoadingManifestSummary[];
+  listMeta?: LoadingManifestsListMeta;
+};
 
 export type LoadingManifestDetail = {
   id: string;

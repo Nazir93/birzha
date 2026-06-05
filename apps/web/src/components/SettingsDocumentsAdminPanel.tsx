@@ -13,10 +13,10 @@ import {
   patchTripHeader,
 } from "../api/fetch-api.js";
 import {
-  loadingManifestsListQueryOptions,
+  loadingManifestsPagedQueryOptions,
   purchaseDocumentsFullListQueryOptions,
   queryRoots,
-  tripsFullListQueryOptions,
+  tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes } from "../routes.js";
@@ -24,9 +24,12 @@ import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/tri
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, dateFieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+
+const SETTINGS_MANIFEST_PAGE_SIZE = 50;
 
 type SettingsDocumentsAdminPanelProps = {
   embedded?: boolean;
@@ -276,6 +279,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
   const purchaseEnabled = meta?.purchaseDocumentsApi === "enabled";
   const tripsEnabled = meta?.tripsApi === "enabled";
 
+  const [manifestSettingsPage, setManifestSettingsPage] = useState(0);
   const [pageError, setPageError] = useState<string | null>(null);
   const [savingPurchaseId, setSavingPurchaseId] = useState<string | null>(null);
   const [savingManifestId, setSavingManifestId] = useState<string | null>(null);
@@ -289,8 +293,20 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
   }, [queryClient]);
 
   const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled: purchaseEnabled });
-  const loadingManifestsQ = useQuery({ ...loadingManifestsListQueryOptions(), enabled: purchaseEnabled });
-  const tripsQ = useQuery({ ...tripsFullListQueryOptions(), enabled: tripsEnabled });
+  const loadingManifestsQ = useQuery({
+    ...loadingManifestsPagedQueryOptions({
+      limit: SETTINGS_MANIFEST_PAGE_SIZE,
+      offset: manifestSettingsPage * SETTINGS_MANIFEST_PAGE_SIZE,
+      scope: "all",
+    }),
+    enabled: purchaseEnabled,
+  });
+  const tripsQ = useQuery({ ...tripsPickerQueryOptions({ limit: 500 }), enabled: tripsEnabled });
+  const manifestSettingsTotal = loadingManifestsQ.data?.listMeta?.totalCount ?? loadingManifestsQ.data?.loadingManifests.length ?? 0;
+  const manifestSettingsPageCount = Math.max(
+    1,
+    Math.ceil(manifestSettingsTotal / SETTINGS_MANIFEST_PAGE_SIZE),
+  );
 
   const deletePurchaseDocument = useMutation({
     mutationFn: async (documentId: string) => {
@@ -523,7 +539,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
                 </tr>
               </thead>
               <tbody>
-                {(loadingManifestsQ.data.loadingManifests ?? [])
+                {(loadingManifestsQ.data?.loadingManifests ?? [])
                   .slice()
                   .sort((a, b) => a.manifestNumber.localeCompare(b.manifestNumber, "ru", { numeric: true }))
                   .map((m) => (
@@ -546,6 +562,14 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
                   ))}
               </tbody>
             </table>
+            {manifestSettingsPageCount > 1 ? (
+              <BirzhaPagination
+                pageIndex={manifestSettingsPage}
+                pageCount={manifestSettingsPageCount}
+                itemLabel="погрузочных"
+                onPageChange={setManifestSettingsPage}
+              />
+            ) : null}
           </div>
         )}
       </BirzhaDisclosure>

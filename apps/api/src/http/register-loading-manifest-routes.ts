@@ -40,6 +40,10 @@ import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 import { DrizzleBatchRepository } from "../infrastructure/persistence/drizzle-batch.repository.js";
 import { DrizzleTripShipmentRepository } from "../infrastructure/persistence/drizzle-trip-shipment.repository.js";
+import {
+  listLoadingManifestsForHttp,
+  loadingManifestsListQuerySchema,
+} from "./loading-manifest-list-http.js";
 
 type JwtUser = { sub: string; roles: AuthRoleGrant[] };
 
@@ -168,104 +172,29 @@ export function registerLoadingManifestRoutes(
     }
   });
 
-  app.get("/loading-manifests", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
+  app.get("/loading-manifests", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
-      const rows = await db
-        .select({
-          id: loadingManifests.id,
-          manifestNumber: loadingManifests.manifestNumber,
-          docDate: loadingManifests.docDate,
-          warehouseId: loadingManifests.warehouseId,
-          warehouseName: warehouses.name,
-          warehouseCode: warehouses.code,
-          destinationCode: loadingManifests.destinationCode,
-          destinationName: shipDestinations.displayName,
-          tripId: loadingManifests.tripId,
-          createdAt: loadingManifests.createdAt,
-        })
-        .from(loadingManifests)
-        .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
-        .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
-        .orderBy(desc(loadingManifests.createdAt));
+      const raw = req.query as Record<string, string | undefined>;
+      const pickerKeys = ["search", "limit", "offset", "scope"] as const;
+      const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
 
-      const manifestIds = rows.map((r) => r.id);
-      const lineByManifest = new Map<
-        string,
-        { lineCount: number; sumGrams: bigint; sumPackages: bigint | null }
-      >();
-      const calibersByManifest = new Map<string, { label: string; kg: number; packagesApprox: number }[]>();
-
-      if (manifestIds.length > 0) {
-        const lineAgg = await db
-          .select({
-            manifestId: loadingManifestLines.manifestId,
-            lineCount: sql<number>`count(*)::int`,
-            sumGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}), 0::bigint)`,
-            sumPackages: sql<bigint | null>`sum(${loadingManifestLines.packageCount})`,
-          })
-          .from(loadingManifestLines)
-          .where(inArray(loadingManifestLines.manifestId, manifestIds))
-          .groupBy(loadingManifestLines.manifestId);
-
-        for (const la of lineAgg) {
-          lineByManifest.set(la.manifestId, {
-            lineCount: la.lineCount,
-            sumGrams: la.sumGrams,
-            sumPackages: la.sumPackages,
-          });
-        }
-
-        const caliberRaw = await db
-          .select({
-            manifestId: loadingManifestLines.manifestId,
-            productGroup: productGrades.productGroup,
-            productGradeCode: productGrades.code,
-            sumGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}), 0::bigint)`,
-            sumPackages: sql<bigint | null>`sum(${loadingManifestLines.packageCount})`,
-          })
-          .from(loadingManifestLines)
-          .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
-          .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
-          .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
-          .where(inArray(loadingManifestLines.manifestId, manifestIds))
-          .groupBy(loadingManifestLines.manifestId, productGrades.productGroup, productGrades.code);
-
-        for (const c of caliberRaw) {
-          const label = `${c.productGroup?.trim() || "Товар"} · ${c.productGradeCode?.trim() || "—"}`;
-          const kg = Number(c.sumGrams) / 1000;
-          const pkg = c.sumPackages != null ? Number(c.sumPackages) : 0;
-          const arr = calibersByManifest.get(c.manifestId) ?? [];
-          arr.push({ label, kg, packagesApprox: pkg });
-          calibersByManifest.set(c.manifestId, arr);
-        }
-        for (const arr of calibersByManifest.values()) {
-          arr.sort((a, b) => a.label.localeCompare(b.label, "ru"));
-        }
+      if (!isPicker) {
+        const payload = await listLoadingManifestsForHttp(db);
+        return reply.send({ loadingManifests: payload.loadingManifests });
       }
 
-      return reply.send({
-        loadingManifests: rows.map((r) => {
-          const la = lineByManifest.get(r.id);
-          const totalKg = la ? Number(la.sumGrams) / 1000 : 0;
-          const packagesApprox = la?.sumPackages != null ? Number(la.sumPackages) : null;
-          return {
-            id: r.id,
-            manifestNumber: r.manifestNumber,
-            docDate: formatPgDate(r.docDate),
-            warehouseId: r.warehouseId,
-            warehouseName: r.warehouseName,
-            warehouseCode: r.warehouseCode,
-            destinationCode: r.destinationCode,
-            destinationName: r.destinationName,
-            tripId: r.tripId,
-            createdAt: r.createdAt.toISOString(),
-            lineCount: la?.lineCount ?? 0,
-            totalKg,
-            packagesApprox,
-            calibers: calibersByManifest.get(r.id) ?? [],
-          };
-        }),
+      const parsed = loadingManifestsListQuerySchema.safeParse(raw);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
+      }
+      const d = parsed.data;
+      const payload = await listLoadingManifestsForHttp(db, {
+        search: d.search,
+        limit: d.limit ?? 100,
+        offset: d.offset ?? 0,
+        scope: d.scope,
       });
+      return reply.send(payload);
     } catch (error) {
       return sendMappedError(reply, error);
     }

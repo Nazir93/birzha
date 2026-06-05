@@ -8,6 +8,8 @@ export type SellerSaleFlashData = {
   packages: string | null;
   sumRub: string;
   productLine: string;
+  paymentLabel?: string | null;
+  clientLabel?: string | null;
 };
 
 type Props = {
@@ -68,7 +70,18 @@ export function SellerSaleSuccessOverlay({ data, onDismiss }: Props) {
         </p>
         <p className="birzha-sold-overlay__sum">
           Сумма <strong>{data.sumRub} ₽</strong>
+          {data.paymentLabel ? (
+            <>
+              <span className="birzha-sold-overlay__dot">·</span>
+              <span>{data.paymentLabel}</span>
+            </>
+          ) : null}
         </p>
+        {data.clientLabel ? (
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 1rem" }}>
+            {data.clientLabel}
+          </p>
+        ) : null}
         <button type="button" className="birzha-sold-overlay__btn" style={btnStyle} onClick={onDismiss}>
           Продолжить
         </button>

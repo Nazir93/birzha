@@ -124,12 +124,17 @@ export function registerBatchRoutes(
     search: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(500).optional(),
     offset: z.coerce.number().int().min(0).optional(),
+    warehouseId: z.string().min(1).max(200).optional(),
+    stockOnly: z
+      .enum(["1", "true", "0", "false"])
+      .optional()
+      .transform((v) => v === "1" || v === "true"),
   });
 
   app.get("/batches", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const raw = req.query as Record<string, string | undefined>;
-      const pickerKeys = ["ids", "search", "limit", "offset"] as const;
+      const pickerKeys = ["ids", "search", "limit", "offset", "warehouseId", "stockOnly"] as const;
       const isPicker = pickerKeys.some((k) => raw[k] !== undefined && String(raw[k]).length > 0);
 
       let filter: BatchListFilter | undefined;
@@ -155,6 +160,8 @@ export function registerBatchRoutes(
             search: d.search?.trim() || undefined,
             limit,
             offset,
+            warehouseId: d.warehouseId?.trim() || undefined,
+            stockOnly: d.stockOnly || undefined,
           };
           listMeta = { limit, offset, hasMore: false };
         }

@@ -58,6 +58,27 @@ export const tripsFullListQueryOptions = () =>
     placeholderData: keepPreviousData,
   });
 
+/** Подборщик рейсов: `GET /api/trips?limit=&offset=` — без тяжёлой сводки у закрытых. */
+export const tripsPickerQueryOptions = (opts: { limit?: number; offset?: number; search?: string } = {}) => {
+  const limit = opts.limit ?? 500;
+  const offset = opts.offset ?? 0;
+  const search = opts.search?.trim() ?? "";
+  return queryOptions({
+    queryKey: [...queryRoots.trips, "picker", limit, offset, search] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("limit", String(limit));
+      p.set("offset", String(offset));
+      if (search) {
+        p.set("search", search);
+      }
+      return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
+  });
+};
+
 /** Список полевых продавцов для назначения на рейс: `GET /api/trips/field-seller-options`. */
 export const tripsFieldSellerOptionsQueryOptions = () =>
   queryOptions({
@@ -108,6 +129,25 @@ export const batchesSearchQueryOptions = (search: string, limit = 20) => {
     },
     enabled: q.length >= 2,
     staleTime: QUERY_STALE_LISTS_MS,
+  });
+};
+
+/** Партии склада с остатком — для «Распределения» без полной выборки. */
+export const batchesForWarehouseQueryOptions = (warehouseId: string, limit = 500) => {
+  const wh = warehouseId.trim();
+  return queryOptions({
+    queryKey: [...queryRoots.batches, "warehouse", wh, limit] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("warehouseId", wh);
+      p.set("stockOnly", "1");
+      p.set("limit", String(limit));
+      p.set("offset", "0");
+      return apiGetJson<BatchesListResponse>(`/api/batches?${p}`);
+    },
+    enabled: wh.length > 0,
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -166,6 +206,42 @@ export const loadingManifestsListQueryOptions = () =>
     queryKey: [...queryRoots.loadingManifest, "list"] as const,
     queryFn: () => apiGetJson<LoadingManifestsListResponse>("/api/loading-manifests"),
     staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+export type LoadingManifestListScope = "active" | "archived" | "all";
+
+/** Пагинированный список погрузочных: `GET /api/loading-manifests?limit=&offset=&scope=`. */
+export const loadingManifestsPagedQueryOptions = (opts: {
+  limit: number;
+  offset: number;
+  scope?: LoadingManifestListScope;
+  search?: string;
+}) =>
+  queryOptions({
+    queryKey: [
+      ...queryRoots.loadingManifest,
+      "list",
+      "paged",
+      opts.scope ?? "all",
+      opts.limit,
+      opts.offset,
+      opts.search?.trim() ?? "",
+    ] as const,
+    queryFn: () => {
+      const p = new URLSearchParams();
+      p.set("limit", String(opts.limit));
+      p.set("offset", String(opts.offset));
+      if (opts.scope) {
+        p.set("scope", opts.scope);
+      }
+      const q = opts.search?.trim();
+      if (q) {
+        p.set("search", q);
+      }
+      return apiGetJson<LoadingManifestsListResponse>(`/api/loading-manifests?${p}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
   });
 
 /** Партии, уже внесённые в погрузочные накладные на складе (не показывать в отборе распределения). */

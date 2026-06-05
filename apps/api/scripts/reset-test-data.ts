@@ -54,7 +54,15 @@ const SEED_WAREHOUSES = `
     ('wh-kayakent', 'KAYAKENT', 'Каякент')
 `;
 
-const SEED_GRADES = `
+const SEED_SHIP_DESTINATIONS = `
+  INSERT INTO ship_destinations (code, display_name, sort_order, is_active) VALUES
+    ('moscow', 'Москва', 10, true),
+    ('regions', 'Регионы', 20, true),
+    ('discount', 'Уценка / распродажа', 30, true),
+    ('writeoff', 'Списание', 40, true)
+  ON CONFLICT (code) DO NOTHING
+`;
+
   INSERT INTO product_grades (id, code, display_name, sort_order, is_active, product_group) VALUES
     ('pg-n5', '№5', 'Калибр №5', 5, true, 'Помидоры'),
     ('pg-n6', '№6', 'Калибр №6', 6, true, 'Помидоры'),
@@ -69,6 +77,7 @@ try {
   await sql.begin(async (q) => {
     await q.unsafe(TRUNCATE);
     await q.unsafe(SEED_WAREHOUSES);
+    await q.unsafe(SEED_SHIP_DESTINATIONS);
     await q.unsafe(SEED_GRADES);
   });
   console.log("OK: накладные, рейсы, продажи, партии и справочники склад/калибр сброшены; пользователи и направления отгрузки не тронуты.");

@@ -169,6 +169,57 @@ export function ArchivedTripSalesReport({
 
       <FieldSellerTripReport report={report} batchById={batchById} />
 
+      {linesQ.isSuccess && (linesQ.data?.lines.length ?? 0) > 0 ? (
+        <>
+          <h4 className="birzha-form-label" style={{ margin: "1.25rem 0 0.5rem", fontSize: "0.95rem" }}>
+            Журнал сделок
+          </h4>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+            <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Журнал сделок по рейсу">
+              <thead>
+                <tr>
+                  <th scope="col" style={thHead}>
+                    №
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Кому
+                  </th>
+                  <th scope="col" style={thHead}>
+                    кг
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Сумма
+                  </th>
+                  <th scope="col" style={thHead}>
+                    Нал / карта / долг
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(linesQ.data?.lines ?? []).map((line, idx) => (
+                  <tr key={line.id}>
+                    <td style={thtd}>{idx + 1}</td>
+                    <td style={thtd}>
+                      {line.clientLabel?.trim()
+                        ? line.clientLabel.trim()
+                        : line.saleChannel === "wholesale"
+                          ? "Опт"
+                          : "Розница"}
+                    </td>
+                    <td style={thtd}>{line.kg}</td>
+                    <td style={thtd}>{kopecksToRubLabel(line.revenueKopecks)} ₽</td>
+                    <td style={thtd}>
+                      {kopecksToRubLabel(line.cashKopecks)} / {kopecksToRubLabel(line.cardTransferKopecks || "0")} /{" "}
+                      {kopecksToRubLabel(line.debtKopecks)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+
       <h4 className="birzha-form-label" style={{ margin: "1.25rem 0 0.5rem", fontSize: "0.95rem" }}>
         Продажи по калибру (сумма по рейсу)
       </h4>

@@ -1,5 +1,5 @@
 import { Batch, type BatchPersistenceState } from "@birzha/domain";
-import { asc, eq, ilike, inArray } from "drizzle-orm";
+import { asc, eq, gt, ilike, inArray, and, type SQL } from "drizzle-orm";
 
 import type { BatchListFilter, BatchRepository } from "../../application/ports/batch-repository.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -70,10 +70,19 @@ export class DrizzleBatchRepository implements BatchRepository {
 
     const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
     const offset = Math.max(filter.offset ?? 0, 0);
+    const conditions: SQL[] = [];
+    if (filter.search?.trim()) {
+      conditions.push(ilike(batches.id, `%${filter.search.trim()}%`));
+    }
+    if (filter.warehouseId?.trim()) {
+      conditions.push(eq(batches.warehouseId, filter.warehouseId.trim()));
+    }
+    if (filter.stockOnly) {
+      conditions.push(gt(batches.onWarehouseGrams, 0n));
+    }
     const base = this.db.select().from(batches);
-    const filtered = filter.search?.trim()
-      ? base.where(ilike(batches.id, `%${filter.search.trim()}%`))
-      : base;
+    const filtered =
+      conditions.length === 0 ? base : conditions.length === 1 ? base.where(conditions[0]) : base.where(and(...conditions));
     const rows = await filtered.orderBy(asc(batches.id)).limit(limit).offset(offset);
     return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
   }

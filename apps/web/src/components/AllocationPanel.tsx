@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -6,7 +6,7 @@ import { BATCH_DESTINATIONS } from "@birzha/contracts";
 import { apiGetJson, apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { BatchListItem, CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
+import { closedTripIdSet, filterTripsInWork } from "../format/archive.js";
 import { batchWarehouseId, isEligibleForLoadingAllocation } from "../format/batch-warehouse.js";
 import {
   estimatedPackageCountOnShelf,
@@ -24,13 +24,13 @@ import {
   writePreferredLoadingTripId,
 } from "../preferences/ops-preferred-loading-trip.js";
 import {
-  batchesFullListQueryOptions,
+  batchesForWarehouseQueryOptions,
   loadingManifestDetailQueryOptions,
   loadingManifestReservedBatchIdsQueryOptions,
-  loadingManifestsListQueryOptions,
+  loadingManifestsPagedQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
-  tripsFullListQueryOptions,
+  tripsPickerQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import {
@@ -42,6 +42,7 @@ import {
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingManifestAccordion } from "./loading-manifest/LoadingManifestAccordion.js";
 import { loadingSummaryFromDetail } from "./loading-manifest/loading-summary-from-detail.js";
 import { LoadingManifestBlock, type LoadingManifestDocOption } from "./LoadingManifestBlock.js";
@@ -55,6 +56,15 @@ const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
   discount: "Уценка / распродажа",
   writeoff: "Списание",
 };
+
+const MANIFEST_LIST_PAGE_SIZE = 50;
+
+function formatManifestPackages(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return "—";
+  }
+  return value.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+}
 
 function todayDateOnly(): string {
   return new Date().toISOString().slice(0, 10);
@@ -162,9 +172,23 @@ export function AllocationPanel() {
     return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
   }, [shipDestQ.data]);
 
-  const batchesQuery = useQuery(batchesFullListQueryOptions());
   const warehousesQuery = useQuery(warehousesFullListQueryOptions());
-  const tripsQuery = useQuery(tripsFullListQueryOptions());
+  const warehouseIds = useMemo(
+    () => (warehousesQuery.data?.warehouses ?? []).map((w) => w.id),
+    [warehousesQuery.data?.warehouses],
+  );
+  const warehouseBatchQueries = useQueries({
+    queries: warehouseIds.map((id) => batchesForWarehouseQueryOptions(id, 500)),
+  });
+  const batchesMerged = useMemo(
+    () => warehouseBatchQueries.flatMap((q) => q.data?.batches ?? []),
+    [warehouseBatchQueries],
+  );
+  const batchesQueryPending = warehousesQuery.isPending || warehouseBatchQueries.some((q) => q.isPending);
+  const batchesQueryError = warehousesQuery.isError || warehouseBatchQueries.some((q) => q.isError);
+  const batchesQueryFetching = warehouseBatchQueries.some((q) => q.isFetching);
+
+  const tripsQuery = useQuery(tripsPickerQueryOptions({ limit: 500, offset: 0 }));
   const routeDetailQuery = useQuery({
     ...loadingManifestDetailQueryOptions(routeManifestId),
     enabled: Boolean(routeManifestId.trim()),
@@ -179,6 +203,7 @@ export function AllocationPanel() {
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
   /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
+  const [manifestListPage, setManifestListPage] = useState(0);
 
   const activeManifestId = routeManifestId.trim() || savedManifestId;
   const viewingSaved = Boolean(routeManifestId.trim());
@@ -196,7 +221,13 @@ export function AllocationPanel() {
     enabled: Boolean(savedManifestId) && savedManifestId !== routeManifestId.trim(),
   });
 
-  const manifestsListQuery = useQuery(loadingManifestsListQueryOptions());
+  const manifestsListQuery = useQuery(
+    loadingManifestsPagedQueryOptions({
+      limit: MANIFEST_LIST_PAGE_SIZE,
+      offset: manifestListPage * MANIFEST_LIST_PAGE_SIZE,
+      scope: "active",
+    }),
+  );
 
   const reservedBatchIdsQuery = useQuery({
     ...loadingManifestReservedBatchIdsQueryOptions(selectedWarehouse),
@@ -211,11 +242,9 @@ export function AllocationPanel() {
   }, [reservedBatchIdsQuery.data?.batchIds, reservedBatchIdsQuery.isError]);
 
   const closedIds = useMemo(() => closedTripIdSet(tripsQuery.data?.trips ?? []), [tripsQuery.data?.trips]);
-  const { active: activeManifests, archived: archivedManifests } = useMemo(
-    () => splitLoadingManifestsByArchive(manifestsListQuery.data?.loadingManifests ?? [], closedIds),
-    [manifestsListQuery.data?.loadingManifests, closedIds],
-  );
-  /** Без списка рейсов нельзя отделить архив — иначе накладные закрытых рейсов мелькают в «Погрузке». */
+  const activeManifests = manifestsListQuery.data?.loadingManifests ?? [];
+  const manifestListTotal = manifestsListQuery.data?.listMeta?.totalCount ?? activeManifests.length;
+  const manifestListPageCount = Math.max(1, Math.ceil(manifestListTotal / MANIFEST_LIST_PAGE_SIZE));
   const distributionManifestListReady = tripsQuery.isSuccess && manifestsListQuery.isSuccess;
 
   const allActiveManifestsSorted = useMemo(
@@ -286,23 +315,20 @@ export function AllocationPanel() {
     if (fromList) {
       return fromList;
     }
-    const fromArchive = archivedManifests.find((x) => x.id === id);
-    if (fromArchive) {
-      return fromArchive;
-    }
     if (routeDetail && routeDetail.id === id) {
       return loadingSummaryFromDetail(routeDetail);
     }
     return null;
-  }, [routeManifestId, activeManifests, archivedManifests, routeDetail]);
+  }, [routeManifestId, activeManifests, routeDetail]);
 
   const viewingArchivedManifest = useMemo(() => {
     const id = routeManifestId.trim();
-    if (!id || !distributionManifestListReady) {
+    if (!id || !routeDetail) {
       return false;
     }
-    return archivedManifests.some((m) => m.id === id);
-  }, [routeManifestId, distributionManifestListReady, archivedManifests]);
+    const tid = routeDetail.tripId?.trim();
+    return Boolean(tid && closedIds.has(tid));
+  }, [routeManifestId, routeDetail, closedIds]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -421,8 +447,8 @@ export function AllocationPanel() {
   });
 
   const batchesOnWarehouse = useMemo(
-    () => (batchesQuery.data?.batches ?? []).filter((b) => b.onWarehouseKg > 0),
-    [batchesQuery.data?.batches],
+    () => batchesMerged.filter((b) => b.onWarehouseKg > 0),
+    [batchesMerged],
   );
 
   const list = useMemo(
@@ -432,8 +458,8 @@ export function AllocationPanel() {
         .filter((b) => !reservedBatchIdSet.has(b.id)),
     [batchesOnWarehouse, reservedBatchIdSet],
   );
-  const loading = batchesQuery.isPending;
-  const refetching = batchesQuery.isFetching && !batchesQuery.isPending;
+  const loading = batchesQueryPending;
+  const refetching = batchesQueryFetching && !batchesQueryPending;
 
   const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
 
@@ -653,7 +679,7 @@ export function AllocationPanel() {
     }
   }, [tableRows.length]);
 
-  if (batchesQuery.isError) {
+  if (batchesQueryError) {
     return (
       <ErrorAlert message="Не удалось загрузить партии. Запустите API с PostgreSQL." title="Партии" />
     );
@@ -741,7 +767,7 @@ export function AllocationPanel() {
           defaultOpen
           title={
             <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>
-              Сохранённые погрузочные накладные ({allActiveManifestsSorted.length})
+              Сохранённые погрузочные накладные ({manifestListTotal.toLocaleString("ru-RU")})
             </span>
           }
         >
@@ -766,6 +792,9 @@ export function AllocationPanel() {
                   </th>
                   <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                     Кг
+                  </th>
+                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                    Ящ.
                   </th>
                   <th scope="col" style={thHead} />
                 </tr>
@@ -793,6 +822,7 @@ export function AllocationPanel() {
                       <td style={{ ...thtd, textAlign: "right" }}>
                         {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                       </td>
+                      <td style={{ ...thtd, textAlign: "right" }}>{formatManifestPackages(m.packagesApprox)}</td>
                       <td style={thtd}>
                         <Link
                           to={`${distributionBase}/${encodeURIComponent(m.id)}`}
@@ -807,6 +837,14 @@ export function AllocationPanel() {
               </tbody>
             </table>
           </div>
+          {manifestListPageCount > 1 ? (
+            <BirzhaPagination
+              pageIndex={manifestListPage}
+              pageCount={manifestListPageCount}
+              itemLabel="погрузочных"
+              onPageChange={setManifestListPage}
+            />
+          ) : null}
         </BirzhaDisclosure>
       ) : null}
 
@@ -839,10 +877,10 @@ export function AllocationPanel() {
             <button
               type="button"
               style={btnStyle}
-              disabled={batchesQuery.isFetching}
-              onClick={() => void batchesQuery.refetch()}
+              disabled={batchesQueryFetching}
+              onClick={() => void queryClient.invalidateQueries({ queryKey: queryRoots.batches })}
             >
-              {batchesQuery.isFetching ? "Обновление…" : "Обновить список партий"}
+              {batchesQueryFetching ? "Обновление…" : "Обновить список партий"}
             </button>
           </p>
         </InfoAlert>

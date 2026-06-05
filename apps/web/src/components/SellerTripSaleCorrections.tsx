@@ -323,6 +323,9 @@ function formatGroupCorrectionMeta(group: TripSaleLineCorrectionsGroup): string 
   if (sample.saleChannel === "wholesale") {
     const name = sample.clientLabel?.trim();
     parts.push(name ? `Опт: ${name}` : "Опт");
+  } else if (BigInt(sample.debtKopecks ?? "0") > 0n) {
+    const name = sample.clientLabel?.trim();
+    parts.push(name ? `Долг: ${name}` : "В долг");
   }
   return parts.join(" · ");
 }
