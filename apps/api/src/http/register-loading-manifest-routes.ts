@@ -13,6 +13,7 @@ import { z } from "zod";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
+import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import {
   loadingManifestTripAssignLock,
   loadingManifestTripAssignLockMessage,
@@ -333,6 +334,19 @@ export function registerLoadingManifestRoutes(
       if (!existing) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
+      const assignDecision = classifyLoadingManifestAssignRequest({
+        existingTripId: existing.tripId,
+        requestedTripId: body.tripId,
+      });
+      if (assignDecision === "idempotent") {
+        return reply.send({ ok: true });
+      }
+      if (assignDecision === "change_forbidden") {
+        return reply.code(400).send({
+          error: "loading_manifest_trip_change_forbidden",
+          message: loadingManifestTripAssignLockMessage("already_assigned"),
+        });
+      }
 
       const lineMassRows = await db
         .select({
@@ -350,10 +364,7 @@ export function registerLoadingManifestRoutes(
       if (assignLock.locked) {
         const code = assignLock.code ?? "already_assigned";
         return reply.code(400).send({
-          error:
-            code === "already_assigned" && existing.tripId && existing.tripId !== body.tripId
-              ? "loading_manifest_trip_change_forbidden"
-              : "loading_manifest_trip_assign_forbidden",
+          error: "loading_manifest_trip_assign_forbidden",
           message: loadingManifestTripAssignLockMessage(code),
         });
       }

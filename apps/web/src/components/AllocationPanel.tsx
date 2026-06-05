@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { BATCH_DESTINATIONS } from "@birzha/contracts";
-import { apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
+import { apiGetJson, apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { BatchListItem, CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { closedTripIdSet, filterTripsInWork, splitLoadingManifestsByArchive } from "../format/archive.js";
@@ -336,18 +336,46 @@ export function AllocationPanel() {
       docDate: string;
       manifestNumber: string;
     }) => {
+      const ensureTripAssigned = async (manifestId: string, tripId: string): Promise<string | null> => {
+        const assignUrl = `/api/loading-manifests/${encodeURIComponent(manifestId)}/assign-trip`;
+        const detailUrl = `/api/loading-manifests/${encodeURIComponent(manifestId)}`;
+        const isAlreadyAssignedToTrip = async (): Promise<boolean> => {
+          try {
+            const detail = (await apiGetJson(detailUrl)) as { manifest?: { tripId?: string | null } };
+            return (detail.manifest?.tripId?.trim() ?? "") === tripId;
+          } catch {
+            return false;
+          }
+        };
+
+        try {
+          await apiPostJson(assignUrl, { tripId });
+          return null;
+        } catch (firstError) {
+          if (await isAlreadyAssignedToTrip()) {
+            return null;
+          }
+          try {
+            await apiPostJson(assignUrl, { tripId });
+            return null;
+          } catch (secondError) {
+            if (await isAlreadyAssignedToTrip()) {
+              return null;
+            }
+            const firstText = firstError instanceof Error && firstError.message.trim() ? firstError.message.trim() : "";
+            const secondText =
+              secondError instanceof Error && secondError.message.trim() ? secondError.message.trim() : "";
+            const reason = secondText || firstText || "Не удалось привязать рейс.";
+            return `Накладная сохранена, но рейс не привязался автоматически: ${reason}`;
+          }
+        }
+      };
+
       const res = (await apiPostJson("/api/loading-manifests", payload)) as CreateLoadingManifestResponse;
       const tripId = newManifestTripId.trim();
       let assignTripWarning: string | null = null;
       if (tripId) {
-        try {
-          await apiPostJson(`/api/loading-manifests/${encodeURIComponent(res.manifestId)}/assign-trip`, {
-            tripId,
-          });
-        } catch (error) {
-          const text = error instanceof Error && error.message.trim() ? error.message.trim() : "Не удалось привязать рейс.";
-          assignTripWarning = `Накладная сохранена, но рейс не привязался автоматически: ${text}`;
-        }
+        assignTripWarning = await ensureTripAssigned(res.manifestId, tripId);
       }
       return { ...res, assignTripWarning };
     },
