@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../app.js";
 import { AUTH_ACCESS_COOKIE_NAME } from "../auth/constants.js";
@@ -13,6 +13,7 @@ import { loadEnv } from "../config.js";
 import { createDb } from "../db/client.js";
 import type { DbClient } from "../db/client.js";
 import * as schema from "../db/schema.js";
+import { clearLoginLockStateForTests } from "./register-auth-routes.js";
 
 const pgUrl = process.env.TEST_DATABASE_URL;
 
@@ -49,6 +50,10 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, userId));
     await db.delete(schema.users).where(eq(schema.users.id, userId));
     await sql.end({ timeout: 10 });
+  });
+
+  beforeEach(() => {
+    clearLoginLockStateForTests();
   });
 
   it("POST /auth/login, GET /auth/me по Bearer и cookie, неверный пароль 401", async () => {
@@ -108,7 +113,7 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     });
     const app = await buildApp({ env, db });
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 4; i++) {
       const res = await app.inject({
         method: "POST",
         url: "/auth/login",
@@ -123,6 +128,7 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
       payload: { login, password: "wrong-limited" },
     });
     expect(limited.statusCode).toBe(429);
+    expect(limited.json()).toEqual({ error: "too_many_attempts" });
 
     await app.close();
   });

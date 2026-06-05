@@ -148,3 +148,8 @@ export async function registerAuthRoutes(app: FastifyInstance, opts: { db: DbCli
     };
   });
 }
+
+/** Сброс in-memory lock между тестами в одном vitest-процессе. */
+export function clearLoginLockStateForTests(): void {
+  loginLockByIdentity.clear();
+}
