@@ -219,8 +219,6 @@ export function AdminCabinetHome() {
 
   const topWarehouseKgMax = topWarehouses[0]?.kg ?? 0;
   const topProductGroupKgMax = topProductGroups[0]?.kg ?? 0;
-  const totalVisibleMass =
-    aggregates.warehouseKg + aggregates.loadingManifestKg + aggregates.inTripRemainingKg + aggregates.soldKg;
   const showMassChart = summaryChartMode === "mass";
   const showWarehouseChart = summaryChartMode === "warehouses";
   const showProductChart = summaryChartMode === "products";
@@ -394,62 +392,17 @@ export function AdminCabinetHome() {
               </div>
               {showMassChart ? (
                 <div className="birzha-admin-dash-modern__mass-row">
-                <MassDistributionRing
-                  warehouseKg={aggregates.warehouseKg}
-                  loadingManifestKg={aggregates.loadingManifestKg}
-                  inTripKg={aggregates.inTripRemainingKg}
-                  soldKg={aggregates.soldKg}
-                />
-                <div className="birzha-admin-dash-modern__mass-bars">
-                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("На складе")}>
-                    <div className="birzha-admin-dash-modern__bar-label">На складе</div>
-                    <div className="birzha-admin-dash-modern__bar-track">
-                      <div
-                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--wh"
-                        style={{ width: `${ratioPart(aggregates.warehouseKg, totalVisibleMass)}%` }}
-                      />
-                    </div>
-                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.warehouseKg)}</div>
+                  <div onMouseEnter={() => setHoveredChartLabel("Распределение массы")}>
+                    <MassDistributionRing
+                      warehouseKg={aggregates.warehouseKg}
+                      loadingManifestKg={aggregates.loadingManifestKg}
+                      inTripKg={aggregates.inTripRemainingKg}
+                      soldKg={aggregates.soldKg}
+                    />
                   </div>
-                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("В погрузочных")}>
-                    <div className="birzha-admin-dash-modern__bar-label">В ПН</div>
-                    <div className="birzha-admin-dash-modern__bar-track">
-                      <div
-                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--lm"
-                        style={{ width: `${ratioPart(aggregates.loadingManifestKg, totalVisibleMass)}%` }}
-                      />
-                    </div>
-                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.loadingManifestKg)}</div>
-                  </div>
-                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("В открытых рейсах")}>
-                    <div className="birzha-admin-dash-modern__bar-label">В рейсе</div>
-                    <div className="birzha-admin-dash-modern__bar-track">
-                      <div
-                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--tr"
-                        style={{ width: `${ratioPart(aggregates.inTripRemainingKg, totalVisibleMass)}%` }}
-                      />
-                    </div>
-                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.inTripRemainingKg)}</div>
-                  </div>
-                  <div className="birzha-admin-dash-modern__bar-row" onMouseEnter={() => setHoveredChartLabel("Продано")}>
-                    <div className="birzha-admin-dash-modern__bar-label">Продано</div>
-                    <div className="birzha-admin-dash-modern__bar-track">
-                      <div
-                        className="birzha-admin-dash-modern__bar-fill birzha-admin-dash-modern__bar-fill--sl"
-                        style={{ width: `${ratioPart(aggregates.soldKg, totalVisibleMass)}%` }}
-                      />
-                    </div>
-                    <div className="birzha-admin-dash-modern__bar-value">{formatKg(aggregates.soldKg)}</div>
-                  </div>
-                </div>
                 </div>
               ) : null}
 
-              {(showWarehouseChart || showProductChart) ? (
-                <h5 className="birzha-admin-dash-modern__subhead">
-                  {showWarehouseChart ? "Топ складов по остатку" : "Виды товара по массе"}
-                </h5>
-              ) : null}
               {(showWarehouseChart || showProductChart) && (showWarehouseChart ? topWarehouses.length : topProductGroups.length) === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>
               ) : null}
