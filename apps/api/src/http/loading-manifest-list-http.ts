@@ -221,14 +221,13 @@ export async function listLoadingManifestsForHttp(
       q = q.where(where) as typeof q;
     }
     const rows = await q.orderBy(desc(loadingManifests.createdAt)).limit(limit).offset(offset);
-    const loadingManifests = await enrichManifestRows(db, rows);
+    const items = await enrichManifestRows(db, rows);
     return {
-      loadingManifests,
+      loadingManifests: items,
       listMeta: { limit, offset, hasMore: offset + rows.length < totalCount, totalCount },
     };
   }
 
   const rows = await baseSelect(db).orderBy(desc(loadingManifests.createdAt));
-  const loadingManifests = await enrichManifestRows(db, rows);
-  return { loadingManifests };
+  return { loadingManifests: await enrichManifestRows(db, rows) };
 }

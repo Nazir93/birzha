@@ -34,7 +34,7 @@ export class InMemoryBatchRepository implements BatchRepository {
       arr = arr.filter((b) => b.getWarehouseId() === filter.warehouseId!.trim());
     }
     if (filter.stockOnly) {
-      arr = arr.filter((b) => b.toPersistenceState().onWarehouseGrams > 0n);
+      arr = arr.filter((b) => b.toPersistenceState().onWarehouseKg > 0);
     }
     arr.sort((a, b) => a.getId().localeCompare(b.getId()));
     const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);

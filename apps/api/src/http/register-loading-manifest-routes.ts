@@ -8,7 +8,7 @@ import {
   loadingManifestReservedBatchIdsQuerySchema,
   updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
