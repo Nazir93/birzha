@@ -63,6 +63,7 @@ const SEED_SHIP_DESTINATIONS = `
   ON CONFLICT (code) DO NOTHING
 `;
 
+const SEED_GRADES = `
   INSERT INTO product_grades (id, code, display_name, sort_order, is_active, product_group) VALUES
     ('pg-n5', '№5', 'Калибр №5', 5, true, 'Помидоры'),
     ('pg-n6', '№6', 'Калибр №6', 6, true, 'Помидоры'),
