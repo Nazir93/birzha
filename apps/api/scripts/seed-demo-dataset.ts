@@ -343,7 +343,7 @@ const SALES: SaleSeed[] = [
     packageCount: 80,
     pricePerKg: 66,
     paymentKind: "card_transfer",
-    cardTransferKopecks: String(lineKop(400, 66) / 2n),
+    cardTransferKopecks: String(Math.floor(lineKop(400, 66) / 2)),
     clientLabel: "Перевод + нал",
   },
   {
@@ -355,7 +355,7 @@ const SALES: SaleSeed[] = [
     packageCount: 70,
     pricePerKg: 71,
     paymentKind: "mixed",
-    cashKopecksMixed: String(lineKop(350, 71) / 2n),
+    cashKopecksMixed: String(Math.floor(lineKop(350, 71) / 2)),
     clientLabel: "Смешанная оплата",
   },
 ];
