@@ -32,6 +32,7 @@ import {
   purchaseDocuments,
   shipDestinations,
   tripBatchShipments,
+  trips,
   warehouses,
 } from "../db/schema.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
@@ -514,8 +515,22 @@ export function registerLoadingManifestRoutes(
       if (!manifest) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
+      let assignedTripId: string | null = manifest.tripId;
       if (manifest.tripId) {
-        return reply.code(400).send({ error: "loading_manifest_trip_assign_forbidden", message: loadingManifestTripAssignLockMessage("already_assigned") });
+        const [trip] = await db
+          .select({ id: trips.id, status: trips.status, assignedSellerUserId: trips.assignedSellerUserId })
+          .from(trips)
+          .where(eq(trips.id, manifest.tripId))
+          .limit(1);
+        if (!trip) {
+          return reply.code(400).send({ error: "trip_not_found", message: "Рейс не найден." });
+        }
+        if (trip.status === "closed") {
+          return reply.code(400).send({
+            error: "loading_manifest_trip_assign_forbidden",
+            message: "Рейс уже закрыт — добавление в погрузочную недоступно.",
+          });
+        }
       }
 
       const selected = await db
@@ -552,6 +567,7 @@ export function registerLoadingManifestRoutes(
 
       await db.transaction(async (tx) => {
         const exec = tx as unknown as DbClient;
+        const affectedBatchIds = new Set<string>();
         for (const row of selected) {
           const already = existingByBatch.get(row.batchId);
           const targetGrams = row.onWarehouseGrams;
@@ -562,6 +578,7 @@ export function registerLoadingManifestRoutes(
                 .update(loadingManifestLines)
                 .set({ grams: targetGrams, packageCount })
                 .where(and(eq(loadingManifestLines.manifestId, manifestId), eq(loadingManifestLines.batchId, row.batchId)));
+              affectedBatchIds.add(row.batchId);
             }
           } else {
             await exec.insert(loadingManifestLines).values({
@@ -571,9 +588,73 @@ export function registerLoadingManifestRoutes(
               grams: targetGrams,
               packageCount,
             });
+            affectedBatchIds.add(row.batchId);
           }
           if (row.destination !== manifest.destinationCode) {
             await exec.update(batches).set({ destination: manifest.destinationCode }).where(eq(batches.id, row.batchId));
+          }
+        }
+
+        if (assignedTripId && tripRead && affectedBatchIds.size > 0) {
+          const batchRepo = new DrizzleBatchRepository(exec);
+          const shipRepo = new DrizzleTripShipmentRepository(exec);
+          const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined);
+
+          for (const batchId of affectedBatchIds) {
+            const [line] = await exec
+              .select({
+                grams: loadingManifestLines.grams,
+                packageCount: loadingManifestLines.packageCount,
+              })
+              .from(loadingManifestLines)
+              .where(and(eq(loadingManifestLines.manifestId, manifestId), eq(loadingManifestLines.batchId, batchId)))
+              .limit(1);
+            if (!line) {
+              continue;
+            }
+            const ledger = await shipRepo.totalGramsForTripAndBatch(assignedTripId, batchId);
+            const [linePkgAgg] = await exec
+              .select({
+                totalPackageCount: sql<bigint>`coalesce(sum(${tripBatchShipments.packageCount}), 0::bigint)`,
+              })
+              .from(tripBatchShipments)
+              .where(and(eq(tripBatchShipments.tripId, assignedTripId), eq(tripBatchShipments.batchId, batchId)));
+            const [br] = await exec
+              .select({
+                onWarehouseGrams: batches.onWarehouseGrams,
+                inTransitGrams: batches.inTransitGrams,
+              })
+              .from(batches)
+              .where(eq(batches.id, batchId))
+              .limit(1);
+            const plan = planLoadingManifestAssignTripShipment({
+              lineGrams: toBigIntOrZero(line.grams),
+              linePackageCount: toNullableBigInt(line.packageCount),
+              ledgerGramsForTripBatch: ledger,
+              ledgerPackageCountForTripBatch: toBigIntOrZero(linePkgAgg?.totalPackageCount),
+              onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
+              inTransitGrams: br?.inTransitGrams ?? 0n,
+            });
+            if (plan.kind === "none") {
+              continue;
+            }
+            if (plan.kind === "ledger_append_in_transit") {
+              await shipRepo.append({
+                id: randomUUID(),
+                tripId: assignedTripId,
+                batchId,
+                grams: plan.grams,
+                packageCount: plan.packageCount,
+              });
+              continue;
+            }
+            const kg = Number(plan.grams) / 1000;
+            await shipUse.execute({
+              batchId,
+              tripId: assignedTripId,
+              kg,
+              packageCount: plan.packageCount == null ? undefined : Number(plan.packageCount),
+            });
           }
         }
       });
