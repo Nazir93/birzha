@@ -18,7 +18,13 @@ export async function listTripLinkedWarehouseIds(db: DbClient, tripId: string): 
       .innerJoin(batches, eq(tripBatchShipments.batchId, batches.id))
       .where(eq(tripBatchShipments.tripId, tripId)),
   ]);
-  return [...new Set([...manifestRows, ...shipmentRows].map((row) => row.warehouseId))];
+  return [
+    ...new Set(
+      [...manifestRows, ...shipmentRows]
+        .map((row) => row.warehouseId)
+        .filter((id): id is string => id != null && id.trim().length > 0),
+    ),
+  ];
 }
 
 export async function assertTripAllowsWarehouseLoading(

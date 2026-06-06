@@ -213,7 +213,7 @@ export function registerBatchRoutes(
           .from(batchesTable)
           .where(eq(batchesTable.id, params.batchId))
           .limit(1);
-        if (batchRow) {
+        if (batchRow?.warehouseId) {
           await assertTripAllowsWarehouseLoading(db, trips, {
             tripId: body.tripId,
             warehouseId: batchRow.warehouseId,
