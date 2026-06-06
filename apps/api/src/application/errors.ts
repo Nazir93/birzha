@@ -31,6 +31,22 @@ export class TripClosedError extends Error {
   }
 }
 
+/** Погрузка с другого склада после закрепления продавца за рейсом. */
+export class TripSellerCrossWarehouseLoadingError extends Error {
+  readonly tripId: string;
+  readonly warehouseId: string;
+
+  constructor(tripId: string, warehouseId: string) {
+    super(
+      "Рейс закреплён за продавцом — догрузка с другого склада недоступна. Завершите погрузку со всех складов, затем закрепите продавца.",
+    );
+    this.name = "TripSellerCrossWarehouseLoadingError";
+    this.tripId = tripId;
+    this.warehouseId = warehouseId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Удаление запрещено: по рейсу уже есть отгрузки, продажи или недостачи. */
 export class TripNotEmptyError extends Error {
   readonly tripId: string;

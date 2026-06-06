@@ -22,6 +22,7 @@ import {
   TripClosedError,
   TripNotEmptyError,
   TripNotFoundError,
+  TripSellerCrossWarehouseLoadingError,
   TripSaleEditForbiddenError,
   TripSaleLineNotFoundError,
   TripShortageExceedsNetError,
@@ -143,6 +144,14 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "trip_closed",
       tripId: error.tripId,
+    });
+  }
+  if (error instanceof TripSellerCrossWarehouseLoadingError) {
+    return reply.code(409).send({
+      error: "trip_seller_assigned_cross_warehouse",
+      tripId: error.tripId,
+      warehouseId: error.warehouseId,
+      message: error.message,
     });
   }
   if (error instanceof TripSaleLineNotFoundError) {

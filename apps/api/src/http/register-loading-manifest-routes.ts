@@ -15,6 +15,7 @@ import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
+import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
 import {
   loadingManifestTripAssignLock,
   loadingManifestTripAssignLockMessage,
@@ -324,6 +325,21 @@ export function registerLoadingManifestRoutes(
         return reply.code(400).send({
           error: "loading_manifest_trip_assign_forbidden",
           message: loadingManifestTripAssignLockMessage(code),
+        });
+      }
+
+      const [manifestRow] = await db
+        .select({ warehouseId: loadingManifests.warehouseId })
+        .from(loadingManifests)
+        .where(eq(loadingManifests.id, manifestId))
+        .limit(1);
+      if (!manifestRow) {
+        return reply.code(404).send({ error: "loading_manifest_not_found" });
+      }
+      if (tripRead) {
+        await assertTripAllowsWarehouseLoading(db, tripRead, {
+          tripId: body.tripId,
+          warehouseId: manifestRow.warehouseId,
         });
       }
 

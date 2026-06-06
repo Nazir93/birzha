@@ -15,6 +15,11 @@ import {
   resolveLoadingManifestNumberForSave,
 } from "../format/loading-manifest.js";
 import { sortLoadingManifestsByCreatedAtDesc } from "../format/loading-manifest-list.js";
+import {
+  listTripLinkedWarehouseIdsFromManifests,
+  TRIP_SELLER_CROSS_WAREHOUSE_LOADING_MESSAGE,
+  tripSellerBlocksCrossWarehouseLoading,
+} from "../format/trip-seller-loading-guard.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
@@ -264,6 +269,20 @@ export function AllocationPanel() {
     () => filterTripsInWork(tripsQuery.data?.trips ?? []),
     [tripsQuery.data?.trips],
   );
+  const selectedTripForManifest = useMemo(() => {
+    const tripId = newManifestTripId.trim();
+    if (!tripId) {
+      return null;
+    }
+    return openTripsForAssign.find((t) => t.id === tripId) ?? null;
+  }, [newManifestTripId, openTripsForAssign]);
+  const linkedWarehouseIdsForSelectedTrip = useMemo(() => {
+    const tripId = newManifestTripId.trim();
+    if (!tripId) {
+      return [];
+    }
+    return listTripLinkedWarehouseIdsFromManifests(tripId, activeManifests);
+  }, [newManifestTripId, activeManifests]);
   const appendTargetManifest = useMemo(
     () => (appendTargetManifestId ? activeManifests.find((m) => m.id === appendTargetManifestId) ?? null : null),
     [activeManifests, appendTargetManifestId],
@@ -329,6 +348,25 @@ export function AllocationPanel() {
     const tid = routeDetail.tripId?.trim();
     return Boolean(tid && closedIds.has(tid));
   }, [routeManifestId, routeDetail, closedIds]);
+
+  const tripForOpenManifest = useMemo(() => {
+    const tripId = openManifestSummary?.tripId?.trim();
+    if (!tripId) {
+      return null;
+    }
+    return (tripsQuery.data?.trips ?? []).find((t) => t.id === tripId) ?? null;
+  }, [openManifestSummary?.tripId, tripsQuery.data?.trips]);
+
+  const crossWarehouseBlocked = useMemo(() => {
+    if (appendMode || !selectedWarehouse.trim()) {
+      return false;
+    }
+    return tripSellerBlocksCrossWarehouseLoading({
+      trip: selectedTripForManifest,
+      warehouseId: selectedWarehouse,
+      linkedWarehouseIds: linkedWarehouseIdsForSelectedTrip,
+    });
+  }, [appendMode, selectedWarehouse, selectedTripForManifest, linkedWarehouseIdsForSelectedTrip]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -915,7 +953,7 @@ export function AllocationPanel() {
               {createManifestWarning ? (
                 <WarningAlert title="Проверьте привязку рейса">{createManifestWarning}</WarningAlert>
               ) : null}
-              {openManifestSummary?.tripId && !viewingArchivedManifest ? (
+              {openManifestSummary?.tripId && !viewingArchivedManifest && !tripForOpenManifest?.assignedSellerUserId ? (
                 <p className="no-print" style={{ margin: "0 0 0.75rem" }}>
                   <button
                     type="button"
@@ -931,6 +969,11 @@ export function AllocationPanel() {
                     Загрузить ещё с другого склада в этот рейс
                   </button>
                 </p>
+              ) : openManifestSummary?.tripId && tripForOpenManifest?.assignedSellerUserId ? (
+                <InfoAlert title="Погрузка закрыта для новых складов">
+                  Рейс закреплён за продавцом — догрузка с другого склада недоступна. Можно добавлять партии только на
+                  уже участвовавших складах.
+                </InfoAlert>
               ) : null}
               {openManifestSummary ? (
                 <LoadingManifestAccordion
@@ -1120,6 +1163,9 @@ export function AllocationPanel() {
                     , затем выберите его здесь — кг уйдут в рейс при сохранении.
                   </p>
                 ) : null}
+                {crossWarehouseBlocked ? (
+                  <WarningAlert title="Другой склад недоступен">{TRIP_SELLER_CROSS_WAREHOUSE_LOADING_MESSAGE}</WarningAlert>
+                ) : null}
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
                   <button
                     type="button"
@@ -1127,6 +1173,7 @@ export function AllocationPanel() {
                     disabled={
                       createManifest.isPending ||
                       tableRows.length === 0 ||
+                      crossWarehouseBlocked ||
                       (!appendMode &&
                         (!manifestDate ||
                           !manifestDestinationCode ||

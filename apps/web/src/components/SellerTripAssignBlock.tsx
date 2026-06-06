@@ -15,7 +15,7 @@ import {
 } from "../query/core-list-queries.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
-import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
@@ -163,6 +163,11 @@ export function SellerTripAssignBlock() {
       {fieldSellersQuery.isSuccess && (fieldSellersQuery.data?.fieldSellers.length ?? 0) === 0 ? (
         <BirzhaEmptyState compact title="Нет активных продавцов" />
       ) : null}
+
+      <InfoAlert title="Порядок работы">
+        Сначала завершите погрузку со всех нужных складов. После закрепления продавца догрузка с другого склада в этот
+        рейс будет недоступна.
+      </InfoAlert>
 
       <button
         type="button"

@@ -45,6 +45,7 @@ import type { SellFromTripTransactionRunner } from "../application/sale/sell-fro
 import type { RecordTripShortageTransactionRunner } from "../application/trip/record-trip-shortage.use-case.js";
 import { RecordTripShortageUseCase } from "../application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "../application/trip/ship-to-trip.use-case.js";
+import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
 
 import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
 import { warehouseReadScopeIds } from "../auth/warehouse-scope.js";
@@ -206,6 +207,19 @@ export function registerBatchRoutes(
     try {
       const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
       const body = shipBodySchema.parse(req.body);
+      if (db) {
+        const [batchRow] = await db
+          .select({ warehouseId: batchesTable.warehouseId })
+          .from(batchesTable)
+          .where(eq(batchesTable.id, params.batchId))
+          .limit(1);
+        if (batchRow) {
+          await assertTripAllowsWarehouseLoading(db, trips, {
+            tripId: body.tripId,
+            warehouseId: batchRow.warehouseId,
+          });
+        }
+      }
       await ship.execute({
         batchId: params.batchId,
         kg: body.kg,
