@@ -1,5 +1,5 @@
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { formatNakladLineLabel, salesCaliberAggregateKey } from "./batch-label.js";
+import { formatNakladLineLabel, salesCaliberAggregateKey, salesCaliberLineLabel } from "./batch-label.js";
 import { kgNumberToGramsBigInt } from "./seller-trip-caliber-groups.js";
 import { inferPaymentKindFromSaleLine } from "./trip-sale-line-payment.js";
 
@@ -141,7 +141,7 @@ export function groupTripSaleLinesByCaliberForDisplay(
     if (!row) {
       row = {
         key,
-        lineLabel: b ? formatNakladLineLabel(b) : key,
+        lineLabel: salesCaliberLineLabel(b, key),
         totalKg: "0",
         totalPackages: null,
         totalRevenueKopecks: 0n,

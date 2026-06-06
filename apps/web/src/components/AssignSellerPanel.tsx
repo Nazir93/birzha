@@ -21,12 +21,14 @@ import {
   tripLedgerMetrics,
 } from "../format/seller-trip-metrics.js";
 import {
+  batchesByIdsQueryOptions,
   batchesFullListQueryOptions,
   queryRoots,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
+import { batchIdsFromShipmentReport } from "../format/shipment-report-batch-ids.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -122,13 +124,31 @@ export function AssignSellerPanel() {
     return m;
   }, [loadedReports]);
 
+  const reportBatchIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const rep of loadedReports) {
+      for (const id of batchIdsFromShipmentReport(rep)) {
+        ids.add(id);
+      }
+    }
+    return [...ids].sort();
+  }, [loadedReports]);
+
+  const batchesByIdsQuery = useQuery({
+    ...batchesByIdsQueryOptions(reportBatchIds),
+    enabled: reportBatchIds.length > 0,
+  });
+
   const batchById = useMemo(() => {
     const m = new Map<string, BatchListItem>();
     for (const b of batchesQuery.data?.batches ?? []) {
       m.set(b.id, b);
     }
+    for (const b of batchesByIdsQuery.data?.batches ?? []) {
+      m.set(b.id, b);
+    }
     return m;
-  }, [batchesQuery.data?.batches]);
+  }, [batchesQuery.data?.batches, batchesByIdsQuery.data?.batches]);
 
   const sellerTotals = useMemo(() => aggregateSellerShipmentReports(loadedReports), [loadedReports]);
 

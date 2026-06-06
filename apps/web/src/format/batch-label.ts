@@ -50,6 +50,9 @@ export function salesCaliberLineLabel(batch: BatchListItem | undefined, aggregat
   if (aggregateKey.startsWith("group:")) {
     return aggregateKey.slice(6);
   }
+  if (aggregateKey.startsWith("id:") || aggregateKey === "unknown") {
+    return batch ? "Товар · калибр не указан" : "Партия без данных накладной";
+  }
   return aggregateKey;
 }
 
