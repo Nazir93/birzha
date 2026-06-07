@@ -24,7 +24,7 @@ export function AdminTripsLogisticsPanel() {
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
-  const showCloseTrip = canCreateTrip(user);
+  const canWriteTrips = canCreateTrip(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const [newTripVehicle, setNewTripVehicle] = useState("");
@@ -154,6 +154,8 @@ export function AdminTripsLogisticsPanel() {
     <section
       className="birzha-card birzha-home-premium birzha-inventory-admin birzha-section-shell"
       aria-labelledby="admin-trips-log-h"
+      role="region"
+      aria-label="Рейсы"
     >
       <h2 id="admin-trips-log-h" className="birzha-section-title-main">
         Рейсы
@@ -169,6 +171,7 @@ export function AdminTripsLogisticsPanel() {
         }
       >
         {tripError ? <ErrorAlert message={tripError} title="Рейс" /> : null}
+        {canWriteTrips ? (
         <div className="birzha-inventory-logistics-form">
           <div className="birzha-inventory-logistics-form__field">
             <label className="birzha-field-label">Водитель</label>
@@ -215,6 +218,11 @@ export function AdminTripsLogisticsPanel() {
             </button>
           </div>
         </div>
+        ) : (
+          <p className="birzha-callout-info birzha-ui-sm" role="status" style={{ marginBottom: "0.75rem" }}>
+            Создание и закрытие рейсов — у логиста или администратора. Здесь можно просмотреть открытые рейсы.
+          </p>
+        )}
         {tripsQ.isError ? <ErrorAlert error={tripsQ.error} title="Список рейсов" /> : null}
         {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
         {tripsQ.isSuccess && (
@@ -261,8 +269,9 @@ export function AdminTripsLogisticsPanel() {
                         </Link>
                       </td>
                       <td style={thtdDense}>
+                        {canWriteTrips ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", alignItems: "flex-start" }}>
-                          {showCloseTrip && t.status === "open" ? (
+                          {t.status === "open" ? (
                             <button
                               type="button"
                               style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
@@ -290,6 +299,9 @@ export function AdminTripsLogisticsPanel() {
                             Удалить
                           </button>
                         </div>
+                        ) : (
+                          <span className="birzha-text-muted birzha-ui-sm">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

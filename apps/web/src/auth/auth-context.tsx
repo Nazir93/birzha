@@ -12,9 +12,6 @@ import {
 
 import { apiFetch, onApiUnauthorized, setStoredApiToken } from "../api/fetch-api.js";
 import { prefetchCoreLists } from "../query/prefetch-app-data.js";
-import { readCachedApiMetaFromSession, writeCachedApiMetaToSession } from "./api-meta-cache.js";
-import { invalidateOfflineStorageForScopeChange } from "../sync/outbox-invalidation.js";
-import { resolveOutboxScopeKey, syncOutboxScopeTo } from "../sync/outbox-scope.js";
 
 export type ApiMeta = {
   name: string;
@@ -34,7 +31,6 @@ export type ApiMeta = {
   wholesalersCatalogApi?: string;
   /** `POST /batches/…/warehouse-write-off` и `GET /warehouse-write-offs` (по документу или журнал) при PostgreSQL. */
   warehouseWriteOffApi?: string;
-  syncApi: string;
   authApi: string;
   requireApiAuth: string;
   /** `GET/POST /admin/users` при PostgreSQL + JWT + REQUIRE_API_AUTH. */
@@ -52,8 +48,6 @@ type AuthState = {
   meta: ApiMeta | undefined;
   bootstrapError: Error | null;
   user: AuthUser | null;
-  /** `GET /api/meta` не ответил, подставлен последний успешный ответ из sessionStorage (PWA без сети). */
-  usingStaleMeta: boolean;
 };
 
 type AuthContextValue = AuthState & {
@@ -83,19 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     meta: undefined,
     bootstrapError: null,
     user: null,
-    usingStaleMeta: false,
   });
-
-  useLayoutEffect(() => {
-    if (!state.ready || !state.meta) {
-      return;
-    }
-    const nextScope = resolveOutboxScopeKey(state.meta.authApi === "enabled", state.user?.id);
-    if (syncOutboxScopeTo(nextScope)) {
-      invalidateOfflineStorageForScopeChange();
-      void queryClient.invalidateQueries({ queryKey: ["outbox"] });
-    }
-  }, [queryClient, state.ready, state.meta?.authApi, state.user?.id]);
 
   /** Статический сплэш в `index.html` вне `#root`; убираем после bootstrap auth, чтобы не было двух слоёв загрузки. */
   useLayoutEffect(() => {
@@ -107,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Прогрев кеша списков после входа или при восстановлении сессии — быстрее первый заход в кабинеты. */
   useEffect(() => {
-    if (!state.ready || !state.user || !state.meta || state.usingStaleMeta) {
+    if (!state.ready || !state.user || !state.meta) {
       return;
     }
     prefetchCoreLists(queryClient, {
@@ -115,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       prefetchCounterparties: state.meta.counterpartyCatalogApi === "enabled",
       prefetchWholesalers: state.meta.wholesalersCatalogApi === "enabled",
     });
-  }, [queryClient, state.ready, state.user?.id, state.meta, state.usingStaleMeta]);
+  }, [queryClient, state.ready, state.user?.id, state.meta]);
 
   const refetchSession = useCallback(async () => {
     const meta = state.meta;
@@ -149,9 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) {
           return;
         }
-        writeCachedApiMetaToSession(meta);
         if (meta.authApi !== "enabled") {
-          setState({ ready: true, meta, bootstrapError: null, user: null, usingStaleMeta: false });
+          setState({ ready: true, meta, bootstrapError: null, user: null });
           return;
         }
         try {
@@ -159,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (cancelled) {
             return;
           }
-          setState({ ready: true, meta, bootstrapError: null, user, usingStaleMeta: false });
+          setState({ ready: true, meta, bootstrapError: null, user });
         } catch (e) {
           if (cancelled) {
             return;
@@ -169,50 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             meta,
             bootstrapError: e instanceof Error ? e : new Error(String(e)),
             user: null,
-            usingStaleMeta: false,
           });
         }
       } catch (e) {
         if (cancelled) {
-          return;
-        }
-        const cached = readCachedApiMetaFromSession();
-        if (cached) {
-          const meta = cached as ApiMeta;
-          if (meta.authApi !== "enabled") {
-            setState({
-              ready: true,
-              meta,
-              bootstrapError: null,
-              user: null,
-              usingStaleMeta: true,
-            });
-            return;
-          }
-          try {
-            const user = await fetchMeUser();
-            if (cancelled) {
-              return;
-            }
-            setState({
-              ready: true,
-              meta,
-              bootstrapError: null,
-              user,
-              usingStaleMeta: true,
-            });
-          } catch {
-            if (cancelled) {
-              return;
-            }
-            setState({
-              ready: true,
-              meta,
-              bootstrapError: null,
-              user: null,
-              usingStaleMeta: true,
-            });
-          }
           return;
         }
         setState({
@@ -220,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           meta: undefined,
           bootstrapError: e instanceof Error ? e : new Error(String(e)),
           user: null,
-          usingStaleMeta: false,
         });
       }
     })();
@@ -251,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const data = (await res.json()) as { token: string; user: AuthUser };
       setStoredApiToken(data.token);
-      setState((s) => ({ ...s, user: data.user, usingStaleMeta: false }));
+      setState((s) => ({ ...s, user: data.user }));
       await queryClient.invalidateQueries();
       prefetchCoreLists(queryClient, {
         prefetchPurchaseDocuments: state.meta?.purchaseDocumentsApi === "enabled",

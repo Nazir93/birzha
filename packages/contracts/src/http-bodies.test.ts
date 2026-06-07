@@ -12,13 +12,9 @@ import {
   createWarehouseBodySchema,
   loginBodySchema,
   receiveBodySchema,
-  receiveOnWarehouseSyncPayloadSchema,
   recordTripShortageBodySchema,
-  recordTripShortageSyncPayloadSchema,
   sellFromTripBodySchema,
-  sellFromTripSyncPayloadSchema,
   shipBodySchema,
-  shipToTripSyncPayloadSchema,
 } from "./http-bodies.js";
 
 describe("loginBodySchema", () => {
@@ -170,56 +166,6 @@ describe("sellFromTripBodySchema (card_transfer)", () => {
   });
 });
 
-describe("sellFromTripSyncPayloadSchema", () => {
-  it("требует batchId и те же правила mixed", () => {
-    expect(() =>
-      sellFromTripSyncPayloadSchema.parse({
-        batchId: "b1",
-        tripId: "t1",
-        kg: 1,
-        saleId: "s1",
-        pricePerKg: 1,
-        paymentKind: "mixed",
-      }),
-    ).toThrow();
-
-    const ok = sellFromTripSyncPayloadSchema.parse({
-      batchId: "b1",
-      tripId: "t1",
-      kg: 1,
-      saleId: "s1",
-      pricePerKg: 1,
-      paymentKind: "mixed",
-      cashKopecksMixed: "100",
-    });
-    expect(ok.batchId).toBe("b1");
-  });
-
-  it("требует cardTransferKopecks при card_transfer", () => {
-    expect(() =>
-      sellFromTripSyncPayloadSchema.parse({
-        batchId: "b1",
-        tripId: "t1",
-        kg: 1,
-        saleId: "s1",
-        pricePerKg: 1,
-        paymentKind: "card_transfer",
-      }),
-    ).toThrow();
-
-    const ok = sellFromTripSyncPayloadSchema.parse({
-      batchId: "b1",
-      tripId: "t1",
-      kg: 1,
-      saleId: "s1",
-      pricePerKg: 1,
-      paymentKind: "card_transfer",
-      cardTransferKopecks: "500",
-    });
-    expect(ok.cardTransferKopecks).toBe("500");
-  });
-});
-
 describe("receiveBodySchema", () => {
   it("принимает положительный kg", () => {
     expect(receiveBodySchema.parse({ kg: 0.1 }).kg).toBe(0.1);
@@ -231,20 +177,6 @@ describe("receiveBodySchema", () => {
   });
 });
 
-describe("receiveOnWarehouseSyncPayloadSchema", () => {
-  it("требует batchId и валидный receive", () => {
-    const r = receiveOnWarehouseSyncPayloadSchema.parse({
-      batchId: "b1",
-      kg: 5,
-    });
-    expect(r).toEqual({ batchId: "b1", kg: 5 });
-  });
-
-  it("отклоняет без batchId", () => {
-    expect(() => receiveOnWarehouseSyncPayloadSchema.parse({ kg: 1 } as never)).toThrow();
-  });
-});
-
 describe("shipBodySchema", () => {
   it("принимает отгрузку в рейс", () => {
     const r = shipBodySchema.parse({ tripId: "t1", kg: 3 });
@@ -253,27 +185,6 @@ describe("shipBodySchema", () => {
 
   it("отклоняет пустой tripId", () => {
     expect(() => shipBodySchema.parse({ tripId: "", kg: 1 })).toThrow();
-  });
-});
-
-describe("shipToTripSyncPayloadSchema", () => {
-  it("объединяет batchId и ship body", () => {
-    const r = shipToTripSyncPayloadSchema.parse({
-      batchId: "b1",
-      tripId: "t1",
-      kg: 2,
-    });
-    expect(r).toEqual({ batchId: "b1", tripId: "t1", kg: 2 });
-  });
-
-  it("принимает packageCount", () => {
-    const r = shipToTripSyncPayloadSchema.parse({
-      batchId: "b1",
-      tripId: "t1",
-      kg: 2,
-      packageCount: 5,
-    });
-    expect(r.packageCount).toBe(5);
   });
 });
 
@@ -295,19 +206,6 @@ describe("recordTripShortageBodySchema", () => {
         reason: "",
       }),
     ).toThrow();
-  });
-});
-
-describe("recordTripShortageSyncPayloadSchema", () => {
-  it("добавляет batchId к телу недостачи", () => {
-    const r = recordTripShortageSyncPayloadSchema.parse({
-      batchId: "b1",
-      tripId: "t1",
-      kg: 0.5,
-      reason: "порча",
-    });
-    expect(r.batchId).toBe("b1");
-    expect(r.reason).toBe("порча");
   });
 });
 

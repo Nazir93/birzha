@@ -99,6 +99,7 @@ export function PurchaseNakladnayaDetailSection() {
       className="birzha-panel birzha-purchase-nakl-print"
       aria-labelledby="nakl-detail-heading"
       role="region"
+      aria-label="Карточка закупочной накладной"
     >
       <BirzhaDisclosure
         defaultOpen

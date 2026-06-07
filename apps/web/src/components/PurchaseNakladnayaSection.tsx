@@ -217,10 +217,15 @@ export function PurchaseNakladnayaSection() {
     if (warehouseId !== "" || !warehousesQ.isSuccess || warehouseCount === 0) {
       return;
     }
+    const list = warehousesQ.data?.warehouses ?? [];
+    const ids = list.map((w) => w.id);
     const pref = readPreferredWarehouseId();
-    const ids = (warehousesQ.data?.warehouses ?? []).map((w) => w.id);
     if (pref && ids.includes(pref)) {
       setWarehouseId(pref);
+      return;
+    }
+    if (list.length === 1) {
+      setWarehouseId(list[0]!.id);
     }
   }, [warehouseId, warehouseCount, warehousesQ.data?.warehouses, warehousesQ.isSuccess]);
   const catalogsEmptyOk =
@@ -344,14 +349,14 @@ export function PurchaseNakladnayaSection() {
             autoComplete="organization"
           />
         </label>
-        <label className="birzha-form-label">
+        <label className="birzha-form-label" htmlFor="nakl-doc-date">
           Дата *
           <BirzhaDateField
+            id="nakl-doc-date"
             value={docDate}
             onChange={setDocDate}
             style={dateFieldStyle}
             className="birzha-input-date"
-            aria-label="Дата документа"
           />
         </label>
         <label className="birzha-form-label">
@@ -400,11 +405,11 @@ export function PurchaseNakladnayaSection() {
               <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
               <th>Кг</th>
               <th>Ящики</th>
-              <th>Цена</th>
+              <th>₽/кг</th>
               <th
-                title="Сумма строки в ₽: «руб,коп» (например 16470,00) или целое число — копейки без запятой"
+                title="Сумма строки в копейках: целое число (50000) или «руб,коп» (16470,00). Кнопка «=кг×цена» подставит расчёт."
               >
-                Сумма, ₽
+                Сумма, коп.
               </th>
               <th className="birzha-nakl-lines-table__actions" />
             </tr>
@@ -469,7 +474,7 @@ export function PurchaseNakladnayaSection() {
                     style={{ ...fieldStyle, maxWidth: 110 }}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="«руб,коп» или целое — копейки; кнопка «Рассчитать» подставит ₽ по кг × цена"
+                    title="Копейки: целое число или «руб,коп»; кнопка «=кг×цена» подставит сумму по кг × ₽/кг"
                   />
                 </td>
                 <td className="birzha-nakl-lines-table__actions-cell">
@@ -478,8 +483,9 @@ export function PurchaseNakladnayaSection() {
                       type="button"
                       className="birzha-nakl-line-action birzha-nakl-line-action--calc"
                       onClick={() => fillLineKopecks(line.key)}
+                      title="Подставить сумму строки: кг × ₽/кг (допуск ±1 коп.)"
                     >
-                      Рассчитать
+                      =кг×цена
                     </button>
                     <button
                       type="button"

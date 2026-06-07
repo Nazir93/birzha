@@ -12,14 +12,14 @@
 | Путь | Назначение |
 |------|------------|
 | `packages/domain` | Домен (`Batch`, `Money`), unit- и интеграционные тесты (sql.js) |
-| `packages/contracts` | **Zod**-схемы тел HTTP и payload **POST /sync** — общие для `@birzha/api` и `@birzha/web` |
+| `packages/contracts` | **Zod**-схемы тел HTTP — общие для `@birzha/api` и `@birzha/web` |
 | `apps/api` | HTTP API: **Fastify**, **Drizzle** + PostgreSQL |
 | `apps/web` | **Vite + React + TanStack Query + React Router + Zod** (формы операций и рейса согласованы с телами REST; прокси `/api` в dev) |
 | `docs/` | Архитектура; **краткий индекс** — `docs/architecture/README.md`; **кабинеты и план входов** — `docs/architecture/cabinets.md`; **как заполнять формы** — `docs/guides/dlya-zakazchika-zapolnenie.md` |
 
 ## Стек (зафиксировано)
 
-TypeScript, раздельные API и клиент, **PWA**, **PostgreSQL**.
+TypeScript, раздельные API и клиент, **PostgreSQL**.
 
 | Слой | Выбор |
 |------|--------|
@@ -29,12 +29,9 @@ TypeScript, раздельные API и клиент, **PWA**, **PostgreSQL**.
 | Тесты | **Vitest** |
 | Интеграции без native SQLite на Windows | **sql.js** (`packages/domain`) |
 | Клиент | **Vite + React** + TanStack Query + React Router; Zod на формах; стили `apps/web/src/ui/styles.ts`, `index.css` |
-| PWA / офлайн | Workbox (Vite PWA) + **IndexedDB** outbox (`apps/web/src/sync`); PNG-иконки из `pwa-icon.svg` при сборке (`sharp`), баннер обновления версии (**`PwaUpdateBanner`**, `registerType: prompt`) |
 | Монорепо | **pnpm** + **Turbo** — `packages/domain`, `packages/contracts`, `apps/api`, `apps/web` |
 
-Next.js по умолчанию не используем. Клиентский кэш и API синхронизации: `docs/architecture/offline/offline-sync.md`, `.cursor/rules/02-offline-sync.mdc`.
-
-**Офлайн-клиент (черновик):** `apps/web/src/sync` — очередь в **IndexedDB** в браузере (однократная миграция из `birzha:outbox:v1` в `localStorage`); если открытие IDB не удалось или API нет — **память / `localStorage`**; `processSyncQueue()` / **`processSyncQueueSerialized()`** шлют на `POST /api/sync` по одному действию; в UI подключены автопопытки при **`online`** и при возврате на вкладку; при `rejected` голова очереди сохраняется.
+Next.js по умолчанию не используем.
 
 ## HTTP API (`apps/api`)
 
@@ -64,26 +61,25 @@ Next.js по умолчанию не используем. Клиентский 
 | `GET` | `/counterparties` | — активные контрагенты (`id`, `displayName`) |
 | `POST` | `/counterparties` | `displayName` — создать контрагента (**201** `{ counterparty }`) |
 | `POST` | `/batches/:batchId/record-trip-shortage` | `tripId`, `kg`, `reason` — недостача при приёмке рейса; списание из «в пути», запись в `trip_batch_shortages` |
-| `POST` | `/sync` | Офлайн-синхронизация одного действия: `deviceId`, `localActionId`, `actionType`, `payload`. Типы: `sell_from_trip`, `ship_to_trip`, `record_trip_shortage`, `receive_on_warehouse`, `create_trip` (тело `payload` как у соответствующих REST-операций). Ответ **200**: `{ status: "ok", actionId, duplicate? }` или `{ status: "rejected", actionId, reason, resolution, errorCode?, details? }`. Идемпотентность по паре `(deviceId, localActionId)` — повтор после успеха даёт `duplicate: true`. |
 | `POST` | `/auth/login` | `login`, `password` — при успехе **200**: `{ token, user }`, cookie `birzha_access` (HttpOnly). Любой неуспешный вход — **401** (`invalid_credentials`) без раскрытия причины (включая отключённые учётные записи). Требуются PostgreSQL, миграции с таблицей `users` и **`JWT_SECRET`** в окружении. |
 | `POST` | `/auth/logout` | **200** `{ ok: true }`, сброс cookie доступа. |
 | `GET` | `/auth/me` | Текущий пользователь по `Authorization: Bearer <token>` или cookie; **401** без/с невалидным токеном. |
 
-`GET /meta` → `batchesApi`, **`purchaseDocumentsApi`** (накладные и справочники закупки при полном бизнес-контуре API), `tripsApi`, `tripShipmentLedger`, `tripSaleLedger`, **`tripShortageLedger`**, **`counterpartyCatalogApi`**, **`syncApi`**, **`authApi`**, **`requireApiAuth`**, **`adminUsersApi`** (управление сотрудниками в UI при БД + `JWT_SECRET` + **`REQUIRE_API_AUTH`**): `enabled` | `disabled`.
+`GET /meta` → `batchesApi`, **`purchaseDocumentsApi`** (накладные и справочники закупки при полном бизнес-контуре API), `tripsApi`, `tripShipmentLedger`, `tripSaleLedger`, **`tripShortageLedger`**, **`counterpartyCatalogApi`**, **`authApi`**, **`requireApiAuth`**, **`adminUsersApi`** (управление сотрудниками в UI при БД + `JWT_SECRET` + **`REQUIRE_API_AUTH`**): `enabled` | `disabled`.
 
-**`REQUIRE_API_AUTH`** (`true` / `1`): бизнес-маршруты (партии, рейсы, **`POST /sync`**) требуют JWT и глобальные роли по упрощённой матрице в **`apps/api/src/http/route-auth.ts`** (роль **`admin`** обходит ограничения). Без токена — **401**, недостаточно прав — **403** `{ "error": "forbidden" }`. Нужны **`DATABASE_URL`** и **`JWT_SECRET`**. В **production**, если переменную **не задавать**, при заданных БД и секрете вход считается **обязательным** (`loadEnv` в **`apps/api/src/config.ts`**); в **development** по умолчанию выключено (удобно для локальной отладки); явно **`REQUIRE_API_AUTH=true`** включает форму входа и на деве. В **`apps/web`** при **`requireApiAuth`** клиент уводит на **`/login`**; запросы идут через **`apiFetch`** (cookie + `Authorization` из `sessionStorage`).
+**`REQUIRE_API_AUTH`** (`true` / `1`): бизнес-маршруты (партии, рейсы) требуют JWT и глобальные роли по упрощённой матрице в **`apps/api/src/http/route-auth.ts`** (роль **`admin`** обходит ограничения). Без токена — **401**, недостаточно прав — **403** `{ "error": "forbidden" }`. Нужны **`DATABASE_URL`** и **`JWT_SECRET`**. В **production**, если переменную **не задавать**, при заданных БД и секрете вход считается **обязательным** (`loadEnv` в **`apps/api/src/config.ts`**); в **development** по умолчанию выключено (удобно для локальной отладки); явно **`REQUIRE_API_AUTH=true`** включает форму входа и на деве. В **`apps/web`** при **`requireApiAuth`** клиент уводит на **`/login`**; запросы идут через **`apiFetch`** (cookie + `Authorization` из `sessionStorage`).
 
 Пароль в БД хранится как **scrypt** (префикс `scrypt$…` в `users.password_hash`). У каждого человека **свой уникальный логин** (`users.login`); учётную запись создают скриптом **`pnpm create-user`** (повторять для каждого сотрудника с другим `--login`). Пример: **`cd apps/api && BIRZHA_CREATE_USER_PASSWORD='ПАРОЛЬ' pnpm create-user -- --login ЛОГИН --role seller`** (роли см. `docs/deployment/runbook.md`). `--password` ещё поддерживается, но не рекомендуется: пароль может попасть в историю команд. Альтернатива — INSERT в `users` и `user_roles` вручную; хэш — `hashPassword` из `apps/api/src/auth/password-scrypt.ts`.
 
 Отгрузка в рейс (`trip_batch_shipments`), продажа (`trip_batch_sales`) и недостача (`trip_batch_shortages`) в PostgreSQL выполняются в **транзакции** с обновлением партии там, где это настроено в приложении.
 
-Фронт в dev ходит на бэкенд через прокси `/api` (см. `apps/web/vite.config.ts`). Сборка `apps/web` генерирует **PWA**: `manifest.webmanifest`, кастомный SW `src/sw.ts` (**injectManifest**: precache, SPA-навигация, опционально **Background Sync**), регистрация в `main.tsx`; проверка установки — `pnpm dev:web` не обязательно поднимает SW (см. настройки `vite-plugin-pwa`), удобнее `pnpm --filter @birzha/web build` и `pnpm --filter @birzha/web preview`.
+Фронт в dev ходит на бэкенд через прокси `/api` (см. `apps/web/vite.config.ts`).
 
 ## Команды
 
 ```bash
 pnpm install
-pnpm typecheck   # tsc: web (включая service worker), contracts, domain, api — без emit
+pnpm typecheck   # tsc: web, contracts, domain, api — без emit
 pnpm check       # typecheck + vitest (turbo) + build — рекомендуется перед коммитом/PR
 pnpm test
 pnpm build
@@ -123,7 +119,7 @@ pnpm e2e
 
 ### API и база
 
-Скопируйте `apps/api/.env.example` в `apps/api/.env`. Для **рабочих** маршрутов партий, рейсов и sync задайте **`DATABASE_URL`**: иначе процесс слушает порт и отвечает на `/health`, но в **`GET /meta`** будет `batchesApi: disabled` (и соответствующие HTTP-операции не подключены). Вместе с **`DATABASE_URL`** задайте **`JWT_SECRET`** (не короче 32 символов) — иначе конфиг не поднимется; при этом включаются маршруты **`/auth/*`** (`authApi: enabled` в **`GET /meta`**). **`pnpm e2e`** использует отдельный процесс **`e2e-server`** с in-memory хранилищем — без PostgreSQL.
+Скопируйте `apps/api/.env.example` в `apps/api/.env`. Для **рабочих** маршрутов партий и рейсов задайте **`DATABASE_URL`**: иначе процесс слушает порт и отвечает на `/health`, но в **`GET /meta`** будет `batchesApi: disabled` (и соответствующие HTTP-операции не подключены). Вместе с **`DATABASE_URL`** задайте **`JWT_SECRET`** (не короче 32 символов) — иначе конфиг не поднимется; при этом включаются маршруты **`/auth/*`** (`authApi: enabled` в **`GET /meta`**). **`pnpm e2e`** использует отдельный процесс **`e2e-server`** с in-memory хранилищем — без PostgreSQL.
 
 **Демо-данные для теста UI (только PostgreSQL):** после **`pnpm db:push`** и **`pnpm --filter @birzha/api db:reset-test-data`** выполните **`pnpm --filter @birzha/api db:seed-demo`**. Скрипт создаёт **10 накладных** (5× Манас, 5× Каякент), **6 рейсов**, отгрузки с ящиками, часть продаж и трёх продавцов `demo-seed-seller-1..3` (остаток — продавать вручную в `/s`). Префикс номеров **`DEMO-`**. Повторный запуск без очистки — ошибка; пароль — **`BIRZHA_DEMO_SEED_PASSWORD`** (≥10 символов). На продакшене только после **`pg_dump`** и осознанного сброса тестовых данных.
 

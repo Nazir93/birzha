@@ -6,36 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <!-- В браузере масштаб не трогаем; в PWA (с экрана «Домой») отключаем щипок двумя пальцами — иначе уезжает шапка. -->
-    <script>
-      (function () {
-        try {
-          var pwa =
-            (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-            (window.matchMedia && window.matchMedia("(display-mode: fullscreen)").matches) ||
-            (typeof navigator !== "undefined" &&
-              /** @type {Navigator & { standalone?: boolean }} */ (navigator).standalone === true);
-          if (!pwa) return;
-          var m = document.querySelector('meta[name="viewport"]');
-          if (m)
-            m.setAttribute(
-              "content",
-              "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no",
-            );
-        } catch (_) {}
-      })();
-    </script>
     <meta name="theme-color" content="#f4f4f5" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Биржа" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Биржа</title>
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16" />
-    <link rel="icon" href="/pwa-192.png" type="image/png" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

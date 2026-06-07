@@ -34,12 +34,11 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("GET /api/meta: batches и sync включены", async ({ request }) => {
+  test("GET /api/meta: batches включены", async ({ request }) => {
     const res = await request.get("/api/meta");
     expect(res.ok()).toBeTruthy();
-    const meta = (await res.json()) as { batchesApi?: string; syncApi?: string };
+    const meta = (await res.json()) as { batchesApi?: string };
     expect(meta.batchesApi).toBe("enabled");
-    expect(meta.syncApi).toBe("enabled");
   });
 
   test("отчёты: после POST /trips в селекторе появляется рейс", async ({ page, request }) => {
@@ -457,6 +456,50 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(text).toContain("25000");
   });
 
+  test("отчёты: legacy /reports → /o/reports", async ({ page }) => {
+    await page.goto("/reports");
+    await expect(page).toHaveURL(/\/o\/reports$/);
+    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("отчёты: ?trip= подставляет рейс и загружает отчёт", async ({ page, request }) => {
+    const id = `e2e-url-trip-${Date.now()}`;
+    const tripNumber = "E2E-URL";
+    const res = await request.post("/api/trips", {
+      data: { id, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto(`/o/reports?trip=${encodeURIComponent(id)}`);
+    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toHaveValue(id, { timeout: 15_000 });
+    await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("отчёты: удаление пустого рейса", async ({ page, request }) => {
+    const id = `e2e-del-trip-${Date.now()}`;
+    const tripNumber = "E2E-DEL";
+    const res = await request.post("/api/trips", {
+      data: { id, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/reports");
+    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
+    await page.selectOption("#trip-select", id);
+    await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Удалить пустой рейс" })).toBeVisible({ timeout: 15_000 });
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Удалить пустой рейс" }).click();
+    await expect(page.locator("#trip-select")).toHaveValue("", { timeout: 15_000 });
+    await expect(page.locator("#trip-select")).not.toContainText(tripNumber);
+  });
+
   test("погрузка: раздел и legacy /distribution → /o/distribution", async ({ page }) => {
     await page.goto("/o/distribution");
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
@@ -495,11 +538,488 @@ test.describe("золотой smoke (UI + API)", () => {
       timeout: 15_000,
     });
     await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible();
+    await expect(page.getByLabel("Партия *")).toBeVisible();
+    await expect(page.getByLabel("Рейс *")).toBeVisible();
+    await expect(page.getByLabel("kg *")).toBeVisible();
+    await expect(page.getByLabel("Причина *")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Зафиксировать недостачу" })).toBeVisible();
     const batchesBlock = page.getByText("Партии по закупочным накладным", { exact: true });
     await expect(batchesBlock).toBeVisible();
     await batchesBlock.click();
     /** Блок только для партий с накладной; сырой POST /batches — пустое состояние. */
     await expect(page.getByRole("heading", { name: "Нет партий по накладным" })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("операции: запись недостачи через UI после отгрузки накладной", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const docId = `e2e-short-nakl-${suffix}`;
+    const tripId = `e2e-short-trip-${suffix}`;
+    const tripNumber = `SHOP-${suffix.slice(-8)}`;
+    const reason = "E2E недостача при приёмке";
+
+    let res = await request.post("/api/purchase-documents", {
+      data: {
+        id: docId,
+        documentNumber: `НФ-SH-${suffix.slice(-8)}`,
+        docDate: "2026-06-07",
+        warehouseId: "wh-manas",
+        supplierName: `E2E-${suffix.slice(-6)}`,
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 20,
+            packageCount: 4,
+            pricePerKg: 35,
+            lineTotalKopecks: 70_000,
+          },
+        ],
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    const docRes = await request.get(`/api/purchase-documents/${docId}`);
+    expect(docRes.ok()).toBeTruthy();
+    const doc = (await docRes.json()) as { lines: { batchId: string }[] };
+    const batchId = doc.lines[0]!.batchId;
+
+    res = await request.post("/api/trips", {
+      data: { id: tripId, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/batches/${batchId}/ship-to-trip`, {
+      data: { kg: 15, tripId },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/operations");
+    await expect(page.getByRole("region", { name: "Недостача по рейсу и справочно партии" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.selectOption("#op-in-short-batch", batchId);
+    await page.selectOption("#op-sel-short-trip", tripId);
+    await page.fill("#op-in-short-kg", "2");
+    await page.fill("#op-in-short-reason", reason);
+    await page.getByRole("button", { name: "Зафиксировать недостачу" }).click();
+    await expect(page.getByText("Готово.", { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    const reportRes = await request.get(`/api/trips/${tripId}/shipment-report`);
+    expect(reportRes.ok()).toBeTruthy();
+    const report = (await reportRes.json()) as { shortage: { totalGrams: string } };
+    expect(report.shortage.totalGrams).toBe("2000");
+  });
+
+  test("закупка: форма и legacy /purchase-nakladnaya → /o/purchase-nakladnaya", async ({ page }) => {
+    await page.goto("/o/purchase-nakladnaya");
+    await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Закупка товара" })).toBeVisible();
+
+    await expect(page.getByLabel("Поставщик *")).toBeVisible();
+    await expect(page.getByLabel("Дата *")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Создать накладную" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "=кг×цена" }).first()).toBeVisible();
+
+    await page.goto("/purchase-nakladnaya");
+    await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/);
+    await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("закупка: созданный документ в списке «В работе» и карточка", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const docId = `e2e-nakl-${suffix}`;
+    const docNumber = `НФ-E2E-${suffix.slice(-8)}`;
+    const supplierName = `E2E-Теплица-${suffix.slice(-6)}`;
+
+    const res = await request.post("/api/purchase-documents", {
+      data: {
+        id: docId,
+        documentNumber: docNumber,
+        docDate: "2026-06-07",
+        warehouseId: "wh-manas",
+        supplierName,
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 12,
+            packageCount: 3,
+            pricePerKg: 40,
+            lineTotalKopecks: 48_000,
+          },
+        ],
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/purchase-nakladnaya");
+    await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "В работе" })).toBeVisible({ timeout: 15_000 });
+    const docLink = page.getByRole("link", { name: docNumber });
+    await expect(docLink).toBeVisible({ timeout: 15_000 });
+    await docLink.click();
+    await expect(page).toHaveURL(new RegExp(`/o/purchase-nakladnaya/${encodeURIComponent(docId)}$`));
+    await expect(page.getByRole("heading", { name: /Накладная/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(supplierName)).toBeVisible();
+    await expect(page.getByText("№5")).toBeVisible();
+  });
+
+  test("рейсы: раздел /o/trips и рейс в списке после POST", async ({ page, request }) => {
+    const id = `e2e-trips-ui-${Date.now()}`;
+    const tripNumber = "E2E-TRIPS-LIST";
+    const res = await request.post("/api/trips", {
+      data: { id, tripNumber, driverName: "Иванов", vehicleLabel: "А111АА 77" },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/trips");
+    await expect(page.getByRole("region", { name: "Рейсы" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Рейсы", exact: true })).toBeVisible();
+    await expect(page.getByText("Иванов")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("А111АА 77")).toBeVisible();
+  });
+
+  test("погрузка: остаток после закупки → отбор и шаг «Готово — погрузочная накладная»", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const docId = `e2e-dist-nakl-${suffix}`;
+
+    let res = await request.post("/api/purchase-documents", {
+      data: {
+        id: docId,
+        documentNumber: `НФ-DIST-${suffix.slice(-8)}`,
+        docDate: "2026-06-07",
+        warehouseId: "wh-manas",
+        supplierName: `E2E-Поставщик-${suffix.slice(-6)}`,
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 20,
+            packageCount: 4,
+            pricePerKg: 35,
+            lineTotalKopecks: 70_000,
+          },
+        ],
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post("/api/trips", {
+      data: { id: `e2e-dist-trip-${suffix}`, tripNumber: `DIST-${suffix.slice(-8)}` },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/distribution");
+    await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
+
+    await page.selectOption("#alloc-sel-warehouse", "wh-manas");
+    await expect(page.getByText("1. Списание и отбор партий")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
+
+    const readyBtn = page.getByRole("button", { name: "Готово — погрузочная накладная" });
+    await expect(readyBtn).toBeEnabled({ timeout: 15_000 });
+    await readyBtn.click();
+
+    await expect(page.getByRole("region", { name: "Новая погрузочная накладная" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("button", { name: "Сохранить погрузочную накладную" })).toBeVisible();
+    await expect(page.locator("option", { hasText: `DIST-${suffix.slice(-8)}` })).toHaveCount(1);
+  });
+
+  test("продавец и продажи: раздел /o/assign-seller и редирект seller-dispatch", async ({ page }) => {
+    await page.goto("/o/assign-seller");
+    await expect(page.getByRole("region", { name: "Продавец и продажи" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Продажи по продавцу" })).toBeVisible();
+
+    await page.goto("/o/seller-dispatch");
+    await expect(page).toHaveURL(/\/o\/assign-seller$/);
+  });
+
+  test("продавец: /s — кабинет и форма продажи", async ({ page }) => {
+    await page.goto("/s");
+    await expect(page.getByRole("heading", { name: "Кабинет продавца" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Продажа с рейса" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Розница или опт" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Розница" })).toBeVisible();
+    await expect(page.getByText("Сначала выберите тип сделки")).toBeVisible();
+  });
+
+  test("продавец: после отгрузки в рейс — калибры на /s", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const batchId = `e2e-sell-b-${suffix}`;
+    const tripId = `e2e-sell-t-${suffix}`;
+    const tripNumber = `SELL-${suffix.slice(-8)}`;
+
+    let res = await request.post("/api/batches", {
+      data: {
+        id: batchId,
+        purchaseId: `p-e2e-sell-${suffix}`,
+        totalKg: 30,
+        pricePerKg: 10,
+        distribution: "on_hand",
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post("/api/trips", {
+      data: { id: tripId, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/batches/${batchId}/ship-to-trip`, {
+      data: { kg: 12, tripId },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto(`/s?trip=${encodeURIComponent(tripId)}`);
+    await expect(page.getByRole("heading", { name: "Продажа с рейса" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#seller-sell-sel-trip")).toHaveValue(tripId, { timeout: 15_000 });
+    await expect(page.getByRole("listbox", { name: "Калибры на рейсе (остаток в машине)" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("option", { name: /12 кг/ })).toBeVisible();
+    await expect(page.getByLabel("Сколько килограмм в этой сделке *")).toBeVisible();
+    await expect(page.getByLabel("Цена за 1 кг, руб *")).toBeVisible();
+  });
+
+  test("продавец: /s/reports — отчёт по рейсу", async ({ page }) => {
+    await page.goto("/s/reports");
+    await expect(page.getByRole("heading", { name: "Отчёт по рейсу" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("продавец: /s/operations — недостача (без входа: seller+склад)", async ({ page }) => {
+    await page.goto("/s/operations");
+    await expect(page.getByRole("region", { name: "Недостача по рейсу и справочно партии" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("heading", { name: "Недостача по рейсу" })).toBeVisible();
+  });
+
+  test("архив: /o/archive — закрытый рейс в таблице", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const tripId = `e2e-arch-t-${suffix}`;
+    const tripNumber = `ARCH-${suffix.slice(-8)}`;
+
+    let res = await request.post("/api/trips", {
+      data: { id: tripId, tripNumber, driverName: "Петров", vehicleLabel: "В222ВВ 77" },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/trips/${tripId}/close`, { data: {} });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/o/archive");
+    await expect(page.getByRole("heading", { name: "Архив" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("table", { name: "Архив рейсов" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Закупочные накладные")).toBeVisible();
+    await expect(page.getByText("Погрузочные накладные")).toBeVisible();
+    await expect(page.getByRole("link", { name: tripNumber })).toBeVisible();
+    await expect(page.getByText("Петров")).toBeVisible();
+  });
+
+  test("архив: ?trip= — продажи закрытого рейса", async ({ page, request }) => {
+    const suffix = `${Date.now()}`;
+    const batchId = `e2e-arch-b-${suffix}`;
+    const tripId = `e2e-arch-rpt-${suffix}`;
+    const tripNumber = `ARPT-${suffix.slice(-8)}`;
+    const clientLabel = `E2E-Архив-${suffix.slice(-6)}`;
+
+    let res = await request.post("/api/batches", {
+      data: {
+        id: batchId,
+        purchaseId: `p-e2e-arch-${suffix}`,
+        totalKg: 40,
+        pricePerKg: 10,
+        distribution: "on_hand",
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post("/api/trips", {
+      data: { id: tripId, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/batches/${batchId}/ship-to-trip`, {
+      data: { kg: 10, tripId },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/batches/${batchId}/sell-from-trip`, {
+      data: {
+        tripId,
+        kg: 3,
+        saleId: `e2e-arch-sale-${suffix}`,
+        pricePerKg: 50,
+        paymentKind: "cash",
+        clientLabel,
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post(`/api/trips/${tripId}/close`, { data: {} });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto(`/o/archive?trip=${encodeURIComponent(tripId)}`);
+    await expect(page.getByRole("heading", { name: "Архив" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /Продажи по рейсу/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /Продажи по рейсу/ })).toContainText(tripNumber);
+    await expect(page.getByRole("link", { name: "Полный отчёт (партии, отгрузка, недостача)" })).toBeVisible();
+    const journal = page.getByRole("table", { name: "Журнал сделок по рейсу" });
+    await expect(journal).toBeVisible({ timeout: 15_000 });
+    await expect(journal.getByRole("cell", { name: clientLabel, exact: true })).toBeVisible();
+  });
+
+  test("архив: /s/archive — только рейсы (без накладных)", async ({ page }) => {
+    await page.goto("/s/archive");
+    await expect(page.getByRole("heading", { name: "Архив" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("table", { name: "Архив рейсов" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Закупочные накладные")).toHaveCount(0);
+    await expect(page.getByText("Погрузочные накладные")).toHaveCount(0);
+  });
+
+  test("админ: /a — меню кабинета", async ({ page }) => {
+    await page.goto("/a");
+    const nav = page.getByRole("navigation", { name: "Разделы приложения" });
+    await expect(nav).toBeVisible({ timeout: 15_000 });
+    await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Архив" })).toBeVisible();
+  });
+
+  test("админ: /a/reports — отчёты (тот же блок, что /o/reports)", async ({ page, request }) => {
+    const id = `e2e-a-rep-${Date.now()}`;
+    const tripNumber = `A-REP-${Date.now().toString().slice(-6)}`;
+    const res = await request.post("/api/trips", {
+      data: { id, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/a/reports");
+    await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toContainText(tripNumber);
+  });
+
+  test("админ: без PostgreSQL — dashboard-summary недоступен", async ({ page, request }) => {
+    const res = await request.get("/api/admin/dashboard-summary");
+    expect(res.status()).toBe(404);
+
+    await page.goto("/a");
+    await expect(page.getByText("Не удалось загрузить сводку")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("админ: legacy /a/trip-registry → /a/trips", async ({ page }) => {
+    await page.goto("/a/trip-registry");
+    await expect(page).toHaveURL(/\/a\/trips$/);
+    await expect(page.getByRole("heading", { name: "Рейсы", exact: true })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("админ: /a/settings/catalog и legacy /a/inventory", async ({ page }) => {
+    await page.goto("/a/settings/catalog");
+    await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("navigation", { name: "Разделы настроек" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Справочники" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Разделы справочников" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Склады" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Калибры" })).toBeVisible();
+
+    await page.goto("/a/inventory");
+    await expect(page).toHaveURL(/\/a\/settings\/catalog(\?section=warehouses)?$/);
+  });
+
+  test("админ: /a/settings/documents — правка шапок накладных", async ({ page }) => {
+    await page.goto("/a/settings/documents");
+    await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Накладные" })).toBeVisible();
+    await expect(page.getByText("Закупочные накладные")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("админ: /a/settings/team и legacy /a/users", async ({ page, request }) => {
+    const metaRes = await request.get("/api/meta");
+    expect(metaRes.ok()).toBeTruthy();
+    const meta = (await metaRes.json()) as { adminUsersApi?: string };
+    expect(meta.adminUsersApi).toBe("disabled");
+
+    await page.goto("/a/settings/team");
+    await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Управление сотрудниками недоступно")).toBeVisible({ timeout: 15_000 });
+
+    await page.goto("/a/users");
+    await expect(page).toHaveURL(/\/a\/settings\/team$/);
+  });
+
+  test("админ: /a/stock-warehouses — склады и остатки", async ({ page }) => {
+    await page.goto("/a/stock-warehouses");
+    await expect(page.getByRole("region", { name: "Склады и остатки" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Склады и остатки" })).toBeVisible();
+    await expect(page.getByLabel("Название нового склада")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Добавить склад" })).toBeVisible();
+  });
+
+  test("админ: /a/warehouse-write-offs — без PostgreSQL журнал недоступен", async ({ page, request }) => {
+    const metaRes = await request.get("/api/meta");
+    expect(metaRes.ok()).toBeTruthy();
+    const meta = (await metaRes.json()) as { warehouseWriteOffApi?: string };
+    expect(meta.warehouseWriteOffApi).toBe("disabled");
+
+    await page.goto("/a/warehouse-write-offs");
+    await expect(page.getByRole("heading", { name: "Журнал недоступен" })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("бухгалтерия: /b — сводка и меню", async ({ page }) => {
+    await page.goto("/b");
+    const nav = page.getByRole("navigation", { name: "Разделы приложения" });
+    await expect(nav).toBeVisible({ timeout: 15_000 });
+    await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Отчёт по рейсу" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Контрагенты" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Деньги, остатки и рейсы" })).toBeVisible();
+  });
+
+  test("бухгалтерия: /b без PostgreSQL — остатки не загружаются", async ({ page, request }) => {
+    const res = await request.get("/api/stock-balances");
+    expect(res.status()).toBe(404);
+
+    await page.goto("/b");
+    await expect(page.getByText("Остатки не загрузились")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("бухгалтерия: /b/reports — отчёт (сверка)", async ({ page, request }) => {
+    const id = `e2e-b-rep-${Date.now()}`;
+    const tripNumber = `B-REP-${Date.now().toString().slice(-6)}`;
+    const res = await request.post("/api/trips", {
+      data: { id, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await page.goto("/b/reports");
+    await expect(page.getByRole("heading", { name: "Отчёт по рейсу (сверка)" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#trip-select")).toContainText(tripNumber);
+  });
+
+  test("бухгалтерия: /b/counterparties — справочник (in-memory)", async ({ page, request }) => {
+    const metaRes = await request.get("/api/meta");
+    expect(metaRes.ok()).toBeTruthy();
+    const meta = (await metaRes.json()) as { counterpartyCatalogApi?: string };
+    expect(meta.counterpartyCatalogApi).toBe("enabled");
+
+    await page.goto("/b/counterparties");
+    await expect(page.getByRole("region", { name: "Справочник контрагентов" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Контрагенты" })).toBeVisible();
+    await expect(page.getByText("Список контрагентов")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("бухгалтерия: legacy /b/seller-dispatch и /b/trade → /b", async ({ page }) => {
+    await page.goto("/b/seller-dispatch");
+    await expect(page).toHaveURL(/\/b\/?$/);
+    await page.goto("/b/trade");
+    await expect(page).toHaveURL(/\/b\/?$/);
   });
 
   test("навигация: боковое меню /o (закупка → рейсы → погрузка → недостача → отчёты)", async ({ page }) => {

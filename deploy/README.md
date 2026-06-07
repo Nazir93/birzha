@@ -92,6 +92,23 @@ BIRZHA_AUTO_BACKUP=1 bash deploy/clean-database.sh
 
 После очистки, если нужен тестовый набор: `cd apps/api && BIRZHA_DEMO_SEED_PASSWORD='…' pnpm db:seed-demo`.
 
+**Нагрузка архива (закрытые рейсы, пагинация UI):**
+
+```bash
+cd /opt/birzha
+BIRZHA_DEMO_SEED_PASSWORD='…' bash deploy/seed-archive-stress.sh
+```
+
+Скрипт: `reset` → `seed-demo` → **50** закрытых рейсов `ARCHIVE-*` → `pnpm db:verify-archive`. Только проверка без сида: `BIRZHA_VERIFY_ONLY=1 bash deploy/seed-archive-stress.sh`. Количество рейсов: `BIRZHA_ARCHIVE_TRIP_COUNT=80`.
+
+**50 000 закупочных в архиве** (поверх рейсов, bulk insert):
+
+```bash
+cd /opt/birzha/apps/api
+BIRZHA_ARCHIVE_NKL_COUNT=50000 pnpm db:seed-archive-nakladnaya-bulk
+BIRZHA_ARCHIVE_MIN_DOCS=50000 pnpm db:verify-archive
+```
+
 ## Из GitHub (CI → SSH)
 
 В репозитории: **Settings → Secrets and variables → Actions** добавьте:

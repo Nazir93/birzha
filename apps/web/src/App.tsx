@@ -14,9 +14,8 @@ import { LoginPage } from "./components/LoginPage.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
-import { StaleMetaBanner } from "./components/StaleMetaBanner.js";
 import { sharedOperationsCabinetRouteElements } from "./routing/shared-operations-routes.js";
-import { accounting, legacyPathList, login, ops, prefix } from "./routes.js";
+import { accounting, adminRoutes, legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
 
 const AccountingCabinetHome = lazy(() =>
@@ -83,8 +82,6 @@ export function App() {
 
   return (
     <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
-      <StaleMetaBanner />
-
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path={login} element={<LoginPage />} />
@@ -114,9 +111,9 @@ export function App() {
             }
           >
             {sharedOperationsCabinetRouteElements("home")}
-            <Route path="trip-registry" element={<Navigate to="trips" replace />} />
-            <Route path="transit-trips" element={<Navigate to="reports" replace />} />
-            <Route path="sold-by-seller" element={<Navigate to="assign-seller" replace />} />
+            <Route path="trip-registry" element={<Navigate to={adminRoutes.trips} replace />} />
+            <Route path="transit-trips" element={<Navigate to={adminRoutes.reports} replace />} />
+            <Route path="sold-by-seller" element={<Navigate to={adminRoutes.assignSeller} replace />} />
             <Route
               path="stock-warehouses"
               element={
@@ -152,9 +149,9 @@ export function App() {
               <Route path="documents" element={<SettingsDocumentsAdminPanel embedded />} />
               <Route path="team" element={<AdminUsersPanel embedded />} />
             </Route>
-            <Route path="inventory" element={<Navigate to="../settings/catalog" replace />} />
-            <Route path="users" element={<Navigate to="../settings/team" replace />} />
-            <Route path="service" element={<Navigate to=".." replace />} />
+            <Route path="inventory" element={<Navigate to={adminRoutes.settingsCatalog} replace />} />
+            <Route path="users" element={<Navigate to={adminRoutes.settingsTeam} replace />} />
+            <Route path="service" element={<Navigate to={adminRoutes.home} replace />} />
             <Route
               index
               element={

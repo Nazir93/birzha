@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "reac
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
-import { isLikelyNetworkOrOfflineFailure } from "../api/is-network-or-offline-failure.js";
+import { isLikelyNetworkFailure } from "../api/is-likely-network-failure.js";
 import type { BatchListItem, TripJson } from "../api/types.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
 import {
@@ -677,8 +677,8 @@ export function SellFromTripSection() {
             `Сохранено ${saved} из ${chunks.length} частей продажи. Обновите страницу и проверьте остаток по калибру.`,
           );
         }
-        if (isLikelyNetworkOrOfflineFailure(e)) {
-          throw new Error("Нет связи с сервером. Продажа не сохранена — подключите сеть и повторите.");
+        if (isLikelyNetworkFailure(e)) {
+          throw new Error("Нет связи с сервером. Продажа не сохранена — проверьте сеть и повторите.");
         }
         throw e;
       }

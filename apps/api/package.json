@@ -15,6 +15,10 @@
     "db:reset-test-data": "tsx scripts/reset-test-data.ts",
     "db:seed-demo": "tsx scripts/seed-demo-dataset.ts",
     "db:seed-load-test": "tsx scripts/seed-load-test-dataset.ts",
+    "db:seed-archive-stress": "tsx scripts/seed-archive-stress.ts",
+    "db:seed-archive-nakladnaya-bulk": "tsx scripts/seed-archive-nakladnaya-bulk.ts",
+    "db:seed-archive-max-stress": "tsx scripts/seed-archive-max-stress.ts",
+    "db:verify-archive": "tsx scripts/verify-archive-health.ts",
     "create-user": "tsx scripts/create-user.ts"
   },
   "dependencies": {

@@ -8,7 +8,6 @@ import type { TripRepository } from "./application/ports/trip-repository.port.js
 import type { TripSaleRepository } from "./application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "./application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "./application/ports/trip-shortage-repository.port.js";
-import type { SyncIdempotencyRepository } from "./application/ports/sync-idempotency.port.js";
 import type { CounterpartyRepository } from "./application/ports/counterparty-repository.port.js";
 import type { WholesalerRepository } from "./application/ports/wholesaler-repository.port.js";
 import type { SellFromTripTransactionRunner } from "./application/sale/sell-from-trip.use-case.js";
@@ -16,10 +15,8 @@ import { InMemoryTripRepository } from "./application/testing/in-memory-trip.rep
 import { InMemoryTripSaleRepository } from "./application/testing/in-memory-trip-sale.repository.js";
 import { InMemoryTripShipmentRepository } from "./application/testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripShortageRepository } from "./application/testing/in-memory-trip-shortage.repository.js";
-import { InMemorySyncIdempotencyRepository } from "./application/testing/in-memory-sync-idempotency.repository.js";
 import { RecordWarehouseWriteOffUseCase } from "./application/batch/record-warehouse-write-off.use-case.js";
 import type { RecordWarehouseWriteOffTransactionRunner } from "./application/batch/record-warehouse-write-off.use-case.js";
-import { ApplySyncActionUseCase } from "./application/sync/apply-sync-action.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "./application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
 import type { AppEnv } from "./config.js";
@@ -34,7 +31,6 @@ import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
-import { registerSyncRoutes } from "./http/register-sync-routes.js";
 import { registerTripRoutes } from "./http/register-trip-routes.js";
 import { DrizzleBatchRepository } from "./infrastructure/persistence/drizzle-batch.repository.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "./infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
@@ -43,9 +39,6 @@ import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
 import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
-import { DrizzleSyncIdempotencyRepository } from "./infrastructure/persistence/drizzle-sync-idempotency.repository.js";
-import { DrizzlePurchaseLinePackageMetaRepository } from "./infrastructure/persistence/drizzle-purchase-line-package-meta.js";
-import { NullPurchaseLinePackageMetaPort } from "./infrastructure/persistence/null-purchase-line-package-meta.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "./application/purchase/delete-purchase-document.use-case.js";
@@ -76,8 +69,6 @@ export async function buildApp(options: {
   saleRepository?: TripSaleRepository | null;
   /** Журнал недостач по рейсу. */
   shortageRepository?: TripShortageRepository | null;
-  /** Идемпотентность `POST /sync`; по умолчанию in-memory или Drizzle при `db`. */
-  syncIdempotencyRepository?: SyncIdempotencyRepository;
   /** Справочник контрагентов; при `db` по умолчанию Drizzle, при полном in-memory стеке — in-memory. */
   counterpartyRepository?: CounterpartyRepository | null;
   /** Для тестов: список полевых продавцов без PostgreSQL. */
@@ -230,18 +221,6 @@ export async function buildApp(options: {
         )
       : null;
 
-  const syncStackReady =
-    Boolean(batchRepository) &&
-    Boolean(tripRepository) &&
-    Boolean(shipmentRepository) &&
-    Boolean(saleRepository) &&
-    Boolean(shortageRepository);
-
-  const syncIdempotency: SyncIdempotencyRepository | null = syncStackReady
-    ? (options.syncIdempotencyRepository ??
-        (db ? new DrizzleSyncIdempotencyRepository(db) : new InMemorySyncIdempotencyRepository()))
-    : null;
-
   app.get("/health", async () => ({
     status: "ok",
     time: new Date().toISOString(),
@@ -335,7 +314,6 @@ export async function buildApp(options: {
     tripShortageLedger: shortageRepository ? "enabled" : "disabled",
     counterpartyCatalogApi: counterpartyRepository ? "enabled" : "disabled",
     wholesalersCatalogApi: wholesalerRepository ? "enabled" : "disabled",
-    syncApi: syncIdempotency ? "enabled" : "disabled",
     authApi: db && env.JWT_SECRET ? "enabled" : "disabled",
     requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
     adminUsersApi:
@@ -368,7 +346,6 @@ export async function buildApp(options: {
     shortageRepository &&
     counterpartyRepository &&
     wholesalerRepository &&
-    syncIdempotency &&
     warehouseRepository &&
     productGradeRepository &&
     purchaseDocumentRepository &&
@@ -425,25 +402,6 @@ export async function buildApp(options: {
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
       registerAdminSummaryRoutes(app, db, routeAuth);
     }
-
-    const purchaseLinePackages = db
-      ? new DrizzlePurchaseLinePackageMetaRepository(db)
-      : new NullPurchaseLinePackageMetaPort();
-    const applySync = new ApplySyncActionUseCase(
-      syncIdempotency,
-      batchRepository,
-      tripRepository,
-      shipmentRepository,
-      saleRepository,
-      shortageRepository,
-      counterpartyRepository,
-      wholesalerRepository,
-      purchaseLinePackages,
-      runShipInTransaction,
-      runSellInTransaction,
-      runRecordTripShortageInTransaction,
-    );
-    registerSyncRoutes(app, applySync, routeAuth);
   }
 
   return app;

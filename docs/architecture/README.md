@@ -6,10 +6,9 @@
 |------|------|
 | **Кабинеты, отдельные входы, план продукта** | [`cabinets.md`](cabinets.md) |
 | Роли, права, зоны | [`processes/roles-and-permissions.md`](processes/roles-and-permissions.md) |
-| Риски, долги, офлайн, округления | [`risks-and-guardrails.md`](risks-and-guardrails.md) |
+| Риски, долги, округления | [`risks-and-guardrails.md`](risks-and-guardrails.md) |
 | Безопасность чтения API, токен, прод | [`security-api-read-audit.md`](security-api-read-audit.md) |
 | Словарь, термины | [`business-glossary.md`](business-glossary.md) |
-| Sync API, кэш клиента | [`offline/offline-sync.md`](offline/offline-sync.md) |
 | Модель данных, БД, единицы | [`data-model/er-model.md`](data-model/er-model.md), `table-catalog.md`, `units-and-precision.md` |
 
 **Принятые решения в коде** — миграции `apps/api/drizzle/`, `apps/api/src/db/schema.ts`; обзор HTTP — **`README.md`** (корень).

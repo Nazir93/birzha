@@ -470,11 +470,6 @@ try {
       driverName: trip.driverName ?? null,
       departedAt: trip.departedAt,
     });
-    if (trip.sellerLogin) {
-      await injectJson(app, `assign ${trip.tripNumber}`, "POST", `/trips/${trip.id}/assign-seller`, {
-        sellerUserId: sellerIds[trip.sellerLogin],
-      });
-    }
   }
 
   console.log(`Отгрузка в рейсы (${SHIPMENTS.length} шт.) …`);
@@ -488,6 +483,15 @@ try {
       kg: s.kg,
       packageCount: s.packageCount,
     });
+  }
+
+  console.log("Назначение продавцов на рейсы (после погрузки) …");
+  for (const trip of TRIPS) {
+    if (trip.sellerLogin) {
+      await injectJson(app, `assign ${trip.tripNumber}`, "POST", `/trips/${trip.id}/assign-seller`, {
+        sellerUserId: sellerIds[trip.sellerLogin],
+      });
+    }
   }
 
   console.log(`Продажи с рейса (${SALES.length} шт., остаток для ручных продаж) …`);

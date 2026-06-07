@@ -93,13 +93,6 @@ export const updateTripSaleBodySchema = tripSaleCorrectionBodyBase
   .superRefine(refineCardTransferSalePayment)
   .superRefine(refineWholesaleBuyer);
 
-/** Payload `sell_from_trip` в POST /sync (batchId в теле, не в пути). */
-export const sellFromTripSyncPayloadSchema = z
-  .object({ batchId: z.string().min(1) })
-  .merge(sellFromTripBodyBase)
-  .superRefine(refineMixedSalePayment)
-  .superRefine(refineCardTransferSalePayment)
-  .superRefine(refineWholesaleBuyer);
 /** POST /batches/:id/record-trip-shortage */
 export const recordTripShortageBodySchema = z.object({
   tripId: z.string().min(1),
@@ -236,19 +229,4 @@ export const appendLoadingManifestBatchesBodySchema = z.object({
 /** GET /loading-manifests/reserved-batch-ids?warehouseId= — партии, уже в строках ПН на этом складе. */
 export const loadingManifestReservedBatchIdsQuerySchema = z.object({
   warehouseId: z.string().min(1).max(200).transform((s) => s.trim()),
-});
-
-/** Payload `ship_to_trip` в POST /sync */
-export const shipToTripSyncPayloadSchema = shipBodySchema.extend({
-  batchId: z.string().min(1),
-});
-
-/** Payload `receive_on_warehouse` в POST /sync */
-export const receiveOnWarehouseSyncPayloadSchema = receiveBodySchema.extend({
-  batchId: z.string().min(1),
-});
-
-/** Payload `record_trip_shortage` в POST /sync */
-export const recordTripShortageSyncPayloadSchema = recordTripShortageBodySchema.extend({
-  batchId: z.string().min(1),
 });

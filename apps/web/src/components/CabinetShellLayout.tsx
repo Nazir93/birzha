@@ -10,7 +10,6 @@ import {
 import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
-import { OfflineStatusBanner } from "../ui/OfflineStatusBanner.js";
 import { ThemeToggle } from "./ThemeToggle.js";
 
 export type CabinetShellAccent = "admin" | "operations" | "sales" | "accounting";
@@ -356,7 +355,6 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
 
         <div className="birzha-cabinet-main">
           <div className="birzha-cabinet-main__canvas">
-            <OfflineStatusBanner />
             <Outlet />
           </div>
         </div>

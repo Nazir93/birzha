@@ -192,66 +192,6 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     await app.close();
   });
 
-  it("REQUIRE_API_AUTH: POST /sync sell_from_trip — бухгалтер получает sync_forbidden (200 rejected)", async () => {
-    const accountantId = randomUUID();
-    const accountantLogin = `u_acc_${randomUUID().slice(0, 8)}`;
-    await db.insert(schema.users).values({
-      id: accountantId,
-      login: accountantLogin,
-      passwordHash: hashPassword(password),
-      isActive: true,
-    });
-    await db.insert(schema.userRoles).values({
-      userId: accountantId,
-      roleCode: "accountant",
-      scopeType: "global",
-      scopeId: "",
-    });
-
-    const env = loadEnv({
-      NODE_ENV: "test",
-      DATABASE_URL: pgUrl,
-      JWT_SECRET: "k".repeat(32),
-      REQUIRE_API_AUTH: "true",
-    });
-    const app = await buildApp({ env, db });
-
-    const loginAcc = await app.inject({
-      method: "POST",
-      url: "/auth/login",
-      payload: { login: accountantLogin, password },
-    });
-    expect(loginAcc.statusCode).toBe(200);
-    const token = (JSON.parse(loginAcc.body) as { token: string }).token;
-
-    const syncRes = await app.inject({
-      method: "POST",
-      url: "/sync",
-      headers: { authorization: `Bearer ${token}` },
-      payload: {
-        deviceId: "d-sync-forbid",
-        localActionId: "la-sync-forbid-1",
-        actionType: "sell_from_trip",
-        payload: {
-          batchId: "b-any",
-          tripId: "t-any",
-          kg: 1,
-          saleId: "sale-any",
-          pricePerKg: 1,
-        },
-      },
-    });
-    expect(syncRes.statusCode).toBe(200);
-    const syncBody = JSON.parse(syncRes.body) as { status: string; errorCode?: string; actionId?: string };
-    expect(syncBody.status).toBe("rejected");
-    expect(syncBody.errorCode).toBe("sync_forbidden");
-    expect(syncBody.actionId).toBe("la-sync-forbid-1");
-
-    await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, accountantId));
-    await db.delete(schema.users).where(eq(schema.users.id, accountantId));
-    await app.close();
-  });
-
   it("REQUIRE_API_AUTH: кладовщик не POST /warehouses; admin — 201", async () => {
     const whUserId = randomUUID();
     const whLogin = `u_wh2_${randomUUID().slice(0, 8)}`;

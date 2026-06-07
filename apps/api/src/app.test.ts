@@ -51,7 +51,6 @@ describe("API", () => {
       tripShortageLedger: string;
       counterpartyCatalogApi: string;
       wholesalersCatalogApi?: string;
-      syncApi: string;
       authApi: string;
       requireApiAuth: string;
       adminUsersApi: string;
@@ -66,7 +65,6 @@ describe("API", () => {
     expect(body.tripShortageLedger).toBe("disabled");
     expect(body.counterpartyCatalogApi).toBe("disabled");
     expect(body.wholesalersCatalogApi).toBe("disabled");
-    expect(body.syncApi).toBe("disabled");
     expect(body.authApi).toBe("disabled");
     expect(body.requireApiAuth).toBe("disabled");
     expect(body.adminUsersApi).toBe("disabled");

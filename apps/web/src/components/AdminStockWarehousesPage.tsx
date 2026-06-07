@@ -28,9 +28,10 @@ export function AdminStockWarehousesPage() {
   };
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
+  const batchesEnabled = selectedWarehouseId.trim().length > 0;
   const batchesQ = useQuery({
     ...batchesForWarehouseQueryOptions(selectedWarehouseId, 500),
-    enabled: selectedWarehouseId.trim().length > 0,
+    enabled: batchesEnabled,
     refetchOnMount: "always",
   });
 
@@ -98,7 +99,7 @@ export function AdminStockWarehousesPage() {
     return rows;
   }, [batchesQ.data?.batches, selectedWarehouseId, gradeSearch]);
 
-  const loading = warehousesQ.isPending || batchesQ.isPending;
+  const loading = warehousesQ.isPending || (batchesEnabled && batchesQ.isPending);
 
   return (
     <div className="birzha-admin-dash birzha-section-shell" role="region" aria-labelledby="stock-wh-h">

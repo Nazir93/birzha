@@ -11,14 +11,7 @@ export function createWebQueryClient(): QueryClient {
         staleTime: QUERY_STALE_LISTS_MS,
         gcTime: QUERY_GC_MS,
         refetchOnWindowFocus: false,
-        /** Без сети не долбим API лишний раз; при персисте показываем последний успешный срез. */
-        networkMode: "offlineFirst",
-        retry: (failureCount) => {
-          if (typeof navigator !== "undefined" && navigator.onLine === false) {
-            return false;
-          }
-          return failureCount < 1;
-        },
+        retry: 1,
       },
       mutations: {
         onError: (error) => {

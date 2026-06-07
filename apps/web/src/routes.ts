@@ -61,12 +61,6 @@ export const adminRoutes = {
   settingsTeam: `${prefix.admin}/settings/team`,
   /** Редиректы со старых URL. */
   inventory: `${prefix.admin}/inventory`,
-  /** Реестр рейсов: фильтр `?status=all|open|closed`, поиск в UI. */
-  tripRegistry: `${prefix.admin}/trip-registry`,
-  /** Рейсы с ненулевым погруженным остатком (учёт). */
-  transitTrips: `${prefix.admin}/transit-trips`,
-  /** Продажи по продавцам (поиск, даты рейсов). */
-  soldBySeller: `${prefix.admin}/sold-by-seller`,
   /** Склады: справочник + остатки по выбранному складу. */
   stockWarehouses: `${prefix.admin}/stock-warehouses`,
   /** Журнал списаний брака с остатка (все накладные). */

@@ -53,6 +53,21 @@ export function buildCabinetNavEntries(
     if (cabinet === "admin") {
       return [{ to: adminRoutes.home, label: "Сводка", key: "home" }, ...ANON_ADMIN_OPS];
     }
+    if (cabinet === "accounting") {
+      return [
+        { to: accounting.home, label: "Сводка", key: "acc-home" },
+        { to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" },
+        { to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" },
+      ];
+    }
+    if (cabinet === "sales") {
+      return [
+        { to: sales.home, label: "Сводка", key: "sales-home" },
+        { to: sales.reports, label: "Отчёты по рейсу", key: "reports" },
+        { to: sales.operations, label: NAV_PANEL_LABELS.operations, key: "operations" },
+        { to: sales.archive, label: NAV_PANEL_LABELS.archive, key: "archive" },
+      ];
+    }
     return [...ANON_OPS];
   }
 

@@ -10,7 +10,7 @@ import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { fieldStyle } from "../ui/styles.js";
 
 export function LoginPage() {
-  const { ready, meta, user, login, bootstrapError, usingStaleMeta } = useAuth();
+  const { ready, meta, user, login, bootstrapError } = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? ops.reports;
 
@@ -64,7 +64,6 @@ export function LoginPage() {
         </h2>
         <p className="birzha-callout-info" style={{ marginBottom: "0.65rem", lineHeight: 1.55 }}>
           Введите логин и пароль.
-          {usingStaleMeta ? " Без сети войти нельзя — дождитесь соединения с сервером." : ""}
         </p>
         <label htmlFor="login-user" className="birzha-form-label">
           Логин (ваш)

@@ -232,16 +232,6 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
-/** Успешно обработанные офлайн-действия (идемпотентность по устройству). */
-export const syncProcessedActions = pgTable(
-  "sync_processed_actions",
-  {
-    deviceId: text("device_id").notNull(),
-    localActionId: text("local_action_id").notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.deviceId, t.localActionId] })],
-);
-
 /** Учётные записи; вход — JWT (`/auth/login`). См. `docs/architecture/data-model/table-catalog.md`. */
 export const users = pgTable("users", {
   id: text("id").primaryKey(),

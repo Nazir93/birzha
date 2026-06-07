@@ -1,8 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import type { SyncRequestBody } from "../application/sync/sync-request.schema.js";
 import { hasAnyGlobalRole, MVP_ROLE_CODES } from "../auth/global-roles.js";
-import type { AuthRoleGrant } from "../auth/role-grant.js";
 import type { AppEnv } from "../config.js";
 
 /** Общее чтение списков/карточек (GET /batches, GET /trips, GET /trips/:id). */
@@ -35,31 +33,11 @@ const SELL_ROLES = ["admin", "manager", "seller"] as const;
 /** Недостача по рейсу. */
 const SHORTAGE_ROLES = ["admin", "manager", "warehouse", "receiver"] as const;
 
-/** Офлайн POST /sync — любая роль MVP для прохода JWT; тип действия дополнительно сверяется с `userMayPerformSyncAction`. */
-const SYNC_ROLES = MVP_ROLE_CODES;
-
 /** GET /counterparties — все роли MVP (нужны продавцу, бухгалтеру и т.д.). */
 const CATALOG_READ_ROLES = MVP_ROLE_CODES;
 
 /** POST /counterparties — ведение справочника (см. матрицу «Справочники» в `roles-and-permissions.md`). */
 const CATALOG_WRITE_ROLES = ["admin", "manager", "accountant"] as const;
-
-/** Тот же смысл, что цепочки REST для соответствующих операций (продавец — только продажа с рейса и т.д.). */
-const SYNC_ACTION_ROLES: Record<SyncRequestBody["actionType"], readonly string[]> = {
-  sell_from_trip: SELL_ROLES,
-  ship_to_trip: SHIP_ROLES,
-  record_trip_shortage: SHORTAGE_ROLES,
-  receive_on_warehouse: RECEIVE_ROLES,
-  create_trip: TRIP_WRITE_ROLES,
-};
-
-/** Проверка прав на конкретное офлайн-действие (после успешной аутентификации). */
-export function userMayPerformSyncAction(
-  user: { roles: AuthRoleGrant[] },
-  actionType: SyncRequestBody["actionType"],
-): boolean {
-  return hasAnyGlobalRole(user, SYNC_ACTION_ROLES[actionType]);
-}
 
 export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => void | Promise<void>;
 
@@ -76,7 +54,6 @@ export type BusinessRouteAuth = {
   ship: AuthPreHandler[];
   sell: AuthPreHandler[];
   shortage: AuthPreHandler[];
-  sync: AuthPreHandler[];
   catalogRead: AuthPreHandler[];
   catalogWrite: AuthPreHandler[];
   /** POST/DELETE /warehouses, /product-grades — только admin. */
@@ -95,7 +72,6 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   ship: [],
   sell: [],
   shortage: [],
-  sync: [],
   catalogRead: [],
   catalogWrite: [],
   inventoryCatalogWrite: [],
@@ -133,7 +109,6 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     ship: [a, requireGlobalRoles(SHIP_ROLES)],
     sell: [a, requireGlobalRoles(SELL_ROLES)],
     shortage: [a, requireGlobalRoles(SHORTAGE_ROLES)],
-    sync: [a, requireGlobalRoles(SYNC_ROLES)],
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],

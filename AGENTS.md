@@ -9,9 +9,8 @@
 | Команды, HTTP API, стек | `README.md` |
 | **Кабинеты, отдельные входы, план** | `docs/architecture/cabinets.md` (матрица экранов по ролям — раздел «Матрица экранов») |
 | Роли, матрица прав, документы | `docs/architecture/processes/roles-and-permissions.md` |
-| Риски (долги, офлайн, возвраты) | `docs/architecture/risks-and-guardrails.md` |
+| Риски (долги, возвраты) | `docs/architecture/risks-and-guardrails.md` |
 | Термины, глоссарий | `docs/architecture/business-glossary.md` |
-| Sync / кэш | `docs/architecture/offline/offline-sync.md` |
 | Сценарии полей/форм (заказчик) | `docs/guides/dlya-zakazchika-zapolnenie.md` |
 | Деплой, VPS, nginx, домен продакшена (**24birzha.ru**) | `docs/deployment/vps-ubuntu.md`, `docs/deployment/runbook.md`, `deploy/nginx-birzha.example.conf` |
 | Эскиз ER, таблицы, единицы | `docs/architecture/data-model/` (er-model, table-catalog, units) |
@@ -29,6 +28,6 @@
 
 ## Качество
 
-- `pnpm check` — **typecheck** (`tsc` по web, в т.ч. `src/sw.ts` через `tsconfig.sw.json`, плюс packages/api) + **vitest** + **сборка**; при необходимости полного UI-прогона: `pnpm e2e` (Playwright, три теста в `e2e/role-nav-auth.spec.ts` помечены skip без PostgreSQL). Тесты рядом с кодом; контракты в `packages/contracts` при смене HTTP.
+- `pnpm check` — **typecheck** (`tsc` по web + packages/api) + **vitest** + **сборка**; при необходимости полного UI-прогона: `pnpm e2e` (Playwright, три теста в `e2e/role-nav-auth.spec.ts` помечены skip без PostgreSQL). Тесты рядом с кодом; контракты в `packages/contracts` при смене HTTP.
 
 Спорные места: `.cursor/rules/07-debts-returns-and-role-edge-cases.mdc` — не тянуть в код сомнительную логику без согласования.

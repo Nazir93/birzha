@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { apiFetch, assertOkResponse, closeTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
@@ -9,7 +9,7 @@ import { hasGlobalRole } from "../auth/global-roles.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import { filterTripsInWork } from "../format/archive.js";
-import { adminRoutes } from "../routes.js";
+import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { resolveUserLogin } from "../format/user-display.js";
@@ -42,7 +42,9 @@ type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: s
 
 export function AssignSellerPanel() {
   const { meta, user } = useAuth();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
+  const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const batchesQuery = useQuery(batchesFullListQueryOptions());
@@ -191,7 +193,7 @@ export function AssignSellerPanel() {
       await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       const closedId = result?.closedTripId;
       if (closedId) {
-        navigate(`${adminRoutes.archive}?${new URLSearchParams({ trip: closedId }).toString()}`);
+        navigate(`${archivePath}?${new URLSearchParams({ trip: closedId }).toString()}`);
       }
     },
   });
