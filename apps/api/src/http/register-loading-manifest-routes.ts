@@ -485,9 +485,11 @@ export function registerLoadingManifestRoutes(
       if (selected.length !== batchIds.length) {
         return reply.code(400).send({ error: "unknown_batch_in_manifest" });
       }
-      const badWarehouse = selected.find((r) => r.warehouseId !== manifest.warehouseId);
-      if (badWarehouse) {
-        return reply.code(400).send({ error: "batch_not_in_warehouse", batchId: badWarehouse.batchId });
+      if (assignedTripId && tripRead) {
+        const warehouseIds = [...new Set(selected.map((r) => r.warehouseId).filter(Boolean))] as string[];
+        for (const warehouseId of warehouseIds) {
+          await assertTripAllowsWarehouseLoading(db, tripRead, { tripId: assignedTripId, warehouseId });
+        }
       }
       const noStock = selected.find((r) => r.onWarehouseGrams <= 0n);
       if (noStock) {

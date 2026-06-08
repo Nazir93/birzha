@@ -42,7 +42,6 @@ const TRUNCATE = `
     purchase_documents,
     counterparties,
     wholesalers,
-    sync_processed_actions,
     warehouses,
     product_grades
   RESTART IDENTITY CASCADE

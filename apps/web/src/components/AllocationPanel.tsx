@@ -358,15 +358,32 @@ export function AllocationPanel() {
   }, [openManifestSummary?.tripId, tripsQuery.data?.trips]);
 
   const crossWarehouseBlocked = useMemo(() => {
-    if (appendMode || !selectedWarehouse.trim()) {
+    if (!selectedWarehouse.trim()) {
       return false;
     }
+    const tripId = appendMode
+      ? (appendTargetManifest?.tripId?.trim() ?? newManifestTripId.trim())
+      : newManifestTripId.trim();
+    const trip =
+      (tripId ? (tripsQuery.data?.trips ?? []).find((t) => t.id === tripId) : null) ?? selectedTripForManifest;
+    const linked = tripId
+      ? listTripLinkedWarehouseIdsFromManifests(tripId, activeManifests)
+      : linkedWarehouseIdsForSelectedTrip;
     return tripSellerBlocksCrossWarehouseLoading({
-      trip: selectedTripForManifest,
+      trip,
       warehouseId: selectedWarehouse,
-      linkedWarehouseIds: linkedWarehouseIdsForSelectedTrip,
+      linkedWarehouseIds: linked,
     });
-  }, [appendMode, selectedWarehouse, selectedTripForManifest, linkedWarehouseIdsForSelectedTrip]);
+  }, [
+    appendMode,
+    appendTargetManifest?.tripId,
+    selectedWarehouse,
+    selectedTripForManifest,
+    linkedWarehouseIdsForSelectedTrip,
+    newManifestTripId,
+    tripsQuery.data?.trips,
+    activeManifests,
+  ]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -1100,7 +1117,7 @@ export function AllocationPanel() {
                         destinationName: appendTargetManifest.destinationName,
                       })}
                     </strong>
-                    . Новая погрузочная создана не будет.
+                    . Новая погрузочная создана не будет — можно добавить партии с другого склада в эту же накладную.
                   </InfoAlert>
                 ) : null}
                 <div className="birzha-form-grid">

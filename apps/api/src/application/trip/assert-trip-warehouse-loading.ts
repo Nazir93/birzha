@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 
 import type { DbClient } from "../../db/client.js";
-import { batches, loadingManifests, tripBatchShipments } from "../../db/schema.js";
+import { batches, loadingManifestLines, loadingManifests, tripBatchShipments } from "../../db/schema.js";
 import { TripNotFoundError, TripSellerCrossWarehouseLoadingError } from "../errors.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
 import { evaluateTripSellerLoadingFromWarehouse } from "./trip-seller-loading-guard.js";
 
 export async function listTripLinkedWarehouseIds(db: DbClient, tripId: string): Promise<string[]> {
-  const [manifestRows, shipmentRows] = await Promise.all([
+  const [manifestRows, shipmentRows, manifestLineRows] = await Promise.all([
     db
       .select({ warehouseId: loadingManifests.warehouseId })
       .from(loadingManifests)
@@ -17,10 +17,16 @@ export async function listTripLinkedWarehouseIds(db: DbClient, tripId: string): 
       .from(tripBatchShipments)
       .innerJoin(batches, eq(tripBatchShipments.batchId, batches.id))
       .where(eq(tripBatchShipments.tripId, tripId)),
+    db
+      .select({ warehouseId: batches.warehouseId })
+      .from(loadingManifestLines)
+      .innerJoin(loadingManifests, eq(loadingManifestLines.manifestId, loadingManifests.id))
+      .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+      .where(eq(loadingManifests.tripId, tripId)),
   ]);
   return [
     ...new Set(
-      [...manifestRows, ...shipmentRows]
+      [...manifestRows, ...shipmentRows, ...manifestLineRows]
         .map((row) => row.warehouseId)
         .filter((id): id is string => id != null && id.trim().length > 0),
     ),
