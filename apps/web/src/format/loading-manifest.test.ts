@@ -8,6 +8,7 @@ import {
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
   formatLoadingManifestDisplayName,
+  formatManifestWarehouseNames,
   resolveLoadingManifestNumberForSave,
   filterBatchesForLoadingManifest,
   loadingManifestRoadCsvContent,
@@ -294,5 +295,15 @@ describe("loadingManifestRoadCsvContent", () => {
     expect(csv).toContain("Погрузочная накладная (на машину);Москва · № ПН-1");
     expect(csv).toContain("Рейс;Р-01");
     expect(csv).toContain("Итого");
+  });
+});
+
+describe("formatManifestWarehouseNames", () => {
+  it("один склад — как fallback если списка нет", () => {
+    expect(formatManifestWarehouseNames(undefined, "Манас")).toBe("Манас");
+  });
+
+  it("несколько складов — через запятую", () => {
+    expect(formatManifestWarehouseNames(["Каякент", "Манас", "Манас"], "Манас")).toBe("Каякент, Манас");
   });
 });

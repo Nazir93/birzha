@@ -95,6 +95,7 @@ async function enrichManifestRows(db: DbClient, rows: ManifestRow[]) {
       lineCount: 0,
       totalKg: 0,
       packagesApprox: null as number | null,
+      lineWarehouseNames: [r.warehouseName],
       calibers: [] as { label: string; kg: number; packagesApprox: number }[],
     }));
   }
@@ -145,6 +146,34 @@ async function enrichManifestRows(db: DbClient, rows: ManifestRow[]) {
     arr.sort((a, b) => a.label.localeCompare(b.label, "ru"));
   }
 
+  const lineWarehouseNamesByManifest = new Map<string, string[]>();
+  if (manifestIds.length > 0) {
+    const whRows = await db
+      .select({
+        manifestId: loadingManifestLines.manifestId,
+        warehouseName: warehouses.name,
+      })
+      .from(loadingManifestLines)
+      .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+      .innerJoin(warehouses, eq(batches.warehouseId, warehouses.id))
+      .where(inArray(loadingManifestLines.manifestId, manifestIds))
+      .groupBy(loadingManifestLines.manifestId, warehouses.name);
+    for (const wh of whRows) {
+      const name = wh.warehouseName?.trim() ?? "";
+      if (!name) {
+        continue;
+      }
+      const arr = lineWarehouseNamesByManifest.get(wh.manifestId) ?? [];
+      if (!arr.includes(name)) {
+        arr.push(name);
+      }
+      lineWarehouseNamesByManifest.set(wh.manifestId, arr);
+    }
+    for (const arr of lineWarehouseNamesByManifest.values()) {
+      arr.sort((a, b) => a.localeCompare(b, "ru"));
+    }
+  }
+
   return rows.map((r) => {
     const la = lineByManifest.get(r.id);
     const totalKg = la ? Number(la.sumGrams) / 1000 : 0;
@@ -163,6 +192,7 @@ async function enrichManifestRows(db: DbClient, rows: ManifestRow[]) {
       lineCount: la?.lineCount ?? 0,
       totalKg,
       packagesApprox,
+      lineWarehouseNames: lineWarehouseNamesByManifest.get(r.id) ?? [r.warehouseName],
       calibers: calibersByManifest.get(r.id) ?? [],
     };
   });

@@ -9,6 +9,7 @@ import {
   updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
@@ -45,6 +46,8 @@ import {
   listLoadingManifestsForHttp,
   loadingManifestsListQuerySchema,
 } from "./loading-manifest-list-http.js";
+
+const batchWarehouse = alias(warehouses, "batch_warehouse");
 
 type JwtUser = { sub: string; roles: AuthRoleGrant[] };
 
@@ -218,6 +221,8 @@ export function registerLoadingManifestRoutes(
           warehouseCode: warehouses.code,
           destinationName: shipDestinations.displayName,
           line: loadingManifestLines,
+          batchWarehouseId: batches.warehouseId,
+          batchWarehouseName: batchWarehouse.name,
           onWarehouseGrams: batches.onWarehouseGrams,
           inTransitGrams: batches.inTransitGrams,
           purchaseDocumentNumber: purchaseDocuments.documentNumber,
@@ -229,6 +234,7 @@ export function registerLoadingManifestRoutes(
         .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
         .innerJoin(loadingManifestLines, eq(loadingManifests.id, loadingManifestLines.manifestId))
         .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+        .leftJoin(batchWarehouse, eq(batches.warehouseId, batchWarehouse.id))
         .leftJoin(purchaseDocumentLines, eq(loadingManifestLines.batchId, purchaseDocumentLines.batchId))
         .leftJoin(purchaseDocuments, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
         .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
@@ -238,6 +244,13 @@ export function registerLoadingManifestRoutes(
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
       const h = rows[0]!;
+      const lineWarehouseNames = [
+        ...new Set(
+          rows
+            .map((r) => r.batchWarehouseName?.trim() ?? "")
+            .filter((name) => name.length > 0),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "ru"));
       const lineMasses = rows.map((r) => ({
         onWarehouseGrams: r.onWarehouseGrams,
         inTransitGrams: r.inTransitGrams,
@@ -260,6 +273,7 @@ export function registerLoadingManifestRoutes(
           createdAt: h.manifest.createdAt.toISOString(),
           tripAssignLocked: assignLock.locked,
           tripAssignLockedReason: assignLock.code ?? null,
+          lineWarehouseNames,
           lines: rows
             .map((r) => ({
               lineNo: r.line.lineNo,
@@ -270,6 +284,8 @@ export function registerLoadingManifestRoutes(
               purchaseDocumentNumber: r.purchaseDocumentNumber,
               productGradeCode: r.productGradeCode,
               productGroup: r.productGroup,
+              warehouseId: r.batchWarehouseId,
+              warehouseName: r.batchWarehouseName,
             }))
             .sort((a, b) => a.lineNo - b.lineNo),
         },

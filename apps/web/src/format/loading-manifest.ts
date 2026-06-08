@@ -2,6 +2,17 @@ import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
 
+/** Подпись складов в шапке ПН: один или «Манас, Каякент». */
+export function formatManifestWarehouseNames(names: readonly string[] | undefined, fallback: string): string {
+  const unique = [...new Set((names ?? []).map((n) => n.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "ru"),
+  );
+  if (unique.length === 0) {
+    return fallback.trim() || "—";
+  }
+  return unique.join(", ");
+}
+
 /** Остаток в ящиках: доля onWarehouseKg к totalKg, × ящиков по строке накладной. */
 export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
   const linePk = b.nakladnaya?.linePackageCount;

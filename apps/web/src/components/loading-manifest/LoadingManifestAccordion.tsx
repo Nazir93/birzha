@@ -5,6 +5,7 @@ import type { LoadingManifestDetail, LoadingManifestSummary } from "../../api/ty
 import {
   aggregateLoadingManifestLinesByCaliber,
   formatLoadingManifestDisplayName,
+  formatManifestWarehouseNames,
   loadingManifestRoadCsvContent,
 } from "../../format/loading-manifest.js";
 import {
@@ -60,6 +61,21 @@ export function LoadingManifestAccordion({
     () => (detail ? aggregateLoadingManifestLinesByCaliber(detail.lines) : []),
     [detail],
   );
+  const warehouseLabel = formatManifestWarehouseNames(
+    detail?.lineWarehouseNames ??
+      m.lineWarehouseNames ??
+      detail?.lines.map((ln) => ln.warehouseName ?? "").filter(Boolean),
+    detail?.warehouseName ?? m.warehouseName,
+  );
+  const showLineWarehouseColumn = useMemo(() => {
+    if (!detail) {
+      return false;
+    }
+    const names = new Set(
+      detail.lines.map((ln) => ln.warehouseName?.trim() ?? "").filter(Boolean),
+    );
+    return names.size > 1;
+  }, [detail]);
   const roadTripLabel = detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : "";
   const tripAssignLock = detail ? loadingManifestTripAssignLockFromDetail(detail) : { locked: false as const };
   const [partyLinesOpen, setPartyLinesOpen] = useState(false);
@@ -93,7 +109,7 @@ export function LoadingManifestAccordion({
               destinationName: m.destinationName,
             })}
           </strong>{" "}
-          · {m.docDate} · {m.warehouseName} · рейс: {tripLabel}
+          · {m.docDate} · {warehouseLabel} · рейс: {tripLabel}
         </span>
         <span className="birzha-disclosure__hint">
           {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг · {m.lineCount} парт. · ящ. ≈{" "}
@@ -124,7 +140,7 @@ export function LoadingManifestAccordion({
                     destinationName: detail.destinationName,
                   })}
                 </strong>{" "}
-                · {detail.docDate} · {detail.warehouseName}
+                · {detail.docDate} · {warehouseLabel}
                 {detail.tripId ? (
                   <>
                     {" "}
@@ -184,7 +200,7 @@ export function LoadingManifestAccordion({
                     const csv = loadingManifestRoadCsvContent({
                       manifestNumber: detail.manifestNumber,
                       docDate: detail.docDate,
-                      warehouseLabel: detail.warehouseName,
+                      warehouseLabel: warehouseLabel,
                       destinationName: detail.destinationName,
                       tripLabel: roadTripLabel || "—",
                       rows: caliberRows,
@@ -279,6 +295,7 @@ export function LoadingManifestAccordion({
                     <thead>
                       <tr>
                         <th style={thHead}>№</th>
+                        {showLineWarehouseColumn ? <th style={thHead}>Склад</th> : null}
                         <th style={thHead}>Накладная закупки</th>
                         <th style={thHead}>Калибр</th>
                         <th style={thHead}>Кг</th>
@@ -289,6 +306,9 @@ export function LoadingManifestAccordion({
                       {detail.lines.map((line) => (
                         <tr key={line.batchId}>
                           <td style={thtd}>{line.lineNo}</td>
+                          {showLineWarehouseColumn ? (
+                            <td style={thtd}>{line.warehouseName?.trim() || "—"}</td>
+                          ) : null}
                           <td style={thtd}>{line.purchaseDocumentNumber ?? "—"}</td>
                           <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
                           <td style={thtd}>{line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>

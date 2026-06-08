@@ -30,6 +30,7 @@ export function loadingSummaryFromDetail(d: LoadingManifestDetail): LoadingManif
     lineCount: d.lines.length,
     totalKg,
     packagesApprox: linesWithPkg > 0 ? packagesSum : null,
+    lineWarehouseNames: d.lineWarehouseNames,
     calibers: [],
   };
 }

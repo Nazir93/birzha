@@ -197,6 +197,8 @@ export type LoadingManifestSummary = {
   totalKg: number;
   /** Сумма ящиков по строкам, если были посчитаны при сохранении. */
   packagesApprox: number | null;
+  /** Склады по строкам партий (может быть несколько в одной ПН). */
+  lineWarehouseNames?: string[];
   calibers: { label: string; kg: number; packagesApprox: number }[];
 };
 
@@ -226,6 +228,8 @@ export type LoadingManifestDetail = {
   tripAssignLocked?: boolean;
   tripAssignLockedReason?: "already_assigned" | "already_shipped" | "no_stock" | null;
   createdAt: string;
+  /** Уникальные склады по строкам (если ПН пополняли с других складов). */
+  lineWarehouseNames?: string[];
   lines: {
     lineNo: number;
     batchId: string;
@@ -235,6 +239,8 @@ export type LoadingManifestDetail = {
     purchaseDocumentNumber: string | null;
     productGradeCode: string | null;
     productGroup: string | null;
+    warehouseId?: string | null;
+    warehouseName?: string | null;
   }[];
 };
 

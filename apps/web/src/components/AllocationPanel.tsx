@@ -496,6 +496,7 @@ export function AllocationPanel() {
       void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "list"] });
+      void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, res.manifestId] });
       void queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
       void navigate(`${distributionBase}/${encodeURIComponent(res.manifestId)}`);
     },
