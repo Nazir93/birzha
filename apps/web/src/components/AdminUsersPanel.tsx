@@ -149,9 +149,6 @@ function UserRowActions({
       <td style={{ ...thtd, minWidth: "14rem" }}>
         {canPwd ? (
           <div style={{ marginBottom: canDel ? "0.45rem" : 0 }}>
-            <span className="birzha-text-muted birzha-text-muted--micro" style={{ display: "block", marginBottom: 2 }}>
-              Новый пароль (текущий на сервере не показывается — хранится только хэш)
-            </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
               <PasswordFieldWithToggle
                 value={pw}
@@ -349,10 +346,6 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
             </div>
           }
         >
-        <p className="birzha-callout-info" style={{ fontSize: "0.82rem", marginTop: 0, marginBottom: "0.75rem", lineHeight: 1.45 }}>
-          Ввод по умолчанию скрыт звёздочками; кнопка «Показать» нужна, чтобы сверить символы перед сохранением. Ранее
-          заданный пароль из базы не отображается — хранится только хэш.
-        </p>
         <div className="birzha-admin-user-create-row">
           <label className="birzha-form-label birzha-form-label--block">
             Логин

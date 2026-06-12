@@ -39,9 +39,18 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
-import { tableStyle, thHead, thtd } from "../ui/styles.js";
+import { tableStyle, thHead, thtd, fieldStyle } from "../ui/styles.js";
 
 const PAGE_SIZE = 25;
+
+function useDebouncedValue<T>(value: T, ms: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return debounced;
+}
 
 function formatTripDepartedRu(departedAt: string | null): string {
   if (!departedAt?.trim()) {
@@ -271,6 +280,13 @@ export function ArchivePage() {
   const [tripsPage, setTripsPage] = useState(0);
   const [nakladPage, setNakladPage] = useState(0);
   const [manifestPage, setManifestPage] = useState(0);
+  const [nakladSearch, setNakladSearch] = useState("");
+  const nakladSearchDebounced = useDebouncedValue(nakladSearch.trim(), 280);
+
+  useEffect(() => {
+    setNakladPage(0);
+    setManifestPage(0);
+  }, [nakladSearchDebounced]);
 
   const tripsQ = useQuery(
     tripsPickerQueryOptions({
@@ -284,6 +300,7 @@ export function ArchivePage() {
       limit: PAGE_SIZE,
       offset: nakladPage * PAGE_SIZE,
       scope: "archived",
+      search: nakladSearchDebounced || undefined,
     }),
     enabled: !salesMode && meta?.purchaseDocumentsApi === "enabled",
   });
@@ -292,6 +309,7 @@ export function ArchivePage() {
       limit: PAGE_SIZE,
       offset: manifestPage * PAGE_SIZE,
       scope: "archived",
+      search: nakladSearchDebounced || undefined,
     }),
     enabled: !salesMode,
   });
@@ -417,6 +435,27 @@ export function ArchivePage() {
 
       {!loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {!salesMode ? (
+            <BirzhaDisclosure defaultOpen title="Поиск накладной">
+              <label className="birzha-field-label" htmlFor="archive-naklad-search">
+                № закупочной или погрузочной накладной
+              </label>
+              <input
+                id="archive-naklad-search"
+                value={nakladSearch}
+                onChange={(e) => setNakladSearch(e.target.value)}
+                style={{ ...fieldStyle, maxWidth: "24rem" }}
+                placeholder="Например Н-2024-001"
+                autoComplete="off"
+              />
+              {nakladSearch.trim() !== nakladSearchDebounced ? (
+                <p className="birzha-text-muted birzha-text-muted--micro" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
+                  Ищем…
+                </p>
+              ) : null}
+            </BirzhaDisclosure>
+          ) : null}
+
           {reportTripId ? (
             selectedArchivedTrip ? (
               <ArchivedTripSalesReport
@@ -457,10 +496,16 @@ export function ArchivePage() {
 
           {!salesMode ? (
             <PaginatedSection
+              key={nakladSearchDebounced ? `purchase-${nakladSearchDebounced}` : "purchase-default"}
               title="Закупочные накладные"
               count={archivedNakladTotal}
-              emptyTitle="Нет накладных в архиве"
-              emptyDescription="Когда по накладной не останется остатка по партиям, документ перенесётся сюда."
+              defaultOpen={nakladSearchDebounced.length > 0 || archivedNakladTotal > 0}
+              emptyTitle={nakladSearchDebounced ? "Ничего не найдено" : "Нет накладных в архиве"}
+              emptyDescription={
+                nakladSearchDebounced
+                  ? `По запросу «${nakladSearchDebounced}» закупочных накладных в архиве нет.`
+                  : "Когда по накладной не останется остатка по партиям, документ перенесётся сюда."
+              }
               pageCount={nakladPaged.pageCount}
               pageIndex={nakladPage}
               itemLabel="накладных"
@@ -477,10 +522,16 @@ export function ArchivePage() {
 
           {!salesMode ? (
             <PaginatedSection
+              key={nakladSearchDebounced ? `manifest-${nakladSearchDebounced}` : "manifest-default"}
               title="Погрузочные накладные"
               count={archivedManifestTotal}
-              emptyTitle="Нет погрузочных в архиве"
-              emptyDescription="Погрузочные, привязанные к закрытому рейсу, отображаются здесь."
+              defaultOpen={nakladSearchDebounced.length > 0 || archivedManifestTotal > 0}
+              emptyTitle={nakladSearchDebounced ? "Ничего не найдено" : "Нет погрузочных в архиве"}
+              emptyDescription={
+                nakladSearchDebounced
+                  ? `По запросу «${nakladSearchDebounced}» погрузочных накладных в архиве нет.`
+                  : "Погрузочные, привязанные к закрытому рейсу, отображаются здесь."
+              }
               pageCount={archivedManifestPageCount}
               pageIndex={manifestPage}
               itemLabel="документов"
