@@ -398,15 +398,16 @@ export function PurchaseNakladnayaSection() {
           В справочнике нет калибров — пусть администратор добавит их в «Настройках».
         </InfoAlert>
       ) : null}
-      <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card birzha-nakl-lines-card--form">
         <table className="birzha-nakl-lines-table">
           <thead>
             <tr>
               <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
-              <th>Кг</th>
-              <th>Ящики</th>
-              <th>₽/кг</th>
+              <th className="birzha-nakl-lines-table__num">Кг</th>
+              <th className="birzha-nakl-lines-table__num">Ящики</th>
+              <th className="birzha-nakl-lines-table__num">₽/кг</th>
               <th
+                className="birzha-nakl-lines-table__num"
                 title="Сумма строки в копейках: целое число (50000) или «руб,коп» (16470,00). Кнопка «=кг×цена» подставит расчёт."
               >
                 Сумма, коп.
@@ -417,12 +418,12 @@ export function PurchaseNakladnayaSection() {
           <tbody>
             {lines.map((line) => (
               <tr key={line.key}>
-                <td>
+                <td className="birzha-nakl-lines-table__grade-cell" data-label="Товар / калибр">
                   <select
                     value={line.productGradeId}
                     onChange={(e) => updateLine(line.key, { productGradeId: e.target.value })}
-                    className="birzha-nakl-line-field"
-                    style={{ ...fieldStyle, minWidth: 180, fontSize: "0.82rem" }}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--grade"
+                    style={fieldStyle}
                     disabled={gradesQ.isPending}
                   >
                     <option value="">{gradesQ.isPending ? "Загрузка…" : "— выберите —"}</option>
@@ -437,47 +438,47 @@ export function PurchaseNakladnayaSection() {
                     ))}
                   </select>
                 </td>
-                <td>
+                <td className="birzha-nakl-lines-table__num-cell" data-label="Кг">
                   <input
                     value={line.totalKg}
                     onChange={(e) => updateLine(line.key, { totalKg: e.target.value })}
-                    className="birzha-nakl-line-field"
-                    style={{ ...fieldStyle, width: 78 }}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
+                    style={fieldStyle}
                     inputMode="decimal"
                   />
                 </td>
-                <td>
+                <td className="birzha-nakl-lines-table__num-cell" data-label="Ящики">
                   <input
                     value={line.packageCount}
                     onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
-                    className="birzha-nakl-line-field"
-                    style={{ ...fieldStyle, width: 72 }}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
+                    style={fieldStyle}
                     inputMode="decimal"
                     autoComplete="off"
                     title="Ящики, целое; можно 10,5 (округлит)"
                   />
                 </td>
-                <td>
+                <td className="birzha-nakl-lines-table__num-cell" data-label="₽/кг">
                   <input
                     value={line.pricePerKg}
                     onChange={(e) => updateLine(line.key, { pricePerKg: e.target.value })}
-                    className="birzha-nakl-line-field"
-                    style={{ ...fieldStyle, width: 78 }}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
+                    style={fieldStyle}
                     inputMode="decimal"
                   />
                 </td>
-                <td>
+                <td className="birzha-nakl-lines-table__num-cell" data-label="Сумма, коп.">
                   <input
                     value={line.lineTotalKopecks}
                     onChange={(e) => updateLine(line.key, { lineTotalKopecks: e.target.value })}
-                    className="birzha-nakl-line-field"
-                    style={{ ...fieldStyle, maxWidth: 110 }}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--sum"
+                    style={fieldStyle}
                     inputMode="decimal"
                     autoComplete="off"
                     title="Копейки: целое число или «руб,коп»; кнопка «=кг×цена» подставит сумму по кг × ₽/кг"
                   />
                 </td>
-                <td className="birzha-nakl-lines-table__actions-cell">
+                <td className="birzha-nakl-lines-table__actions-cell" data-label="Действия">
                   <div className="birzha-nakl-line-actions">
                     <button
                       type="button"
@@ -507,12 +508,14 @@ export function PurchaseNakladnayaSection() {
               <th
                 scope="row"
                 className="birzha-nakl-lines-table__total-label"
+                data-label="Итого"
                 title="Складываются все строки при вводе"
               >
                 Итого
               </th>
               <td
                 className="birzha-nakl-lines-table__total-cell"
+                data-label="Кг"
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
@@ -522,6 +525,7 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-nakl-lines-table__total-cell"
+                data-label="Ящики"
                 title="Сумма ящиков; пустое поле = 0"
               >
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
@@ -531,10 +535,13 @@ export function PurchaseNakladnayaSection() {
                   ящ.
                 </span>
               </td>
-              <td className="birzha-text-muted birzha-nakl-lines-table__total-cell">
+              <td
+                className="birzha-text-muted birzha-nakl-lines-table__total-cell birzha-nakl-lines-table__total-skip"
+                data-label="₽/кг"
+              >
                 —
               </td>
-              <td colSpan={1} className="birzha-nakl-lines-table__total-sum">
+              <td colSpan={1} className="birzha-nakl-lines-table__total-sum" data-label="Сумма">
                 <span>{kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽</span>
                 {extraCostKopecksForTotals > 0 && (
                   <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
@@ -545,18 +552,18 @@ export function PurchaseNakladnayaSection() {
                   </div>
                 )}
               </td>
-              <td className="birzha-text-subtle birzha-nakl-lines-table__total-actions" />
+              <td className="birzha-text-subtle birzha-nakl-lines-table__total-actions birzha-nakl-lines-table__total-skip" />
             </tr>
           </tfoot>
         </table>
       </div>
-      <p style={{ margin: "0.5rem 0" }}>
+      <p className="birzha-nakl-form-actions">
         <button type="button" style={btnStyle} onClick={addLine}>
           Добавить строку
         </button>
         <button
           type="button"
-          style={{ ...btnStyle, marginLeft: 8 }}
+          style={btnStyle}
           onClick={() => void submit.mutate()}
           disabled={submit.isPending}
         >

@@ -1563,6 +1563,34 @@ a.birzha-kpi-tile--link:focus-visible {
   margin-top: 0 !important;
   min-height: 2.3rem !important;
   border-radius: 10px !important;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.birzha-nakl-line-field--grade {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+.birzha-nakl-line-field--numeric {
+  width: 4.9rem;
+}
+
+.birzha-nakl-line-field--sum {
+  width: 100%;
+  max-width: 7rem;
+}
+
+.birzha-nakl-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.birzha-nakl-lines-card--form.birzha-table-scroll {
+  overflow-x: auto;
 }
 
 .birzha-nakl-line-action {
@@ -1646,6 +1674,165 @@ a.birzha-kpi-tile--link:focus-visible {
   background: var(--birzha-accent-soft);
   color: var(--color-text);
   border: 1px solid var(--color-border);
+}
+
+/* Закупочная накладная: строки товара — карточки на узком экране */
+@media (max-width: 48rem) {
+  .birzha-nakl-lines-card--form.birzha-table-scroll {
+    overflow-x: visible;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table {
+    min-width: 0;
+    display: block;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table thead {
+    display: none;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody {
+    display: block;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody tr {
+    display: block;
+    margin-bottom: 0.65rem;
+    padding: 0.72rem 0.78rem;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--birzha-surface-muted);
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 34%) 1fr;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+    border: none;
+    padding: 0.42rem 0;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__grade-cell {
+    grid-template-columns: 1fr;
+    padding-top: 0;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__grade-cell::before {
+    margin-bottom: 0.15rem;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-line-field--grade,
+  .birzha-nakl-lines-card--form .birzha-nakl-line-field--numeric,
+  .birzha-nakl-lines-card--form .birzha-nakl-line-field--sum {
+    width: 100%;
+    max-width: none;
+    font-size: 1rem;
+    min-height: 2.75rem !important;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__actions-cell {
+    grid-template-columns: 1fr;
+    padding-top: 0.35rem;
+    text-align: left;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__actions-cell::before {
+    margin-bottom: 0.1rem;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-line-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-line-action--calc {
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot {
+    display: block;
+    margin-top: 0.75rem;
+    padding: 0.72rem 0.78rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--birzha-surface-muted);
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot tr {
+    display: block;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot th,
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot td {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, 34%) 1fr;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+    border: none;
+    padding: 0.35rem 0;
+    background: transparent !important;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot th::before,
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-label {
+    display: none;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-skip {
+    display: none;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum {
+    grid-template-columns: 1fr;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum::before {
+    margin-bottom: 0.15rem;
+  }
+
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum span {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+  }
+
+  .birzha-nakl-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .birzha-nakl-form-actions button {
+    width: 100%;
+    min-height: 2.75rem;
+  }
 }
 
 .birzha-trip-search-picker__option:hover:not(:disabled) {
@@ -5367,7 +5554,7 @@ html[data-birzha-theme="dark"] .birzha-section-filters {
     font-size: 0.9rem;
   }
 
-  .birzha-table-scroll > table {
+  .birzha-table-scroll > table:not(.birzha-nakl-lines-table) {
     min-width: max-content;
   }
 
