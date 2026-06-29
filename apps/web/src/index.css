@@ -64,6 +64,11 @@
   --birzha-link: #1d4ed8;
   --birzha-link-hover: #2563eb;
   --birzha-link-visited: #4338ca;
+
+  --birzha-scrollbar-size: 8px;
+  --birzha-scrollbar-track: #e4e4e7;
+  --birzha-scrollbar-thumb: #a1a1aa;
+  --birzha-scrollbar-thumb-hover: #71717a;
 }
 
 html,
@@ -78,6 +83,53 @@ body,
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+}
+
+/* PWA: баннеры установки и обновления */
+.birzha-pwa-install,
+.birzha-pwa-toast {
+  position: fixed;
+  z-index: 10000;
+  max-width: min(440px, calc(100vw - 24px));
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--birzha-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  background: var(--birzha-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.birzha-pwa-install {
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+}
+
+.birzha-pwa-toast {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 9999;
+}
+
+.birzha-pwa-install__text,
+.birzha-pwa-toast__text {
+  margin: 0 0 0.5rem;
+}
+
+.birzha-pwa-install__actions,
+.birzha-pwa-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+html[data-birzha-theme="dark"] .birzha-pwa-install,
+html[data-birzha-theme="dark"] .birzha-pwa-toast {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
 }
 
 /* Тёмная тема: токены переопределяются на корне (см. ThemeToggle + sync в main.tsx). */
@@ -115,6 +167,10 @@ html[data-birzha-theme="dark"] {
   --birzha-link: #93c5fd;
   --birzha-link-hover: #e0f2fe;
   --birzha-link-visited: #c4b5fd;
+
+  --birzha-scrollbar-track: rgba(15, 23, 42, 0.92);
+  --birzha-scrollbar-thumb: rgba(100, 116, 139, 0.88);
+  --birzha-scrollbar-thumb-hover: rgba(148, 163, 184, 0.95);
 }
 
 html[data-birzha-theme="dark"] .birzha-cabinet-main {
@@ -1359,6 +1415,38 @@ a.birzha-kpi-tile--link:focus-visible {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
+  scrollbar-width: thin;
+  scrollbar-color: var(--birzha-scrollbar-thumb) var(--birzha-scrollbar-track);
+}
+
+.birzha-table-scroll::-webkit-scrollbar {
+  width: var(--birzha-scrollbar-size);
+  height: var(--birzha-scrollbar-size);
+}
+
+.birzha-table-scroll::-webkit-scrollbar-track {
+  background: var(--birzha-scrollbar-track);
+  border-radius: 999px;
+}
+
+.birzha-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--birzha-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--birzha-scrollbar-track);
+}
+
+.birzha-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--birzha-scrollbar-thumb-hover);
+}
+
+.birzha-table-scroll::-webkit-scrollbar-corner {
+  background: var(--birzha-scrollbar-track);
+}
+
+.birzha-disclosure__body > .birzha-table-scroll {
+  border-radius: var(--birzha-radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--birzha-surface);
 }
 
 .birzha-table-scroll > table {

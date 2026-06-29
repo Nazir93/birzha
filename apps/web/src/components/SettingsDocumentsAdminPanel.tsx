@@ -534,7 +534,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
                   <th style={thHeadDense}>Склад</th>
                   <th style={thHeadDense}>Куда</th>
                   <th style={thHeadDense}>Рейс</th>
-                  <th style={thHeadDense}>кг</th>
+                  <th style={thHeadDense}>Кг</th>
                   <th style={thHeadDense} />
                 </tr>
               </thead>

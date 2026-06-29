@@ -12,6 +12,7 @@
 cd /opt/birzha
 git fetch origin && git checkout main && git pull --ff-only origin main
 pnpm install --frozen-lockfile
+export VITE_PWA_START_URL="${VITE_PWA_START_URL:-/s}"
 pnpm exec turbo run build --force
 set -a && source apps/api/.env && set +a
 pg_dump "$DATABASE_URL" --format=custom --file "birzha-before-update-$(date +%F-%H%M).dump"
@@ -78,6 +79,35 @@ bash deploy/check-server.sh
 ```
 
 Откат схемы/данных делается только из заранее снятого `pg_dump`, не через `git checkout`.
+
+## Резервные копии БД (production)
+
+**Перед** первым вводом данных и **перед** `clean-database` / `db:push` на prod:
+
+```bash
+cd /opt/birzha
+bash deploy/backup-database.sh
+```
+
+Дамп: `backups/birzha-daily-YYYY-MM-DD-HHMMSS.dump` (формат `pg_restore`). Старые `birzha-daily-*` удаляются через **7** дней (`BIRZHA_BACKUP_KEEP_DAYS`).
+
+**Автоматически каждый день (03:15 UTC):**
+
+```bash
+cd /opt/birzha
+bash deploy/install-backup-cron.sh
+```
+
+Лог: `backups/backup.log`. Проверка: `crontab -l | grep birzha-pg-backup`.
+
+**Восстановление** (только в отдельную БД, не поверх рабочей — см. `docs/deployment/runbook.md` §9):
+
+```bash
+createdb birzha_restore_check
+pg_restore --dbname=birzha_restore_check backups/birzha-daily-....dump
+```
+
+Рекомендуется раз в месяц скачивать свежий `.dump` **на другой носитель** (не только диск VPS).
 
 ## Очистка данных (начать с нуля)
 

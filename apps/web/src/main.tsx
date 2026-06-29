@@ -8,6 +8,8 @@ import { createWebQueryClient } from "./query/create-web-query-client.js";
 import { WebQueryProvider } from "./query/WebQueryProvider.js";
 import { MutationErrorBanner } from "./query/MutationErrorBanner.js";
 import { AppErrorBoundary } from "./ui/AppErrorBoundary.js";
+import { PwaInstallBanner } from "./ui/PwaInstallBanner.js";
+import { PwaUpdateBanner } from "./ui/PwaUpdateBanner.js";
 import { RefetchDomainOnAppVisible } from "./query/RefetchDomainOnAppVisible.js";
 
 import "./index.css";
@@ -21,10 +23,12 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BirzhaThemeProvider>
       <WebQueryProvider client={queryClient}>
+        <PwaUpdateBanner />
         <RefetchDomainOnAppVisible />
         <MutationErrorBanner />
         <AuthProvider>
           <BrowserRouter>
+            <PwaInstallBanner />
             <AppErrorBoundary>
               <App />
             </AppErrorBoundary>
