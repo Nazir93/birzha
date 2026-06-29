@@ -1779,42 +1779,48 @@ a.birzha-kpi-tile--link:focus-visible {
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot tr {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.65rem;
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot th,
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot td {
-    display: grid;
-    grid-template-columns: minmax(5.5rem, 34%) 1fr;
-    align-items: center;
-    gap: 0.35rem 0.55rem;
+    display: block;
     border: none;
-    padding: 0.35rem 0;
+    padding: 0;
     background: transparent !important;
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot th::before,
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot td::before {
-    content: attr(data-label);
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--color-muted);
+    content: none;
+    display: none;
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-label {
-    display: none;
+    flex: 0 0 100%;
+    display: block;
+    margin: 0 0 0.15rem;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text);
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-skip {
     display: none;
   }
 
-  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum {
-    grid-template-columns: 1fr;
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-cell {
+    font-size: 0.88rem;
+    white-space: nowrap;
   }
 
-  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum::before {
-    margin-bottom: 0.15rem;
+  .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum {
+    flex: 0 0 100%;
+    margin-top: 0.15rem;
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table__total-sum span {

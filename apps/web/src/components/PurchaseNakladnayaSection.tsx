@@ -508,14 +508,12 @@ export function PurchaseNakladnayaSection() {
               <th
                 scope="row"
                 className="birzha-nakl-lines-table__total-label"
-                data-label="Итого"
                 title="Складываются все строки при вводе"
               >
                 Итого
               </th>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                data-label="Кг"
                 title="Сумма кг по строкам, где кг &gt; 0"
               >
                 {totalKgLabel}{" "}
@@ -525,7 +523,6 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                data-label="Ящики"
                 title="Сумма ящиков; пустое поле = 0"
               >
                 {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
@@ -537,11 +534,10 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-text-muted birzha-nakl-lines-table__total-cell birzha-nakl-lines-table__total-skip"
-                data-label="₽/кг"
               >
                 —
               </td>
-              <td colSpan={1} className="birzha-nakl-lines-table__total-sum" data-label="Сумма">
+              <td colSpan={1} className="birzha-nakl-lines-table__total-sum">
                 <span>{kopecksToRubLabel(nakladnayaFormTotals.totalLineKopecks.toString())} ₽</span>
                 {extraCostKopecksForTotals > 0 && (
                   <div style={{ fontSize: "0.8rem", marginTop: 6, fontWeight: 600, color: "var(--color-text)" }}>
