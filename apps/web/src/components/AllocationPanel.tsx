@@ -2,10 +2,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { apiGetJson, apiPostJson, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
-import type { CreateLoadingManifestResponse } from "../api/types.js";
+import { apiGetJson, apiPostJson, deleteLoadingManifestById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
+import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { isLoadingManifestNotFoundError } from "../format/user-facing-error.js";
+import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
+import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   readPreferredLoadingDestinationCode,
@@ -60,6 +61,8 @@ export function AllocationPanel() {
   /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
   const [manifestListPage, setManifestListPage] = useState(0);
+  const [deleteManifestError, setDeleteManifestError] = useState<string | null>(null);
+  const [deletingManifestId, setDeletingManifestId] = useState<string | null>(null);
 
   const workspace = useDistributionWorkspace({
     routeManifestId,
@@ -166,6 +169,43 @@ export function AllocationPanel() {
       void refreshDistributionLists(queryClient);
     },
   });
+
+  const deleteLoadingManifest = useMutation({
+    mutationFn: async (manifestId: string) => {
+      setDeleteManifestError(null);
+      setDeletingManifestId(manifestId);
+      await deleteLoadingManifestById(manifestId, "Недостаточно прав: удаление погрузочных накладных — только admin.");
+    },
+    onSuccess: async (_data, manifestId) => {
+      await refreshDistributionLists(queryClient);
+      if (manifestId === activeManifestId) {
+        void navigate(distributionBase);
+      }
+    },
+    onError: (e: unknown) => setDeleteManifestError(humanizeErrorMessage(e)),
+    onSettled: () => setDeletingManifestId(null),
+  });
+
+  const handleDeleteManifest = useCallback(
+    (manifest: LoadingManifestSummary) => {
+      const tripLabel = manifest.tripId ? (tripNumberById.get(manifest.tripId) ?? "—") : "—";
+      const label = formatLoadingManifestTableNumberLabel({
+        manifestNumber: manifest.manifestNumber,
+        destinationName: manifest.destinationName,
+        docDate: manifest.docDate,
+        tripLabel,
+      });
+      const confirmLabel = label === "—" ? manifest.destinationName || "без номера" : label;
+      if (
+        window.confirm(
+          `Удалить погрузочную накладную ${confirmLabel}? Отгруженные в рейс удалить нельзя.`,
+        )
+      ) {
+        void deleteLoadingManifest.mutate(manifest.id);
+      }
+    },
+    [deleteLoadingManifest, tripNumberById],
+  );
 
   const writeOff = useMutation({
     mutationFn: async ({ items }: { inputKey: string; items: { batchId: string; kg: number }[] }) => {
@@ -544,16 +584,23 @@ export function AllocationPanel() {
       ) : null}
 
       {!loading && !viewingSaved && distributionManifestListReady && allActiveManifestsSorted.length > 0 ? (
-        <DistributionManifestListTable
-          manifests={allActiveManifestsSorted}
-          totalCount={manifestListTotal}
-          pageIndex={manifestListPage}
-          pageCount={manifestListPageCount}
-          distributionBase={distributionBase}
-          activeManifestId={activeManifestId}
-          tripNumberById={tripNumberById}
-          onPageChange={setManifestListPage}
-        />
+        <>
+          {deleteManifestError ? (
+            <ErrorAlert message={deleteManifestError} title="Удаление погрузочной накладной" />
+          ) : null}
+          <DistributionManifestListTable
+            manifests={allActiveManifestsSorted}
+            totalCount={manifestListTotal}
+            pageIndex={manifestListPage}
+            pageCount={manifestListPageCount}
+            distributionBase={distributionBase}
+            activeManifestId={activeManifestId}
+            tripNumberById={tripNumberById}
+            deletingManifestId={deletingManifestId}
+            onPageChange={setManifestListPage}
+            onDelete={handleDeleteManifest}
+          />
+        </>
       ) : null}
 
       {!loading && distributionManifestListReady && !viewingSaved && allActiveManifestsSorted.length === 0 ? (

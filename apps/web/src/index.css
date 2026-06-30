@@ -2196,6 +2196,14 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   background: color-mix(in srgb, var(--birzha-accent) 8%, transparent);
 }
 
+.birzha-distribution-manifest-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
 .birzha-distribution-warehouse-meta {
   display: flex;
   flex-wrap: wrap;

@@ -8,6 +8,7 @@ import {
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
   formatLoadingManifestDisplayName,
+  formatLoadingManifestTableNumberLabel,
   formatManifestWarehouseNames,
   resolveLoadingManifestNumberForSave,
   filterBatchesForLoadingManifest,
@@ -218,6 +219,39 @@ describe("aggregateLoadingManifestLinesByCaliber", () => {
     expect(r5?.totalPackages).toBe(15);
     const r8 = rows.find((r) => r.caliberLabel.includes("№8"));
     expect(r8?.totalPackages).toBeNull();
+  });
+});
+
+describe("formatLoadingManifestTableNumberLabel", () => {
+  it("убирает рейс, дату и город из длинного автономера", () => {
+    expect(
+      formatLoadingManifestTableNumberLabel({
+        manifestNumber: "01 Курбан · а123но05 · 29.06.2026 · Москва · 2026-06-29",
+        destinationName: "Москва",
+        docDate: "2026-06-29",
+        tripLabel: "01 Курбан · а123но05 · 29.06.2026",
+      }),
+    ).toBe("—");
+  });
+
+  it("оставляет только отличительную часть без рейса", () => {
+    expect(
+      formatLoadingManifestTableNumberLabel({
+        manifestNumber: "С айгид · Ф500ФФ · 29.06.2026 · Москва · 2026-06-29",
+        destinationName: "Москва",
+        docDate: "2026-06-29",
+      }),
+    ).toBe("№ С айгид · Ф500ФФ");
+  });
+
+  it("показывает короткий ручной номер", () => {
+    expect(
+      formatLoadingManifestTableNumberLabel({
+        manifestNumber: "Фура-12",
+        destinationName: "Москва",
+        docDate: "2026-06-05",
+      }),
+    ).toBe("№ Фура-12");
   });
 });
 
