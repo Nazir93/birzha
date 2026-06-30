@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { gramsToKgLabel, kopecksToRubLabel } from "./money.js";
+import { gramsToKgLabel, kopecksToRubDisplay, kopecksToRubLabel } from "./money.js";
 
 describe("money format", () => {
   it("kopecksToRubLabel", () => {
@@ -8,6 +8,11 @@ describe("money format", () => {
     expect(kopecksToRubLabel("12345")).toBe("123,45");
     expect(kopecksToRubLabel("5")).toBe("0,05");
     expect(kopecksToRubLabel("-100")).toBe("-1,00");
+  });
+
+  it("kopecksToRubDisplay — пробелы в рублях", () => {
+    expect(kopecksToRubDisplay("2200000")).toBe("22 000,00");
+    expect(kopecksToRubDisplay("800000")).toBe("8 000,00");
   });
 
   it("gramsToKgLabel", () => {

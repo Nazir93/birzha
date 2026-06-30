@@ -7,6 +7,8 @@ import {
   mapWarehouseStockRows,
   proportionalPackageCount,
   remainingValueKopecks,
+  sumKopecks,
+  toKopecksBigInt,
 } from "./admin-dashboard-summary-map.js";
 
 describe("admin dashboard stock formulas", () => {
@@ -25,6 +27,11 @@ describe("admin dashboard stock formulas", () => {
   it("gramsToKg", () => {
     expect(gramsToKg(1_500_000n)).toBe(1500);
     expect(gramsToKg(null)).toBe(0);
+  });
+
+  it("sumKopecks — строки из PostgreSQL не склеиваются", () => {
+    expect(sumKopecks(["2200000", "800000", "1000000"])).toBe(4_000_000n);
+    expect(toKopecksBigInt("2200000")).toBe(2_200_000n);
   });
 });
 
@@ -59,6 +66,30 @@ describe("mapGradeStockRows", () => {
     expect(stockTotals.kg).toBe(800);
     expect(stockTotals.packages).toBe(71);
     expect(stockTotals.valueKopecks).toBe("1900000");
+  });
+
+  it("mapGradeStockRows — valueKopecks-строки из SQL суммируются", () => {
+    const { stockTotals } = mapGradeStockRows([
+      {
+        productGradeId: "g1",
+        code: "№6",
+        displayName: "Калибр №6",
+        productGroup: "Помидоры",
+        grams: 2_000_000n,
+        packages: 200,
+        valueKopecks: "2200000" as unknown as bigint,
+      },
+      {
+        productGradeId: "g2",
+        code: "№8",
+        displayName: "Калибр №8",
+        productGroup: "Помидоры",
+        grams: 1_000_000n,
+        packages: 100,
+        valueKopecks: "800000" as unknown as bigint,
+      },
+    ]);
+    expect(stockTotals.valueKopecks).toBe("3000000");
   });
 });
 

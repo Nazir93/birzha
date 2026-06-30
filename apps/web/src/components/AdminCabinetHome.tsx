@@ -17,7 +17,7 @@ import {
   productGroupTableRows,
   warehouseTableRows,
 } from "../format/admin-dashboard-summary-rows.js";
-import { kopecksToRubLabel } from "../format/money.js";
+import { kopecksToRubDisplay } from "../format/money.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
@@ -120,7 +120,7 @@ function SummaryTotalsStrip({ totals, caption }: { totals: DashboardStockSlice; 
       <span className="birzha-text-muted"> · </span>
       <strong>{formatPackages(totals.packages)} ящ.</strong>
       <span className="birzha-text-muted"> · </span>
-      <strong>{kopecksToRubLabel(totals.valueKopecks)} ₽</strong>
+      <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
       <span className="birzha-text-muted"> (оценка по закупу)</span>
     </p>
   );
@@ -145,20 +145,26 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
     return <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>;
   }
   return (
-    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-      <table style={{ ...tableStyle, minWidth: 420 }} className="birzha-admin-summary-table">
+    <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-admin-summary-table-wrap">
+      <table style={tableStyle} className="birzha-admin-summary-table">
+        <colgroup>
+          <col className="birzha-admin-summary-table__col-label" />
+          <col className="birzha-admin-summary-table__col-num" />
+          <col className="birzha-admin-summary-table__col-num" />
+          <col className="birzha-admin-summary-table__col-sum" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col" style={thHead}>
               {labelColumn}
             </th>
-            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
               Кг
             </th>
-            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
               Ящ.
             </th>
-            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
               Сумма, ₽
             </th>
           </tr>
@@ -166,7 +172,7 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
-              <th scope="row" style={thtd}>
+              <th scope="row" style={thtd} className="birzha-admin-summary-table__label-cell">
                 <div className="birzha-admin-summary-table__label">{row.label}</div>
                 {row.sublabel ? (
                   <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
@@ -180,10 +186,14 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
                   />
                 </div>
               </th>
-              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>{formatKg(row.kg)}</td>
-              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>{formatPackages(row.packages)}</td>
-              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>
-                {kopecksToRubLabel(row.valueKopecks)}
+              <td className="birzha-admin-summary-table__num" style={thtd}>
+                {formatKg(row.kg)}
+              </td>
+              <td className="birzha-admin-summary-table__num" style={thtd}>
+                {formatPackages(row.packages)}
+              </td>
+              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum" style={thtd}>
+                {kopecksToRubDisplay(row.valueKopecks)}
               </td>
             </tr>
           ))}
@@ -194,9 +204,18 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
               <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
                 Итого
               </th>
-              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{formatKg(totals.kg)}</td>
-              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{formatPackages(totals.packages)}</td>
-              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{kopecksToRubLabel(totals.valueKopecks)}</td>
+              <td className="birzha-admin-summary-table__num" style={{ ...thtd, fontWeight: 700 }}>
+                {formatKg(totals.kg)}
+              </td>
+              <td className="birzha-admin-summary-table__num" style={{ ...thtd, fontWeight: 700 }}>
+                {formatPackages(totals.packages)}
+              </td>
+              <td
+                className="birzha-admin-summary-table__num birzha-admin-summary-table__sum"
+                style={{ ...thtd, fontWeight: 700 }}
+              >
+                {kopecksToRubDisplay(totals.valueKopecks)}
+              </td>
             </tr>
           </tfoot>
         ) : null}

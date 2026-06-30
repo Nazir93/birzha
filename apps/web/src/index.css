@@ -4161,6 +4161,46 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 
 .birzha-admin-dash-modern__summary-totals {
   line-height: 1.45;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.45rem;
+}
+
+.birzha-admin-summary-table-wrap {
+  margin-top: 0.15rem;
+}
+
+.birzha-admin-summary-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.birzha-admin-summary-table__col-label {
+  width: auto;
+}
+
+.birzha-admin-summary-table__col-num {
+  width: 4.75rem;
+}
+
+.birzha-admin-summary-table__col-sum {
+  width: 6.75rem;
+}
+
+.birzha-admin-summary-table__num-head,
+.birzha-admin-summary-table__num {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.birzha-admin-summary-table__sum {
+  padding-right: 0.35rem !important;
+}
+
+.birzha-admin-summary-table__label-cell {
+  overflow: hidden;
 }
 
 .birzha-admin-summary-table__label {

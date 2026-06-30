@@ -1,8 +1,36 @@
+import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../application/units/rub-kopecks.js";
+
 export function gramsToKg(grams: bigint | number | null | undefined): number {
   if (grams == null) {
     return 0;
   }
   return Number(grams) / 1000;
+}
+
+/** Копейки из SQL/Drizzle (bigint, string или number) — без склеивания строк. */
+export function toKopecksBigInt(value: unknown): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return BigInt(Math.trunc(value));
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      return 0n;
+    }
+    return BigInt(trimmed);
+  }
+  return 0n;
+}
+
+export function sumKopecks(values: Iterable<unknown>): bigint {
+  let sum = 0n;
+  for (const value of values) {
+    sum += toKopecksBigInt(value);
+  }
+  return sum;
 }
 
 export type RawGradeStockRow = {
@@ -73,8 +101,6 @@ export function proportionalPackageCount(
   return Math.round(Number((remainingGrams * packageCount) / totalGrams));
 }
 
-import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../application/units/rub-kopecks.js";
-
 /** Оценка остатка по закупочной цене, копейки (pricePerKg — rub/kg). */
 export function remainingValueKopecks(remainingGrams: bigint, pricePerKg: string | number): bigint {
   const rub = typeof pricePerKg === "number" ? pricePerKg : Number(pricePerKg);
@@ -87,15 +113,14 @@ export function mapGradeStockRows(rows: RawGradeStockRow[]): {
 } {
   let stockKg = 0;
   let stockPackages = 0;
-  let stockValueKopecks = 0n;
 
   const byGrade = rows
     .map((row) => {
       const kg = gramsToKg(row.grams);
       const packages = Math.round(row.packages);
+      const valueKopecks = toKopecksBigInt(row.valueKopecks);
       stockKg += kg;
       stockPackages += packages;
-      stockValueKopecks += row.valueKopecks;
       return {
         productGradeId: row.productGradeId,
         code: row.code,
@@ -103,10 +128,12 @@ export function mapGradeStockRows(rows: RawGradeStockRow[]): {
         productGroup: row.productGroup,
         kg,
         packages,
-        valueKopecks: row.valueKopecks.toString(),
+        valueKopecks: valueKopecks.toString(),
       };
     })
     .sort((a, b) => b.kg - a.kg);
+
+  const stockValueKopecks = sumKopecks(byGrade.map((row) => row.valueKopecks));
 
   return {
     byGrade,
@@ -125,7 +152,7 @@ export function mapWarehouseStockRows(rows: RawWarehouseStockRow[]): MappedWareh
       warehouseName: row.warehouseName,
       kg: gramsToKg(row.grams),
       packages: Math.round(row.packages),
-      valueKopecks: row.valueKopecks.toString(),
+      valueKopecks: toKopecksBigInt(row.valueKopecks).toString(),
     }))
     .sort((a, b) => b.kg - a.kg);
 }
@@ -144,7 +171,7 @@ export function mapProductGroupStockRows(rows: RawProductGroupStockRow[]): {
         productGroup: name,
         kg,
         packages: Math.round(row.packages),
-        valueKopecks: row.valueKopecks.toString(),
+        valueKopecks: toKopecksBigInt(row.valueKopecks).toString(),
       };
     })
     .sort((a, b) => b.kg - a.kg);
