@@ -111,10 +111,13 @@ body,
 }
 
 .birzha-pwa-toast {
-  bottom: max(12px, env(safe-area-inset-bottom));
-  left: max(12px, env(safe-area-inset-left));
-  right: max(12px, env(safe-area-inset-right));
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
   z-index: 9999;
+  text-align: center;
 }
 
 .birzha-pwa-install__text,
@@ -127,6 +130,10 @@ body,
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.birzha-pwa-toast__actions {
+  justify-content: center;
 }
 
 html[data-birzha-theme="dark"] .birzha-pwa-install,
@@ -1897,6 +1904,175 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-trip-search-picker__option:hover:not(:disabled) {
   border-color: var(--color-border) !important;
   background: var(--birzha-surface-muted) !important;
+}
+
+/* Закупочная накладная (/a/purchase-nakladnaya): без карточных рамок, компактная сетка */
+.birzha-purchase-nakl-page.birzha-panel {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.app-shell--cabinet .birzha-purchase-nakl-page.birzha-panel {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.app-shell--cabinet .birzha-purchase-nakl-page.birzha-panel:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.birzha-purchase-nakl-page .birzha-purchase-nakl-disclosure.birzha-disclosure {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.birzha-purchase-nakl-page .birzha-disclosure__summary {
+  padding: 0 0 0.65rem;
+}
+
+.birzha-purchase-nakl-page .birzha-disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0;
+}
+
+.birzha-purchase-nakl-meta-grid {
+  display: grid;
+  gap: 0.75rem 1.1rem;
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 40rem) {
+  .birzha-purchase-nakl-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.birzha-purchase-nakl-page .birzha-purchase-nakl-meta-grid input,
+.birzha-purchase-nakl-page .birzha-purchase-nakl-meta-grid select {
+  border: none;
+  background: var(--birzha-surface-muted);
+  box-shadow: none;
+}
+
+.birzha-purchase-nakl-page .birzha-purchase-nakl-meta-grid input:focus-visible,
+.birzha-purchase-nakl-page .birzha-purchase-nakl-meta-grid select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--birzha-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-card {
+  margin-top: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.birzha-purchase-nakl-page .birzha-disclosure__body > .birzha-table-scroll {
+  border: none;
+  background: transparent;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-table th,
+.birzha-purchase-nakl-page .birzha-nakl-lines-table td,
+.birzha-purchase-nakl-page .birzha-data-table th,
+.birzha-purchase-nakl-page .birzha-data-table td {
+  border-bottom: none;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-table thead th,
+.birzha-purchase-nakl-page .birzha-data-table thead th {
+  background: transparent !important;
+  padding-top: 0;
+  padding-bottom: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-table tbody tr:hover td,
+.birzha-purchase-nakl-page .birzha-data-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--birzha-accent) 6%, transparent);
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-table tfoot th,
+.birzha-purchase-nakl-page .birzha-nakl-lines-table tfoot td {
+  background: transparent !important;
+  padding-top: 0.55rem;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-lines-table__total-sum span {
+  border: none;
+  background: color-mix(in srgb, var(--birzha-accent) 14%, var(--birzha-surface-muted));
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-line-field {
+  border: none;
+  background: var(--birzha-surface-muted);
+  box-shadow: none;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-line-field:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--birzha-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-line-action {
+  border: none !important;
+  box-shadow: none;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-form-actions {
+  margin: 0;
+  gap: 0.55rem;
+}
+
+.birzha-purchase-nakl-page .birzha-nakl-form-actions button {
+  margin-top: 0;
+  margin-right: 0;
+}
+
+.birzha-purchase-nakl-list {
+  margin-top: 1.35rem;
+  padding-top: 0.25rem;
+}
+
+.birzha-purchase-nakl-list--empty {
+  margin-top: 0.85rem;
+}
+
+.birzha-purchase-nakl-list__title {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+@media (max-width: 48rem) {
+  .birzha-purchase-nakl-page .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody tr {
+    border: none;
+    border-radius: 10px;
+    background: var(--birzha-surface-muted);
+  }
+
+  .birzha-purchase-nakl-page .birzha-nakl-lines-card--form .birzha-nakl-lines-table tfoot {
+    border: none;
+    background: transparent;
+  }
 }
 
 /* Разделители секций внутри длинных страниц (/o, формы) */
@@ -3784,12 +3960,15 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-mass-ring--interactive {
-  cursor: default;
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23dc2626' stroke='%23ffffff' stroke-width='1.1' d='M2 2 L2 14 L6.5 10.5 L9.5 16 L11.5 15 L8.5 9.5 L14.5 9.5 Z'/%3E%3C/svg%3E")
+      2 2,
+    auto;
   touch-action: none;
 }
 
 .birzha-admin-mass-ring__tooltip {
-  position: fixed;
+  position: absolute;
   z-index: 120;
   pointer-events: none;
   display: flex;

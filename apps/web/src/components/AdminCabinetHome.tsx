@@ -17,7 +17,6 @@ import {
   isMassRingPointerOnDonut,
   massRingPointerAngleDeg,
   massSegmentAtRingAngle,
-  productGroupTableRows,
   warehouseTableRows,
 } from "../format/admin-dashboard-summary-rows.js";
 import { buildAdminSummaryAlerts } from "../format/admin-summary-alerts.js";
@@ -36,12 +35,12 @@ import { btnStyleInline } from "../ui/styles.js";
 const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
-type SummaryChartMode = "mass" | "warehouses" | "products";
+type SummaryChartMode = "mass" | "warehouses";
 type SummaryPeriod = "today" | "7d" | "30d" | "all";
 
 type MassRingTooltip = {
-  clientX: number;
-  clientY: number;
+  x: number;
+  y: number;
   label: string;
   kg: number;
 };
@@ -57,6 +56,7 @@ function MassDistributionRing({
   inTripKg: number;
   soldKg: number;
 }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<MassRingTooltip | null>(null);
   const segments = useMemo(
@@ -89,7 +89,8 @@ function MassDistributionRing({
 
   const updateTooltip = (clientX: number, clientY: number) => {
     const el = ringRef.current;
-    if (!el) {
+    const wrap = wrapRef.current;
+    if (!el || !wrap) {
       return;
     }
     const rect = el.getBoundingClientRect();
@@ -103,11 +104,17 @@ function MassDistributionRing({
       setTooltip(null);
       return;
     }
-    setTooltip({ clientX, clientY, label: segment.label, kg: segment.kg });
+    const wrapRect = wrap.getBoundingClientRect();
+    setTooltip({
+      x: clientX - wrapRect.left + 6,
+      y: clientY - wrapRect.top + 6,
+      label: segment.label,
+      kg: segment.kg,
+    });
   };
 
   return (
-    <div className="birzha-admin-mass-ring-wrap">
+    <div ref={wrapRef} className="birzha-admin-mass-ring-wrap">
       <div
         ref={ringRef}
         className="birzha-admin-mass-ring birzha-admin-mass-ring--interactive"
@@ -122,7 +129,7 @@ function MassDistributionRing({
       {tooltip ? (
         <div
           className="birzha-admin-mass-ring__tooltip"
-          style={{ left: tooltip.clientX + 12, top: tooltip.clientY + 12 }}
+          style={{ left: tooltip.x, top: tooltip.y }}
           role="tooltip"
         >
           <span className="birzha-admin-mass-ring__tooltip-label">{tooltip.label}</span>
@@ -340,7 +347,7 @@ function periodStartDate(period: SummaryPeriod): Date | null {
 }
 
 /**
- * Дашборд администратора: KPI, распределение массы, топ складов/видов товара, рейсы.
+ * Дашборд администратора: KPI, распределение массы, сводка по складам, рейсы.
  */
 export function AdminCabinetHome() {
   const { user } = useAuth();
@@ -378,7 +385,6 @@ export function AdminCabinetHome() {
         stockTotals: { kg: 0, packages: 0, valueKopecks: "0" },
         byGrade: [],
         byWarehouse: [],
-        byProductGroup: [],
       };
     }
     return {
@@ -398,7 +404,6 @@ export function AdminCabinetHome() {
       stockTotals: summary.warehouse.stockTotals,
       byGrade: summary.warehouse.byGrade,
       byWarehouse: summary.warehouse.byWarehouse,
-      byProductGroup: summary.warehouse.byProductGroup,
     };
   }, [summaryQ.data]);
 
@@ -422,19 +427,10 @@ export function AdminCabinetHome() {
 
   const gradeRows = useMemo(() => gradeTableRows(aggregates.byGrade), [aggregates.byGrade]);
   const warehouseRows = useMemo(() => warehouseTableRows(aggregates.byWarehouse), [aggregates.byWarehouse]);
-  const productGroupRows = useMemo(
-    () => productGroupTableRows(aggregates.byProductGroup),
-    [aggregates.byProductGroup],
-  );
   const summaryTableMaxKg = useMemo(() => {
-    const rows =
-      summaryChartMode === "mass"
-        ? gradeRows
-        : summaryChartMode === "warehouses"
-          ? warehouseRows
-          : productGroupRows;
+    const rows = summaryChartMode === "mass" ? gradeRows : warehouseRows;
     return rows[0]?.kg ?? 0;
-  }, [gradeRows, productGroupRows, summaryChartMode, warehouseRows]);
+  }, [gradeRows, summaryChartMode, warehouseRows]);
 
   const massSegments = useMemo(
     () =>
@@ -454,7 +450,6 @@ export function AdminCabinetHome() {
 
   const showMassChart = summaryChartMode === "mass";
   const showWarehouseChart = summaryChartMode === "warehouses";
-  const showProductChart = summaryChartMode === "products";
   const openTripsReadyToClose = useMemo(
     () => sortedTripsOpen.filter((t) => t.status === "open" && tripListFullySold(t)).length,
     [sortedTripsOpen],
@@ -636,14 +631,6 @@ export function AdminCabinetHome() {
                 >
                   По складам
                 </button>
-                <button
-                  type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryChartMode === "products" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => setSummaryChartMode("products")}
-                >
-                  По видам товара
-                </button>
               </div>
               <SummaryTotalsStrip
                 totals={aggregates.stockTotals}
@@ -680,17 +667,6 @@ export function AdminCabinetHome() {
                     totals={aggregates.stockTotals}
                     maxKg={summaryTableMaxKg}
                     nestedGrades
-                  />
-                </>
-              ) : null}
-              {showProductChart ? (
-                <>
-                  <h5 className="birzha-admin-dash-modern__subhead">По видам товара</h5>
-                  <SummaryStockTable
-                    labelColumn="Вид"
-                    rows={productGroupRows}
-                    totals={aggregates.stockTotals}
-                    maxKg={summaryTableMaxKg}
                   />
                 </>
               ) : null}
