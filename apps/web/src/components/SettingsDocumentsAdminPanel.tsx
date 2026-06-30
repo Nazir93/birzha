@@ -15,9 +15,9 @@ import {
 import {
   loadingManifestsPagedQueryOptions,
   purchaseDocumentsFullListQueryOptions,
-  queryRoots,
   tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
+import { refreshDistributionLists, refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { useAuth } from "../auth/auth-context.js";
 import { adminRoutes } from "../routes.js";
 import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/trip-label.js";
@@ -285,11 +285,8 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
   const [savingManifestId, setSavingManifestId] = useState<string | null>(null);
   const [savingTripId, setSavingTripId] = useState<string | null>(null);
 
-  const invalidateAll = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.loadingManifest });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+  const invalidateAll = useCallback(async () => {
+    await Promise.all([refreshPurchaseAndBatchLists(queryClient), refreshDistributionLists(queryClient)]);
   }, [queryClient]);
 
   const purchaseDocsQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled: purchaseEnabled });

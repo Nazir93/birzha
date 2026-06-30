@@ -14,7 +14,7 @@ import {
 } from "../../format/loading-manifest-trip-assign-lock.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
-import { btnStyle, tableStyle, thHead, thtd } from "../../ui/styles.js";
+import { fieldStyle } from "../../ui/styles.js";
 
 function formatPkg(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) {
@@ -147,21 +147,23 @@ export function LoadingManifestAccordion({
                   </>
                 ) : null}
               </p>
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 420 }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+                <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 420 }}>
                   <thead>
                     <tr>
-                      <th style={thHead}>Калибр</th>
-                      <th style={thHead}>Кг</th>
-                      <th style={thHead}>Ящ.</th>
+                      <th>Калибр</th>
+                      <th className="birzha-data-table__num">Кг</th>
+                      <th className="birzha-data-table__num">Ящ.</th>
                     </tr>
                   </thead>
                   <tbody>
                     {caliberRows.map((r) => (
                       <tr key={r.caliberLabel}>
-                        <td style={thtd}>{r.caliberLabel}</td>
-                        <td style={thtd}>{r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
-                        <td style={thtd}>
+                        <td>{r.caliberLabel}</td>
+                        <td className="birzha-data-table__num">
+                          {r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="birzha-data-table__num">
                           {r.totalPackages != null ? r.totalPackages.toLocaleString("ru-RU") : "—"}
                         </td>
                       </tr>
@@ -169,15 +171,15 @@ export function LoadingManifestAccordion({
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
+                      <th scope="row" style={{ fontWeight: 700 }}>
                         Итого
                       </th>
-                      <td style={thtd}>
+                      <td className="birzha-data-table__num">
                         {caliberRows
                           .reduce((a, r) => a + r.totalKg, 0)
                           .toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                       </td>
-                      <td style={thtd}>
+                      <td className="birzha-data-table__num">
                         {caliberRows.some((r) => r.totalPackages != null)
                           ? caliberRows
                               .reduce((a, r) => a + (r.totalPackages ?? 0), 0)
@@ -188,13 +190,13 @@ export function LoadingManifestAccordion({
                   </tfoot>
                 </table>
               </div>
-              <div className="no-print" style={{ marginTop: "0.65rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                <button type="button" style={btnStyle} onClick={() => window.print()}>
+              <div className="no-print birzha-clean-ops-row-actions" style={{ marginTop: "0.65rem" }}>
+                <button type="button" className="birzha-clean-ops-row-action" onClick={() => window.print()}>
                   Печать накладной
                 </button>
                 <button
                   type="button"
-                  style={btnStyle}
+                  className="birzha-clean-ops-row-action"
                   onClick={() => {
                     const csv = loadingManifestRoadCsvContent({
                       manifestNumber: detail.manifestNumber,
@@ -244,14 +246,11 @@ export function LoadingManifestAccordion({
                   </p>
                 ) : (
                   <>
-                    <div
-                      className="no-print"
-                      style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}
-                    >
+                    <div className="no-print birzha-clean-ops-row-actions">
                       <select
                         value={assignTripId}
                         onChange={(e) => setAssignTripId(e.target.value)}
-                        style={{ minWidth: "16rem" }}
+                        style={{ ...fieldStyle, minWidth: "16rem" }}
                       >
                         <option value="">— выбрать рейс —</option>
                         {trips.map((t) => (
@@ -262,7 +261,7 @@ export function LoadingManifestAccordion({
                       </select>
                       <button
                         type="button"
-                        style={btnStyle}
+                        className="birzha-clean-ops-row-action"
                         disabled={assignTrip.isPending || !assignTripId}
                         onClick={() => assignTrip.mutate()}
                       >
@@ -289,29 +288,31 @@ export function LoadingManifestAccordion({
                 <span className="birzha-disclosure__hint">{detail.lines.length} строк</span>
               </summary>
               <div className="birzha-disclosure__body">
-                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                  <table style={{ ...tableStyle, minWidth: 740 }}>
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+                  <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 740 }}>
                     <thead>
                       <tr>
-                        <th style={thHead}>№</th>
-                        {showLineWarehouseColumn ? <th style={thHead}>Склад</th> : null}
-                        <th style={thHead}>Накладная закупки</th>
-                        <th style={thHead}>Калибр</th>
-                        <th style={thHead}>Кг</th>
-                        <th style={thHead}>Ящ.</th>
+                        <th>№</th>
+                        {showLineWarehouseColumn ? <th>Склад</th> : null}
+                        <th>Накладная закупки</th>
+                        <th>Калибр</th>
+                        <th className="birzha-data-table__num">Кг</th>
+                        <th className="birzha-data-table__num">Ящ.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {detail.lines.map((line) => (
                         <tr key={line.batchId}>
-                          <td style={thtd}>{line.lineNo}</td>
+                          <td>{line.lineNo}</td>
                           {showLineWarehouseColumn ? (
-                            <td style={thtd}>{line.warehouseName?.trim() || "—"}</td>
+                            <td>{line.warehouseName?.trim() || "—"}</td>
                           ) : null}
-                          <td style={thtd}>{line.purchaseDocumentNumber ?? "—"}</td>
-                          <td style={thtd}>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
-                          <td style={thtd}>{line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</td>
-                          <td style={thtd}>{line.packageCount ?? "—"}</td>
+                          <td>{line.purchaseDocumentNumber ?? "—"}</td>
+                          <td>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
+                          <td className="birzha-data-table__num">
+                            {line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="birzha-data-table__num">{line.packageCount ?? "—"}</td>
                         </tr>
                       ))}
                     </tbody>

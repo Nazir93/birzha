@@ -82,3 +82,13 @@ export function humanizeErrorMessage(error: unknown): string {
 
   return withoutUrl;
 }
+
+/** Погрузочная ПН удалена или URL устарел (HTTP 404 / код API). */
+export function isLoadingManifestNotFoundError(error: unknown): boolean {
+  const raw = error instanceof Error ? error.message.trim() : String(error ?? "").trim();
+  if (/loading_manifest_not_found/i.test(raw)) {
+    return true;
+  }
+  const human = humanizeErrorMessage(error);
+  return /погрузочн.*не найден/i.test(human) || human === ERROR_CODE_RU.loading_manifest_not_found;
+}

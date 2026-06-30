@@ -26,16 +26,21 @@ function formatPgDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** ПН «в работе»: без рейса, рейс не закрыт или trip row отсутствует. */
+export function loadingManifestActiveScopeWhere(): SQL {
+  return or(
+    sql`${loadingManifests.tripId} IS NULL`,
+    sql`${trips.status} IS NULL`,
+    sql`${trips.status} <> 'closed'`,
+  )!;
+}
+
 function scopeWhere(scope: LoadingManifestListScope | undefined): SQL | undefined {
   if (scope === "archived") {
     return and(sql`${loadingManifests.tripId} IS NOT NULL`, eq(trips.status, "closed"));
   }
   if (scope === "active") {
-    return or(
-      sql`${loadingManifests.tripId} IS NULL`,
-      sql`${trips.status} IS NULL`,
-      sql`${trips.status} <> 'closed'`,
-    );
+    return loadingManifestActiveScopeWhere();
   }
   return undefined;
 }

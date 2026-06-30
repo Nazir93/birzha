@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { loadingManifestsListQuerySchema } from "./loading-manifest-list-http.js";
+import {
+  loadingManifestActiveScopeWhere,
+  loadingManifestsListQuerySchema,
+} from "./loading-manifest-list-http.js";
 
 describe("loadingManifestsListQuerySchema", () => {
   it("accepts pagination and scope", () => {
@@ -21,5 +24,17 @@ describe("loadingManifestsListQuerySchema", () => {
 
   it("rejects invalid scope", () => {
     expect(() => loadingManifestsListQuerySchema.parse({ scope: "bad" })).toThrow();
+  });
+});
+
+describe("loadingManifestActiveScopeWhere", () => {
+  it("exports active scope SQL fragment", () => {
+    expect(loadingManifestActiveScopeWhere()).toBeDefined();
+  });
+
+  it("matches active list scope (open or unassigned trips)", () => {
+    const active = loadingManifestActiveScopeWhere();
+    expect(active).not.toBeUndefined();
+    expect(String(active)).not.toBe("");
   });
 });

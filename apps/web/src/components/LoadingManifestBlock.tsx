@@ -13,7 +13,7 @@ import {
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnStyle, btnStyleInline, fieldStyle } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
 
@@ -149,27 +149,24 @@ export function LoadingManifestBlock({
         </p>
       )}
       {documentOptions.length > 0 && (
-        <div className="no-print" style={{ marginBottom: "0.75rem" }}>
-          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+        <div className="no-print birzha-clean-ops-meta-grid birzha-distribution-doc-checkboxes" style={{ marginBottom: "0.75rem" }}>
+          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem", gridColumn: "1 / -1" }}>
             Включить в отбор (один раз на документ)
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem 0.75rem", alignItems: "center" }}>
-            {documentOptions.map((d) => (
-              <label
-                key={d.id}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}
-              >
-                <input type="checkbox" checked={selectedDocIds.has(d.id)} onChange={() => onToggleNaklDoc(d.id)} />
-                {d.checkboxLabel}
-              </label>
-            ))}
+          {documentOptions.map((d) => (
+            <label key={d.id} className="birzha-form-label" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" checked={selectedDocIds.has(d.id)} onChange={() => onToggleNaklDoc(d.id)} />
+              {d.checkboxLabel}
+            </label>
+          ))}
+          <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
             <button type="button" style={btnStyleInline} onClick={onSelectAllNakl}>
               Все
             </button>
             <button type="button" style={btnStyleInline} onClick={onClearNakl}>
               Снять
             </button>
-          </div>
+          </span>
         </div>
       )}
 
@@ -245,13 +242,13 @@ export function LoadingManifestBlock({
                   накладным
                 </label>
               </div>
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 560 }}>
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+                <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 560 }}>
                   <thead>
                     <tr>
-                      <th style={thHead}>{writeOffGroupMode === "caliber" ? "Калибр" : "Накладная"}</th>
-                      <th style={thHead}>Остаток, кг</th>
-                      <th style={thHead}>Списать, кг</th>
+                      <th>{writeOffGroupMode === "caliber" ? "Калибр" : "Накладная"}</th>
+                      <th className="birzha-data-table__num">Остаток, кг</th>
+                      <th>Списать, кг</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -260,16 +257,16 @@ export function LoadingManifestBlock({
                           const inputKey = writeOffKeyCaliber(row.lineLabel);
                           return (
                             <tr key={`wo-cal-${row.lineLabel}`}>
-                              <td style={thtd}>
+                              <td>
                                 <strong>{row.lineLabel}</strong>
                                 <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
                                   {row.partCount} парт.
                                 </span>
                               </td>
-                              <td style={thtd}>
+                              <td className="birzha-data-table__num">
                                 {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                               </td>
-                              <td style={thtd}>
+                              <td>
                                 <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                                   <input
                                     type="text"
@@ -318,7 +315,7 @@ export function LoadingManifestBlock({
                           const inputKey = writeOffKeyDocument(row.rowKey);
                           return (
                             <tr key={`wo-doc-${row.rowKey}`}>
-                              <td style={thtd}>
+                              <td>
                                 {row.documentId ? (
                                   <Link
                                     to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
@@ -333,10 +330,10 @@ export function LoadingManifestBlock({
                                   {row.partCount} парт.
                                 </span>
                               </td>
-                              <td style={thtd}>
+                              <td className="birzha-data-table__num">
                                 {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                               </td>
-                              <td style={thtd}>
+                              <td>
                                 <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                                   <input
                                     type="text"
@@ -430,10 +427,9 @@ export function LoadingManifestBlock({
             </label>
           </div>
 
-          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
             <table
-              style={tableStyle}
-              className="loading-manifest-table"
+              className="birzha-data-table birzha-data-table--compact loading-manifest-table"
               aria-labelledby={stockTableLabelId}
               aria-describedby={modeToggleId}
               aria-label={stockTableMode === "caliber" ? "Остаток по калибрам" : "Остаток по накладным"}
@@ -441,21 +437,17 @@ export function LoadingManifestBlock({
               <thead>
                 <tr>
                   {stockTableMode === "caliber" ? (
-                    <th scope="col" style={thHead}>
-                      Калибр (как в накладной)
-                    </th>
+                    <th scope="col">Калибр (как в накладной)</th>
                   ) : (
-                    <th scope="col" style={thHead}>
-                      Накладная
-                    </th>
+                    <th scope="col">Накладная</th>
                   )}
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                  <th scope="col" className="birzha-data-table__num">
                     На складе, кг
                   </th>
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                  <th scope="col" className="birzha-data-table__num">
                     Ящ. (оц.)
                   </th>
-                  <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                  <th scope="col" className="birzha-data-table__num">
                     Парт.
                   </th>
                 </tr>
@@ -464,21 +456,21 @@ export function LoadingManifestBlock({
                 {stockTableMode === "caliber"
                   ? caliberRows.map((row) => (
                       <tr key={row.lineLabel}>
-                        <td style={thtd}>
+                        <td>
                           <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{row.lineLabel}</span>
                         </td>
-                        <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                        <td className="birzha-data-table__num birzha-data-table__emph">
                           {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>
+                        <td className="birzha-data-table__num">
                           {row.linesWithPkg === 0 ? "—" : `≈ ${row.totalPkg}`}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>{row.partCount}</td>
+                        <td className="birzha-data-table__num">{row.partCount}</td>
                       </tr>
                     ))
                   : documentRows.map((row) => (
                       <tr key={row.rowKey}>
-                        <td style={thtd}>
+                        <td>
                           {row.documentId ? (
                             <Link
                               to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
@@ -490,28 +482,30 @@ export function LoadingManifestBlock({
                             <span style={{ fontSize: "0.92rem", fontWeight: 600 }}>{row.displayLabel}</span>
                           )}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                        <td className="birzha-data-table__num birzha-data-table__emph">
                           {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>
+                        <td className="birzha-data-table__num">
                           {row.linesWithPkg === 0 ? "—" : `≈ ${row.totalPkg}`}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>{row.partCount}</td>
+                        <td className="birzha-data-table__num">{row.partCount}</td>
                       </tr>
                     ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <th scope="row" style={{ ...thtd, fontWeight: 700, textAlign: "left" }}>
+                  <th scope="row" style={{ fontWeight: 700, textAlign: "left" }}>
                     Итого
                   </th>
-                  <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                  <td className="birzha-data-table__num" style={{ fontWeight: 700 }}>
                     {totals.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                   </td>
-                  <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                  <td className="birzha-data-table__num" style={{ fontWeight: 700 }}>
                     {totals.linesWithPkg === 0 ? "—" : `≈ ${totals.pkg.toLocaleString("ru-RU")}`}
                   </td>
-                  <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{totals.batchCount}</td>
+                  <td className="birzha-data-table__num" style={{ fontWeight: 700 }}>
+                    {totals.batchCount}
+                  </td>
                 </tr>
               </tfoot>
             </table>

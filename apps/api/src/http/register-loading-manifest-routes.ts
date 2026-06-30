@@ -44,6 +44,7 @@ import { DrizzleBatchRepository } from "../infrastructure/persistence/drizzle-ba
 import { DrizzleTripShipmentRepository } from "../infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import {
   listLoadingManifestsForHttp,
+  loadingManifestActiveScopeWhere,
   loadingManifestsListQuerySchema,
 } from "./loading-manifest-list-http.js";
 
@@ -203,7 +204,8 @@ export function registerLoadingManifestRoutes(
         .select({ batchId: loadingManifestLines.batchId })
         .from(loadingManifestLines)
         .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
-        .where(eq(loadingManifests.warehouseId, q.warehouseId))
+        .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
+        .where(and(eq(loadingManifests.warehouseId, q.warehouseId), loadingManifestActiveScopeWhere()))
         .groupBy(loadingManifestLines.batchId);
       return reply.send({ batchIds: rows.map((r) => r.batchId) });
     } catch (error) {

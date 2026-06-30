@@ -1,0 +1,96 @@
+import { Link } from "react-router-dom";
+
+import type { LoadingManifestSummary } from "../../api/types.js";
+import { formatLoadingManifestDisplayName } from "../../format/loading-manifest.js";
+import { BirzhaPagination } from "../../ui/BirzhaPagination.js";
+
+function formatManifestPackages(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return "—";
+  }
+  return value.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+}
+
+type Props = {
+  manifests: LoadingManifestSummary[];
+  totalCount: number;
+  pageIndex: number;
+  pageCount: number;
+  distributionBase: string;
+  activeManifestId: string;
+  tripNumberById: Map<string, string>;
+  onPageChange: (page: number) => void;
+};
+
+export function DistributionManifestListTable({
+  manifests,
+  totalCount,
+  pageIndex,
+  pageCount,
+  distributionBase,
+  activeManifestId,
+  tripNumberById,
+  onPageChange,
+}: Props) {
+  return (
+    <div className="birzha-clean-ops-list">
+      <h4 className="birzha-clean-ops-list__title">
+        Сохранённые погрузочные накладные ({totalCount.toLocaleString("ru-RU")})
+      </h4>
+      <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+        <table className="birzha-data-table birzha-data-table--compact" aria-label="Сохранённые погрузочные накладные">
+          <thead>
+            <tr>
+              <th>Накладная</th>
+              <th>Рейс</th>
+              <th>Дата</th>
+              <th>Склад</th>
+              <th>Город</th>
+              <th className="birzha-data-table__num">Кг</th>
+              <th className="birzha-data-table__num">Ящ.</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {manifests.map((m) => {
+              const isCurrent = m.id === activeManifestId;
+              return (
+                <tr key={m.id} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
+                  <td>
+                    <strong>
+                      {formatLoadingManifestDisplayName({
+                        manifestNumber: m.manifestNumber,
+                        destinationName: m.destinationName,
+                      })}
+                    </strong>
+                  </td>
+                  <td>{m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—"}</td>
+                  <td className="birzha-data-table__emph">{m.docDate}</td>
+                  <td>{m.warehouseName}</td>
+                  <td>{m.destinationName}</td>
+                  <td className="birzha-data-table__num">
+                    {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="birzha-data-table__num">{formatManifestPackages(m.packagesApprox)}</td>
+                  <td>
+                    <Link to={`${distributionBase}/${encodeURIComponent(m.id)}`} className="birzha-clean-ops-text-btn">
+                      {isCurrent ? "Открыта" : "Открыть · печать"}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {pageCount > 1 ? (
+        <BirzhaPagination
+          pageIndex={pageIndex}
+          pageCount={pageCount}
+          itemLabel="погрузочных"
+          onPageChange={onPageChange}
+        />
+      ) : null}
+    </div>
+  );
+}

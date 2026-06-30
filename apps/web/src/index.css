@@ -2172,6 +2172,54 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   font-weight: 700;
 }
 
+.birzha-clean-ops-text-btn {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--birzha-accent);
+  text-decoration: underline;
+  cursor: var(--birzha-cursor-red);
+}
+
+.birzha-clean-ops-text-btn:hover {
+  color: color-mix(in srgb, var(--birzha-accent) 85%, var(--color-text));
+}
+
+.birzha-data-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.birzha-distribution-manifest-row--current td {
+  background: color-mix(in srgb, var(--birzha-accent) 8%, transparent);
+}
+
+.birzha-distribution-warehouse-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.birzha-clean-ops-meta-grid--warehouse {
+  margin-bottom: 0.85rem;
+}
+
+.birzha-distribution-doc-checkboxes {
+  align-items: center;
+}
+
+.birzha-clean-ops-page .birzha-distribution-detail {
+  margin-top: 1rem;
+}
+
+.birzha-clean-ops-list__title--step {
+  margin-top: 0.35rem;
+}
+
 @media (max-width: 48rem) {
   .birzha-clean-ops-page .birzha-nakl-lines-card--form .birzha-nakl-lines-table tbody tr {
     border: none;
