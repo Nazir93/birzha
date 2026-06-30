@@ -167,11 +167,32 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
       count: sql<number>`count(distinct ${loadingManifests.id})::int`,
       withoutTrip: sql<number>`count(distinct ${loadingManifests.id}) filter (where ${loadingManifests.tripId} is null)::int`,
       sumGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}), 0)`,
+      withoutTripGrams: sql<bigint>`coalesce(sum(${loadingManifestLines.grams}) filter (where ${loadingManifests.tripId} is null), 0)`,
     })
     .from(loadingManifests)
     .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
     .leftJoin(loadingManifestLines, eq(loadingManifestLines.manifestId, loadingManifests.id))
     .where(manifestWhere);
+
+  const [transitTotals] = await db
+    .select({
+      inTransitGrams: sql<bigint>`coalesce(sum(${batches.inTransitGrams}), 0)`,
+      pendingInboundGrams: sql<bigint>`coalesce(sum(${batches.pendingInboundGrams}), 0)`,
+    })
+    .from(batches)
+    .where(batchWithRemainingWhere);
+
+  const [unassignedTrips] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.status, "open"),
+        or(isNull(trips.assignedSellerUserId), eq(trips.assignedSellerUserId, "")),
+      ),
+    );
 
   let warehouseKg = 0;
   const byWarehouseKg: Record<string, number> = {};
@@ -195,10 +216,13 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
       shippedKg,
       soldKg,
       remainingInTripKg,
+      shortageKg,
     },
     warehouse: {
       warehouseKg,
       batchCount: batchCountRow?.count ?? 0,
+      inTransitKg: gramsToKg(transitTotals?.inTransitGrams ?? 0n),
+      pendingInboundKg: gramsToKg(transitTotals?.pendingInboundGrams ?? 0n),
       byWarehouseKg,
       byProductGroupKg,
       stockTotals,
@@ -209,7 +233,11 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
     loadingManifests: {
       activeCount: manifestStats?.count ?? 0,
       withoutTripCount: manifestStats?.withoutTrip ?? 0,
+      withoutTripKg: gramsToKg(manifestStats?.withoutTripGrams ?? 0n),
       activeKg: gramsToKg(manifestStats?.sumGrams ?? 0n),
+    },
+    attention: {
+      unassignedOpenTripsCount: unassignedTrips?.count ?? 0,
     },
   };
 }

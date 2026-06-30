@@ -96,10 +96,13 @@ export type AdminDashboardSummaryResponse = {
     shippedKg: number;
     soldKg: number;
     remainingInTripKg: number;
+    shortageKg: number;
   };
   warehouse: {
     warehouseKg: number;
     batchCount: number;
+    inTransitKg: number;
+    pendingInboundKg: number;
     byWarehouseKg: Record<string, number>;
     byProductGroupKg: Record<string, number>;
     stockTotals: DashboardStockSlice;
@@ -110,7 +113,11 @@ export type AdminDashboardSummaryResponse = {
   loadingManifests: {
     activeCount: number;
     withoutTripCount: number;
+    withoutTripKg: number;
     activeKg: number;
+  };
+  attention: {
+    unassignedOpenTripsCount: number;
   };
 };
 

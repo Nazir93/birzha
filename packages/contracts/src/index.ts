@@ -1,5 +1,13 @@
 export { createShipDestinationBodySchema } from "./ship-destination.js";
 export type { CreateShipDestinationBody } from "./ship-destination.js";
+export {
+  adminDashboardSummaryQuerySchema,
+  adminDashboardSummaryResponseSchema,
+} from "./admin-dashboard-summary.js";
+export type {
+  AdminDashboardSummaryQuery,
+  AdminDashboardSummaryResponse,
+} from "./admin-dashboard-summary.js";
 export { createWholesalerBodySchema } from "./wholesaler.js";
 export type { CreateWholesalerBody } from "./wholesaler.js";
 export {

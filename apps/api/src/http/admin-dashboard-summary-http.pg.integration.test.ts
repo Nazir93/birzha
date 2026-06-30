@@ -167,6 +167,10 @@ describe.skipIf(!pgUrl)("admin dashboard summary stock breakdown (PostgreSQL)", 
     expect(toms).toMatchObject({ kg: 1000, packages: 90, valueKopecks: "2500000" });
 
     expect(summary.warehouse.warehouseKg).toBe(700);
+    expect(summary.warehouse.inTransitKg).toBe(300);
+    expect(summary.warehouse.pendingInboundKg).toBe(0);
+    expect(summary.attention.unassignedOpenTripsCount).toBeGreaterThanOrEqual(0);
+    expect(summary.trips.shortageKg).toBeGreaterThanOrEqual(0);
   });
 });
 

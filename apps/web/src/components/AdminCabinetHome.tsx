@@ -20,16 +20,20 @@ import {
   productGroupTableRows,
   warehouseTableRows,
 } from "../format/admin-dashboard-summary-rows.js";
+import { buildAdminSummaryAlerts } from "../format/admin-summary-alerts.js";
 import { kopecksToRubDisplay } from "../format/money.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
-import { adminRoutes } from "../routes.js";
+import { adminRoutes, accounting } from "../routes.js";
+import { AdminSummaryAttention } from "./admin/AdminSummaryAttention.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyleInline, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnStyleInline } from "../ui/styles.js";
+
+const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
 type SummaryChartMode = "mass" | "warehouses" | "products";
@@ -166,20 +170,33 @@ function MassBalanceLegend({ segments }: { segments: MassSegment[] }) {
   );
 }
 
-function SummaryTotalsStrip({ totals, caption }: { totals: DashboardStockSlice; caption: string }) {
+function SummaryTotalsStrip({
+  totals,
+  caption,
+  footnote,
+}: {
+  totals: DashboardStockSlice;
+  caption: string;
+  footnote?: string;
+}) {
   if (totals.kg <= 0 && totals.packages <= 0) {
     return null;
   }
   return (
-    <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-      <span className="birzha-text-muted">{caption}</span>{" "}
-      <strong>{formatKg(totals.kg)}</strong>
-      <span className="birzha-text-muted"> · </span>
-      <strong>{formatPackages(totals.packages)} ящ.</strong>
-      <span className="birzha-text-muted"> · </span>
-      <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
-      <span className="birzha-text-muted"> (оценка по закупу)</span>
-    </p>
+    <div className="birzha-admin-dash-modern__summary-totals-block" style={{ margin: "0 0 0.65rem" }}>
+      <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: 0 }}>
+        <span className="birzha-text-muted">{caption}</span>{" "}
+        <strong>{formatKg(totals.kg)}</strong>
+        <span className="birzha-text-muted"> · </span>
+        <strong>{formatPackages(totals.packages)} ящ.</strong>
+        <span className="birzha-text-muted"> · </span>
+        <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
+        <span className="birzha-text-muted"> (оценка по закупу)</span>
+      </p>
+      {footnote ? (
+        <p className="birzha-admin-dash-modern__summary-footnote birzha-text-muted birzha-ui-sm">{footnote}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -311,49 +328,43 @@ export function AdminCabinetHome() {
     const summary = summaryQ.data;
     if (!summary) {
       return {
-        tripCount: 0,
         tripsOpen: 0,
         tripsClosed: 0,
         batchCount: 0,
         warehouseKg: 0,
-        transitKg: 0,
+        inTransitKg: 0,
+        pendingInboundKg: 0,
         soldKg: 0,
         dispatchedKg: 0,
         inTripRemainingKg: 0,
+        shortageKg: 0,
         loadingManifestKg: 0,
         loadingManifestCount: 0,
         loadingManifestsWithoutTrip: 0,
-        byWarehouseKg: new Map<string, number>(),
-        byProductGroupKg: new Map<string, number>(),
+        loadingManifestsWithoutTripKg: 0,
+        unassignedOpenTripsCount: 0,
         stockTotals: { kg: 0, packages: 0, valueKopecks: "0" },
         byGrade: [],
         byWarehouse: [],
         byProductGroup: [],
       };
     }
-    const byWarehouseKg = new Map<string, number>();
-    for (const [k, v] of Object.entries(summary.warehouse.byWarehouseKg)) {
-      byWarehouseKg.set(k, v);
-    }
-    const byProductGroupKg = new Map<string, number>();
-    for (const [k, v] of Object.entries(summary.warehouse.byProductGroupKg)) {
-      byProductGroupKg.set(k, v);
-    }
     return {
-      tripCount: summary.trips.openCount + summary.trips.closedCount,
       tripsOpen: summary.trips.openCount,
       tripsClosed: summary.trips.closedCount,
       batchCount: summary.warehouse.batchCount,
       warehouseKg: summary.warehouse.warehouseKg,
-      transitKg: summary.trips.shippedKg,
+      inTransitKg: summary.warehouse.inTransitKg,
+      pendingInboundKg: summary.warehouse.pendingInboundKg,
       soldKg: summary.trips.soldKg,
       dispatchedKg: summary.trips.remainingInTripKg,
       inTripRemainingKg: summary.trips.remainingInTripKg,
+      shortageKg: summary.trips.shortageKg,
       loadingManifestKg: summary.loadingManifests.activeKg,
       loadingManifestCount: summary.loadingManifests.activeCount,
       loadingManifestsWithoutTrip: summary.loadingManifests.withoutTripCount,
-      byWarehouseKg,
-      byProductGroupKg,
+      loadingManifestsWithoutTripKg: summary.loadingManifests.withoutTripKg,
+      unassignedOpenTripsCount: summary.attention.unassignedOpenTripsCount,
       stockTotals: summary.warehouse.stockTotals,
       byGrade: summary.warehouse.byGrade,
       byWarehouse: summary.warehouse.byWarehouse,
@@ -419,6 +430,41 @@ export function AdminCabinetHome() {
     [sortedTripsOpen],
   );
 
+  const summaryAlerts = useMemo(
+    () =>
+      buildAdminSummaryAlerts({
+        loadingManifestsWithoutTrip: aggregates.loadingManifestsWithoutTrip,
+        openTripsReadyToClose,
+        unassignedOpenTripsCount: aggregates.unassignedOpenTripsCount,
+        distributionRoute: adminRoutes.distribution,
+        assignSellerRoute: adminRoutes.assignSeller,
+        tripsSectionHash: `#${ADMIN_TRIPS_SECTION_ID}`,
+      }),
+    [
+      aggregates.loadingManifestsWithoutTrip,
+      aggregates.unassignedOpenTripsCount,
+      openTripsReadyToClose,
+    ],
+  );
+
+  const stockTotalsFootnote = useMemo(() => {
+    const parts: string[] = ["Включая в пути и ожидание; оценка по цене закупа."];
+    if (aggregates.inTransitKg > 0 || aggregates.pendingInboundKg > 0) {
+      const detail: string[] = [];
+      if (aggregates.inTransitKg > 0) {
+        detail.push(`в пути ${formatKg(aggregates.inTransitKg)}`);
+      }
+      if (aggregates.pendingInboundKg > 0) {
+        detail.push(`ожидание ${formatKg(aggregates.pendingInboundKg)}`);
+      }
+      parts.push(`Из них ${detail.join(", ")}.`);
+    }
+    parts.push(
+      `KPI «На складе» (${formatKg(aggregates.warehouseKg)}) — только физический склад, без пути.`,
+    );
+    return parts.join(" ");
+  }, [aggregates.inTransitKg, aggregates.pendingInboundKg, aggregates.warehouseKg]);
+
   const loading = summaryQ.isPending;
   const summaryFailed = summaryQ.isError;
   const tripsFailed = tripsQ.isError;
@@ -456,6 +502,10 @@ export function AdminCabinetHome() {
             <div>
               <p className="birzha-home-hero__eyebrow">Панель управления</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
+              <p className="birzha-admin-dash-modern__hero-hint birzha-text-muted birzha-ui-sm">
+                Остатки и открытые рейсы — на текущий момент. После закрытия рейса смотрите{" "}
+                <Link to={adminRoutes.archive}>Архив</Link>.
+              </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
                 <button
                   type="button"
@@ -490,6 +540,9 @@ export function AdminCabinetHome() {
                   Всё время
                 </button>
               </div>
+              <p className="birzha-admin-dash-modern__period-hint birzha-text-muted birzha-ui-sm">
+                Период влияет на счётчики рейсов и ПН справа; остатки на складе и таблицы — всегда актуальные.
+              </p>
             </div>
             <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
               <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
@@ -511,26 +564,36 @@ export function AdminCabinetHome() {
               <Link
                 to={adminRoutes.stockWarehouses}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
-                title="Остаток на складах"
+                title="Физический остаток на складах (без массы в пути)"
               >
                 <div className="birzha-kpi-tile__label">Остаток на складе</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.warehouseKg)}</div>
+                <div className="birzha-kpi-tile__hint birzha-ui-sm">Только склад</div>
               </Link>
               <Link
                 to={adminRoutes.distribution}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link"
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--violet birzha-kpi-tile--link"
                 title="Погрузочные накладные в работе"
               >
-                <div className="birzha-kpi-tile__label">В погрузочных</div>
+                <div className="birzha-kpi-tile__label">
+                  В погрузочных
+                  {aggregates.loadingManifestsWithoutTrip > 0 ? (
+                    <span className="birzha-kpi-tile__badge">
+                      {aggregates.loadingManifestsWithoutTrip} без рейса
+                    </span>
+                  ) : null}
+                </div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.loadingManifestKg)}</div>
+                <div className="birzha-kpi-tile__hint birzha-ui-sm">ПН в работе</div>
               </Link>
               <Link
                 to={adminRoutes.reports}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
-                title="Остаток в открытых рейсах (ещё не продано)"
+                title="Остаток в открытых рейсах (отгружено − продано − недостача)"
               >
                 <div className="birzha-kpi-tile__label">В открытых рейсах</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.dispatchedKg)}</div>
+                <div className="birzha-kpi-tile__hint birzha-ui-sm">Только открытые рейсы</div>
               </Link>
               <Link
                 to={adminRoutes.assignSeller}
@@ -539,6 +602,7 @@ export function AdminCabinetHome() {
               >
                 <div className="birzha-kpi-tile__label">Продано</div>
                 <div className="birzha-kpi-tile__value">{formatKg(aggregates.soldKg)}</div>
+                <div className="birzha-kpi-tile__hint birzha-ui-sm">С открытых рейсов</div>
               </Link>
           </section>
 
@@ -579,6 +643,7 @@ export function AdminCabinetHome() {
               <SummaryTotalsStrip
                 totals={aggregates.stockTotals}
                 caption="Товар в обороте (склад + погружено + ожидание):"
+                footnote={stockTotalsFootnote}
               />
               {showMassChart ? (
                 <div className="birzha-admin-dash-modern__mass-row">
@@ -628,37 +693,65 @@ export function AdminCabinetHome() {
 
             <aside className="birzha-admin-dash-modern__ops-card">
               <h4 style={{ margin: "0 0 0.65rem", fontSize: "1rem" }}>Операции сейчас</h4>
+              <AdminSummaryAttention alerts={summaryAlerts} />
               <ul className="birzha-admin-dash-modern__ops-list">
                 <li>
                   <span>Открытые рейсы</span>
                   <strong>{aggregates.tripsOpen}</strong>
                 </li>
                 <li>
-                  <span>Закрытые рейсы</span>
+                  <span>
+                    Закрытые рейсы
+                    <span className="birzha-admin-dash-modern__ops-hint">за период</span>
+                  </span>
                   <strong>{aggregates.tripsClosed}</strong>
                 </li>
-                <li>
-                  <span>Готовы к закрытию</span>
-                  <strong>{openTripsReadyToClose}</strong>
+                <li className="birzha-admin-dash-modern__ops-list-item--link">
+                  <a href={`#${ADMIN_TRIPS_SECTION_ID}`} className="birzha-admin-dash-modern__ops-row">
+                    <span>Готовы к закрытию</span>
+                    <strong>{openTripsReadyToClose}</strong>
+                  </a>
                 </li>
                 <li>
                   <span>Погрузочные в работе</span>
                   <strong>{aggregates.loadingManifestCount}</strong>
                 </li>
-                <li>
-                  <span>ПН без рейса</span>
-                  <strong>{aggregates.loadingManifestsWithoutTrip}</strong>
+                <li className="birzha-admin-dash-modern__ops-list-item--link">
+                  <Link to={adminRoutes.distribution} className="birzha-admin-dash-modern__ops-row">
+                    <span>
+                      ПН без рейса
+                      {aggregates.loadingManifestsWithoutTripKg > 0 ? (
+                        <span className="birzha-admin-dash-modern__ops-hint">
+                          {formatKg(aggregates.loadingManifestsWithoutTripKg)}
+                        </span>
+                      ) : null}
+                    </span>
+                    <strong>{aggregates.loadingManifestsWithoutTrip}</strong>
+                  </Link>
                 </li>
+                {aggregates.batchCount > 0 ? (
+                  <li>
+                    <span>Активных партий</span>
+                    <strong>{aggregates.batchCount}</strong>
+                  </li>
+                ) : null}
               </ul>
               <div className="birzha-admin-dash-modern__ops-links no-print">
                 <Link to={adminRoutes.trips}>Рейсы</Link>
                 <Link to={adminRoutes.reports}>Отчёты</Link>
                 <Link to={adminRoutes.archive}>Архив</Link>
               </div>
+              <p className="birzha-admin-dash-modern__ops-accounting birzha-ui-sm">
+                <Link to={accounting.home}>Деньги и прибыль → Бухгалтерия</Link>
+              </p>
             </aside>
           </div>
 
-          <BirzhaDisclosure title={`Рейсы в работе (${sortedTripsOpen.length})`} defaultOpen>
+          <BirzhaDisclosure
+            id={ADMIN_TRIPS_SECTION_ID}
+            title={`Рейсы в работе (${sortedTripsOpen.length})`}
+            defaultOpen
+          >
             {tripsFailed ? (
               <ErrorAlert error={tripsQ.error} message="Не удалось загрузить список рейсов." title="Рейсы" />
             ) : null}
@@ -666,24 +759,24 @@ export function AdminCabinetHome() {
               {sortedTripsOpen.length === 0 ? (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>—</p>
               ) : null}
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table className="birzha-admin-trips-table" style={tableStyle} aria-label="Рейсы в работе">
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-admin-trips-table-wrap">
+                <table className="birzha-admin-trips-table" aria-label="Рейсы в работе">
                   <thead>
                     <tr>
-                      <th scope="col" style={thHead}>
+                      <th scope="col" className="birzha-admin-trips-table__head">
                         №
                       </th>
-                      <th scope="col" style={thHead}>
+                      <th scope="col" className="birzha-admin-trips-table__head">
                         Статус
                       </th>
-                      <th scope="col" style={thHead}>
+                      <th scope="col" className="birzha-admin-trips-table__head">
                         ТС / водитель
                       </th>
-                      <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                      <th scope="col" className="birzha-admin-trips-table__head birzha-admin-trips-table__head--right">
                         Отчёт
                       </th>
                       {showCloseTrip ? (
-                        <th scope="col" style={thHead}>
+                        <th scope="col" className="birzha-admin-trips-table__head">
                           Закрытие
                         </th>
                       ) : null}
@@ -694,12 +787,12 @@ export function AdminCabinetHome() {
                       const reportTo = `${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`;
                       return (
                       <tr key={t.id}>
-                        <th scope="row" style={thtd}>
+                        <th scope="row" className="birzha-admin-trips-table__row-head">
                           <Link to={reportTo} style={{ fontWeight: 700, textDecoration: "none" }}>
                             {t.tripNumber}
                           </Link>
                         </th>
-                        <td style={thtd}>
+                        <td className="birzha-admin-trips-table__cell">
                           <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
                           {tripListFullySold(t) ? (
                             <span
@@ -710,16 +803,16 @@ export function AdminCabinetHome() {
                             </span>
                           ) : null}
                         </td>
-                        <td className="birzha-text-muted birzha-text-muted--lg" style={thtd}>
+                        <td className="birzha-admin-trips-table__cell birzha-text-muted birzha-text-muted--lg">
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>
+                        <td className="birzha-admin-trips-table__cell birzha-admin-trips-table__cell--right">
                           <Link to={reportTo} style={{ fontWeight: 600 }}>
                             Открыть
                           </Link>
                         </td>
                         {showCloseTrip ? (
-                          <td style={thtd}>
+                          <td className="birzha-admin-trips-table__cell">
                             {t.status === "open" ? (
                               <button
                                 type="button"
