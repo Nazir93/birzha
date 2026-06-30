@@ -239,13 +239,15 @@ export function AdminTripsLogisticsPanel() {
             Создание и закрытие рейсов — у логиста или администратора. Здесь можно просмотреть открытые рейсы.
           </p>
         )}
-        {tripsQ.isError ? <ErrorAlert error={tripsQ.error} title="Список рейсов" /> : null}
-        {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
-        {tripsQ.isSuccess && (
-          <div className="birzha-clean-ops-list">
-            <h4 className="birzha-clean-ops-list__title">В работе ({openTrips.length})</h4>
-            <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-              <table className="birzha-data-table birzha-data-table--compact">
+      </BirzhaDisclosure>
+
+      {tripsQ.isError ? <ErrorAlert error={tripsQ.error} title="Список рейсов" /> : null}
+      {tripsQ.isPending && <LoadingBlock label="Список рейсов…" minHeight={48} skeleton skeletonRows={3} />}
+      {tripsQ.isSuccess && (
+        <div className="birzha-clean-ops-list">
+          <h4 className="birzha-clean-ops-list__title">В работе ({openTrips.length})</h4>
+          <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
+            <table className="birzha-data-table birzha-data-table--compact">
                 <thead>
                   <tr>
                     <th>№</th>
@@ -292,7 +294,7 @@ export function AdminTripsLogisticsPanel() {
                             {t.status === "open" ? (
                               <button
                                 type="button"
-                                style={btnStyle}
+                                className="birzha-clean-ops-row-action"
                                 disabled={closeTrip.isPending}
                                 onClick={() => void closeTrip.mutate(t.id)}
                               >
@@ -301,7 +303,7 @@ export function AdminTripsLogisticsPanel() {
                             ) : null}
                             <button
                               type="button"
-                              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                              className="birzha-clean-ops-row-action birzha-clean-ops-row-action--danger"
                               disabled={deleteTrip.isPending}
                               onClick={() => {
                                 const caption = t.tripNumber || buildTripDisplayNumber(t);
@@ -326,12 +328,11 @@ export function AdminTripsLogisticsPanel() {
                 </tbody>
               </table>
             </div>
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
-              Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
-            </p>
-          </div>
-        )}
-      </BirzhaDisclosure>
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
+            Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

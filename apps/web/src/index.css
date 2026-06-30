@@ -1935,6 +1935,21 @@ a.birzha-kpi-tile--link:focus-visible {
   background: transparent;
 }
 
+.app-shell--cabinet .birzha-clean-ops-page .birzha-clean-ops-disclosure.birzha-disclosure {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page .birzha-clean-ops-disclosure.birzha-disclosure,
+html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha-panel {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+
 .birzha-clean-ops-page .birzha-disclosure__summary {
   padding: 0 0 0.65rem;
 }
@@ -2065,11 +2080,19 @@ a.birzha-kpi-tile--link:focus-visible {
   margin-bottom: 0;
 }
 
+.birzha-clean-ops-page .birzha-clean-ops-list .birzha-table-scroll,
+.birzha-clean-ops-page .birzha-clean-ops-list .birzha-nakl-lines-card {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .birzha-clean-ops-row-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.55rem;
+  align-items: center;
 }
 
 .birzha-clean-ops-page .birzha-clean-ops-row-actions button {
@@ -2077,6 +2100,35 @@ a.birzha-kpi-tile--link:focus-visible {
   margin-right: 0;
   font-size: 0.82rem;
   padding: 0.35rem 0.65rem;
+}
+
+.birzha-clean-ops-row-action {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.35rem 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--birzha-surface-muted);
+  color: var(--color-text);
+  box-shadow: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.birzha-clean-ops-row-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface-muted));
+}
+
+.birzha-clean-ops-row-action--danger {
+  color: var(--birzha-danger);
+  background: transparent;
+  padding-inline: 0.25rem;
+}
+
+.birzha-clean-ops-row-action--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--birzha-danger) 12%, transparent);
+  color: var(--birzha-danger);
 }
 
 .birzha-clean-ops-list {

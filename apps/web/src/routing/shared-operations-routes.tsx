@@ -79,7 +79,9 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
         path="trips"
         element={
           <RequirePanel panel="trips">
-            <AdminTripsLogisticsPanel />
+            <section className="birzha-card">
+              <AdminTripsLogisticsPanel />
+            </section>
           </RequirePanel>
         }
       />
