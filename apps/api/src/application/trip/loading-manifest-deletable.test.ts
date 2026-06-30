@@ -29,4 +29,13 @@ describe("loadingManifestDeletable", () => {
       }),
     ).toEqual({ deletable: false, reason: "shipped_to_trip" });
   });
+
+  it("allows delete for empty manifest (no lines)", () => {
+    expect(
+      loadingManifestDeletable({
+        lineMasses: [],
+        shipmentGramsOnLinkedTrip: 0n,
+      }),
+    ).toEqual({ deletable: true });
+  });
 });

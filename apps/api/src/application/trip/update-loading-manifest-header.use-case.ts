@@ -27,25 +27,29 @@ export class UpdateLoadingManifestHeaderUseCase {
 
   async execute(manifestId: string, input: UpdateLoadingManifestHeaderInput): Promise<void> {
     const id = manifestId.trim();
-    const rows = await this.db
+
+    const [manifestRow] = await this.db
+      .select({ id: loadingManifests.id, tripId: loadingManifests.tripId })
+      .from(loadingManifests)
+      .where(eq(loadingManifests.id, id))
+      .limit(1);
+
+    if (!manifestRow) {
+      throw new LoadingManifestNotFoundError(id);
+    }
+
+    const lineRows = await this.db
       .select({
-        manifestId: loadingManifests.id,
-        tripId: loadingManifests.tripId,
         batchId: loadingManifestLines.batchId,
         onWarehouseGrams: batches.onWarehouseGrams,
         inTransitGrams: batches.inTransitGrams,
       })
-      .from(loadingManifests)
-      .innerJoin(loadingManifestLines, eq(loadingManifestLines.manifestId, loadingManifests.id))
-      .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
-      .where(eq(loadingManifests.id, id));
+      .from(loadingManifestLines)
+      .leftJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+      .where(eq(loadingManifestLines.manifestId, id));
 
-    if (rows.length === 0) {
-      throw new LoadingManifestNotFoundError(id);
-    }
-
-    const tripId = rows[0]!.tripId?.trim() ?? "";
-    const batchIds = [...new Set(rows.map((r) => r.batchId))];
+    const tripId = manifestRow.tripId?.trim() ?? "";
+    const batchIds = [...new Set(lineRows.map((r) => r.batchId))];
     let shipmentGramsOnLinkedTrip = 0n;
     if (tripId.length > 0 && batchIds.length > 0) {
       const sh = await this.db
@@ -58,9 +62,9 @@ export class UpdateLoadingManifestHeaderUseCase {
     }
 
     const check = loadingManifestDeletable({
-      lineMasses: rows.map((r) => ({
-        onWarehouseGrams: r.onWarehouseGrams,
-        inTransitGrams: r.inTransitGrams,
+      lineMasses: lineRows.map((r) => ({
+        onWarehouseGrams: r.onWarehouseGrams ?? 0n,
+        inTransitGrams: r.inTransitGrams ?? 0n,
       })),
       shipmentGramsOnLinkedTrip,
     });

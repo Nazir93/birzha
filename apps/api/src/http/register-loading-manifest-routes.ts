@@ -216,12 +216,26 @@ export function registerLoadingManifestRoutes(
   app.get("/loading-manifests/:manifestId", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
-      const rows = await db
+
+      const [header] = await db
         .select({
           manifest: loadingManifests,
           warehouseName: warehouses.name,
           warehouseCode: warehouses.code,
           destinationName: shipDestinations.displayName,
+        })
+        .from(loadingManifests)
+        .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
+        .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
+        .where(eq(loadingManifests.id, params.manifestId))
+        .limit(1);
+
+      if (!header) {
+        return reply.code(404).send({ error: "loading_manifest_not_found" });
+      }
+
+      const rows = await db
+        .select({
           line: loadingManifestLines,
           batchWarehouseId: batches.warehouseId,
           batchWarehouseName: batchWarehouse.name,
@@ -231,21 +245,14 @@ export function registerLoadingManifestRoutes(
           productGradeCode: productGrades.code,
           productGroup: productGrades.productGroup,
         })
-        .from(loadingManifests)
-        .innerJoin(warehouses, eq(loadingManifests.warehouseId, warehouses.id))
-        .innerJoin(shipDestinations, eq(loadingManifests.destinationCode, shipDestinations.code))
-        .innerJoin(loadingManifestLines, eq(loadingManifests.id, loadingManifestLines.manifestId))
-        .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+        .from(loadingManifestLines)
+        .leftJoin(batches, eq(loadingManifestLines.batchId, batches.id))
         .leftJoin(batchWarehouse, eq(batches.warehouseId, batchWarehouse.id))
         .leftJoin(purchaseDocumentLines, eq(loadingManifestLines.batchId, purchaseDocumentLines.batchId))
         .leftJoin(purchaseDocuments, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
         .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
-        .where(eq(loadingManifests.id, params.manifestId));
+        .where(eq(loadingManifestLines.manifestId, params.manifestId));
 
-      if (rows.length === 0) {
-        return reply.code(404).send({ error: "loading_manifest_not_found" });
-      }
-      const h = rows[0]!;
       const lineWarehouseNames = [
         ...new Set(
           rows
@@ -254,25 +261,25 @@ export function registerLoadingManifestRoutes(
         ),
       ].sort((a, b) => a.localeCompare(b, "ru"));
       const lineMasses = rows.map((r) => ({
-        onWarehouseGrams: r.onWarehouseGrams,
-        inTransitGrams: r.inTransitGrams,
+        onWarehouseGrams: r.onWarehouseGrams ?? 0n,
+        inTransitGrams: r.inTransitGrams ?? 0n,
       }));
       const assignLock = loadingManifestTripAssignLock({
-        tripId: h.manifest.tripId,
+        tripId: header.manifest.tripId,
         lineMasses,
       });
       return reply.send({
         manifest: {
-          id: h.manifest.id,
-          manifestNumber: h.manifest.manifestNumber,
-          docDate: formatPgDate(h.manifest.docDate),
-          warehouseId: h.manifest.warehouseId,
-          warehouseName: h.warehouseName,
-          warehouseCode: h.warehouseCode,
-          destinationCode: h.manifest.destinationCode,
-          destinationName: h.destinationName,
-          tripId: h.manifest.tripId,
-          createdAt: h.manifest.createdAt.toISOString(),
+          id: header.manifest.id,
+          manifestNumber: header.manifest.manifestNumber,
+          docDate: formatPgDate(header.manifest.docDate),
+          warehouseId: header.manifest.warehouseId,
+          warehouseName: header.warehouseName,
+          warehouseCode: header.warehouseCode,
+          destinationCode: header.manifest.destinationCode,
+          destinationName: header.destinationName,
+          tripId: header.manifest.tripId,
+          createdAt: header.manifest.createdAt.toISOString(),
           tripAssignLocked: assignLock.locked,
           tripAssignLockedReason: assignLock.code ?? null,
           lineWarehouseNames,
