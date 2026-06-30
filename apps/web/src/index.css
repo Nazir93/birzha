@@ -4159,6 +4159,28 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   font-size: 0.9rem;
 }
 
+.birzha-admin-dash-modern__summary-totals {
+  line-height: 1.45;
+}
+
+.birzha-admin-summary-table__label {
+  font-weight: 600;
+}
+
+.birzha-admin-summary-table__sublabel {
+  margin-top: 0.12rem;
+}
+
+.birzha-admin-summary-table__track {
+  margin-top: 0.35rem;
+  max-width: 12rem;
+}
+
+.birzha-admin-summary-table__foot th,
+.birzha-admin-summary-table__foot td {
+  border-top: 1px solid var(--birzha-border, rgba(0, 0, 0, 0.12));
+}
+
 .birzha-admin-dash-modern__warehouse-bars {
   display: grid;
   gap: 0.45rem;
@@ -4467,6 +4489,10 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
 
 .birzha-inventory-logistics-form__field--wide {
   grid-column: 1 / -1;
+}
+
+.birzha-inventory-logistics-form__field--trip-num {
+  max-width: 5.5rem;
 }
 
 .birzha-inventory-logistics-form__field--datetime {

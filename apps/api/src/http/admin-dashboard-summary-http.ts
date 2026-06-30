@@ -15,6 +15,12 @@ import {
   trips,
   warehouses,
 } from "../db/schema.js";
+import {
+  gramsToKg,
+  mapGradeStockRows,
+  mapProductGroupStockRows,
+  mapWarehouseStockRows,
+} from "./admin-dashboard-summary-map.js";
 
 export const adminDashboardSummaryQuerySchema = z.object({
   since: z
@@ -25,12 +31,23 @@ export const adminDashboardSummaryQuerySchema = z.object({
 
 export type AdminDashboardSummaryQuery = z.infer<typeof adminDashboardSummaryQuerySchema>;
 
-function gramsToKg(grams: bigint | number | null | undefined): number {
-  if (grams == null) {
-    return 0;
-  }
-  return Number(grams) / 1000;
-}
+const batchRemainingGrams = sql<bigint>`(${batches.onWarehouseGrams} + ${batches.inTransitGrams} + ${batches.pendingInboundGrams})`;
+
+const batchWithRemainingWhere = or(
+  gt(batches.onWarehouseGrams, 0n),
+  gt(batches.inTransitGrams, 0n),
+  gt(batches.pendingInboundGrams, 0n),
+);
+
+const batchPackageShareSum = sql<number>`coalesce(sum(
+  case when ${batches.totalGrams} > 0 then
+    ${batchRemainingGrams}::numeric / ${batches.totalGrams}::numeric * coalesce(${purchaseDocumentLines.packageCount}, 0)
+  else 0 end
+), 0)::float`;
+
+const batchRemainingValueKopecks = sql<bigint>`coalesce(sum(
+  (${batchRemainingGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000)::bigint
+), 0)`;
 
 export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboardSummaryQuery) {
   const since = query.since?.trim();
@@ -85,22 +102,49 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
     .where(gt(batches.onWarehouseGrams, 0n))
     .groupBy(purchaseDocuments.warehouseId, warehouses.name);
 
-  const productRows = await db
-    .select({
-      productGroup: productGrades.productGroup,
-      grams: sql<bigint>`coalesce(sum(${batches.onWarehouseGrams} + ${batches.inTransitGrams} + ${batches.pendingInboundGrams}), 0)`,
-    })
-    .from(batches)
-    .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
-    .innerJoin(productGrades, eq(productGrades.id, purchaseDocumentLines.productGradeId))
-    .where(
-      or(
-        gt(batches.onWarehouseGrams, 0n),
-        gt(batches.inTransitGrams, 0n),
-        gt(batches.pendingInboundGrams, 0n),
-      ),
-    )
-    .groupBy(productGrades.productGroup);
+  const [gradeRows, warehouseDetailRows, productGroupRows] = await Promise.all([
+    db
+      .select({
+        productGradeId: productGrades.id,
+        code: productGrades.code,
+        displayName: productGrades.displayName,
+        productGroup: productGrades.productGroup,
+        grams: sql<bigint>`coalesce(sum(${batchRemainingGrams}), 0)`,
+        packages: batchPackageShareSum,
+        valueKopecks: batchRemainingValueKopecks,
+      })
+      .from(batches)
+      .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
+      .innerJoin(productGrades, eq(productGrades.id, purchaseDocumentLines.productGradeId))
+      .where(batchWithRemainingWhere)
+      .groupBy(productGrades.id, productGrades.code, productGrades.displayName, productGrades.productGroup),
+    db
+      .select({
+        warehouseId: purchaseDocuments.warehouseId,
+        warehouseName: warehouses.name,
+        grams: sql<bigint>`coalesce(sum(${batchRemainingGrams}), 0)`,
+        packages: batchPackageShareSum,
+        valueKopecks: batchRemainingValueKopecks,
+      })
+      .from(batches)
+      .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
+      .innerJoin(purchaseDocuments, eq(purchaseDocuments.id, purchaseDocumentLines.documentId))
+      .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
+      .where(batchWithRemainingWhere)
+      .groupBy(purchaseDocuments.warehouseId, warehouses.name),
+    db
+      .select({
+        productGroup: productGrades.productGroup,
+        grams: sql<bigint>`coalesce(sum(${batchRemainingGrams}), 0)`,
+        packages: batchPackageShareSum,
+        valueKopecks: batchRemainingValueKopecks,
+      })
+      .from(batches)
+      .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
+      .innerJoin(productGrades, eq(productGrades.id, purchaseDocumentLines.productGradeId))
+      .where(batchWithRemainingWhere)
+      .groupBy(productGrades.productGroup),
+  ]);
 
   const [batchCountRow] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -139,10 +183,10 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
   }
 
   const byProductGroupKg: Record<string, number> = {};
-  for (const row of productRows) {
-    const g = row.productGroup?.trim() || "Без вида";
-    byProductGroupKg[g] = gramsToKg(row.grams);
-  }
+  const { byGrade, stockTotals } = mapGradeStockRows(gradeRows);
+  const byWarehouse = mapWarehouseStockRows(warehouseDetailRows);
+  const { byProductGroup, byProductGroupKg: productGroupKgMap } = mapProductGroupStockRows(productGroupRows);
+  Object.assign(byProductGroupKg, productGroupKgMap);
 
   return {
     trips: {
@@ -157,6 +201,10 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
       batchCount: batchCountRow?.count ?? 0,
       byWarehouseKg,
       byProductGroupKg,
+      stockTotals,
+      byGrade,
+      byWarehouse,
+      byProductGroup,
     },
     loadingManifests: {
       activeCount: manifestStats?.count ?? 0,

@@ -61,6 +61,23 @@ export function formatTripStatusLabel(status: string): string {
   return status;
 }
 
+/** Следующий порядковый № рейса по уже существующим (01, 02, …). */
+export function suggestNextTripNumber(trips: readonly { tripNumber: string }[]): string {
+  let max = 0;
+  for (const t of trips) {
+    const m = /^(\d+)/.exec(t.tripNumber.trim());
+    if (!m) {
+      continue;
+    }
+    const n = Number.parseInt(m[1]!, 10);
+    if (Number.isFinite(n) && n > max) {
+      max = n;
+    }
+  }
+  const next = max + 1;
+  return next < 10 ? `0${next}` : String(next);
+}
+
 /** Подпись рейса для UI: водитель · машина · дата (без отдельного «номера рейса»). */
 export function buildTripDisplayNumber(input: {
   driverName?: string | null;
@@ -119,10 +136,16 @@ export type FormatTripSelectLabelOptions = {
   includeTechnicalId?: boolean;
 };
 
-/** Подпись рейса в селекторах: водитель, машина, дата, статус. */
+/** Подпись рейса в селекторах: №, водитель, машина, дата, статус. */
 export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
+  const num = t.tripNumber.trim();
   const display = buildTripDisplayNumber(t);
-  const head = display === "Рейс" ? t.tripNumber : display;
+  const head =
+    display === "Рейс"
+      ? num || "Рейс"
+      : num && !display.startsWith(num)
+        ? `${num} · ${display}`
+        : display;
   const label = `${head} (${formatTripListStatusLabel(t)})`;
   if (opts?.includeTechnicalId === true) {
     return `${label} — ${t.id}`;

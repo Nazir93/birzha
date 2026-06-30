@@ -67,6 +67,28 @@ export type BatchesListResponse = {
   listMeta?: BatchesListMeta;
 };
 
+export type DashboardStockSlice = {
+  kg: number;
+  packages: number;
+  valueKopecks: string;
+};
+
+export type DashboardGradeStockRow = DashboardStockSlice & {
+  productGradeId: string;
+  code: string;
+  displayName: string;
+  productGroup: string | null;
+};
+
+export type DashboardWarehouseStockRow = DashboardStockSlice & {
+  warehouseId: string;
+  warehouseName: string;
+};
+
+export type DashboardProductGroupStockRow = DashboardStockSlice & {
+  productGroup: string;
+};
+
 export type AdminDashboardSummaryResponse = {
   trips: {
     openCount: number;
@@ -80,6 +102,10 @@ export type AdminDashboardSummaryResponse = {
     batchCount: number;
     byWarehouseKg: Record<string, number>;
     byProductGroupKg: Record<string, number>;
+    stockTotals: DashboardStockSlice;
+    byGrade: DashboardGradeStockRow[];
+    byWarehouse: DashboardWarehouseStockRow[];
+    byProductGroup: DashboardProductGroupStockRow[];
   };
   loadingManifests: {
     activeCount: number;

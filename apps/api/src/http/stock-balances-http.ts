@@ -16,8 +16,8 @@ export async function getStockBalancesSummary(db: DbClient) {
       warehouseCode: warehouses.code,
       onWarehouseGrams: sql<bigint>`coalesce(sum(${batches.onWarehouseGrams}), 0)`,
       inTransitGrams: sql<bigint>`coalesce(sum(${batches.inTransitGrams}), 0)`,
-      valueWhKopecks: sql<bigint>`coalesce(sum((${batches.onWarehouseGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000000)::bigint), 0)`,
-      valueTrKopecks: sql<bigint>`coalesce(sum((${batches.inTransitGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000000)::bigint), 0)`,
+      valueWhKopecks: sql<bigint>`coalesce(sum((${batches.onWarehouseGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000)::bigint), 0)`,
+      valueTrKopecks: sql<bigint>`coalesce(sum((${batches.inTransitGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000)::bigint), 0)`,
     })
     .from(batches)
     .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))

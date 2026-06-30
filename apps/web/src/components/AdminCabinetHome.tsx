@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
+import type { DashboardStockSlice } from "../api/types.js";
 import {
   adminDashboardSummaryQueryOptions,
   queryRoots,
@@ -10,6 +11,13 @@ import {
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip } from "../auth/role-panels.js";
+import {
+  buildMassSegments,
+  gradeTableRows,
+  productGroupTableRows,
+  warehouseTableRows,
+} from "../format/admin-dashboard-summary-rows.js";
+import { kopecksToRubLabel } from "../format/money.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
@@ -68,6 +76,135 @@ function formatKg(v: number): string {
   return `${v.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг`;
 }
 
+function formatPackages(v: number): string {
+  return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+}
+
+type MassSegment = {
+  label: string;
+  kg: number;
+  fillClass: string;
+};
+
+function MassBalanceLegend({ segments }: { segments: MassSegment[] }) {
+  const total = segments.reduce((sum, row) => sum + row.kg, 0);
+  if (total <= 0) {
+    return null;
+  }
+  return (
+    <div className="birzha-admin-dash-modern__mass-bars" aria-label="Распределение массы по этапам">
+      {segments.map((row) => (
+        <div key={row.label} className="birzha-admin-dash-modern__bar-row">
+          <div className="birzha-admin-dash-modern__bar-label">{row.label}</div>
+          <div className="birzha-admin-dash-modern__bar-track">
+            <div
+              className={`birzha-admin-dash-modern__bar-fill ${row.fillClass}`}
+              style={{ width: `${ratioPart(row.kg, total)}%` }}
+            />
+          </div>
+          <div className="birzha-admin-dash-modern__bar-value">{formatKg(row.kg)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SummaryTotalsStrip({ totals, caption }: { totals: DashboardStockSlice; caption: string }) {
+  if (totals.kg <= 0 && totals.packages <= 0) {
+    return null;
+  }
+  return (
+    <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+      <span className="birzha-text-muted">{caption}</span>{" "}
+      <strong>{formatKg(totals.kg)}</strong>
+      <span className="birzha-text-muted"> · </span>
+      <strong>{formatPackages(totals.packages)} ящ.</strong>
+      <span className="birzha-text-muted"> · </span>
+      <strong>{kopecksToRubLabel(totals.valueKopecks)} ₽</strong>
+      <span className="birzha-text-muted"> (оценка по закупу)</span>
+    </p>
+  );
+}
+
+type SummaryTableProps = {
+  labelColumn: string;
+  rows: Array<{
+    key: string;
+    label: string;
+    sublabel?: string | null;
+    kg: number;
+    packages: number;
+    valueKopecks: string;
+  }>;
+  totals?: DashboardStockSlice;
+  maxKg: number;
+};
+
+function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTableProps) {
+  if (rows.length === 0) {
+    return <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>;
+  }
+  return (
+    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+      <table style={{ ...tableStyle, minWidth: 420 }} className="birzha-admin-summary-table">
+        <thead>
+          <tr>
+            <th scope="col" style={thHead}>
+              {labelColumn}
+            </th>
+            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+              Кг
+            </th>
+            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+              Ящ.
+            </th>
+            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+              Сумма, ₽
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <th scope="row" style={thtd}>
+                <div className="birzha-admin-summary-table__label">{row.label}</div>
+                {row.sublabel ? (
+                  <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
+                    {row.sublabel}
+                  </div>
+                ) : null}
+                <div className="birzha-admin-dash-modern__warehouse-track birzha-admin-summary-table__track">
+                  <div
+                    className="birzha-admin-dash-modern__warehouse-fill"
+                    style={{ width: `${ratioPart(row.kg, maxKg)}%` }}
+                  />
+                </div>
+              </th>
+              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>{formatKg(row.kg)}</td>
+              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>{formatPackages(row.packages)}</td>
+              <td style={{ ...thtd, textAlign: "right", whiteSpace: "nowrap" }}>
+                {kopecksToRubLabel(row.valueKopecks)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        {totals ? (
+          <tfoot>
+            <tr className="birzha-admin-summary-table__foot">
+              <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
+                Итого
+              </th>
+              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{formatKg(totals.kg)}</td>
+              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{formatPackages(totals.packages)}</td>
+              <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>{kopecksToRubLabel(totals.valueKopecks)}</td>
+            </tr>
+          </tfoot>
+        ) : null}
+      </table>
+    </div>
+  );
+}
+
 function ratioPart(value: number, total: number): number {
   if (total <= 0) {
     return 0;
@@ -97,7 +234,6 @@ export function AdminCabinetHome() {
   const showCloseTrip = canCreateTrip(user ?? null);
   const [summaryChartMode, setSummaryChartMode] = useState<SummaryChartMode>("mass");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("30d");
-  const [hoveredChartLabel, setHoveredChartLabel] = useState<string | null>(null);
 
   const periodStart = useMemo(() => periodStartDate(summaryPeriod), [summaryPeriod]);
   const sinceParam = periodStart ? periodStart.toISOString().slice(0, 10) : undefined;
@@ -126,6 +262,10 @@ export function AdminCabinetHome() {
         loadingManifestsWithoutTrip: 0,
         byWarehouseKg: new Map<string, number>(),
         byProductGroupKg: new Map<string, number>(),
+        stockTotals: { kg: 0, packages: 0, valueKopecks: "0" },
+        byGrade: [],
+        byWarehouse: [],
+        byProductGroup: [],
       };
     }
     const byWarehouseKg = new Map<string, number>();
@@ -151,6 +291,10 @@ export function AdminCabinetHome() {
       loadingManifestsWithoutTrip: summary.loadingManifests.withoutTripCount,
       byWarehouseKg,
       byProductGroupKg,
+      stockTotals: summary.warehouse.stockTotals,
+      byGrade: summary.warehouse.byGrade,
+      byWarehouse: summary.warehouse.byWarehouse,
+      byProductGroup: summary.warehouse.byProductGroup,
     };
   }, [summaryQ.data]);
 
@@ -172,25 +316,38 @@ export function AdminCabinetHome() {
     return sortedTripsOpen.slice(start, start + ADMIN_TRIPS_PAGE_SIZE);
   }, [sortedTripsOpen, tripsPage]);
 
-  const topWarehouses = useMemo(
-    () =>
-      [...aggregates.byWarehouseKg.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([name, kg]) => ({ name, kg })),
-    [aggregates.byWarehouseKg],
+  const gradeRows = useMemo(() => gradeTableRows(aggregates.byGrade), [aggregates.byGrade]);
+  const warehouseRows = useMemo(() => warehouseTableRows(aggregates.byWarehouse), [aggregates.byWarehouse]);
+  const productGroupRows = useMemo(
+    () => productGroupTableRows(aggregates.byProductGroup),
+    [aggregates.byProductGroup],
   );
-  const topProductGroups = useMemo(
+  const summaryTableMaxKg = useMemo(() => {
+    const rows =
+      summaryChartMode === "mass"
+        ? gradeRows
+        : summaryChartMode === "warehouses"
+          ? warehouseRows
+          : productGroupRows;
+    return rows[0]?.kg ?? 0;
+  }, [gradeRows, productGroupRows, summaryChartMode, warehouseRows]);
+
+  const massSegments = useMemo(
     () =>
-      [...aggregates.byProductGroupKg.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6)
-        .map(([name, kg]) => ({ name, kg })),
-    [aggregates.byProductGroupKg],
+      buildMassSegments({
+        warehouseKg: aggregates.warehouseKg,
+        loadingManifestKg: aggregates.loadingManifestKg,
+        inTripRemainingKg: aggregates.inTripRemainingKg,
+        soldKg: aggregates.soldKg,
+      }),
+    [
+      aggregates.inTripRemainingKg,
+      aggregates.loadingManifestKg,
+      aggregates.soldKg,
+      aggregates.warehouseKg,
+    ],
   );
 
-  const topWarehouseKgMax = topWarehouses[0]?.kg ?? 0;
-  const topProductGroupKgMax = topProductGroups[0]?.kg ?? 0;
   const showMassChart = summaryChartMode === "mass";
   const showWarehouseChart = summaryChartMode === "warehouses";
   const showProductChart = summaryChartMode === "products";
@@ -335,10 +492,7 @@ export function AdminCabinetHome() {
                   type="button"
                   style={btnStyleInline}
                   className={`birzha-admin-summary-toggle${summaryChartMode === "mass" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => {
-                    setSummaryChartMode("mass");
-                    setHoveredChartLabel(null);
-                  }}
+                  onClick={() => setSummaryChartMode("mass")}
                 >
                   Баланс массы
                 </button>
@@ -346,10 +500,7 @@ export function AdminCabinetHome() {
                   type="button"
                   style={btnStyleInline}
                   className={`birzha-admin-summary-toggle${summaryChartMode === "warehouses" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => {
-                    setSummaryChartMode("warehouses");
-                    setHoveredChartLabel(null);
-                  }}
+                  onClick={() => setSummaryChartMode("warehouses")}
                 >
                   По складам
                 </button>
@@ -357,67 +508,59 @@ export function AdminCabinetHome() {
                   type="button"
                   style={btnStyleInline}
                   className={`birzha-admin-summary-toggle${summaryChartMode === "products" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => {
-                    setSummaryChartMode("products");
-                    setHoveredChartLabel(null);
-                  }}
+                  onClick={() => setSummaryChartMode("products")}
                 >
                   По видам товара
                 </button>
               </div>
+              <SummaryTotalsStrip
+                totals={aggregates.stockTotals}
+                caption="Товар в обороте (склад + погружено + ожидание):"
+              />
               {showMassChart ? (
                 <div className="birzha-admin-dash-modern__mass-row">
-                  <div onMouseEnter={() => setHoveredChartLabel("Распределение массы")}>
-                    <MassDistributionRing
-                      warehouseKg={aggregates.warehouseKg}
-                      loadingManifestKg={aggregates.loadingManifestKg}
-                      inTripKg={aggregates.inTripRemainingKg}
-                      soldKg={aggregates.soldKg}
-                    />
-                  </div>
+                  <MassDistributionRing
+                    warehouseKg={aggregates.warehouseKg}
+                    loadingManifestKg={aggregates.loadingManifestKg}
+                    inTripKg={aggregates.inTripRemainingKg}
+                    soldKg={aggregates.soldKg}
+                  />
+                  <MassBalanceLegend segments={massSegments} />
                 </div>
               ) : null}
-
-              {(showWarehouseChart || showProductChart) && (showWarehouseChart ? topWarehouses.length : topProductGroups.length) === 0 ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>
+              {showMassChart ? (
+                <>
+                  <h5 className="birzha-admin-dash-modern__subhead">По калибрам</h5>
+                  <SummaryStockTable
+                    labelColumn="Калибр"
+                    rows={gradeRows}
+                    totals={aggregates.stockTotals}
+                    maxKg={summaryTableMaxKg}
+                  />
+                </>
               ) : null}
-              {(showWarehouseChart || showProductChart) && (showWarehouseChart ? topWarehouses.length : topProductGroups.length) > 0 ? (
-                <div
-                  className="birzha-admin-dash-modern__warehouse-bars"
-                  aria-label={showWarehouseChart ? "Топ складов по остатку" : "Виды товара по массе"}
-                >
-                  {(showWarehouseChart ? topWarehouses : topProductGroups).map((row) => (
-                    <div
-                      key={row.name}
-                      className="birzha-admin-dash-modern__warehouse-row"
-                      onMouseEnter={() => setHoveredChartLabel(row.name)}
-                    >
-                      <div className="birzha-admin-dash-modern__warehouse-name">{row.name}</div>
-                      <div className="birzha-admin-dash-modern__warehouse-track">
-                        <div
-                          className="birzha-admin-dash-modern__warehouse-fill"
-                          style={{
-                            width: `${ratioPart(
-                              row.kg,
-                              showWarehouseChart ? topWarehouseKgMax : topProductGroupKgMax,
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="birzha-admin-dash-modern__warehouse-value">{formatKg(row.kg)}</div>
-                    </div>
-                  ))}
-                </div>
+              {showWarehouseChart ? (
+                <>
+                  <h5 className="birzha-admin-dash-modern__subhead">По складам поступления</h5>
+                  <SummaryStockTable
+                    labelColumn="Склад"
+                    rows={warehouseRows}
+                    totals={aggregates.stockTotals}
+                    maxKg={summaryTableMaxKg}
+                  />
+                </>
               ) : null}
-              {hoveredChartLabel ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.6rem 0 0" }}>
-                  Наведение: <strong>{hoveredChartLabel}</strong>
-                </p>
-              ) : (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.6rem 0 0" }}>
-                  Наведите на сегмент или строку графика.
-                </p>
-              )}
+              {showProductChart ? (
+                <>
+                  <h5 className="birzha-admin-dash-modern__subhead">По видам товара</h5>
+                  <SummaryStockTable
+                    labelColumn="Вид"
+                    rows={productGroupRows}
+                    totals={aggregates.stockTotals}
+                    maxKg={summaryTableMaxKg}
+                  />
+                </>
+              ) : null}
             </section>
 
             <aside className="birzha-admin-dash-modern__ops-card">
