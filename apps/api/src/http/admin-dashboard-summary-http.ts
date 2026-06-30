@@ -19,7 +19,7 @@ import {
   gramsToKg,
   mapGradeStockRows,
   mapProductGroupStockRows,
-  mapWarehouseStockRows,
+  mapWarehouseWithGradeStockRows,
 } from "./admin-dashboard-summary-map.js";
 
 export const adminDashboardSummaryQuerySchema = z.object({
@@ -102,7 +102,7 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
     .where(gt(batches.onWarehouseGrams, 0n))
     .groupBy(purchaseDocuments.warehouseId, warehouses.name);
 
-  const [gradeRows, warehouseDetailRows, productGroupRows] = await Promise.all([
+  const [gradeRows, warehouseGradeRows, productGroupRows] = await Promise.all([
     db
       .select({
         productGradeId: productGrades.id,
@@ -122,6 +122,10 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
       .select({
         warehouseId: purchaseDocuments.warehouseId,
         warehouseName: warehouses.name,
+        productGradeId: productGrades.id,
+        code: productGrades.code,
+        displayName: productGrades.displayName,
+        productGroup: productGrades.productGroup,
         grams: sql<bigint>`coalesce(sum(${batchRemainingGrams}), 0)`,
         packages: batchPackageShareSum,
         valueKopecks: batchRemainingValueKopecks,
@@ -130,8 +134,16 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
       .innerJoin(purchaseDocumentLines, eq(purchaseDocumentLines.batchId, batches.id))
       .innerJoin(purchaseDocuments, eq(purchaseDocuments.id, purchaseDocumentLines.documentId))
       .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
+      .innerJoin(productGrades, eq(productGrades.id, purchaseDocumentLines.productGradeId))
       .where(batchWithRemainingWhere)
-      .groupBy(purchaseDocuments.warehouseId, warehouses.name),
+      .groupBy(
+        purchaseDocuments.warehouseId,
+        warehouses.name,
+        productGrades.id,
+        productGrades.code,
+        productGrades.displayName,
+        productGrades.productGroup,
+      ),
     db
       .select({
         productGroup: productGrades.productGroup,
@@ -205,7 +217,7 @@ export async function getAdminDashboardSummary(db: DbClient, query: AdminDashboa
 
   const byProductGroupKg: Record<string, number> = {};
   const { byGrade, stockTotals } = mapGradeStockRows(gradeRows);
-  const byWarehouse = mapWarehouseStockRows(warehouseDetailRows);
+  const byWarehouse = mapWarehouseWithGradeStockRows(warehouseGradeRows);
   const { byProductGroup, byProductGroupKg: productGroupKgMap } = mapProductGroupStockRows(productGroupRows);
   Object.assign(byProductGroupKg, productGroupKgMap);
 

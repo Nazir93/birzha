@@ -83,6 +83,7 @@ export type DashboardGradeStockRow = DashboardStockSlice & {
 export type DashboardWarehouseStockRow = DashboardStockSlice & {
   warehouseId: string;
   warehouseName: string;
+  byGrade: DashboardGradeStockRow[];
 };
 
 export type DashboardProductGroupStockRow = DashboardStockSlice & {

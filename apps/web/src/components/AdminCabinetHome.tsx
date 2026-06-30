@@ -196,12 +196,58 @@ type SummaryTableProps = {
     kg: number;
     packages: number;
     valueKopecks: string;
+    children?: SummaryTableProps["rows"];
   }>;
   totals?: DashboardStockSlice;
   maxKg: number;
+  nestedGrades?: boolean;
 };
 
-function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTableProps) {
+function SummaryStockTableRow({
+  row,
+  maxKg,
+  variant,
+}: {
+  row: SummaryTableProps["rows"][number];
+  maxKg: number;
+  variant: "default" | "group" | "child";
+}) {
+  const showTrack = variant !== "child";
+  const rowClass =
+    variant === "group"
+      ? "birzha-admin-summary-table__group-row"
+      : variant === "child"
+        ? "birzha-admin-summary-table__child-row"
+        : undefined;
+
+  return (
+    <tr key={row.key} className={rowClass}>
+      <th scope="row" className="birzha-admin-summary-table__label-cell">
+        <div className="birzha-admin-summary-table__label">{row.label}</div>
+        {row.sublabel ? (
+          <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
+            {row.sublabel}
+          </div>
+        ) : null}
+        {showTrack ? (
+          <div className="birzha-admin-dash-modern__warehouse-track birzha-admin-summary-table__track">
+            <div
+              className="birzha-admin-dash-modern__warehouse-fill"
+              style={{ width: `${ratioPart(row.kg, maxKg)}%` }}
+            />
+          </div>
+        ) : null}
+      </th>
+      <td className="birzha-admin-summary-table__num">{formatKg(row.kg)}</td>
+      <td className="birzha-admin-summary-table__num">{formatPackages(row.packages)}</td>
+      <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
+        {kopecksToRubDisplay(row.valueKopecks)}
+      </td>
+    </tr>
+  );
+}
+
+function SummaryStockTable({ labelColumn, rows, totals, maxKg, nestedGrades }: SummaryTableProps) {
   if (rows.length === 0) {
     return <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>;
   }
@@ -231,29 +277,30 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.key}>
-              <th scope="row" className="birzha-admin-summary-table__label-cell">
-                <div className="birzha-admin-summary-table__label">{row.label}</div>
-                {row.sublabel ? (
-                  <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
-                    {row.sublabel}
-                  </div>
-                ) : null}
-                <div className="birzha-admin-dash-modern__warehouse-track birzha-admin-summary-table__track">
-                  <div
-                    className="birzha-admin-dash-modern__warehouse-fill"
-                    style={{ width: `${ratioPart(row.kg, maxKg)}%` }}
-                  />
-                </div>
-              </th>
-              <td className="birzha-admin-summary-table__num">{formatKg(row.kg)}</td>
-              <td className="birzha-admin-summary-table__num">{formatPackages(row.packages)}</td>
-              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
-                {kopecksToRubDisplay(row.valueKopecks)}
-              </td>
-            </tr>
-          ))}
+          {rows.flatMap((row) => {
+            const hasChildren = nestedGrades && (row.children?.length ?? 0) > 0;
+            const groupRows = [
+              <SummaryStockTableRow
+                key={row.key}
+                row={row}
+                maxKg={maxKg}
+                variant={hasChildren ? "group" : "default"}
+              />,
+            ];
+            if (hasChildren) {
+              for (const child of row.children ?? []) {
+                groupRows.push(
+                  <SummaryStockTableRow
+                    key={child.key}
+                    row={child}
+                    maxKg={maxKg}
+                    variant="child"
+                  />,
+                );
+              }
+            }
+            return groupRows;
+          })}
         </tbody>
         {totals ? (
           <tfoot>
@@ -468,13 +515,6 @@ export function AdminCabinetHome() {
               <p className="birzha-home-hero__eyebrow">Панель управления</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
-                <Link
-                  to={adminRoutes.archive}
-                  style={btnStyleInline}
-                  className="birzha-admin-summary-toggle no-print"
-                >
-                  Архив
-                </Link>
                 <button
                   type="button"
                   style={btnStyleInline}
@@ -639,6 +679,7 @@ export function AdminCabinetHome() {
                     rows={warehouseRows}
                     totals={aggregates.stockTotals}
                     maxKg={summaryTableMaxKg}
+                    nestedGrades
                   />
                 </>
               ) : null}

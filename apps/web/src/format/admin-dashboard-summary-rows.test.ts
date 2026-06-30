@@ -29,7 +29,7 @@ describe("admin-dashboard-summary-rows", () => {
     expect(rows[0]!.packages).toBe(40);
   });
 
-  it("warehouseTableRows — имя склада", () => {
+  it("warehouseTableRows — имя склада и калибры", () => {
     const rows = warehouseTableRows([
       {
         warehouseId: "wh1",
@@ -37,9 +37,31 @@ describe("admin-dashboard-summary-rows", () => {
         kg: 100,
         packages: 10,
         valueKopecks: "50000",
+        byGrade: [
+          {
+            productGradeId: "g1",
+            code: "№5",
+            displayName: "Калибр №5",
+            productGroup: "Помидоры",
+            kg: 60,
+            packages: 6,
+            valueKopecks: "30000",
+          },
+          {
+            productGradeId: "g2",
+            code: "№6",
+            displayName: "Калибр №6",
+            productGroup: "Помидоры",
+            kg: 40,
+            packages: 4,
+            valueKopecks: "20000",
+          },
+        ],
       },
     ]);
     expect(rows[0]!.label).toBe("Манас");
+    expect(rows[0]!.children).toHaveLength(2);
+    expect(rows[0]!.children![0]!.label).toBe("№5");
   });
 
   it("productGroupTableRows", () => {

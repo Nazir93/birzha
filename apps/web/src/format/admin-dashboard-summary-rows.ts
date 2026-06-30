@@ -12,6 +12,7 @@ export type SummaryTableRow = {
   kg: number;
   packages: number;
   valueKopecks: string;
+  children?: SummaryTableRow[];
 };
 
 export function gradeTableRows(rows: DashboardGradeStockRow[]): SummaryTableRow[] {
@@ -33,6 +34,7 @@ export function warehouseTableRows(rows: DashboardWarehouseStockRow[]): SummaryT
     kg: row.kg,
     packages: row.packages,
     valueKopecks: row.valueKopecks,
+    children: gradeTableRows(row.byGrade ?? []),
   }));
 }
 

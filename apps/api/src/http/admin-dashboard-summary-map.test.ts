@@ -5,6 +5,7 @@ import {
   mapGradeStockRows,
   mapProductGroupStockRows,
   mapWarehouseStockRows,
+  mapWarehouseWithGradeStockRows,
   proportionalPackageCount,
   remainingValueKopecks,
   sumKopecks,
@@ -113,7 +114,56 @@ describe("mapWarehouseStockRows", () => {
     ]);
     expect(rows[0]!.warehouseName).toBe("А");
     expect(rows[0]!.kg).toBe(500);
+    expect(rows[0]!.byGrade).toEqual([]);
     expect(rows[1]!.kg).toBe(200);
+  });
+});
+
+describe("mapWarehouseWithGradeStockRows", () => {
+  it("группирует калибры по складу и сортирует", () => {
+    const rows = mapWarehouseWithGradeStockRows([
+      {
+        warehouseId: "wh-a",
+        warehouseName: "Манас",
+        productGradeId: "g2",
+        code: "№6",
+        displayName: "Калибр №6",
+        productGroup: "Помидоры",
+        grams: 300_000n,
+        packages: 30,
+        valueKopecks: 300_000n,
+      },
+      {
+        warehouseId: "wh-a",
+        warehouseName: "Манас",
+        productGradeId: "g1",
+        code: "№5",
+        displayName: "Калибр №5",
+        productGroup: "Помидоры",
+        grams: 500_000n,
+        packages: 50,
+        valueKopecks: 500_000n,
+      },
+      {
+        warehouseId: "wh-b",
+        warehouseName: "Каякент",
+        productGradeId: "g3",
+        code: "№8",
+        displayName: "Калибр №8",
+        productGroup: "Огурцы",
+        grams: 200_000n,
+        packages: 20,
+        valueKopecks: 220_000n,
+      },
+    ]);
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.warehouseName).toBe("Манас");
+    expect(rows[0]!.kg).toBe(800);
+    expect(rows[0]!.byGrade).toHaveLength(2);
+    expect(rows[0]!.byGrade[0]!.code).toBe("№5");
+    expect(rows[1]!.warehouseName).toBe("Каякент");
+    expect(rows[1]!.byGrade[0]!.code).toBe("№8");
   });
 });
 

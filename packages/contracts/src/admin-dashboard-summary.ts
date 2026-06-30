@@ -44,6 +44,14 @@ export const adminDashboardSummaryResponseSchema = z.object({
       dashboardStockSliceSchema.extend({
         warehouseId: z.string(),
         warehouseName: z.string(),
+        byGrade: z.array(
+          dashboardStockSliceSchema.extend({
+            productGradeId: z.string(),
+            code: z.string(),
+            displayName: z.string(),
+            productGroup: z.string().nullable(),
+          }),
+        ),
       }),
     ),
     byProductGroup: z.array(

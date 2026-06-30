@@ -74,6 +74,14 @@ export type MappedWarehouseStockRow = {
   kg: number;
   packages: number;
   valueKopecks: string;
+  byGrade: MappedGradeStockRow[];
+};
+
+export type RawWarehouseGradeStockRow = RawWarehouseStockRow & {
+  productGradeId: string;
+  code: string;
+  displayName: string;
+  productGroup: string | null;
 };
 
 export type MappedProductGroupStockRow = {
@@ -153,7 +161,57 @@ export function mapWarehouseStockRows(rows: RawWarehouseStockRow[]): MappedWareh
       kg: gramsToKg(row.grams),
       packages: Math.round(row.packages),
       valueKopecks: toKopecksBigInt(row.valueKopecks).toString(),
+      byGrade: [],
     }))
+    .sort((a, b) => b.kg - a.kg);
+}
+
+export function mapWarehouseWithGradeStockRows(rows: RawWarehouseGradeStockRow[]): MappedWarehouseStockRow[] {
+  const byWarehouseId = new Map<
+    string,
+    { warehouseId: string; warehouseName: string; byGrade: MappedGradeStockRow[] }
+  >();
+
+  for (const row of rows) {
+    const kg = gramsToKg(row.grams);
+    const packages = Math.round(row.packages);
+    if (kg <= 0 && packages <= 0) {
+      continue;
+    }
+
+    let warehouse = byWarehouseId.get(row.warehouseId);
+    if (!warehouse) {
+      warehouse = {
+        warehouseId: row.warehouseId,
+        warehouseName: row.warehouseName,
+        byGrade: [],
+      };
+      byWarehouseId.set(row.warehouseId, warehouse);
+    }
+
+    warehouse.byGrade.push({
+      productGradeId: row.productGradeId,
+      code: row.code,
+      displayName: row.displayName,
+      productGroup: row.productGroup,
+      kg,
+      packages,
+      valueKopecks: toKopecksBigInt(row.valueKopecks).toString(),
+    });
+  }
+
+  return [...byWarehouseId.values()]
+    .map((warehouse) => {
+      const byGrade = warehouse.byGrade.sort((a, b) => b.kg - a.kg);
+      return {
+        warehouseId: warehouse.warehouseId,
+        warehouseName: warehouse.warehouseName,
+        kg: byGrade.reduce((sum, grade) => sum + grade.kg, 0),
+        packages: byGrade.reduce((sum, grade) => sum + grade.packages, 0),
+        valueKopecks: sumKopecks(byGrade.map((grade) => grade.valueKopecks)).toString(),
+        byGrade,
+      };
+    })
     .sort((a, b) => b.kg - a.kg);
 }
 

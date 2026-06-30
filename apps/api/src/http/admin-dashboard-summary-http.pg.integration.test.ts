@@ -162,6 +162,14 @@ describe.skipIf(!pgUrl)("admin dashboard summary stock breakdown (PostgreSQL)", 
     const wh2 = summary.warehouse.byWarehouse.find((w) => w.warehouseId === wh2Id);
     expect(wh1).toMatchObject({ kg: 500, packages: 40, valueKopecks: "1000000" });
     expect(wh2).toMatchObject({ kg: 500, packages: 50, valueKopecks: "1500000" });
+    expect(wh1?.byGrade.find((g) => g.productGradeId === grade1Id)).toMatchObject({
+      kg: 500,
+      code: "№5",
+    });
+    expect(wh2?.byGrade.find((g) => g.productGradeId === grade2Id)).toMatchObject({
+      kg: 500,
+      code: "№6",
+    });
 
     const toms = summary.warehouse.byProductGroup.find((p) => p.productGroup === "Помидоры");
     expect(toms).toMatchObject({ kg: 1000, packages: 90, valueKopecks: "2500000" });
