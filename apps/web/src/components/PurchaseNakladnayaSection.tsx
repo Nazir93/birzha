@@ -290,10 +290,10 @@ export function PurchaseNakladnayaSection() {
 
   if (!enabled) {
     return (
-      <section className="birzha-panel birzha-purchase-nakl-page" aria-labelledby="nakl-disabled" role="region" aria-label="Закупка товара">
+      <section className="birzha-panel birzha-clean-ops-page" aria-labelledby="nakl-disabled" role="region" aria-label="Закупка товара">
         <BirzhaDisclosure
           defaultOpen
-          className="birzha-purchase-nakl-disclosure"
+          className="birzha-clean-ops-disclosure"
           title={
             <h3 id="nakl-disabled" style={{ margin: 0, fontSize: "0.98rem" }}>
               Закупка товара
@@ -309,10 +309,10 @@ export function PurchaseNakladnayaSection() {
   }
 
   return (
-    <section className="birzha-panel birzha-purchase-nakl-page" aria-labelledby="nakl-heading" role="region" aria-label="Закупка товара">
+    <section className="birzha-panel birzha-clean-ops-page" aria-labelledby="nakl-heading" role="region" aria-label="Закупка товара">
       <BirzhaDisclosure
         defaultOpen
-        className="birzha-purchase-nakl-disclosure"
+        className="birzha-clean-ops-disclosure"
         title={
           <div className="birzha-section-heading">
             <div>
@@ -340,7 +340,7 @@ export function PurchaseNakladnayaSection() {
       {(warehousesQ.isPending || gradesQ.isPending) && (
         <LoadingBlock label="Загрузка справочников складов и калибров…" minHeight={56} skeleton skeletonRows={3} />
       )}
-      <div className="birzha-purchase-nakl-meta-grid">
+      <div className="birzha-clean-ops-meta-grid">
         <label className="birzha-form-label">
           Поставщик *
           <input
@@ -584,14 +584,14 @@ export function PurchaseNakladnayaSection() {
       )}
 
       {listQ.data && listQ.data.purchaseDocuments.length === 0 && !listQ.isPending && (
-        <div className="birzha-purchase-nakl-list birzha-purchase-nakl-list--empty">
+        <div className="birzha-clean-ops-list birzha-clean-ops-list--empty">
           <BirzhaEmptyState compact title="Сохранённых накладных пока нет" description="Создайте документ формой выше." />
         </div>
       )}
 
       {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
-        <div className="birzha-purchase-nakl-list">
-          <h4 className="birzha-purchase-nakl-list__title">
+        <div className="birzha-clean-ops-list">
+          <h4 className="birzha-clean-ops-list__title">
             В работе
             {batchesQ.isSuccess ? (
               <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
