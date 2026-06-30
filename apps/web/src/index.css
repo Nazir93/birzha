@@ -27,6 +27,8 @@
 /* Дизайн-токены: тексты, акцент, поверхности, навигация (остальное — `styles.ts` + компоненты). */
 :root {
   --font-ui: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /** Базовый размер (rem). Было 16px — компактнее на всех экранах. */
+  --birzha-font-size-root: 14px;
   --color-text: #18181b;
   --color-muted: #71717a;
   --color-text-muted: #71717a;
@@ -446,6 +448,7 @@ html {
   overscroll-behavior-x: none;
   /* iOS: не отдавать горизонтальный жест странице целиком */
   touch-action: pan-y pinch-zoom;
+  font-size: var(--birzha-font-size-root);
 }
 
 *,
@@ -472,7 +475,7 @@ body {
   touch-action: pan-y pinch-zoom;
   margin: 0;
   font-family: var(--font-ui);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.5;
   color: var(--color-text);
   background: var(--birzha-bg-page);
