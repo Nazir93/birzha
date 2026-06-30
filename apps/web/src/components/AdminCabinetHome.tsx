@@ -170,33 +170,20 @@ function MassBalanceLegend({ segments }: { segments: MassSegment[] }) {
   );
 }
 
-function SummaryTotalsStrip({
-  totals,
-  caption,
-  footnote,
-}: {
-  totals: DashboardStockSlice;
-  caption: string;
-  footnote?: string;
-}) {
+function SummaryTotalsStrip({ totals, caption }: { totals: DashboardStockSlice; caption: string }) {
   if (totals.kg <= 0 && totals.packages <= 0) {
     return null;
   }
   return (
-    <div className="birzha-admin-dash-modern__summary-totals-block" style={{ margin: "0 0 0.65rem" }}>
-      <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: 0 }}>
-        <span className="birzha-text-muted">{caption}</span>{" "}
-        <strong>{formatKg(totals.kg)}</strong>
-        <span className="birzha-text-muted"> · </span>
-        <strong>{formatPackages(totals.packages)} ящ.</strong>
-        <span className="birzha-text-muted"> · </span>
-        <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
-        <span className="birzha-text-muted"> (оценка по закупу)</span>
-      </p>
-      {footnote ? (
-        <p className="birzha-admin-dash-modern__summary-footnote birzha-text-muted birzha-ui-sm">{footnote}</p>
-      ) : null}
-    </div>
+    <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+      <span className="birzha-text-muted">{caption}</span>{" "}
+      <strong>{formatKg(totals.kg)}</strong>
+      <span className="birzha-text-muted"> · </span>
+      <strong>{formatPackages(totals.packages)} ящ.</strong>
+      <span className="birzha-text-muted"> · </span>
+      <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
+      <span className="birzha-text-muted"> (оценка по закупу)</span>
+    </p>
   );
 }
 
@@ -332,8 +319,6 @@ export function AdminCabinetHome() {
         tripsClosed: 0,
         batchCount: 0,
         warehouseKg: 0,
-        inTransitKg: 0,
-        pendingInboundKg: 0,
         soldKg: 0,
         dispatchedKg: 0,
         inTripRemainingKg: 0,
@@ -354,8 +339,6 @@ export function AdminCabinetHome() {
       tripsClosed: summary.trips.closedCount,
       batchCount: summary.warehouse.batchCount,
       warehouseKg: summary.warehouse.warehouseKg,
-      inTransitKg: summary.warehouse.inTransitKg,
-      pendingInboundKg: summary.warehouse.pendingInboundKg,
       soldKg: summary.trips.soldKg,
       dispatchedKg: summary.trips.remainingInTripKg,
       inTripRemainingKg: summary.trips.remainingInTripKg,
@@ -447,24 +430,6 @@ export function AdminCabinetHome() {
     ],
   );
 
-  const stockTotalsFootnote = useMemo(() => {
-    const parts: string[] = ["Включая в пути и ожидание; оценка по цене закупа."];
-    if (aggregates.inTransitKg > 0 || aggregates.pendingInboundKg > 0) {
-      const detail: string[] = [];
-      if (aggregates.inTransitKg > 0) {
-        detail.push(`в пути ${formatKg(aggregates.inTransitKg)}`);
-      }
-      if (aggregates.pendingInboundKg > 0) {
-        detail.push(`ожидание ${formatKg(aggregates.pendingInboundKg)}`);
-      }
-      parts.push(`Из них ${detail.join(", ")}.`);
-    }
-    parts.push(
-      `KPI «На складе» (${formatKg(aggregates.warehouseKg)}) — только физический склад, без пути.`,
-    );
-    return parts.join(" ");
-  }, [aggregates.inTransitKg, aggregates.pendingInboundKg, aggregates.warehouseKg]);
-
   const loading = summaryQ.isPending;
   const summaryFailed = summaryQ.isError;
   const tripsFailed = tripsQ.isError;
@@ -502,11 +467,14 @@ export function AdminCabinetHome() {
             <div>
               <p className="birzha-home-hero__eyebrow">Панель управления</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
-              <p className="birzha-admin-dash-modern__hero-hint birzha-text-muted birzha-ui-sm">
-                Остатки и открытые рейсы — на текущий момент. После закрытия рейса смотрите{" "}
-                <Link to={adminRoutes.archive}>Архив</Link>.
-              </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
+                <Link
+                  to={adminRoutes.archive}
+                  style={btnStyleInline}
+                  className="birzha-admin-summary-toggle no-print"
+                >
+                  Архив
+                </Link>
                 <button
                   type="button"
                   style={btnStyleInline}
@@ -540,9 +508,6 @@ export function AdminCabinetHome() {
                   Всё время
                 </button>
               </div>
-              <p className="birzha-admin-dash-modern__period-hint birzha-text-muted birzha-ui-sm">
-                Период влияет на счётчики рейсов и ПН справа; остатки на складе и таблицы — всегда актуальные.
-              </p>
             </div>
             <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
               <Link to={adminRoutes.purchaseNakladnaya} className="birzha-home-action">
@@ -643,7 +608,6 @@ export function AdminCabinetHome() {
               <SummaryTotalsStrip
                 totals={aggregates.stockTotals}
                 caption="Товар в обороте (склад + погружено + ожидание):"
-                footnote={stockTotalsFootnote}
               />
               {showMassChart ? (
                 <div className="birzha-admin-dash-modern__mass-row">
