@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildMassSegments,
   gradeTableRows,
+  isMassRingPointerOnDonut,
+  massRingPointerAngleDeg,
+  massSegmentAtRingAngle,
   productGroupTableRows,
   summaryTableMaxKg,
   warehouseTableRows,
@@ -61,5 +64,30 @@ describe("admin-dashboard-summary-rows", () => {
   it("summaryTableMaxKg — первый после сортировки API", () => {
     expect(summaryTableMaxKg([{ key: "a", label: "A", kg: 500, packages: 1, valueKopecks: "0" }])).toBe(500);
     expect(summaryTableMaxKg([])).toBe(0);
+  });
+
+  it("massRingPointerAngleDeg — 12 часов и 3 часа", () => {
+    const rect = { left: 0, top: 0, width: 100, height: 100 } as DOMRect;
+    expect(massRingPointerAngleDeg(50, 0, rect)).toBeCloseTo(0, 0);
+    expect(massRingPointerAngleDeg(100, 50, rect)).toBeCloseTo(90, 0);
+  });
+
+  it("isMassRingPointerOnDonut — центр и край", () => {
+    const rect = { left: 0, top: 0, width: 100, height: 100 } as DOMRect;
+    expect(isMassRingPointerOnDonut(50, 50, rect)).toBe(false);
+    expect(isMassRingPointerOnDonut(50, 2, rect)).toBe(true);
+  });
+
+  it("massSegmentAtRingAngle — четыре сегмента по долям", () => {
+    const segments = buildMassSegments({
+      warehouseKg: 400,
+      loadingManifestKg: 100,
+      inTripRemainingKg: 100,
+      soldKg: 100,
+    });
+    expect(massSegmentAtRingAngle(segments, 45)?.label).toBe("На складе");
+    expect(massSegmentAtRingAngle(segments, 220)?.label).toBe("Погрузка");
+    expect(massSegmentAtRingAngle(segments, 280)?.label).toBe("В рейсе");
+    expect(massSegmentAtRingAngle(segments, 330)?.label).toBe("Продано");
   });
 });

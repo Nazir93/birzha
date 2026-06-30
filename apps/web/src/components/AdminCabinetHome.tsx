@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
@@ -14,6 +14,9 @@ import { canCreateTrip } from "../auth/role-panels.js";
 import {
   buildMassSegments,
   gradeTableRows,
+  isMassRingPointerOnDonut,
+  massRingPointerAngleDeg,
+  massSegmentAtRingAngle,
   productGroupTableRows,
   warehouseTableRows,
 } from "../format/admin-dashboard-summary-rows.js";
@@ -32,6 +35,13 @@ const ADMIN_TRIPS_PAGE_SIZE = 15;
 type SummaryChartMode = "mass" | "warehouses" | "products";
 type SummaryPeriod = "today" | "7d" | "30d" | "all";
 
+type MassRingTooltip = {
+  clientX: number;
+  clientY: number;
+  label: string;
+  kg: number;
+};
+
 function MassDistributionRing({
   warehouseKg,
   loadingManifestKg,
@@ -43,6 +53,18 @@ function MassDistributionRing({
   inTripKg: number;
   soldKg: number;
 }) {
+  const ringRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<MassRingTooltip | null>(null);
+  const segments = useMemo(
+    () =>
+      buildMassSegments({
+        warehouseKg,
+        loadingManifestKg,
+        inTripRemainingKg: inTripKg,
+        soldKg,
+      }),
+    [warehouseKg, loadingManifestKg, inTripKg, soldKg],
+  );
   const total = warehouseKg + loadingManifestKg + inTripKg + soldKg;
   if (total <= 0) {
     return (
@@ -60,14 +82,49 @@ function MassDistributionRing({
     #f59e0b ${lm}deg ${tr}deg,
     #2563eb ${tr}deg 360deg
   )`;
+
+  const updateTooltip = (clientX: number, clientY: number) => {
+    const el = ringRef.current;
+    if (!el) {
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    if (!isMassRingPointerOnDonut(clientX, clientY, rect)) {
+      setTooltip(null);
+      return;
+    }
+    const angle = massRingPointerAngleDeg(clientX, clientY, rect);
+    const segment = massSegmentAtRingAngle(segments, angle);
+    if (!segment) {
+      setTooltip(null);
+      return;
+    }
+    setTooltip({ clientX, clientY, label: segment.label, kg: segment.kg });
+  };
+
   return (
-    <div
-      className="birzha-admin-mass-ring"
-      style={{ background: gradient }}
-      role="img"
-      aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, в погрузочных накладных ${loadingManifestKg.toFixed(0)} кг, в открытых рейсах ${inTripKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
-    >
-      <div className="birzha-admin-mass-ring__hole" />
+    <div className="birzha-admin-mass-ring-wrap">
+      <div
+        ref={ringRef}
+        className="birzha-admin-mass-ring birzha-admin-mass-ring--interactive"
+        style={{ background: gradient }}
+        role="img"
+        aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, в погрузочных накладных ${loadingManifestKg.toFixed(0)} кг, в открытых рейсах ${inTripKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
+        onPointerMove={(event) => updateTooltip(event.clientX, event.clientY)}
+        onPointerLeave={() => setTooltip(null)}
+      >
+        <div className="birzha-admin-mass-ring__hole" aria-hidden />
+      </div>
+      {tooltip ? (
+        <div
+          className="birzha-admin-mass-ring__tooltip"
+          style={{ left: tooltip.clientX + 12, top: tooltip.clientY + 12 }}
+          role="tooltip"
+        >
+          <span className="birzha-admin-mass-ring__tooltip-label">{tooltip.label}</span>
+          <span className="birzha-admin-mass-ring__tooltip-value">{formatKg(tooltip.kg)}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -146,7 +203,7 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
   }
   return (
     <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-admin-summary-table-wrap">
-      <table style={tableStyle} className="birzha-admin-summary-table">
+      <table className="birzha-admin-summary-table">
         <colgroup>
           <col className="birzha-admin-summary-table__col-label" />
           <col className="birzha-admin-summary-table__col-num" />
@@ -155,16 +212,16 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
         </colgroup>
         <thead>
           <tr>
-            <th scope="col" style={thHead}>
+            <th scope="col" className="birzha-admin-summary-table__head">
               {labelColumn}
             </th>
-            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
+            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
               Кг
             </th>
-            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
+            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
               Ящ.
             </th>
-            <th scope="col" className="birzha-admin-summary-table__num-head" style={thHead}>
+            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
               Сумма, ₽
             </th>
           </tr>
@@ -172,7 +229,7 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
         <tbody>
           {rows.map((row) => (
             <tr key={row.key}>
-              <th scope="row" style={thtd} className="birzha-admin-summary-table__label-cell">
+              <th scope="row" className="birzha-admin-summary-table__label-cell">
                 <div className="birzha-admin-summary-table__label">{row.label}</div>
                 {row.sublabel ? (
                   <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
@@ -186,13 +243,9 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
                   />
                 </div>
               </th>
-              <td className="birzha-admin-summary-table__num" style={thtd}>
-                {formatKg(row.kg)}
-              </td>
-              <td className="birzha-admin-summary-table__num" style={thtd}>
-                {formatPackages(row.packages)}
-              </td>
-              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum" style={thtd}>
+              <td className="birzha-admin-summary-table__num">{formatKg(row.kg)}</td>
+              <td className="birzha-admin-summary-table__num">{formatPackages(row.packages)}</td>
+              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
                 {kopecksToRubDisplay(row.valueKopecks)}
               </td>
             </tr>
@@ -201,19 +254,10 @@ function SummaryStockTable({ labelColumn, rows, totals, maxKg }: SummaryTablePro
         {totals ? (
           <tfoot>
             <tr className="birzha-admin-summary-table__foot">
-              <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
-                Итого
-              </th>
-              <td className="birzha-admin-summary-table__num" style={{ ...thtd, fontWeight: 700 }}>
-                {formatKg(totals.kg)}
-              </td>
-              <td className="birzha-admin-summary-table__num" style={{ ...thtd, fontWeight: 700 }}>
-                {formatPackages(totals.packages)}
-              </td>
-              <td
-                className="birzha-admin-summary-table__num birzha-admin-summary-table__sum"
-                style={{ ...thtd, fontWeight: 700 }}
-              >
+              <th scope="row">Итого</th>
+              <td className="birzha-admin-summary-table__num">{formatKg(totals.kg)}</td>
+              <td className="birzha-admin-summary-table__num">{formatPackages(totals.packages)}</td>
+              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
                 {kopecksToRubDisplay(totals.valueKopecks)}
               </td>
             </tr>
@@ -463,7 +507,7 @@ export function AdminCabinetHome() {
             </nav>
           </header>
 
-          <section className="birzha-kpi-grid birzha-kpi-grid--wide birzha-admin-dash-modern__kpi">
+          <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi">
               <Link
                 to={adminRoutes.stockWarehouses}
                 className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"

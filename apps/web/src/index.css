@@ -3688,6 +3688,11 @@ main.app-shell--cabinet {
   gap: 1rem 1.5rem;
 }
 
+.birzha-admin-mass-ring-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .birzha-admin-mass-ring {
   width: 7.5rem;
   height: 7.5rem;
@@ -3696,6 +3701,41 @@ main.app-shell--cabinet {
   box-shadow:
     inset 0 1px 2px rgba(255, 255, 255, 0.38),
     0 14px 34px -24px rgba(15, 23, 42, 0.6);
+}
+
+.birzha-admin-mass-ring--interactive {
+  cursor: default;
+  touch-action: none;
+}
+
+.birzha-admin-mass-ring__tooltip {
+  position: fixed;
+  z-index: 120;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.55);
+  white-space: nowrap;
+}
+
+.birzha-admin-mass-ring__tooltip-label {
+  color: rgba(248, 250, 252, 0.82);
+}
+
+.birzha-admin-mass-ring__tooltip-value {
+  font-weight: 600;
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-mass-ring__tooltip {
+  background: rgba(30, 41, 59, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .birzha-admin-mass-ring--empty {
@@ -3719,6 +3759,7 @@ main.app-shell--cabinet {
   border-radius: 50%;
   background: #ffffff;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
 }
 
 .birzha-admin-dash__legend {
@@ -4011,12 +4052,16 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-dash-modern__kpi {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  grid-template-columns: repeat(4, minmax(7.25rem, 10.5rem));
+  justify-content: start;
+  gap: 0.45rem;
 }
 
 .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
-  min-height: 7.2rem;
-  border-radius: 16px;
+  min-height: unset;
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
   position: relative;
   overflow: hidden;
   transition:
@@ -4051,13 +4096,15 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-dash-modern__kpi .birzha-kpi-tile__label {
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
 }
 
 .birzha-admin-dash-modern__kpi .birzha-kpi-tile__value {
-  font-size: clamp(1.2rem, 1.7vw, 1.62rem);
+  font-size: 1.05rem;
+  line-height: 1.15;
 }
 
 .birzha-admin-dash-modern__layout {
@@ -4171,12 +4218,34 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-summary-table-wrap {
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
+}
+
+.birzha-admin-summary-table-wrap.birzha-table-scroll--sticky-head thead th {
+  box-shadow: none;
 }
 
 .birzha-admin-summary-table {
   width: 100%;
   table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.birzha-admin-summary-table th,
+.birzha-admin-summary-table td {
+  border: none;
+  padding: 0.2rem 0.35rem;
+  text-align: left;
+  vertical-align: middle;
+  background: transparent;
+}
+
+.birzha-admin-summary-table__head {
+  font-weight: 600;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  padding-bottom: 0.28rem;
 }
 
 .birzha-admin-summary-table__col-label {
@@ -4184,11 +4253,11 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-summary-table__col-num {
-  width: 4.75rem;
+  width: 4.25rem;
 }
 
 .birzha-admin-summary-table__col-sum {
-  width: 6.75rem;
+  width: 6.25rem;
 }
 
 .birzha-admin-summary-table__num-head,
@@ -4199,29 +4268,50 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-summary-table__sum {
-  padding-right: 0.35rem !important;
+  padding-right: 0.15rem !important;
 }
 
 .birzha-admin-summary-table__label-cell {
   overflow: hidden;
+  font-weight: 400;
 }
 
 .birzha-admin-summary-table__label {
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .birzha-admin-summary-table__sublabel {
-  margin-top: 0.12rem;
+  margin-top: 0.04rem;
+  line-height: 1.15;
 }
 
 .birzha-admin-summary-table__track {
-  margin-top: 0.35rem;
-  max-width: 12rem;
+  margin-top: 0.18rem;
+  max-width: 11rem;
+  height: 0.42rem;
+}
+
+.birzha-admin-summary-table-wrap tbody tr:hover td,
+.birzha-admin-summary-table-wrap tbody tr:hover th {
+  background: rgba(0, 0, 0, 0.035);
 }
 
 .birzha-admin-summary-table__foot th,
 .birzha-admin-summary-table__foot td {
-  border-top: 1px solid var(--birzha-border, rgba(0, 0, 0, 0.12));
+  padding-top: 0.3rem;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.22);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-summary-table-wrap tbody tr:hover td,
+html[data-birzha-theme="dark"] .birzha-admin-summary-table-wrap tbody tr:hover th {
+  background: rgba(51, 65, 85, 0.45);
+}
+
+html[data-birzha-theme="dark"] .birzha-admin-summary-table__foot th,
+html[data-birzha-theme="dark"] .birzha-admin-summary-table__foot td {
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.18);
 }
 
 .birzha-admin-dash-modern__warehouse-bars {
@@ -4468,12 +4558,20 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
   .birzha-admin-dash-modern__layout {
     grid-template-columns: 1fr;
   }
+
+  .birzha-admin-dash-modern__kpi {
+    grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  }
 }
 
 @media (max-width: 46rem) {
   .birzha-admin-dash-modern__mass-row {
     grid-template-columns: 1fr;
     justify-items: center;
+  }
+
+  .birzha-admin-dash-modern__kpi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .birzha-admin-dash-modern__bar-row {
