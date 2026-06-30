@@ -157,7 +157,7 @@ export function LoadingManifestBlock({
             {documentOptions.map((d) => (
               <label
                 key={d.id}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.9rem", cursor: "pointer" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: "0.9rem" }}
               >
                 <input type="checkbox" checked={selectedDocIds.has(d.id)} onChange={() => onToggleNaklDoc(d.id)} />
                 {d.checkboxLabel}
@@ -226,7 +226,7 @@ export function LoadingManifestBlock({
                 }}
               >
                 <span className="birzha-text-muted">Списать по:</span>
-                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <input
                     type="radio"
                     name="lm-writeoff-mode"
@@ -235,7 +235,7 @@ export function LoadingManifestBlock({
                   />
                   калибрам
                 </label>
-                <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <input
                     type="radio"
                     name="lm-writeoff-mode"
@@ -410,7 +410,7 @@ export function LoadingManifestBlock({
             }}
           >
             <span className="birzha-text-muted">Показать:</span>
-            <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
               <input
                 type="radio"
                 name="lm-stock-mode"
@@ -419,7 +419,7 @@ export function LoadingManifestBlock({
               />
               по калибрам
             </label>
-            <label style={{ cursor: "pointer", display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
               <input
                 type="radio"
                 name="lm-stock-mode"

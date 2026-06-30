@@ -173,7 +173,6 @@ export function AdminStockWarehousesPage() {
                               background: "none",
                               border: "none",
                               padding: 0,
-                              cursor: "pointer",
                               fontWeight: active ? 800 : 600,
                               color: "inherit",
                               textAlign: "left",

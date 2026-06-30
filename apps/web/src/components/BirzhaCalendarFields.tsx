@@ -88,7 +88,6 @@ const triggerStyleBase: CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   gap: "0.5rem",
-  cursor: "pointer",
   textAlign: "left" as const,
   font: "inherit",
   boxShadow: "none" as const,

@@ -92,7 +92,6 @@ export function LoadingManifestAccordion({
     <details className="birzha-disclosure birzha-disclosure--nested" open={isOpen}>
       <summary
         className="birzha-disclosure__summary"
-        style={{ cursor: "pointer" }}
         onClick={(e) => {
           e.preventDefault();
           if (manifestId === m.id) {

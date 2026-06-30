@@ -13,7 +13,7 @@
   list-style: none;
   padding: 0.45rem 0.65rem;
   user-select: none;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 .birzha-nakl-details__summary::-webkit-details-marker,
 .birzha-nakl-details__summary::marker {
@@ -71,12 +71,38 @@
   --birzha-scrollbar-track: #e4e4e7;
   --birzha-scrollbar-thumb: #a1a1aa;
   --birzha-scrollbar-thumb-hover: #71717a;
+  /* Красная стрелка — курсор по умолчанию во всём приложении */
+  --birzha-cursor-red: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23dc2626' stroke='%23ffffff' stroke-width='1.1' d='M2 2 L2 14 L6.5 10.5 L9.5 16 L11.5 15 L8.5 9.5 L14.5 9.5 Z'/%3E%3C/svg%3E")
+    2 2,
+    auto;
 }
 
 html,
 body,
 #root {
   color-scheme: light dark;
+  cursor: var(--birzha-cursor-red);
+}
+
+input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea {
+  cursor: text;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+summary,
+a,
+label,
+[role="button"],
+[role="link"],
+[role="tab"] {
+  cursor: var(--birzha-cursor-red);
 }
 
 /* PWA с экрана «Домой»: дополнительно фиксируем текст (viewport — в index.html). */
@@ -604,7 +630,7 @@ main.app-shell {
 /* Переключатель темы: в шапке и в drawer */
 .birzha-theme-toggle {
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   border: 1px solid var(--color-border);
   background: var(--birzha-surface);
   color: var(--color-text);
@@ -698,7 +724,7 @@ main.app-shell {
   font-family: inherit;
   font-size: 0.88rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   border-radius: var(--birzha-radius-sm);
   border: 1px solid var(--color-border);
   background: var(--birzha-surface);
@@ -738,7 +764,7 @@ main.app-shell {
   font-family: inherit;
   font-size: 0.92rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   border-radius: var(--birzha-radius-sm);
   border: 1px solid var(--birzha-accent-strong);
   background: var(--birzha-accent);
@@ -836,7 +862,7 @@ main.app-shell {
 a.birzha-kpi-tile--link {
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -1062,7 +1088,7 @@ a.birzha-kpi-tile--link:focus-visible {
   border-radius: var(--birzha-radius-sm);
   border: 2px solid var(--color-border);
   background: var(--birzha-surface);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   word-break: break-word;
 }
@@ -1129,7 +1155,7 @@ a.birzha-kpi-tile--link:focus-visible {
   border: 2px solid var(--color-border);
   background: var(--birzha-surface);
   color: var(--color-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1171,7 +1197,7 @@ a.birzha-kpi-tile--link:focus-visible {
   padding: 0.55rem 0.7rem;
   border: none;
   background: transparent;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   font-family: var(--font-ui);
   font-size: 0.95rem;
   font-weight: 500;
@@ -1249,7 +1275,7 @@ a.birzha-kpi-tile--link:focus-visible {
   border: none;
   background: rgba(9, 9, 11, 0.62);
   backdrop-filter: blur(6px);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-sold-overlay__dialog {
@@ -1662,7 +1688,7 @@ a.birzha-kpi-tile--link:focus-visible {
   font-size: 0.8rem !important;
   font-weight: 600;
   line-height: 1.2;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   background: var(--birzha-btn-outline-bg) !important;
   color: var(--color-text) !important;
   border: 1px solid var(--birzha-btn-outline-border) !important;
@@ -2106,7 +2132,7 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   font-family: var(--font-ui);
   font-size: 0.82rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   padding: 0.35rem 0.65rem;
   border: none;
   border-radius: 8px;
@@ -2291,7 +2317,7 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   color: inherit;
   font-size: 1.35rem;
   line-height: 1;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   opacity: 0.75;
 }
 
@@ -2607,7 +2633,7 @@ html[data-birzha-theme="dark"] p[role="alert"].birzha-text-danger {
 
 .birzha-disclosure > summary,
 .birzha-disclosure__summary {
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   list-style: none;
   font-weight: 600;
   font-size: 0.92rem;
@@ -2726,7 +2752,7 @@ html[data-birzha-theme="dark"] p[role="alert"].birzha-text-danger {
 
 .birzha-btn-danger-outline {
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   font-weight: 600;
   color: var(--color-text) !important;
   background: var(--birzha-btn-outline-bg) !important;
@@ -2931,7 +2957,7 @@ input[type="datetime-local"]::-webkit-datetime-edit {
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   width: 1.25rem;
   height: 1.25rem;
   margin-inline: 0.15rem 0.2rem;
@@ -2975,7 +3001,7 @@ main input[type="month"] {
   justify-content: center;
   padding: 1rem;
   box-sizing: border-box;
-  cursor: default;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-dp__card {
@@ -3050,7 +3076,7 @@ main input[type="month"] {
   border-radius: 8px;
   background: var(--birzha-surface-muted);
   color: #18181b;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition: background 0.12s ease;
 }
 
@@ -3097,7 +3123,7 @@ main input[type="month"] {
   font-size: 0.9rem;
   font-weight: 500;
   color: #18181b;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition: background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
 }
 
@@ -3161,7 +3187,7 @@ main input[type="month"] {
   background: none;
   border: 0;
   padding: 0.25rem 0;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-dp__linkish:hover {
@@ -3175,7 +3201,7 @@ main input[type="month"] {
   font-weight: 600;
   padding: 0.4rem 0.85rem;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   border: 1px solid #d4d4d8;
   background: #fff;
   transition: background 0.12s ease, border-color 0.12s ease;
@@ -3503,7 +3529,7 @@ main.app-shell--cabinet {
   border: 1px solid var(--color-border);
   background: var(--birzha-chrome-muted);
   color: var(--birzha-chrome-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-cabinet-topbar__menu-btn:hover {
@@ -3550,7 +3576,7 @@ main.app-shell--cabinet {
   border: 1px solid var(--color-border);
   background: var(--birzha-chrome-muted);
   color: var(--birzha-chrome-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition:
     background 0.15s ease,
     transform 0.12s ease,
@@ -3633,7 +3659,7 @@ main.app-shell--cabinet {
   border-radius: 10px;
   background: var(--birzha-chrome-muted);
   color: var(--birzha-chrome-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3884,7 +3910,7 @@ main.app-shell--cabinet {
   border-radius: 10px;
   background: var(--birzha-chrome-muted);
   color: var(--birzha-chrome-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-cabinet-drawer__nav {
@@ -3950,7 +3976,7 @@ main.app-shell--cabinet {
   border: 1px solid var(--color-border);
   background: var(--birzha-chrome-muted);
   color: var(--birzha-chrome-text);
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-cabinet-drawer__footer-logout:hover {
@@ -4044,10 +4070,6 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-mass-ring--interactive {
-  cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23dc2626' stroke='%23ffffff' stroke-width='1.1' d='M2 2 L2 14 L6.5 10.5 L9.5 16 L11.5 15 L8.5 9.5 L14.5 9.5 Z'/%3E%3C/svg%3E")
-      2 2,
-    auto;
   touch-action: none;
 }
 
@@ -4166,7 +4188,7 @@ a.birzha-admin-stat--link {
   display: block;
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -4185,7 +4207,7 @@ a.birzha-admin-stat--link:focus-visible {
 .birzha-admin-dash__hero-ring--link {
   text-decoration: none;
   color: inherit;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
   border-radius: inherit;
   transition: opacity 0.15s ease;
 }
@@ -5695,7 +5717,7 @@ html[data-birzha-theme="dark"] .birzha-assign-seller__trip-row--active td {
   color: var(--birzha-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
-  cursor: pointer;
+  cursor: var(--birzha-cursor-red);
 }
 
 .birzha-assign-seller__trip-select:hover {

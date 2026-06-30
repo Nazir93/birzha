@@ -1099,7 +1099,6 @@ export function AllocationPanel() {
                       padding: 0,
                       border: "none",
                       background: "none",
-                      cursor: "pointer",
                       color: "var(--birzha-accent)",
                       textDecoration: "underline",
                     }}
