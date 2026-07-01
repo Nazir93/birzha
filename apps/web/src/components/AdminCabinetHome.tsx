@@ -1,9 +1,8 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
-import type { DashboardStockSlice } from "../api/types.js";
 import {
   adminDashboardSummaryQueryOptions,
   queryRoots,
@@ -14,17 +13,24 @@ import { canCreateTrip } from "../auth/role-panels.js";
 import {
   buildMassSegments,
   gradeTableRows,
-  isMassRingPointerOnDonut,
-  massRingPointerAngleDeg,
-  massSegmentAtRingAngle,
   warehouseTableRows,
 } from "../format/admin-dashboard-summary-rows.js";
 import { buildAdminSummaryAlerts } from "../format/admin-summary-alerts.js";
-import { kopecksToRubDisplay } from "../format/money.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { adminRoutes, accounting } from "../routes.js";
+import {
+  DashboardSummaryPeriodToggles,
+  MassBalanceLegend,
+  MassDistributionRing,
+  SummaryStockTable,
+  SummaryTotalsStrip,
+  dashboardPeriodStartDate,
+  formatDashboardKg,
+  type DashboardSummaryChartMode,
+  type DashboardSummaryPeriod,
+} from "./dashboard/dashboard-summary-ui.js";
 import { AdminSummaryAttention } from "./admin/AdminSummaryAttention.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
@@ -35,316 +41,6 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
 
 const ADMIN_TRIPS_PAGE_SIZE = 15;
-type SummaryChartMode = "mass" | "warehouses";
-type SummaryPeriod = "today" | "7d" | "30d" | "all";
-
-type MassRingTooltip = {
-  x: number;
-  y: number;
-  label: string;
-  kg: number;
-};
-
-function MassDistributionRing({
-  warehouseKg,
-  loadingManifestKg,
-  inTripKg,
-  soldKg,
-}: {
-  warehouseKg: number;
-  loadingManifestKg: number;
-  inTripKg: number;
-  soldKg: number;
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const [tooltip, setTooltip] = useState<MassRingTooltip | null>(null);
-  const segments = useMemo(
-    () =>
-      buildMassSegments({
-        warehouseKg,
-        loadingManifestKg,
-        inTripRemainingKg: inTripKg,
-        soldKg,
-      }),
-    [warehouseKg, loadingManifestKg, inTripKg, soldKg],
-  );
-  const total = warehouseKg + loadingManifestKg + inTripKg + soldKg;
-  if (total <= 0) {
-    return (
-      <div className="birzha-admin-mass-ring birzha-admin-mass-ring--empty" aria-hidden>
-        <span className="birzha-admin-mass-ring__empty-label">Нет массы</span>
-      </div>
-    );
-  }
-  const w = (warehouseKg / total) * 360;
-  const lm = w + (loadingManifestKg / total) * 360;
-  const tr = lm + (inTripKg / total) * 360;
-  const gradient = `conic-gradient(
-    #16a34a 0deg ${w}deg,
-    #7c3aed ${w}deg ${lm}deg,
-    #f59e0b ${lm}deg ${tr}deg,
-    #2563eb ${tr}deg 360deg
-  )`;
-
-  const updateTooltip = (clientX: number, clientY: number) => {
-    const el = ringRef.current;
-    const wrap = wrapRef.current;
-    if (!el || !wrap) {
-      return;
-    }
-    const rect = el.getBoundingClientRect();
-    if (!isMassRingPointerOnDonut(clientX, clientY, rect)) {
-      setTooltip(null);
-      return;
-    }
-    const angle = massRingPointerAngleDeg(clientX, clientY, rect);
-    const segment = massSegmentAtRingAngle(segments, angle);
-    if (!segment) {
-      setTooltip(null);
-      return;
-    }
-    const wrapRect = wrap.getBoundingClientRect();
-    setTooltip({
-      x: clientX - wrapRect.left + 6,
-      y: clientY - wrapRect.top + 6,
-      label: segment.label,
-      kg: segment.kg,
-    });
-  };
-
-  return (
-    <div ref={wrapRef} className="birzha-admin-mass-ring-wrap">
-      <div
-        ref={ringRef}
-        className="birzha-admin-mass-ring birzha-admin-mass-ring--interactive"
-        style={{ background: gradient }}
-        role="img"
-        aria-label={`Распределение массы: на складе ${warehouseKg.toFixed(0)} кг, в погрузочных накладных ${loadingManifestKg.toFixed(0)} кг, в открытых рейсах ${inTripKg.toFixed(0)} кг, продано ${soldKg.toFixed(0)} кг`}
-        onPointerMove={(event) => updateTooltip(event.clientX, event.clientY)}
-        onPointerLeave={() => setTooltip(null)}
-      >
-        <div className="birzha-admin-mass-ring__hole" aria-hidden />
-      </div>
-      {tooltip ? (
-        <div
-          className="birzha-admin-mass-ring__tooltip"
-          style={{ left: tooltip.x, top: tooltip.y }}
-          role="tooltip"
-        >
-          <span className="birzha-admin-mass-ring__tooltip-label">{tooltip.label}</span>
-          <span className="birzha-admin-mass-ring__tooltip-value">{formatKg(tooltip.kg)}</span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function formatKg(v: number): string {
-  return `${v.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг`;
-}
-
-function formatPackages(v: number): string {
-  return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
-}
-
-type MassSegment = {
-  label: string;
-  kg: number;
-  fillClass: string;
-};
-
-function MassBalanceLegend({ segments }: { segments: MassSegment[] }) {
-  const total = segments.reduce((sum, row) => sum + row.kg, 0);
-  if (total <= 0) {
-    return null;
-  }
-  return (
-    <div className="birzha-admin-dash-modern__mass-bars" aria-label="Распределение массы по этапам">
-      {segments.map((row) => (
-        <div key={row.label} className="birzha-admin-dash-modern__bar-row">
-          <div className="birzha-admin-dash-modern__bar-label">{row.label}</div>
-          <div className="birzha-admin-dash-modern__bar-track">
-            <div
-              className={`birzha-admin-dash-modern__bar-fill ${row.fillClass}`}
-              style={{ width: `${ratioPart(row.kg, total)}%` }}
-            />
-          </div>
-          <div className="birzha-admin-dash-modern__bar-value">{formatKg(row.kg)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SummaryTotalsStrip({ totals, caption }: { totals: DashboardStockSlice; caption: string }) {
-  if (totals.kg <= 0 && totals.packages <= 0) {
-    return null;
-  }
-  return (
-    <p className="birzha-admin-dash-modern__summary-totals birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-      <span className="birzha-text-muted">{caption}</span>{" "}
-      <strong>{formatKg(totals.kg)}</strong>
-      <span className="birzha-text-muted"> · </span>
-      <strong>{formatPackages(totals.packages)} ящ.</strong>
-      <span className="birzha-text-muted"> · </span>
-      <strong>{kopecksToRubDisplay(totals.valueKopecks)} ₽</strong>
-      <span className="birzha-text-muted"> (оценка по закупу)</span>
-    </p>
-  );
-}
-
-type SummaryTableProps = {
-  labelColumn: string;
-  rows: Array<{
-    key: string;
-    label: string;
-    sublabel?: string | null;
-    kg: number;
-    packages: number;
-    valueKopecks: string;
-    children?: SummaryTableProps["rows"];
-  }>;
-  totals?: DashboardStockSlice;
-  maxKg: number;
-  nestedGrades?: boolean;
-};
-
-function SummaryStockTableRow({
-  row,
-  maxKg,
-  variant,
-}: {
-  row: SummaryTableProps["rows"][number];
-  maxKg: number;
-  variant: "default" | "group" | "child";
-}) {
-  const showTrack = variant !== "child";
-  const rowClass =
-    variant === "group"
-      ? "birzha-admin-summary-table__group-row"
-      : variant === "child"
-        ? "birzha-admin-summary-table__child-row"
-        : undefined;
-
-  return (
-    <tr key={row.key} className={rowClass}>
-      <th scope="row" className="birzha-admin-summary-table__label-cell">
-        <div className="birzha-admin-summary-table__label">{row.label}</div>
-        {row.sublabel ? (
-          <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
-            {row.sublabel}
-          </div>
-        ) : null}
-        {showTrack ? (
-          <div className="birzha-admin-dash-modern__warehouse-track birzha-admin-summary-table__track">
-            <div
-              className="birzha-admin-dash-modern__warehouse-fill"
-              style={{ width: `${ratioPart(row.kg, maxKg)}%` }}
-            />
-          </div>
-        ) : null}
-      </th>
-      <td className="birzha-admin-summary-table__num">{formatKg(row.kg)}</td>
-      <td className="birzha-admin-summary-table__num">{formatPackages(row.packages)}</td>
-      <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
-        {kopecksToRubDisplay(row.valueKopecks)}
-      </td>
-    </tr>
-  );
-}
-
-function SummaryStockTable({ labelColumn, rows, totals, maxKg, nestedGrades }: SummaryTableProps) {
-  if (rows.length === 0) {
-    return <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>;
-  }
-  return (
-    <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-admin-summary-table-wrap">
-      <table className="birzha-admin-summary-table">
-        <colgroup>
-          <col className="birzha-admin-summary-table__col-label" />
-          <col className="birzha-admin-summary-table__col-num" />
-          <col className="birzha-admin-summary-table__col-num" />
-          <col className="birzha-admin-summary-table__col-sum" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" className="birzha-admin-summary-table__head">
-              {labelColumn}
-            </th>
-            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
-              Кг
-            </th>
-            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
-              Ящ.
-            </th>
-            <th scope="col" className="birzha-admin-summary-table__head birzha-admin-summary-table__num-head">
-              Сумма, ₽
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.flatMap((row) => {
-            const hasChildren = nestedGrades && (row.children?.length ?? 0) > 0;
-            const groupRows = [
-              <SummaryStockTableRow
-                key={row.key}
-                row={row}
-                maxKg={maxKg}
-                variant={hasChildren ? "group" : "default"}
-              />,
-            ];
-            if (hasChildren) {
-              for (const child of row.children ?? []) {
-                groupRows.push(
-                  <SummaryStockTableRow
-                    key={child.key}
-                    row={child}
-                    maxKg={maxKg}
-                    variant="child"
-                  />,
-                );
-              }
-            }
-            return groupRows;
-          })}
-        </tbody>
-        {totals ? (
-          <tfoot>
-            <tr className="birzha-admin-summary-table__foot">
-              <th scope="row">Итого</th>
-              <td className="birzha-admin-summary-table__num">{formatKg(totals.kg)}</td>
-              <td className="birzha-admin-summary-table__num">{formatPackages(totals.packages)}</td>
-              <td className="birzha-admin-summary-table__num birzha-admin-summary-table__sum">
-                {kopecksToRubDisplay(totals.valueKopecks)}
-              </td>
-            </tr>
-          </tfoot>
-        ) : null}
-      </table>
-    </div>
-  );
-}
-
-function ratioPart(value: number, total: number): number {
-  if (total <= 0) {
-    return 0;
-  }
-  return (value / total) * 100;
-}
-
-function periodStartDate(period: SummaryPeriod): Date | null {
-  if (period === "all") {
-    return null;
-  }
-  const now = new Date();
-  if (period === "today") {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  }
-  const d = new Date(now);
-  d.setDate(d.getDate() - (period === "7d" ? 7 : 30));
-  return d;
-}
 
 /**
  * Дашборд администратора: KPI, распределение массы, сводка по складам, рейсы.
@@ -353,10 +49,10 @@ export function AdminCabinetHome() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const showCloseTrip = canCreateTrip(user ?? null);
-  const [summaryChartMode, setSummaryChartMode] = useState<SummaryChartMode>("mass");
-  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("30d");
+  const [summaryChartMode, setSummaryChartMode] = useState<DashboardSummaryChartMode>("mass");
+  const [summaryPeriod, setSummaryPeriod] = useState<DashboardSummaryPeriod>("30d");
 
-  const periodStart = useMemo(() => periodStartDate(summaryPeriod), [summaryPeriod]);
+  const periodStart = useMemo(() => dashboardPeriodStartDate(summaryPeriod), [summaryPeriod]);
   const sinceParam = periodStart ? periodStart.toISOString().slice(0, 10) : undefined;
 
   const summaryQ = useQuery({
@@ -510,34 +206,7 @@ export function AdminCabinetHome() {
               <p className="birzha-home-hero__eyebrow">Панель управления</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
-                <button
-                  type="button"
-                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "today" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => setSummaryPeriod("today")}
-                >
-                  Сегодня
-                </button>
-                <button
-                  type="button"
-                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "7d" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => setSummaryPeriod("7d")}
-                >
-                  7 дней
-                </button>
-                <button
-                  type="button"
-                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "30d" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => setSummaryPeriod("30d")}
-                >
-                  30 дней
-                </button>
-                <button
-                  type="button"
-                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "all" ? " birzha-admin-summary-toggle--active" : ""}`}
-                  onClick={() => setSummaryPeriod("all")}
-                >
-                  Всё время
-                </button>
+                <DashboardSummaryPeriodToggles period={summaryPeriod} onChange={setSummaryPeriod} />
               </div>
             </div>
             <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
@@ -563,7 +232,7 @@ export function AdminCabinetHome() {
                 title="Физический остаток на складах (без массы в пути)"
               >
                 <div className="birzha-kpi-tile__label">Остаток на складе</div>
-                <div className="birzha-kpi-tile__value">{formatKg(aggregates.warehouseKg)}</div>
+                <div className="birzha-kpi-tile__value">{formatDashboardKg(aggregates.warehouseKg)}</div>
                 <div className="birzha-kpi-tile__hint birzha-ui-sm">Только склад</div>
               </Link>
               <Link
@@ -579,7 +248,7 @@ export function AdminCabinetHome() {
                     </span>
                   ) : null}
                 </div>
-                <div className="birzha-kpi-tile__value">{formatKg(aggregates.loadingManifestKg)}</div>
+                <div className="birzha-kpi-tile__value">{formatDashboardKg(aggregates.loadingManifestKg)}</div>
                 <div className="birzha-kpi-tile__hint birzha-ui-sm">ПН в работе</div>
               </Link>
               <Link
@@ -588,7 +257,7 @@ export function AdminCabinetHome() {
                 title="Остаток в открытых рейсах (отгружено − продано − недостача)"
               >
                 <div className="birzha-kpi-tile__label">В открытых рейсах</div>
-                <div className="birzha-kpi-tile__value">{formatKg(aggregates.dispatchedKg)}</div>
+                <div className="birzha-kpi-tile__value">{formatDashboardKg(aggregates.dispatchedKg)}</div>
                 <div className="birzha-kpi-tile__hint birzha-ui-sm">Только открытые рейсы</div>
               </Link>
               <Link
@@ -597,7 +266,7 @@ export function AdminCabinetHome() {
                 title="Продано с открытых рейсов"
               >
                 <div className="birzha-kpi-tile__label">Продано</div>
-                <div className="birzha-kpi-tile__value">{formatKg(aggregates.soldKg)}</div>
+                <div className="birzha-kpi-tile__value">{formatDashboardKg(aggregates.soldKg)}</div>
                 <div className="birzha-kpi-tile__hint birzha-ui-sm">С открытых рейсов</div>
               </Link>
           </section>
@@ -697,7 +366,7 @@ export function AdminCabinetHome() {
                       ПН без рейса
                       {aggregates.loadingManifestsWithoutTripKg > 0 ? (
                         <span className="birzha-admin-dash-modern__ops-hint">
-                          {formatKg(aggregates.loadingManifestsWithoutTripKg)}
+                          {formatDashboardKg(aggregates.loadingManifestsWithoutTripKg)}
                         </span>
                       ) : null}
                     </span>

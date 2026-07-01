@@ -7,6 +7,14 @@ function gramsToKg(grams: bigint): number {
   return Number(grams) / 1000;
 }
 
+/** Суммирует копейки из SQL (bigint | string | number) без конкатенации строк. */
+export function sumKopecksField(acc: bigint, value: bigint | string | number | null | undefined): bigint {
+  if (value == null) {
+    return acc;
+  }
+  return acc + BigInt(value);
+}
+
 /** Сводка остатков для бухгалтерии без полного GET /batches. */
 export async function getStockBalancesSummary(db: DbClient) {
   const rows = await db
@@ -35,8 +43,8 @@ export async function getStockBalancesSummary(db: DbClient) {
     const trKg = gramsToKg(r.inTransitGrams);
     totalWarehouseKg += whKg;
     totalTransitKg += trKg;
-    totalWhKopecks += r.valueWhKopecks;
-    totalTrKopecks += r.valueTrKopecks;
+    totalWhKopecks = sumKopecksField(totalWhKopecks, r.valueWhKopecks);
+    totalTrKopecks = sumKopecksField(totalTrKopecks, r.valueTrKopecks);
     return {
       warehouseId: r.warehouseId,
       warehouseName: r.warehouseName,

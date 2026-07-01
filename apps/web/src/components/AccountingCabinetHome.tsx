@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { accounting, adminRoutes } from "../routes.js";
-import { AccountingStockBalances } from "./AccountingStockBalances.js";
+import { AccountingDashboardSummary } from "./AccountingDashboardSummary.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 
 /**
@@ -25,7 +25,7 @@ export function AccountingCabinetHome() {
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия бухгалтерии">
           <a href="#acc-stock" className="birzha-home-action">
             <span>Остатки</span>
-            <strong>Склад и путь</strong>
+            <strong>Сводка товара</strong>
           </a>
           <a href="#acc-trips" className="birzha-home-action">
             <span>Деньги</span>
@@ -48,7 +48,7 @@ export function AccountingCabinetHome() {
         </nav>
       </header>
 
-      <AccountingStockBalances />
+      <AccountingDashboardSummary />
 
       <AccountingTripsSummary />
     </section>
