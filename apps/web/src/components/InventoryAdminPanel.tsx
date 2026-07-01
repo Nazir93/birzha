@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -21,7 +21,7 @@ import { useSearchParams } from "react-router-dom";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 /**
  * Справочники админки: склады, калибры, направления логистики и оптовики.
  */
@@ -400,8 +400,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
             />
             <button
               type="button"
-              className="birzha-inventory-inline-tools__submit"
-              style={btnStyle}
+              className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
               disabled={createShipDest.isPending}
               onClick={() => void createShipDest.mutate()}
             >
@@ -439,7 +438,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                           {r.isActive ? (
                             <button
                               type="button"
-                              style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                              className="birzha-btn birzha-btn--inline"
                               disabled={deleteShipDest.isPending}
                               onClick={() => {
                                 if (window.confirm(`Снять направление «${r.displayName}» (код ${r.code})?`)) {
@@ -502,8 +501,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
               />
               <button
                 type="button"
-                className="birzha-inventory-inline-tools__submit"
-                style={btnStyle}
+                className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
                 disabled={createWholesaler.isPending}
                 onClick={() => void createWholesaler.mutate()}
               >
@@ -583,8 +581,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         />
         <button
           type="button"
-          className="birzha-inventory-inline-tools__submit"
-          style={btnStyle}
+          className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
           disabled={createWarehouse.isPending}
           onClick={() => void createWarehouse.mutate()}
         >
@@ -677,8 +674,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         />
         <button
           type="button"
-          className="birzha-inventory-inline-tools__submit"
-          style={btnStyle}
+          className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
           disabled={createProductGrade.isPending}
           onClick={() => void createProductGrade.mutate()}
         >

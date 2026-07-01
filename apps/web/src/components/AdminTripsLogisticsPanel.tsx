@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -19,7 +19,7 @@ import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, dateFieldStyle, fieldStyle } from "../ui/styles.js";
+import { btnClassSpaced, dateFieldStyle, fieldStyle } from "../ui/styles.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -229,7 +229,7 @@ export function AdminTripsLogisticsPanel() {
               </label>
             </div>
             <p className="birzha-clean-ops-form-actions">
-              <button type="button" style={btnStyle} disabled={createTrip.isPending} onClick={() => void createTrip.mutate()}>
+              <button type="button" className={btnClassSpaced} disabled={createTrip.isPending} onClick={() => void createTrip.mutate()}>
                 {createTrip.isPending ? "…" : "Создать рейс"}
               </button>
             </p>

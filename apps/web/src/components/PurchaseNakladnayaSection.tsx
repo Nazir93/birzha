@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -43,7 +43,7 @@ import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import {
-  btnStyle,
+  btnClassSpaced,
   dateFieldStyle,
   fieldStyle,
   successText,
@@ -554,12 +554,12 @@ export function PurchaseNakladnayaSection() {
         </table>
       </div>
       <p className="birzha-nakl-form-actions">
-        <button type="button" style={btnStyle} onClick={addLine}>
+        <button type="button" className={btnClassSpaced} onClick={addLine}>
           Добавить строку
         </button>
         <button
           type="button"
-          style={btnStyle}
+          className={btnClassSpaced}
           onClick={() => void submit.mutate()}
           disabled={submit.isPending}
         >

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
@@ -6,7 +6,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnClassInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -100,7 +100,7 @@ function PasswordFieldWithToggle({
       />
       <button
         type="button"
-        style={{ ...btnStyleInline, fontSize: "0.78rem", padding: "0.2rem 0.45rem" }}
+        className="birzha-btn birzha-btn--inline"
         aria-pressed={visible}
         aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
         disabled={disabled}
@@ -160,7 +160,7 @@ function UserRowActions({
               />
               <button
                 type="button"
-                style={btnStyleInline}
+                className={btnClassInline}
                 disabled={passwordBusy || pw.length < 10}
                 onClick={() => {
                   onPassword(row.id, pw);
@@ -384,8 +384,7 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
           </label>
           <button
             type="button"
-            className="birzha-admin-user-create-row__submit"
-            style={btnStyle}
+            className="birzha-btn birzha-btn--spaced birzha-admin-user-create-row__submit"
             disabled={
               createM.isPending ||
               !login.trim() ||

@@ -1,7 +1,6 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
-import { btnStyle } from "../ui/styles.js";
 
 export type SellerSaleFlashData = {
   kg: string;
@@ -82,7 +81,7 @@ export function SellerSaleSuccessOverlay({ data, onDismiss }: Props) {
             {data.clientLabel}
           </p>
         ) : null}
-        <button type="button" className="birzha-sold-overlay__btn" style={btnStyle} onClick={onDismiss}>
+        <button type="button" className="birzha-sold-overlay__btn birzha-btn birzha-btn--spaced" onClick={onDismiss}>
           Продолжить
         </button>
       </div>

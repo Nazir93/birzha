@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { useAuth } from "../auth/auth-context.js";
@@ -33,7 +33,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle } from "../ui/styles.js";
+import { btnClassSpaced } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
@@ -298,13 +298,14 @@ function SellerTripSaleEditForm({
       <div style={{ marginTop: "0.55rem" }}>
         <button
           type="button"
-          style={{ ...btnStyle, marginRight: "0.5rem" }}
+          className="birzha-btn birzha-btn--spaced"
+          style={{ marginRight: "0.5rem" }}
           disabled={save.isPending || Boolean(blockReason)}
           onClick={() => save.mutate()}
         >
           {save.isPending ? "Сохранение…" : "Сохранить правку"}
         </button>
-        <button type="button" style={btnStyle} disabled={save.isPending} onClick={onCancel}>
+        <button type="button" className={btnClassSpaced} disabled={save.isPending} onClick={onCancel}>
           Отмена
         </button>
       </div>
@@ -397,7 +398,7 @@ function SellerTripSaleCorrectionsGroupRow({
         </span>
         {!isEditing ? (
           <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            <button type="button" style={btnStyle} onClick={() => onEditGroup(group.key)}>
+            <button type="button" className={btnClassSpaced} onClick={() => onEditGroup(group.key)}>
               Исправить
             </button>
             <button
@@ -410,7 +411,7 @@ function SellerTripSaleCorrectionsGroupRow({
             </button>
           </span>
         ) : (
-          <button type="button" style={btnStyle} disabled={remove.isPending} onClick={onCancelEdit}>
+          <button type="button" className={btnClassSpaced} disabled={remove.isPending} onClick={onCancelEdit}>
             Отмена правки
           </button>
         )}

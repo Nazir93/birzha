@@ -57,50 +57,26 @@ export const preJson: CSSProperties = {
   lineHeight: 1.45,
 };
 
-/** Основная кнопка действия в формах. */
+/** Единая кнопка (см. `.birzha-btn` в index.css — как «Закрыть рейс»). */
+export const btnClass = "birzha-btn";
+export const btnClassSpaced = "birzha-btn birzha-btn--spaced";
+export const btnClassInline = "birzha-btn birzha-btn--inline";
+
+/** @deprecated margins only — визуал через `btnClassSpaced` */
 export const btnStyle: CSSProperties = {
   marginTop: "0.65rem",
   marginRight: "0.5rem",
-  padding: "0.5rem 1rem",
-  fontFamily: fontUi,
-  fontSize: "0.9rem",
-  fontWeight: 600,
-  borderRadius: 8,
-  border: "1px solid var(--birzha-btn-outline-border)",
-  background: "var(--birzha-btn-outline-bg)",
-  color: "var(--color-text)",
-  boxShadow: "var(--birzha-btn-outline-shadow)",
-  transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
-/** Как `btnStyle`, без верхнего отступа (ряд кнопок в шапке карточки). */
+/** @deprecated margins only — визуал через `btnClassInline` */
 export const btnStyleInline: CSSProperties = {
   marginTop: 0,
   marginRight: "0.5rem",
-  padding: "0.5rem 1rem",
-  fontFamily: fontUi,
-  fontSize: "0.9rem",
-  fontWeight: 600,
-  borderRadius: 8,
-  border: "1px solid var(--birzha-btn-outline-border)",
-  background: "var(--birzha-btn-outline-bg)",
-  color: "var(--color-text)",
-  boxShadow: "var(--birzha-btn-outline-shadow)",
-  transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
-/** Вторичная (компактная) кнопка — CSV, мелкие действия. */
+/** @deprecated визуал через `birzha-btn` */
 export const btnSecondary: CSSProperties = {
   marginLeft: "0.75rem",
-  padding: "0.4rem 0.7rem",
-  fontFamily: fontUi,
-  fontSize: "0.82rem",
-  fontWeight: 600,
-  borderRadius: 8,
-  border: "1px solid var(--birzha-btn-outline-border)",
-  background: "var(--birzha-btn-outline-bg)",
-  color: "var(--color-text)",
-  boxShadow: "var(--birzha-btn-outline-shadow)",
 };
 
 export const tableStyle: CSSProperties = {

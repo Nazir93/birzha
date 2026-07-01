@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -14,7 +14,7 @@ import { adminRoutes } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
@@ -146,8 +146,7 @@ export function AdminStockWarehousesPage() {
               />
               <button
                 type="button"
-                className="birzha-inventory-inline-tools__submit"
-                style={btnStyle}
+                className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
                 disabled={createWarehouse.isPending}
                 onClick={() => void createWarehouse.mutate()}
               >

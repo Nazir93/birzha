@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
@@ -9,7 +9,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
+import { btnClassSpaced, fieldStyle, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 /**
  * Справочник контрагентов: список, добавление и удаление (когда разрешено API и ролью).
@@ -104,7 +104,7 @@ export function CounterpartiesPanel() {
               />
               <button
                 type="submit"
-                style={btnStyle}
+                className={btnClassSpaced}
                 disabled={createM.isPending || newName.trim().length === 0}
               >
                 Добавить

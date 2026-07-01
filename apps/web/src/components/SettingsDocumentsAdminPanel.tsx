@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -27,7 +27,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, dateFieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { dateFieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 
 const SETTINGS_MANIFEST_PAGE_SIZE = 50;
 
@@ -118,7 +118,8 @@ function PurchaseDocRow({ doc, saving, deleting, onSave, onDelete }: PurchaseDoc
       <td style={thtdDense}>
         <button
           type="button"
-          style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.55rem", marginRight: "0.35rem" }}
+          className="birzha-btn birzha-btn--inline"
+          style={{ marginRight: "0.35rem" }}
           disabled={!dirty || saving || deleting}
           onClick={() => onSave(doc.id, documentNumber.trim(), docDate)}
         >
@@ -171,7 +172,8 @@ function LoadingManifestRow({ manifest, saving, deleting, onSave, onDelete }: Lo
       <td style={thtdDense}>
         <button
           type="button"
-          style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.55rem", marginRight: "0.35rem" }}
+          className="birzha-btn birzha-btn--inline"
+          style={{ marginRight: "0.35rem" }}
           disabled={!dirty || saving || deleting}
           onClick={() => onSave(manifest.id, manifestNumber.trim(), docDate)}
         >
@@ -246,7 +248,8 @@ function TripRow({ trip, saving, deleting, onSave, onDelete }: TripRowProps) {
       <td style={thtdDense}>
         <button
           type="button"
-          style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.55rem", marginRight: "0.35rem" }}
+          className="birzha-btn birzha-btn--inline"
+          style={{ marginRight: "0.35rem" }}
           disabled={!dirty || saving || deleting}
           onClick={() =>
             onSave(trip.id, {

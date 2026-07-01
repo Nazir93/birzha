@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -32,7 +32,7 @@ import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle } from "../ui/styles.js";
+import { btnClassSpaced, fieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function todayDateOnly(): string {
@@ -536,7 +536,7 @@ export function AllocationPanel() {
                 Выбран: <strong>{warehouseName(selectedWarehouse)}</strong>
                 {selectedWarehouseRow != null ? ` · ${selectedWarehouseRow.batchCount} парт. для отбора` : null}
               </span>
-              <button type="button" style={btnStyle} onClick={clearWarehouseSelection}>
+              <button type="button" className={btnClassSpaced} onClick={clearWarehouseSelection}>
                 ← Сменить склад
               </button>
             </div>
@@ -594,7 +594,7 @@ export function AllocationPanel() {
             ) : null}
             <button
               type="button"
-              style={btnStyle}
+              className={btnClassSpaced}
               disabled={tableRows.length === 0}
               onClick={() => setManifestFormOpen(true)}
             >
@@ -681,7 +681,7 @@ export function AllocationPanel() {
           <p style={{ margin: "0.5rem 0 0" }}>
             <button
               type="button"
-              style={btnStyle}
+              className={btnClassSpaced}
               disabled={batchesQueryFetching}
               onClick={() => void refreshDistributionLists(queryClient)}
             >

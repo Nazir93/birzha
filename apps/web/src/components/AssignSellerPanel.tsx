@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -33,7 +33,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { SellerTripAssignBlock } from "./SellerTripAssignBlock.js";
 
@@ -410,8 +410,7 @@ export function AssignSellerPanel() {
                   {canCreateTrip(user ?? null) && activeReport.trip.status === "open" ? (
                     <button
                       type="button"
-                      className="birzha-ui-sm no-print"
-                      style={btnStyleInline}
+                      className="birzha-btn birzha-btn--inline birzha-ui-sm no-print"
                       disabled={closeTripSoldOutMut.isPending}
                       onClick={() => closeTripSoldOutMut.mutate(activeReport.trip.id)}
                     >

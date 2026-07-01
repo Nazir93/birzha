@@ -1,4 +1,4 @@
-import {
+﻿import {
   nonnegativeDecimalStringToNumber,
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
@@ -47,7 +47,7 @@ import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { SellerSaleSuccessOverlay } from "./SellerSaleSuccessOverlay.js";
-import { btnStyle, fieldStyle } from "../ui/styles.js";
+import { fieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
@@ -1124,13 +1124,7 @@ export function SellFromTripSection() {
       ) : null}
       <button
         type="button"
-        style={{
-          ...btnStyle,
-          fontSize: "1.1rem",
-          padding: "0.75rem 1.15rem",
-          fontWeight: 700,
-          marginTop: "0.65rem",
-        }}
+        className="birzha-btn birzha-btn--spaced"
         disabled={sell.isPending || Boolean(sellerSellBlockReason)}
         aria-busy={sell.isPending || undefined}
         onClick={() => sell.mutate()}

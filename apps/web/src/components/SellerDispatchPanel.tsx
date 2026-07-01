@@ -1,4 +1,4 @@
-import { compareProductGradeCodes } from "@birzha/contracts";
+﻿import { compareProductGradeCodes } from "@birzha/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -20,7 +20,7 @@ import {
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { fieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -222,7 +222,8 @@ export function SellerDispatchPanel() {
 
           <button
             type="button"
-            style={{ ...btnStyle, marginTop: "0.5rem" }}
+            className="birzha-btn birzha-btn--spaced"
+            style={{ marginTop: "0.5rem" }}
             disabled={
               assignSellerToTrip.isPending ||
               !assignTripId.trim() ||

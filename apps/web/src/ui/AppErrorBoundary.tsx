@@ -1,9 +1,9 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+﻿import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 
 import { BirzhaAlert } from "./BirzhaAlert.js";
-import { btnStyle } from "./styles.js";
+import { btnClassSpaced } from "./styles.js";
 
 type Props = { children: ReactNode };
 
@@ -41,10 +41,10 @@ export class AppErrorBoundary extends Component<Props, State> {
             <p style={{ margin: 0, opacity: 0.9 }}>{humanizeErrorMessage(error)}</p>
           </BirzhaAlert>
           <div className="birzha-error-boundary-actions">
-            <button type="button" style={btnStyle} onClick={() => window.location.reload()}>
+            <button type="button" className={btnClassSpaced} onClick={() => window.location.reload()}>
               Обновить страницу
             </button>
-            <button type="button" style={btnStyle} onClick={this.clear}>
+            <button type="button" className={btnClassSpaced} onClick={this.clear}>
               Попробовать снова
             </button>
           </div>

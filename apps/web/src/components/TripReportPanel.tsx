@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -37,8 +37,6 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import {
-  btnSecondary,
-  btnStyle,
   fieldStyleFullWidth,
   tableStyle,
   thHead,
@@ -410,8 +408,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </span>
             <button
               type="button"
-              className="no-print"
-              style={btnSecondary}
+              className="no-print birzha-btn birzha-btn--secondary"
               onClick={printReport}
               aria-label="Открыть диалог печати отчёта по рейсу"
             >
@@ -420,8 +417,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             {canTripWrite && r.trip.status === "open" ? (
               <button
                 type="button"
-                className="no-print"
-                style={btnStyle}
+                className="no-print birzha-btn birzha-btn--spaced"
                 disabled={closeTripMutation.isPending}
                 onClick={() => closeTripMutation.mutate(r.trip.id)}
               >
@@ -684,8 +680,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               {batchRows.length > 0 && (
                 <button
                   type="button"
-                  className="no-print"
-                  style={btnSecondary}
+                  className="no-print birzha-btn birzha-btn--secondary"
                   onClick={downloadBatchCsv}
                   aria-label="Скачать таблицу сверки по партиям в CSV для Excel"
                 >

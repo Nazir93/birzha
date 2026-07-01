@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -30,7 +30,7 @@ import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnStyleInline } from "../ui/styles.js";
+
 
 const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
 
@@ -512,32 +512,28 @@ export function AdminCabinetHome() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.45rem" }}>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryPeriod === "today" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "today" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("today")}
                 >
                   Сегодня
                 </button>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryPeriod === "7d" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "7d" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("7d")}
                 >
                   7 дней
                 </button>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryPeriod === "30d" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "30d" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("30d")}
                 >
                   30 дней
                 </button>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryPeriod === "all" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryPeriod === "all" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryPeriod("all")}
                 >
                   Всё время
@@ -617,16 +613,14 @@ export function AdminCabinetHome() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginBottom: "0.65rem" }}>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryChartMode === "mass" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryChartMode === "mass" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryChartMode("mass")}
                 >
                   Баланс массы
                 </button>
                 <button
                   type="button"
-                  style={btnStyleInline}
-                  className={`birzha-admin-summary-toggle${summaryChartMode === "warehouses" ? " birzha-admin-summary-toggle--active" : ""}`}
+                  className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${summaryChartMode === "warehouses" ? " birzha-admin-summary-toggle--active" : ""}`}
                   onClick={() => setSummaryChartMode("warehouses")}
                 >
                   По складам
@@ -797,8 +791,7 @@ export function AdminCabinetHome() {
                             {t.status === "open" ? (
                               <button
                                 type="button"
-                                className="birzha-ui-sm"
-                                style={btnStyleInline}
+                                className="birzha-btn birzha-btn--inline birzha-ui-sm"
                                 disabled={closeTripMut.isPending}
                                 onClick={() => closeTripMut.mutate(t.id)}
                               >

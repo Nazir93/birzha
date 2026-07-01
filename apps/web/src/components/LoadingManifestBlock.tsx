@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import type { BatchListItem } from "../api/types.js";
@@ -14,7 +14,7 @@ import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { WriteOffRecentList, type RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
-import { btnStyle, btnStyleInline, fieldStyle } from "../ui/styles.js";
+import { btnClassInline, btnClassSpaced, fieldStyle } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
 
@@ -172,10 +172,10 @@ export function LoadingManifestBlock({
             </label>
           ))}
           <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
-            <button type="button" style={btnStyleInline} onClick={onSelectAllNakl}>
+            <button type="button" className={btnClassInline} onClick={onSelectAllNakl}>
               Все
             </button>
-            <button type="button" style={btnStyleInline} onClick={onClearNakl}>
+            <button type="button" className={btnClassInline} onClick={onClearNakl}>
               Снять
             </button>
           </span>
@@ -291,7 +291,7 @@ export function LoadingManifestBlock({
                                   />
                                   <button
                                     type="button"
-                                    style={btnStyle}
+                                    className={btnClassSpaced}
                                     disabled={writeOff.isPending}
                                     onClick={() => {
                                       const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
@@ -358,7 +358,7 @@ export function LoadingManifestBlock({
                                   />
                                   <button
                                     type="button"
-                                    style={btnStyle}
+                                    className={btnClassSpaced}
                                     disabled={writeOff.isPending}
                                     onClick={() => {
                                       const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");

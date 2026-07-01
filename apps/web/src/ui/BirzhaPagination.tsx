@@ -1,4 +1,4 @@
-import { btnStyleInline } from "./styles.js";
+﻿import { btnClassInline } from "./styles.js";
 
 export type BirzhaPaginationProps = {
   /** Номер страницы с нуля. */
@@ -35,7 +35,7 @@ export function BirzhaPagination({ pageIndex, pageCount, itemLabel, onPageChange
     >
       <button
         type="button"
-        style={btnStyleInline}
+        className={btnClassInline}
         disabled={safeIndex <= 0}
         onClick={() => onPageChange(safeIndex - 1)}
       >
@@ -46,7 +46,7 @@ export function BirzhaPagination({ pageIndex, pageCount, itemLabel, onPageChange
       </span>
       <button
         type="button"
-        style={btnStyleInline}
+        className={btnClassInline}
         disabled={safeIndex >= pageCount - 1}
         onClick={() => onPageChange(safeIndex + 1)}
       >

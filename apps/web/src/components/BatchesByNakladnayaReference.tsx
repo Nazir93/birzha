@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+﻿import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -15,7 +15,7 @@ import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaSkeletonPanel } from "../ui/BirzhaSkeleton.js";
-import { btnStyleInline, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
+import { btnClassInline, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 export type BatchesNaklGroup = {
   documentId: string;
@@ -149,10 +149,10 @@ export function BatchesByNakladnayaReference({
       </p>
       {showBulkExpandControls && groups.length > 1 && (
         <p className="no-print" style={{ margin: "0 0 0.5rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-          <button type="button" style={btnStyleInline} onClick={() => setAll(true)}>
+          <button type="button" className={btnClassInline} onClick={() => setAll(true)}>
             Развернуть все
           </button>
-          <button type="button" style={btnStyleInline} onClick={() => setAll(false)}>
+          <button type="button" className={btnClassInline} onClick={() => setAll(false)}>
             Свернуть все
           </button>
         </p>

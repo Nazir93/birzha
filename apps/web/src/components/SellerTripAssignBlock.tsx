@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
@@ -18,7 +18,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
+import { fieldStyle, successText } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -181,7 +181,8 @@ export function SellerTripAssignBlock() {
 
       <button
         type="button"
-        style={{ ...btnStyle, marginTop: "0.5rem" }}
+        className="birzha-btn birzha-btn--spaced"
+        style={{ marginTop: "0.5rem" }}
         disabled={
           assignSellerToTrip.isPending ||
           !assignTripId.trim() ||

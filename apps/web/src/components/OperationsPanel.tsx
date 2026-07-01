@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { compareProductGradeCodes } from "@birzha/contracts";
@@ -9,7 +9,7 @@ import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
+import { btnClassSpaced, fieldStyle, successText } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
@@ -162,7 +162,8 @@ export function OperationsPanel() {
             </p>
             <button
               type="button"
-              style={{ ...btnStyle, marginTop: "0.35rem" }}
+              className="birzha-btn birzha-btn--spaced"
+              style={{ marginTop: "0.35rem" }}
               disabled={shipDistributionSelection.isPending || !shipTripId.trim() || distributionRows.length === 0}
               aria-busy={shipDistributionSelection.isPending || undefined}
               onClick={() => shipDistributionSelection.mutate()}
@@ -171,7 +172,8 @@ export function OperationsPanel() {
             </button>{" "}
             <button
               type="button"
-              style={{ ...btnStyle, marginTop: "0.35rem" }}
+              className="birzha-btn birzha-btn--spaced"
+              style={{ marginTop: "0.35rem" }}
               onClick={() => {
                 clearDistributionShipPayload();
                 setDistributionPayload(null);
@@ -261,7 +263,7 @@ export function OperationsPanel() {
         />
         <button
           type="button"
-          style={btnStyle}
+          className={btnClassSpaced}
           disabled={shortage.isPending}
           aria-busy={shortage.isPending || undefined}
           onClick={() => shortage.mutate()}

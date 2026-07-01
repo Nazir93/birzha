@@ -239,18 +239,6 @@ html[data-birzha-theme="dark"] .birzha-cabinet-main .birzha-inline-panel {
   border-color: rgba(82, 82, 91, 0.5);
 }
 
-html[data-birzha-theme="dark"] .birzha-btn-primary {
-  background: #e4e4e7;
-  color: #18181b;
-  border-color: #d4d4d8;
-}
-
-html[data-birzha-theme="dark"] .birzha-btn-primary:hover:not(:disabled) {
-  background: #fafafa;
-  border-color: #fafafa;
-  color: #18181b;
-}
-
 /* Сводка админки в тёмной теме: убрать «белые карточки» с невидимым текстом */
 html[data-birzha-theme="dark"] .birzha-admin-dash__hero {
   background:
@@ -740,23 +728,68 @@ main.app-shell {
   color: var(--birzha-text-subtle);
 }
 
+/* Единая кнопка интерфейса (как «Закрыть рейс»): без рамки, muted-фон, скругление 8px */
+.birzha-btn,
+.birzha-clean-ops-row-action,
+.birzha-btn-primary,
 .birzha-btn-ghost {
-  margin: 0;
-  padding: 0.45rem 0.85rem;
-  font-family: inherit;
-  font-size: 0.88rem;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
   font-weight: 600;
+  line-height: 1.2;
   cursor: var(--birzha-cursor-red);
-  border-radius: var(--birzha-radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--birzha-surface);
-  color: var(--color-text);
-  transition: background 0.12s ease, border-color 0.12s ease;
+  padding: 0.35rem 0.65rem;
+  border: none !important;
+  border-radius: 8px;
+  background: var(--birzha-surface-muted) !important;
+  color: var(--color-text) !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
+.birzha-btn:hover:not(:disabled),
+.birzha-clean-ops-row-action:hover:not(:disabled):not(.birzha-clean-ops-row-action--danger),
+.birzha-btn-primary:hover:not(:disabled),
 .birzha-btn-ghost:hover:not(:disabled) {
-  background: var(--birzha-surface-muted);
-  border-color: #a1a1aa;
+  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface-muted)) !important;
+}
+
+.birzha-btn:focus-visible,
+.birzha-clean-ops-row-action:focus-visible,
+.birzha-btn-primary:focus-visible,
+.birzha-btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
+.birzha-btn:disabled,
+.birzha-clean-ops-row-action:disabled,
+.birzha-btn-primary:disabled,
+.birzha-btn-ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.birzha-btn--spaced {
+  margin-top: 0.65rem;
+  margin-right: 0.5rem;
+}
+
+.birzha-btn--inline {
+  margin-top: 0;
+  margin-right: 0.5rem;
+}
+
+.birzha-btn--secondary {
+  margin-left: 0.75rem;
+}
+
+.birzha-btn-primary {
+  margin-top: 0.65rem;
+}
+
+.birzha-btn-ghost {
+  margin: 0;
 }
 
 /* Карточка входа */
@@ -778,30 +811,6 @@ main.app-shell {
   box-shadow:
     var(--birzha-shadow-sm),
     0 12px 40px -12px rgba(15, 23, 42, 0.12);
-}
-
-.birzha-btn-primary {
-  margin-top: 0.65rem;
-  padding: 0.55rem 1.1rem;
-  font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: var(--birzha-cursor-red);
-  border-radius: var(--birzha-radius-sm);
-  border: 1px solid var(--birzha-accent-strong);
-  background: var(--birzha-accent);
-  color: #fff;
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.birzha-btn-primary:hover:not(:disabled) {
-  background: #27272a;
-  border-color: #18181b;
-}
-
-.birzha-btn-primary:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
 }
 
 /* Карточки секций и KPI (дашборды кабинетов) */
@@ -1719,25 +1728,22 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-nakl-line-action {
   margin: 0 !important;
   flex-shrink: 0;
-  padding: 0.4rem 0.72rem !important;
-  border-radius: 10px !important;
-  font-family: inherit;
-  font-size: 0.8rem !important;
+  padding: 0.35rem 0.65rem !important;
+  border-radius: 8px !important;
+  font-family: var(--font-ui);
+  font-size: 0.82rem !important;
   font-weight: 600;
   line-height: 1.2;
   cursor: var(--birzha-cursor-red);
-  background: var(--birzha-btn-outline-bg) !important;
+  background: var(--birzha-surface-muted) !important;
   color: var(--color-text) !important;
-  border: 1px solid var(--birzha-btn-outline-border) !important;
-  box-shadow: var(--birzha-btn-outline-shadow);
-  transition:
-    background 0.14s ease,
-    border-color 0.14s ease,
-    opacity 0.14s ease;
+  border: none !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .birzha-nakl-line-action:hover:not(:disabled) {
-  background: var(--birzha-surface-muted) !important;
+  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface-muted)) !important;
 }
 
 .birzha-nakl-line-action--calc {
@@ -2169,27 +2175,9 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
 .birzha-clean-ops-page .birzha-clean-ops-row-actions button {
   margin-top: 0;
   margin-right: 0;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.65rem;
 }
 
-.birzha-clean-ops-row-action {
-  font-family: var(--font-ui);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: var(--birzha-cursor-red);
-  padding: 0.35rem 0.65rem;
-  border: none;
-  border-radius: 8px;
-  background: var(--birzha-surface-muted);
-  color: var(--color-text);
-  box-shadow: none;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.birzha-clean-ops-row-action:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface-muted));
-}
+/* birzha-clean-ops-row-action — см. общий .birzha-btn выше */
 
 .birzha-clean-ops-row-action--danger {
   color: var(--birzha-danger);
@@ -4721,25 +4709,10 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 
 .birzha-admin-summary-toggle {
   margin: 0 !important;
-  padding: 0.4rem 0.75rem !important;
-  min-height: 2.15rem;
-  border-radius: 10px !important;
-  border: 1px solid rgba(100, 116, 139, 0.35) !important;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.95)) !important;
-  color: #0f172a !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  font-size: 0.82rem !important;
-}
-
-.birzha-admin-summary-toggle:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(239, 246, 255, 0.94), rgba(226, 232, 240, 0.95)) !important;
-  border-color: rgba(59, 130, 246, 0.45) !important;
 }
 
 .birzha-admin-summary-toggle--active {
-  border-color: rgba(59, 130, 246, 0.62) !important;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.14), rgba(147, 197, 253, 0.3)) !important;
-  color: #1e3a8a !important;
+  background: color-mix(in srgb, var(--birzha-accent) 18%, var(--birzha-surface-muted)) !important;
   font-weight: 700;
 }
 
@@ -5269,28 +5242,9 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__actions .birzha-home-a
     0 24px 48px -30px rgba(30, 64, 175, 0.62);
 }
 
-html[data-birzha-theme="dark"] .birzha-admin-summary-toggle {
-  border-color: rgba(100, 116, 139, 0.52) !important;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(17, 24, 39, 0.94)) !important;
-  color: #e2e8f0 !important;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.38),
-    0 10px 24px -22px rgba(30, 64, 175, 0.55);
-}
-
-html[data-birzha-theme="dark"] .birzha-admin-summary-toggle:hover:not(:disabled) {
-  border-color: rgba(96, 165, 250, 0.58) !important;
-  background: linear-gradient(180deg, rgba(30, 58, 138, 0.35), rgba(17, 24, 39, 0.94)) !important;
-  color: #f8fafc !important;
-}
-
 html[data-birzha-theme="dark"] .birzha-admin-summary-toggle--active {
-  border-color: rgba(96, 165, 250, 0.8) !important;
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.42), rgba(30, 64, 175, 0.46)) !important;
-  color: #eff6ff !important;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 16px 30px -20px rgba(37, 99, 235, 0.62);
+  background: color-mix(in srgb, var(--birzha-accent) 22%, var(--birzha-surface-muted)) !important;
+  color: var(--color-text) !important;
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile {

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 
 import type { BatchListItem, LoadingManifestSummary } from "../../api/types.js";
 import { formatLoadingManifestDisplayName, resolveLoadingManifestNumberForSave } from "../../format/loading-manifest.js";
@@ -6,7 +6,7 @@ import { formatTripSelectLabel } from "../../format/trip-label.js";
 import type { TripJson } from "../../api/types.js";
 import { BirzhaDateField } from "../BirzhaCalendarFields.js";
 import { ErrorAlert, InfoAlert } from "../../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle } from "../../ui/styles.js";
+import { btnClassSpaced, fieldStyle } from "../../ui/styles.js";
 import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 type CreatePayload = {
@@ -173,7 +173,7 @@ export function DistributionCreateForm({
       <p className="birzha-clean-ops-form-actions">
         <button
           type="button"
-          style={btnStyle}
+          className={btnClassSpaced}
           disabled={
             createPending ||
             tableRows.length === 0 ||

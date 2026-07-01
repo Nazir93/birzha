@@ -1,4 +1,4 @@
-import { compareProductGradeLineLabels } from "@birzha/contracts";
+﻿import { compareProductGradeLineLabels } from "@birzha/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -15,7 +15,7 @@ import {
 } from "../../format/loading-manifest-trip-assign-lock.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
-import { btnStyle, fieldStyle } from "../../ui/styles.js";
+import { btnClassSpaced, fieldStyle } from "../../ui/styles.js";
 import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 function formatPkg(n: number | null | undefined): string {
@@ -206,7 +206,7 @@ export function LoadingManifestAccordion({
               </div>
               <div className="no-print birzha-clean-ops-row-actions" style={{ marginTop: "0.65rem" }}>
                 {canAppendLoad && onAppendLoad ? (
-                  <button type="button" style={btnStyle} onClick={onAppendLoad}>
+                  <button type="button" className={btnClassSpaced} onClick={onAppendLoad}>
                     Догрузить товар
                   </button>
                 ) : null}
