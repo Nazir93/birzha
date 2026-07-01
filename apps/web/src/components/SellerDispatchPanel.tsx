@@ -20,14 +20,14 @@ import {
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { fieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { selectFieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 
-const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
+const selectWide = selectFieldStyle;
 const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };

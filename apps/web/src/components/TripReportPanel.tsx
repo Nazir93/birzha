@@ -37,7 +37,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import {
-  fieldStyleFullWidth,
+  selectFieldStyleFullWidth,
   tableStyle,
   thHead,
   thtd,
@@ -305,7 +305,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             id="trip-select"
             value={tripId}
             onChange={setTripId}
-            style={fieldStyleFullWidth}
+            style={selectFieldStyleFullWidth}
             placeholder="—"
             options={[
               { value: "", label: "—" },

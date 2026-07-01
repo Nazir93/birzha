@@ -269,7 +269,7 @@ export function BirzhaDateField({ id, "aria-label": ariaLabel, value, onChange, 
               selectedDay={sel && sel.y === viewMonth.getFullYear() && sel.m0 === viewMonth.getMonth() ? sel.d : null}
               onPickDay={onPickDay}
             />
-            <div className="birzha-dp__row">
+            <div className="birzha-dp__row birzha-dp__row--split">
               <button
                 type="button"
                 className="birzha-dp__linkish"
@@ -281,8 +281,13 @@ export function BirzhaDateField({ id, "aria-label": ariaLabel, value, onChange, 
               >
                 Сегодня
               </button>
-              <button type="button" className="birzha-dp__secondary" onClick={() => ref.current?.close()}>
-                Закрыть
+              <button
+                type="button"
+                className="birzha-dp__close"
+                aria-label="Закрыть"
+                onClick={() => ref.current?.close()}
+              >
+                ×
               </button>
             </div>
           </div>
@@ -438,8 +443,13 @@ export function BirzhaDateTimeField({
                   Без даты/времени
                 </button>
               )}
-              <button type="button" className="birzha-dp__secondary" onClick={() => ref.current?.close()}>
-                Отмена
+              <button
+                type="button"
+                className="birzha-dp__close"
+                aria-label="Отмена"
+                onClick={() => ref.current?.close()}
+              >
+                ×
               </button>
               <button type="button" className="birzha-dp__primary" onClick={apply} disabled={!sel}>
                 Готово

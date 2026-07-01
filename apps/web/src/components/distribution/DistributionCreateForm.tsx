@@ -6,7 +6,7 @@ import { formatTripSelectLabel } from "../../format/trip-label.js";
 import type { TripJson } from "../../api/types.js";
 import { BirzhaDateField } from "../BirzhaCalendarFields.js";
 import { ErrorAlert, InfoAlert } from "../../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle } from "../../ui/styles.js";
+import { btnClassSpaced, fieldStyle, selectFieldStyle } from "../../ui/styles.js";
 import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 type CreatePayload = {
@@ -118,7 +118,7 @@ export function DistributionCreateForm({
           <BirzhaSelect
             value={newManifestTripId}
             onChange={onNewManifestTripIdChange}
-            style={fieldStyle}
+            style={selectFieldStyle}
             disabled={tripsPending || appendMode}
             placeholder={
               tripsPending
@@ -148,7 +148,7 @@ export function DistributionCreateForm({
           <BirzhaSelect
             value={manifestDestinationCode}
             onChange={onManifestDestinationCodeChange}
-            style={fieldStyle}
+            style={selectFieldStyle}
             disabled={appendMode}
             options={destAllowed.map((d) => ({
               value: d,

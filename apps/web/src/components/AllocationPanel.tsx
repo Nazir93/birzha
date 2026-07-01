@@ -33,7 +33,7 @@ import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle } from "../ui/styles.js";
+import { btnClassSpaced, selectFieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function todayDateOnly(): string {
@@ -528,7 +528,7 @@ export function AllocationPanel() {
                   void navigate(distributionBase);
                 }
               }}
-              style={fieldStyle}
+              style={selectFieldStyle}
               placeholder="— выберите склад —"
               options={[
                 { value: "", label: "— выберите склад —" },

@@ -56,6 +56,7 @@
   --birzha-chrome-text: #09090b;
   --birzha-chrome-muted: #f4f4f5;
   --birzha-chrome-elevated: #fafafa;
+  --birzha-cabinet-canvas-bg: linear-gradient(165deg, #fafbfc 0%, #f3f4f6 48%, #eef0f3 100%);
   --birzha-radius-drawer: 16px;
   --birzha-shadow-drawer: 8px 0 32px rgba(15, 23, 42, 0.12);
   /* Вторичные кнопки (style btnStyle / btnStyleInline в TS) */
@@ -212,6 +213,7 @@ html[data-birzha-theme="dark"] {
   --birzha-chrome-text: #fafafa;
   --birzha-chrome-muted: #3f3f46;
   --birzha-chrome-elevated: #2e2e33;
+  --birzha-cabinet-canvas-bg: linear-gradient(165deg, #1f1f23 0%, #18181b 55%, #141418 100%);
   --birzha-shadow-drawer: 12px 0 40px rgba(0, 0, 0, 0.45);
   --birzha-btn-outline-bg: #52525b;
   --birzha-btn-outline-border: #d4d4d8;
@@ -230,13 +232,14 @@ html[data-birzha-theme="dark"] {
   --birzha-scrollbar-thumb-hover: rgba(113, 113, 122, 0.98);
 }
 
-html[data-birzha-theme="dark"] .birzha-cabinet-main {
-  background: linear-gradient(165deg, #1f1f23 0%, #18181b 55%, #141418 100%);
-}
-
 html[data-birzha-theme="dark"] .birzha-cabinet-main .birzha-inline-panel {
   background: rgba(39, 39, 42, 0.95);
   border-color: rgba(82, 82, 91, 0.5);
+}
+
+html[data-birzha-theme="dark"] .birzha-cabinet-sidebar,
+html[data-birzha-theme="dark"] .birzha-cabinet-drawer {
+  border-right-color: rgba(82, 82, 91, 0.38);
 }
 
 /* Сводка админки в тёмной теме: убрать «белые карточки» с невидимым текстом */
@@ -401,6 +404,17 @@ html[data-birzha-theme="dark"] .birzha-dp__secondary {
 html[data-birzha-theme="dark"] .birzha-dp__secondary:hover {
   background: var(--birzha-surface-muted);
   border-color: var(--color-border);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__close {
+  background: var(--birzha-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__close:hover {
+  background: var(--birzha-surface-muted);
+  border-color: var(--color-border-focus);
 }
 
 html[data-birzha-theme="dark"] .birzha-dp__primary {
@@ -1082,17 +1096,18 @@ a.birzha-kpi-tile--link:focus-visible {
   width: 100%;
   max-width: 100%;
   margin-top: 0.35rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   font-family: var(--font-ui);
-  font-size: 1.02rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1.45;
   color: var(--color-text);
-  border-radius: var(--birzha-radius-sm);
+  border-radius: 8px;
   border: 1px solid var(--color-border);
   background: var(--birzha-surface);
   box-sizing: border-box;
-  min-height: 2.75rem;
+  min-height: 2.625rem;
+  height: 2.625rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1108,12 +1123,13 @@ a.birzha-kpi-tile--link:focus-visible {
 
 .birzha-seller-sell-panel .birzha-seller-form-control.birzha-select .birzha-select__trigger {
   margin-top: 0;
-  padding: 0.55rem 0.75rem;
-  font-size: 1.02rem;
-  border-radius: var(--birzha-radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  border-radius: 8px;
   border-color: var(--color-border);
   background: var(--birzha-surface);
-  min-height: 2.75rem;
+  min-height: 2.625rem;
+  height: 2.625rem;
 }
 
 .birzha-seller-sell-panel .birzha-seller-form-control.birzha-select .birzha-select__trigger:focus-visible {
@@ -1710,10 +1726,38 @@ a.birzha-kpi-tile--link:focus-visible {
 
 .birzha-nakl-line-field {
   margin-top: 0 !important;
-  min-height: 2.3rem !important;
-  border-radius: 10px !important;
+  min-height: 2.625rem !important;
+  height: 2.625rem;
+  border-radius: 8px !important;
   box-sizing: border-box;
   max-width: 100%;
+}
+
+.birzha-clean-ops-page .birzha-clean-ops-meta-grid input,
+.birzha-clean-ops-page .birzha-clean-ops-meta-grid .birzha-dp-trigger,
+.birzha-clean-ops-page .birzha-clean-ops-meta-grid .birzha-select__trigger,
+.birzha-clean-ops-page .birzha-clean-ops-field.birzha-select .birzha-select__trigger,
+.birzha-clean-ops-page .birzha-nakl-line-field.birzha-select .birzha-select__trigger,
+.birzha-clean-ops-page input.birzha-nakl-line-field {
+  min-height: 2.625rem;
+  height: 2.625rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.45;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.birzha-clean-ops-page .birzha-clean-ops-meta-grid .birzha-select,
+.birzha-clean-ops-page .birzha-clean-ops-field.birzha-select,
+.birzha-clean-ops-page .birzha-nakl-line-field.birzha-select {
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .birzha-nakl-line-field--grade {
@@ -1768,9 +1812,9 @@ a.birzha-kpi-tile--link:focus-visible {
 }
 
 .birzha-nakl-line-action--remove {
-  width: 2.3rem;
-  min-width: 2.3rem;
-  height: 2.3rem;
+  width: 2.625rem;
+  min-width: 2.625rem;
+  height: 2.625rem;
   padding: 0 !important;
   display: inline-flex;
   align-items: center;
@@ -1887,11 +1931,13 @@ a.birzha-kpi-tile--link:focus-visible {
 
   .birzha-nakl-lines-card--form .birzha-nakl-line-field--grade,
   .birzha-nakl-lines-card--form .birzha-nakl-line-field--numeric,
-  .birzha-nakl-lines-card--form .birzha-nakl-line-field--sum {
+  .birzha-nakl-lines-card--form .birzha-nakl-line-field--sum,
+  .birzha-nakl-lines-card--form .birzha-nakl-line-field.birzha-select .birzha-select__trigger {
     width: 100%;
     max-width: none;
     font-size: 1rem;
     min-height: 2.75rem !important;
+    height: 2.75rem;
   }
 
   .birzha-nakl-lines-card--form .birzha-nakl-lines-table__actions-cell {
@@ -2198,14 +2244,14 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
 /* birzha-clean-ops-row-action — см. общий .birzha-btn выше */
 
 .birzha-clean-ops-row-action--danger {
-  color: var(--birzha-danger);
-  background: transparent;
-  padding-inline: 0.25rem;
+  color: var(--birzha-danger) !important;
+  background: var(--birzha-surface-muted) !important;
+  padding: 0.35rem 0.65rem;
 }
 
 .birzha-clean-ops-row-action--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--birzha-danger) 12%, transparent);
-  color: var(--birzha-danger);
+  background: color-mix(in srgb, var(--birzha-danger) 14%, var(--birzha-surface-muted)) !important;
+  color: var(--birzha-danger) !important;
 }
 
 /* Кнопка «Удалить»: красный текст, без рамки и фона (как в таблице рейсов) */
@@ -2253,7 +2299,6 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
 .birzha-clean-ops-page .birzha-clean-ops-row-actions .birzha-clean-ops-row-action--danger {
   margin-top: 0;
   margin-right: 0;
-  padding: 0.35rem 0.25rem;
 }
 
 .birzha-trip-manifest-list {
@@ -3154,6 +3199,12 @@ select:focus-visible {
   max-width: 100%;
   margin-top: 0.35rem;
   box-sizing: border-box;
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .birzha-select__trigger {
@@ -3163,6 +3214,7 @@ select:focus-visible {
   gap: 0.5rem;
   width: 100%;
   min-height: 2.625rem;
+  height: 2.625rem;
   padding: 0.5rem 0.75rem;
   font: inherit;
   font-size: 0.9375rem;
@@ -3291,6 +3343,10 @@ html[data-birzha-theme="dark"] .birzha-select__menu {
 .birzha-nakl-line-field.birzha-select,
 .birzha-nakl-line-field.birzha-select .birzha-select__trigger {
   margin-top: 0;
+}
+
+.birzha-clean-ops-page .birzha-nakl-line-field.birzha-select .birzha-select__trigger {
+  width: 100%;
 }
 
 /*
@@ -3554,6 +3610,40 @@ html[data-birzha-theme="dark"] .birzha-dp__time {
   margin-top: 0.75rem;
   padding-top: 0.4rem;
   border-top: 1px solid #e4e4e7;
+}
+
+.birzha-dp__row--split {
+  justify-content: space-between;
+}
+
+.birzha-dp__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--birzha-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: var(--birzha-cursor-red);
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.birzha-dp__close:hover {
+  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface-muted));
+  border-color: var(--color-border-focus);
+}
+
+.birzha-dp__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .birzha-dp__row--end {
@@ -3868,13 +3958,13 @@ main.app-shell--cabinet {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--birzha-bg-page);
+  background: var(--birzha-cabinet-canvas-bg);
 }
 
 .birzha-cabinet-layout--operations,
 .birzha-cabinet-layout--sales,
 .birzha-cabinet-layout--accounting {
-  background: var(--birzha-bg-page);
+  background: var(--birzha-cabinet-canvas-bg);
 }
 
 .birzha-cabinet-topbar {
@@ -4024,9 +4114,9 @@ main.app-shell--cabinet {
   flex-shrink: 0;
   min-height: 0;
   overflow-x: hidden;
-  background: var(--birzha-chrome-surface);
+  background: var(--birzha-cabinet-canvas-bg);
   color: var(--birzha-chrome-text);
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
   transition: width 0.22s ease;
 }
 
@@ -4160,8 +4250,7 @@ main.app-shell--cabinet {
   overscroll-behavior-y: contain;
   touch-action: pan-y pinch-zoom;
   scrollbar-gutter: stable;
-  /* Лёгкая глубина вместо плоского серого — контент визуально «лист», сайдбар остаётся ровным белым */
-  background: linear-gradient(165deg, #fafbfc 0%, #f3f4f6 48%, #eef0f3 100%);
+  background: var(--birzha-cabinet-canvas-bg);
   padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) max(1.75rem, env(safe-area-inset-bottom))
     max(0.85rem, env(safe-area-inset-left));
 }
@@ -4246,9 +4335,9 @@ main.app-shell--cabinet {
   width: min(20.5rem, 92vw);
   display: flex;
   flex-direction: column;
-  background: var(--birzha-chrome-surface);
+  background: var(--birzha-cabinet-canvas-bg);
   color: var(--birzha-chrome-text);
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 0 var(--birzha-radius-drawer) var(--birzha-radius-drawer) 0;
   box-shadow: var(--birzha-shadow-drawer);
   padding-top: env(safe-area-inset-top);
@@ -4443,8 +4532,8 @@ main.app-shell--cabinet {
 }
 
 .birzha-admin-mass-ring {
-  width: 7.5rem;
-  height: 7.5rem;
+  width: 6.25rem;
+  height: 6.25rem;
   border-radius: 50%;
   position: relative;
   box-shadow:
@@ -4843,8 +4932,8 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   display: grid;
   grid-template-columns: minmax(20rem, 2.2fr) minmax(14rem, 1fr);
   gap: 0.9rem;
-  margin-bottom: 1rem;
-  align-items: start;
+  margin-bottom: 0.35rem;
+  align-items: stretch;
 }
 
 .birzha-admin-dash-modern__chart-card,
@@ -4860,12 +4949,20 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   animation: birzha-admin-fade-up 360ms ease-out both;
 }
 
-.birzha-admin-dash-modern__chart-card {
-  animation-delay: 120ms;
+.birzha-admin-dash-modern__ops-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  animation-delay: 160ms;
 }
 
-.birzha-admin-dash-modern__ops-card {
-  animation-delay: 160ms;
+.birzha-admin-dash-modern__trips-disclosure {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.birzha-admin-dash-modern__chart-card {
+  animation-delay: 120ms;
 }
 
 .birzha-admin-dash-modern__chart-head {
@@ -4938,7 +5035,7 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-dash-modern__subhead {
-  margin: 0.85rem 0 0.55rem;
+  margin: 0.55rem 0 0.35rem;
   font-size: 0.9rem;
 }
 
@@ -5244,7 +5341,7 @@ html[data-birzha-theme="dark"] .birzha-admin-summary-table__foot td {
 }
 
 .birzha-admin-dash-modern__ops-links {
-  margin-top: 0.75rem;
+  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem 0.7rem;

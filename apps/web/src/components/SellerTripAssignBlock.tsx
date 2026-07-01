@@ -18,10 +18,10 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
-import { fieldStyle, successText } from "../ui/styles.js";
+import { selectFieldStyle, successText } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
-const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
+const selectWide = selectFieldStyle;
 const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };

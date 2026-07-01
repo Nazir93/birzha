@@ -46,6 +46,58 @@ type MenuPosition = {
 const MENU_GAP_PX = 4;
 const MENU_MAX_HEIGHT_PX = 16 * 16;
 
+const SELECT_WRAPPER_STYLE_KEYS = new Set<keyof CSSProperties>([
+  "width",
+  "maxWidth",
+  "minWidth",
+  "minWidth",
+  "margin",
+  "marginTop",
+  "marginBottom",
+  "marginLeft",
+  "marginRight",
+  "flex",
+  "flexGrow",
+  "flexShrink",
+  "flexBasis",
+  "alignSelf",
+  "gridColumn",
+  "gridRow",
+  "gridArea",
+  "justifySelf",
+  "display",
+  "position",
+  "zIndex",
+  "visibility",
+  "opacity",
+]);
+
+export function splitBirzhaSelectStyle(style?: CSSProperties): {
+  wrapperStyle: CSSProperties | undefined;
+  triggerStyle: CSSProperties | undefined;
+} {
+  if (!style) {
+    return { wrapperStyle: undefined, triggerStyle: undefined };
+  }
+  const wrapperStyle: Record<string, string | number> = {};
+  const triggerStyle: Record<string, string | number> = {};
+  for (const key of Object.keys(style) as (keyof CSSProperties)[]) {
+    const value = style[key];
+    if (value === undefined) {
+      continue;
+    }
+    if (SELECT_WRAPPER_STYLE_KEYS.has(key)) {
+      wrapperStyle[key as string] = value as string | number;
+    } else {
+      triggerStyle[key as string] = value as string | number;
+    }
+  }
+  return {
+    wrapperStyle: Object.keys(wrapperStyle).length > 0 ? (wrapperStyle as CSSProperties) : undefined,
+    triggerStyle: Object.keys(triggerStyle).length > 0 ? (triggerStyle as CSSProperties) : undefined,
+  };
+}
+
 function flattenSelectable(options?: BirzhaSelectOption[], groups?: BirzhaSelectOptionGroup[]): BirzhaSelectOption[] {
   if (groups && groups.length > 0) {
     return groups.flatMap((group) => group.options.filter((opt) => !opt.disabled));
@@ -136,6 +188,7 @@ export function BirzhaSelect({
     [value, placeholder, options, groups],
   );
   const isPlaceholder = !value;
+  const { wrapperStyle, triggerStyle } = useMemo(() => splitBirzhaSelectStyle(style), [style]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -337,12 +390,13 @@ export function BirzhaSelect({
       : null;
 
   return (
-    <div className={["birzha-select", className].filter(Boolean).join(" ")} style={style}>
+    <div className={["birzha-select", className].filter(Boolean).join(" ")} style={wrapperStyle}>
       <button
         ref={triggerRef}
         id={triggerId}
         type="button"
         className="birzha-select__trigger"
+        style={triggerStyle}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}

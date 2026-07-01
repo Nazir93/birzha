@@ -393,6 +393,7 @@ export function AdminCabinetHome() {
 
           <BirzhaDisclosure
             id={ADMIN_TRIPS_SECTION_ID}
+            className="birzha-admin-dash-modern__trips-disclosure"
             title={`Рейсы в работе (${sortedTripsOpen.length})`}
             defaultOpen
           >

@@ -8,7 +8,7 @@ import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { tableStyle, thHead, thtd, fieldStyle } from "../ui/styles.js";
+import { tableStyle, thHead, thtd, selectFieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 /**
@@ -55,7 +55,7 @@ export function AdminWarehouseWriteOffsLedgerPage() {
           <BirzhaSelect
             value={warehouseId}
             onChange={setWarehouseId}
-            style={{ ...fieldStyle, marginTop: 4 }}
+            style={{ ...selectFieldStyle, marginTop: 4 }}
             placeholder="Все склады"
             options={[
               { value: "", label: "Все склады" },
@@ -74,7 +74,7 @@ export function AdminWarehouseWriteOffsLedgerPage() {
           <BirzhaSelect
             value={String(limit)}
             onChange={(v) => setLimit(Number(v))}
-            style={{ ...fieldStyle, marginTop: 4 }}
+            style={{ ...selectFieldStyle, marginTop: 4 }}
             options={[
               { value: "100", label: "100" },
               { value: "200", label: "200" },

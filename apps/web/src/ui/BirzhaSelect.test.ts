@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { BirzhaSelect } from "./BirzhaSelect.js";
+import { BirzhaSelect, splitBirzhaSelectStyle } from "./BirzhaSelect.js";
 
 describe("BirzhaSelect", () => {
   it("рендерит кнопку-триггер с подписью выбранного значения", () => {
@@ -32,6 +32,43 @@ describe("BirzhaSelect", () => {
     );
     expect(html).toContain("birzha-select__value--placeholder");
     expect(html).toContain("— выберите склад —");
+  });
+
+  it("раскладывает minWidth на обёртку", () => {
+    const split = splitBirzhaSelectStyle({
+      width: "100%",
+      minWidth: "16rem",
+      padding: "0.5rem 0.75rem",
+    });
+    expect(split.wrapperStyle).toEqual({ width: "100%", minWidth: "16rem" });
+    expect(split.triggerStyle).toEqual({ padding: "0.5rem 0.75rem" });
+  });
+
+  it("раскладывает style: layout на обёртку, оформление на триггер", () => {
+    const split = splitBirzhaSelectStyle({
+      width: "100%",
+      marginTop: "0.35rem",
+      padding: "0.5rem 0.75rem",
+      minHeight: "2.625rem",
+    });
+    expect(split.wrapperStyle).toEqual({ width: "100%", marginTop: "0.35rem" });
+    expect(split.triggerStyle).toEqual({ padding: "0.5rem 0.75rem", minHeight: "2.625rem" });
+
+    const html = renderToStaticMarkup(
+      createElement(BirzhaSelect, {
+        value: "w1",
+        onChange: () => {},
+        style: {
+          width: "100%",
+          marginTop: "0.35rem",
+          padding: "0.5rem 0.75rem",
+          minHeight: "2.625rem",
+        },
+        options: [{ value: "w1", label: "Склад" }],
+      }),
+    );
+    expect(html).toContain('class="birzha-select" style="width:100%;margin-top:0.35rem"');
+    expect(html).toContain('class="birzha-select__trigger" style="padding:0.5rem 0.75rem;min-height:2.625rem"');
   });
 
   it("поддерживает группы опций", () => {

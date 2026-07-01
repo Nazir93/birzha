@@ -34,11 +34,11 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { selectFieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { SellerTripAssignBlock } from "./SellerTripAssignBlock.js";
 
-const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
+const selectWide = selectFieldStyle;
 
 type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: string[] };
 

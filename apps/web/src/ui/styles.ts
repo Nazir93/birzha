@@ -23,6 +23,20 @@ export const fieldStyle: CSSProperties = {
   transition: "border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
+/** Layout для BirzhaSelect: оформление поля — в `.birzha-select__trigger` (index.css). */
+export const selectFieldStyle: CSSProperties = {
+  display: "block",
+  width: "100%",
+  maxWidth: "100%",
+  marginTop: "0.35rem",
+};
+
+/** Селект на всю ширину блока (как fieldStyleFullWidth для input). */
+export const selectFieldStyleFullWidth: CSSProperties = {
+  ...selectFieldStyle,
+  maxWidth: "100%",
+};
+
 /** `input[type="date"]` — цвет схемы как у страницы (тёмная тема без «засвета»). */
 export const dateFieldStyle: CSSProperties = {
   ...fieldStyle,

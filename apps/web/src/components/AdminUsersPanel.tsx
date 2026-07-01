@@ -6,7 +6,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnClassInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnClassInline, fieldStyle, selectFieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -377,7 +377,7 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
           </label>
           <label className="birzha-form-label birzha-form-label--block">
             Роль
-            <BirzhaSelect value={roleCode} onChange={setRoleCode} style={fieldStyle} options={roleOptions.map((code) => ({
+            <BirzhaSelect value={roleCode} onChange={setRoleCode} style={selectFieldStyle} options={roleOptions.map((code) => ({
               value: code,
               label: ROLE_LABEL[code] ?? code,
             }))} />

@@ -9,7 +9,7 @@ import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { WarningAlert } from "../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle, successText } from "../ui/styles.js";
+import { btnClassSpaced, fieldStyle, selectFieldStyle, successText } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
@@ -22,7 +22,7 @@ import {
 import { BatchesByNakladnayaReference } from "./BatchesByNakladnayaReference.js";
 import { parseRecordTripShortageForm, parseShipForm } from "../validation/api-schemas.js";
 
-const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
+const selectWide = selectFieldStyle;
 
 export function OperationsPanel() {
   const queryClient = useQueryClient();

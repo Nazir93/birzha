@@ -46,6 +46,7 @@ import {
   btnClassSpaced,
   dateFieldStyle,
   fieldStyle,
+  selectFieldStyle,
   successText,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
@@ -370,7 +371,8 @@ export function PurchaseNakladnayaSection() {
               setWarehouseId(v);
               writePreferredWarehouseId(v === "" ? null : v);
             }}
-            style={{ ...fieldStyle, maxWidth: "100%" }}
+            className="birzha-clean-ops-field"
+            style={selectFieldStyle}
             placeholder="— выберите —"
             options={[
               { value: "", label: "— выберите —" },
@@ -425,8 +427,8 @@ export function PurchaseNakladnayaSection() {
                   <BirzhaSelect
                     value={line.productGradeId}
                     onChange={(v) => updateLine(line.key, { productGradeId: v })}
-                    className="birzha-nakl-line-field birzha-nakl-line-field--grade"
-                    style={fieldStyle}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                    style={{ ...selectFieldStyle, marginTop: 0 }}
                     disabled={gradesQ.isPending}
                     placeholder={gradesQ.isPending ? "Загрузка…" : "— выберите —"}
                     groups={gradeOptionGroups.map((grp) => ({

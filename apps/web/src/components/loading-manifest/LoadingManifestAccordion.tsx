@@ -16,7 +16,7 @@ import {
 import { loadingManifestTripDetachLockMessage } from "../../format/loading-manifest-trip-detach-lock.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle } from "../../ui/styles.js";
+import { btnClassSpaced, selectFieldStyle } from "../../ui/styles.js";
 import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 function formatPkg(n: number | null | undefined): string {
@@ -287,7 +287,7 @@ export function LoadingManifestAccordion({
                       <BirzhaSelect
                         value={assignTripId}
                         onChange={setAssignTripId}
-                        style={{ ...fieldStyle, minWidth: "16rem" }}
+                        style={{ ...selectFieldStyle, minWidth: "16rem" }}
                         placeholder="— выбрать другой рейс —"
                         options={tripSelectOptions}
                       />
@@ -353,7 +353,7 @@ export function LoadingManifestAccordion({
                       <BirzhaSelect
                         value={assignTripId}
                         onChange={setAssignTripId}
-                        style={{ ...fieldStyle, minWidth: "16rem" }}
+                        style={{ ...selectFieldStyle, minWidth: "16rem" }}
                         placeholder="— выбрать рейс —"
                         options={tripSelectOptions}
                       />
