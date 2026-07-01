@@ -67,6 +67,11 @@
   --birzha-link-hover: #2563eb;
   --birzha-link-visited: #4338ca;
 
+  /** Рамка полей и акцент строки в выпадающих списках */
+  --birzha-field-outline: var(--color-border);
+  --birzha-popup-accent: #2563eb;
+  --birzha-popup-surface: var(--color-surface-input);
+
   --birzha-scrollbar-size: 8px;
   --birzha-scrollbar-track: #e4e4e7;
   --birzha-scrollbar-thumb: #a1a1aa;
@@ -215,6 +220,10 @@ html[data-birzha-theme="dark"] {
   --birzha-link: #93c5fd;
   --birzha-link-hover: #e0f2fe;
   --birzha-link-visited: #c4b5fd;
+
+  --birzha-field-outline: #d4d4d8;
+  --birzha-popup-accent: #2563eb;
+  --birzha-popup-surface: #27272a;
 
   --birzha-scrollbar-track: rgba(39, 39, 42, 0.95);
   --birzha-scrollbar-thumb: rgba(82, 82, 91, 0.92);
@@ -429,8 +438,8 @@ html[data-birzha-theme="dark"] .birzha-dp__linkish:hover {
 }
 
 html[data-birzha-theme="dark"] .birzha-dp__card {
-  background: #1f2128;
-  border-color: #3f4450;
+  background: var(--birzha-popup-surface);
+  border-color: var(--birzha-field-outline);
 }
 
 html[data-birzha-theme="dark"] .birzha-dp__title,
@@ -471,10 +480,10 @@ html[data-birzha-theme="dark"] .birzha-dp__day--today {
 
 html[data-birzha-theme="dark"] .birzha-dp__day--selected,
 html[data-birzha-theme="dark"] .birzha-dp__day--selected:hover {
-  background: #111827;
+  background: var(--birzha-popup-accent);
   color: #ffffff;
-  border-color: #93c5fd;
-  box-shadow: inset 0 0 0 1px #bfdbfe;
+  border-color: var(--birzha-popup-accent);
+  box-shadow: none;
 }
 
 html[data-birzha-theme="dark"] .birzha-dp__time-lbl {
@@ -1940,9 +1949,17 @@ a.birzha-kpi-tile--link:focus-visible {
   }
 }
 
-.birzha-trip-search-picker__option:hover:not(:disabled) {
-  border-color: var(--color-border) !important;
-  background: var(--birzha-surface-muted) !important;
+.birzha-trip-search-picker__option:hover:not(:disabled),
+.birzha-trip-search-picker__option:focus-visible {
+  border-color: var(--birzha-field-outline, var(--color-border)) !important;
+  background: color-mix(in srgb, var(--birzha-popup-accent) 22%, var(--birzha-popup-surface)) !important;
+}
+
+html[data-birzha-theme="dark"] .birzha-trip-search-picker__option[aria-selected="true"],
+html[data-birzha-theme="dark"] .birzha-trip-search-picker__option:hover:not(:disabled) {
+  background: var(--birzha-popup-accent) !important;
+  color: #fff !important;
+  border-color: var(--birzha-popup-accent) !important;
 }
 
 /* Чистые формы операций (/a/purchase-nakladnaya, /a/trips): без карточных рамок */
@@ -2017,8 +2034,8 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
 .birzha-clean-ops-page .birzha-clean-ops-meta-grid input,
 .birzha-clean-ops-page .birzha-clean-ops-meta-grid select,
 .birzha-clean-ops-page .birzha-clean-ops-meta-grid .birzha-input-date {
-  border: none;
-  background: var(--birzha-surface-muted);
+  border: 1px solid var(--birzha-field-outline, var(--color-border));
+  background: var(--birzha-popup-surface, var(--color-surface-input));
   box-shadow: none;
 }
 
@@ -2967,8 +2984,8 @@ textarea {
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--color-text);
-  background: var(--color-surface-input);
-  border: 1px solid var(--color-border);
+  background: var(--birzha-popup-surface, var(--color-surface-input));
+  border: 1px solid var(--birzha-field-outline, var(--color-border));
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   min-height: 2.625rem;
@@ -3003,6 +3020,48 @@ textarea:disabled {
   background: #f4f4f5;
 }
 
+html[data-birzha-theme="dark"] input:disabled,
+html[data-birzha-theme="dark"] select:disabled,
+html[data-birzha-theme="dark"] textarea:disabled {
+  background: #1f1f23;
+}
+
+/* Выпадающие списки: единый вид поля + тёмная панель опций с синим выделением */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 0.85rem;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  border-color: var(--birzha-field-outline, var(--color-border));
+  background-color: var(--birzha-popup-surface, var(--color-surface-input));
+  accent-color: var(--birzha-popup-accent);
+}
+
+html[data-birzha-theme="dark"] select {
+  color-scheme: dark;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f4f4f5' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+html[data-birzha-theme="dark"] select option {
+  background-color: var(--birzha-popup-surface);
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] select option:checked,
+html[data-birzha-theme="dark"] select option:focus {
+  background-color: var(--birzha-popup-accent);
+  color: #ffffff;
+}
+
+select:focus-visible {
+  border-color: var(--color-border-focus);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
 /*
  * Нативный выбор даты/времени: всплывающий календарь в Chromium/Edge
  * с «светлой» схемой, как остальное тело (серый/белый, не тёмный системный);
@@ -3011,10 +3070,17 @@ textarea:disabled {
 input[type="date"],
 input[type="datetime-local"],
 input[type="month"] {
-  color-scheme: only light;
-  accent-color: var(--color-border-focus);
+  color-scheme: light;
+  accent-color: var(--birzha-popup-accent);
   color: var(--color-text);
-  background: var(--color-surface-input);
+  background: var(--birzha-popup-surface, var(--color-surface-input));
+  border-color: var(--birzha-field-outline, var(--color-border));
+}
+
+html[data-birzha-theme="dark"] input[type="date"],
+html[data-birzha-theme="dark"] input[type="datetime-local"],
+html[data-birzha-theme="dark"] input[type="month"] {
+  color-scheme: dark;
 }
 
 /* Сегменты внутри поля (Chromium) — в одной гамме с остальными input */
@@ -3035,12 +3101,22 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   padding: 0.1rem;
 }
 
-/* Нативный popover календаря в Chromium/Edge: светлая схема, без «системного» тёмного окна */
+/* Нативный popover календаря: в тёмной теме — тёмная панель, синий акцент */
 .birzha-input-date,
 main input[type="date"],
 main input[type="datetime-local"],
 main input[type="month"] {
-  color-scheme: only light;
+  color-scheme: light;
+  accent-color: var(--birzha-popup-accent);
+}
+
+html[data-birzha-theme="dark"] .birzha-input-date,
+html[data-birzha-theme="dark"] main input[type="date"],
+html[data-birzha-theme="dark"] main input[type="datetime-local"],
+html[data-birzha-theme="dark"] main input[type="month"] {
+  color-scheme: dark;
+  border-color: var(--birzha-field-outline, var(--color-border));
+  background-color: var(--birzha-popup-surface, var(--color-surface-input));
 }
 
 /* Кастомный выбор даты/времени: центр экрана + светлая панель (BirzhaDateField / BirzhaDateTimeField) */
@@ -3228,8 +3304,15 @@ main input[type="month"] {
   max-width: 12rem;
   margin-bottom: 0.75rem;
   min-height: 2.5rem;
-  color-scheme: only light;
-  accent-color: var(--birzha-accent);
+  color-scheme: light;
+  accent-color: var(--birzha-popup-accent);
+}
+
+html[data-birzha-theme="dark"] .birzha-dp__time {
+  color-scheme: dark;
+  accent-color: var(--birzha-popup-accent);
+  border-color: var(--birzha-field-outline);
+  background: var(--birzha-popup-surface);
 }
 
 .birzha-dp__row {
