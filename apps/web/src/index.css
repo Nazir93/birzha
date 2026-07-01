@@ -2084,8 +2084,9 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
 .birzha-clean-ops-page .birzha-nakl-lines-table thead th,
 .birzha-clean-ops-page .birzha-data-table thead th {
   background: transparent !important;
-  padding-top: 0;
-  padding-bottom: 0.4rem;
+  padding: 0.48rem 0.55rem;
+  vertical-align: middle;
+  line-height: 1.25;
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -6249,6 +6250,7 @@ html[data-birzha-theme="dark"] .birzha-assign-seller__trip-row--active td {
   z-index: 2;
   background: var(--birzha-surface);
   box-shadow: 0 1px 0 var(--color-border);
+  vertical-align: middle;
 }
 
 /* ——— Настройки (справочники + сотрудники) ——— */
