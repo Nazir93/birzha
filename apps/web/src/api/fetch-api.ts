@@ -197,7 +197,10 @@ export async function patchBatchAllocation(
 /**
  * `POST /api/batches/:id/warehouse-write-off` — списание брака с остатка.
  */
-export async function postBatchWarehouseWriteOffQualityReject(batchId: string, kg: number): Promise<void> {
+export async function postBatchWarehouseWriteOffQualityReject(
+  batchId: string,
+  kg: number,
+): Promise<{ writeOffId: string }> {
   const url = `/api/batches/${encodeURIComponent(batchId)}/warehouse-write-off`;
   const res = await apiFetch(url, {
     method: "POST",
@@ -217,6 +220,30 @@ export async function postBatchWarehouseWriteOffQualityReject(batchId: string, k
   }
   if (res.status === 403) {
     throw new Error("Недостаточно прав (роль закупки/склада/руководства).");
+  }
+  await assertOkResponse(res, url);
+  const body = (await res.json()) as { writeOffId?: string };
+  const writeOffId = typeof body.writeOffId === "string" ? body.writeOffId.trim() : "";
+  if (!writeOffId) {
+    throw new Error("Сервер не вернул идентификатор списания.");
+  }
+  return { writeOffId };
+}
+
+/**
+ * `DELETE /api/warehouse-write-offs/:id` — отмена последнего списания брака с остатка.
+ */
+export async function deleteWarehouseWriteOffById(writeOffId: string): Promise<void> {
+  const url = `/api/warehouse-write-offs/${encodeURIComponent(writeOffId)}`;
+  const res = await apiFetch(url, { method: "DELETE" });
+  if (res.status === 503) {
+    throw new Error("Нужна PostgreSQL (списание на складе не настроено).");
+  }
+  if (res.status === 403) {
+    throw new Error("Недостаточно прав (роль закупки/склада/руководства).");
+  }
+  if (res.status === 404) {
+    throw new Error("Запись списания не найдена — возможно, уже отменена.");
   }
   await assertOkResponse(res, url);
 }

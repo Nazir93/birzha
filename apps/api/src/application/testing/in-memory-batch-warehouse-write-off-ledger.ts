@@ -10,6 +10,20 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
     this.rows.push({ ...row });
   }
 
+  async findById(id: string): Promise<BatchWarehouseWriteOffAppend | null> {
+    const row = this.rows.find((r) => r.id === id);
+    return row ? { ...row } : null;
+  }
+
+  async deleteById(id: string): Promise<boolean> {
+    const idx = this.rows.findIndex((r) => r.id === id);
+    if (idx < 0) {
+      return false;
+    }
+    this.rows.splice(idx, 1);
+    return true;
+  }
+
   async totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>> {
     const set = new Set(batchIds);
     const m = new Map<string, bigint>();

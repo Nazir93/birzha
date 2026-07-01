@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { apiGetJson, apiPostJson, deleteLoadingManifestById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
+import { apiGetJson, apiPostJson, deleteLoadingManifestById, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
@@ -28,6 +28,7 @@ import { LoadingManifestAccordion } from "./loading-manifest/LoadingManifestAcco
 import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
+import { WriteOffUndoToast } from "./distribution/WriteOffUndoToast.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
@@ -63,6 +64,13 @@ export function AllocationPanel() {
   const [manifestListPage, setManifestListPage] = useState(0);
   const [deleteManifestError, setDeleteManifestError] = useState<string | null>(null);
   const [deletingManifestId, setDeletingManifestId] = useState<string | null>(null);
+  const [writeOffUndo, setWriteOffUndo] = useState<{
+    writeOffIds: string[];
+    totalKg: number;
+    label: string;
+    expiresAt: number;
+  } | null>(null);
+  const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
 
   const workspace = useDistributionWorkspace({
     routeManifestId,
@@ -155,6 +163,19 @@ export function AllocationPanel() {
     }
   }, [tripsQuery.isSuccess, openTripsForAssign, newManifestTripId]);
 
+  useEffect(() => {
+    if (!writeOffUndo) {
+      return;
+    }
+    const ms = writeOffUndo.expiresAt - Date.now();
+    if (ms <= 0) {
+      setWriteOffUndo(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setWriteOffUndo(null), ms);
+    return () => window.clearTimeout(timer);
+  }, [writeOffUndo]);
+
   const assignTrip = useMutation({
     mutationFn: async () => {
       const id = routeManifestId.trim();
@@ -208,20 +229,54 @@ export function AllocationPanel() {
   );
 
   const writeOff = useMutation({
-    mutationFn: async ({ items }: { inputKey: string; items: { batchId: string; kg: number }[] }) => {
+    mutationFn: async ({
+      items,
+      label,
+    }: {
+      inputKey: string;
+      items: { batchId: string; kg: number }[];
+      label: string;
+    }) => {
+      const writeOffIds: string[] = [];
+      let totalKg = 0;
       for (const item of items) {
-        await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
+        const { writeOffId } = await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
+        writeOffIds.push(writeOffId);
+        totalKg += item.kg;
       }
+      return { writeOffIds, totalKg, label };
     },
-    onSuccess: (_d, { inputKey }) => {
+    onSuccess: (result, { inputKey }) => {
+      setWriteOffUndoError(null);
       setRejectScrapInput((prev) => {
         const next = { ...prev };
         delete next[inputKey];
         return next;
       });
+      setWriteOffUndo({
+        writeOffIds: result.writeOffIds,
+        totalKg: result.totalKg,
+        label: result.label,
+        expiresAt: Date.now() + 60_000,
+      });
       void refreshDistributionLists(queryClient);
       void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
+  });
+
+  const undoWriteOff = useMutation({
+    mutationFn: async (writeOffIds: string[]) => {
+      setWriteOffUndoError(null);
+      for (const id of writeOffIds) {
+        await deleteWarehouseWriteOffById(id);
+      }
+    },
+    onSuccess: () => {
+      setWriteOffUndo(null);
+      void refreshDistributionLists(queryClient);
+      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+    },
+    onError: (e: unknown) => setWriteOffUndoError(humanizeErrorMessage(e)),
   });
 
   const createManifest = useMutation({
@@ -543,7 +598,7 @@ export function AllocationPanel() {
                     errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
                     rejectInput: rejectScrapInput,
                     onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
-                    onSubmitWriteOff: (inputKey, items) => writeOff.mutate({ inputKey, items }),
+                    onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
                   }
                 : null
             }
@@ -773,6 +828,19 @@ export function AllocationPanel() {
           createError={createManifest.isError ? createManifest.error : null}
           tripsBase={tripsBase}
           onSave={(payload) => createManifest.mutate(payload)}
+        />
+      ) : null}
+
+      {writeOffUndoError ? (
+        <ErrorAlert message={writeOffUndoError} title="Отмена списания" />
+      ) : null}
+      {writeOffUndo ? (
+        <WriteOffUndoToast
+          label={writeOffUndo.label}
+          totalKg={writeOffUndo.totalKg}
+          undoing={undoWriteOff.isPending}
+          onUndo={() => void undoWriteOff.mutate(writeOffUndo.writeOffIds)}
+          onDismiss={() => setWriteOffUndo(null)}
         />
       ) : null}
     </section>

@@ -9,6 +9,17 @@ export class BatchNotFoundError extends Error {
   }
 }
 
+export class WarehouseWriteOffNotFoundError extends Error {
+  readonly writeOffId: string;
+
+  constructor(writeOffId: string) {
+    super(`Запись списания не найдена: ${writeOffId}`);
+    this.name = "WarehouseWriteOffNotFoundError";
+    this.writeOffId = writeOffId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class TripNotFoundError extends Error {
   readonly tripId: string;
 

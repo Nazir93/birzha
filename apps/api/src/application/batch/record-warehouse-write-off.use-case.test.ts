@@ -18,7 +18,8 @@ describe("RecordWarehouseWriteOffUseCase", () => {
       distribution: "on_hand",
     });
     await batches.save(b);
-    await uc.execute({ batchId: "b-w1", kg: 15, reason: "quality_reject" });
+    const { writeOffId } = await uc.execute({ batchId: "b-w1", kg: 15, reason: "quality_reject" });
+    expect(writeOffId.length).toBeGreaterThan(0);
     const reloaded = await batches.findById("b-w1");
     expect(reloaded).not.toBeNull();
     expect(reloaded!.toPersistenceState().onWarehouseKg).toBe(185);

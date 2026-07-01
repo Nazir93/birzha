@@ -16,6 +16,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { RecordWarehouseWriteOffUseCase } from "../application/batch/record-warehouse-write-off.use-case.js";
+import { ReverseWarehouseWriteOffUseCase } from "../application/batch/reverse-warehouse-write-off.use-case.js";
 import {
   batchWarehouseWriteOffs,
   batches as batchesTable,
@@ -81,6 +82,7 @@ export function registerBatchRoutes(
   runRecordTripShortageInTransaction?: RecordTripShortageTransactionRunner,
   db: DbClient | null = null,
   recordWarehouseWriteOff: RecordWarehouseWriteOffUseCase | null = null,
+  reverseWarehouseWriteOff: ReverseWarehouseWriteOffUseCase | null = null,
 ): void {
   const createPurchase = new CreatePurchaseUseCase(batches);
   const receive = new ReceiveOnWarehouseUseCase(batches);
@@ -432,11 +434,28 @@ export function registerBatchRoutes(
         if (!row) {
           return reply.code(404).send({ error: "batch_not_found" });
         }
-        await recordWarehouseWriteOff.execute({
+        const { writeOffId } = await recordWarehouseWriteOff.execute({
           batchId: params.batchId,
           kg: body.kg,
           reason: "quality_reject",
         });
+        return reply.code(200).send({ ok: true, writeOffId });
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
+
+  app.delete(
+    "/warehouse-write-offs/:writeOffId",
+    { ...withPreHandlers(routeAuth.batchCreate) },
+    async (req, reply) => {
+      if (!db || !reverseWarehouseWriteOff) {
+        return reply.code(503).send({ error: "warehouse_write_off_requires_postgres" });
+      }
+      try {
+        const params = z.object({ writeOffId: z.string().min(1) }).parse(req.params);
+        await reverseWarehouseWriteOff.execute(params.writeOffId);
         return reply.code(200).send({ ok: true });
       } catch (error) {
         return sendMappedError(reply, error);

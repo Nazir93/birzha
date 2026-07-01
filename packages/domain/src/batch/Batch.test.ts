@@ -131,6 +131,32 @@ describe("Batch", () => {
     expect(batch.totalProcessedKg()).toBe(50);
   });
 
+  it("reverseWarehouseWriteOff возвращает списанное на склад", () => {
+    const batch = Batch.create({
+      id: "b-8a",
+      purchaseId: "p-8",
+      totalKg: 200,
+      pricePerKg: 6,
+      distribution: "on_hand",
+    });
+    batch.writeOff(50, "порча");
+    batch.reverseWarehouseWriteOff(20);
+    expect(batch.remainingKg()).toBe(170);
+    expect(batch.totalProcessedKg()).toBe(30);
+  });
+
+  it("reverseWarehouseWriteOff отказывает при слишком большой массе", () => {
+    const batch = Batch.create({
+      id: "b-8c",
+      purchaseId: "p-8",
+      totalKg: 200,
+      pricePerKg: 6,
+      distribution: "on_hand",
+    });
+    batch.writeOff(50, "порча");
+    expect(() => batch.reverseWarehouseWriteOff(60)).toThrow(InsufficientStockError);
+  });
+
   it("writeOffFromTransit списывает недостачу из рейса", () => {
     const batch = Batch.create({
       id: "b-8b",

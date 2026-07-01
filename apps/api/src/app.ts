@@ -17,6 +17,7 @@ import { InMemoryTripShipmentRepository } from "./application/testing/in-memory-
 import { InMemoryTripShortageRepository } from "./application/testing/in-memory-trip-shortage.repository.js";
 import { RecordWarehouseWriteOffUseCase } from "./application/batch/record-warehouse-write-off.use-case.js";
 import type { RecordWarehouseWriteOffTransactionRunner } from "./application/batch/record-warehouse-write-off.use-case.js";
+import { ReverseWarehouseWriteOffUseCase } from "./application/batch/reverse-warehouse-write-off.use-case.js";
 import type { RecordTripShortageTransactionRunner } from "./application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
 import type { AppEnv } from "./config.js";
@@ -221,6 +222,15 @@ export async function buildApp(options: {
         )
       : null;
 
+  const reverseWarehouseWriteOff: ReverseWarehouseWriteOffUseCase | null =
+    db && batchRepository && runRecordWarehouseWriteOff
+      ? new ReverseWarehouseWriteOffUseCase(
+          batchRepository,
+          new DrizzleBatchWarehouseWriteOffLedger(db as DbClient),
+          runRecordWarehouseWriteOff,
+        )
+      : null;
+
   app.get("/health", async () => ({
     status: "ok",
     time: new Date().toISOString(),
@@ -395,6 +405,7 @@ export async function buildApp(options: {
       runRecordTripShortageInTransaction,
       db,
       recordWarehouseWriteOff,
+      reverseWarehouseWriteOff,
     );
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);

@@ -11,7 +11,7 @@ export class InvalidKgError extends DomainError {
 
 export class InsufficientStockError extends DomainError {
   constructor(
-    public readonly context: "warehouse" | "transit" | "pending" | "sold",
+    public readonly context: "warehouse" | "transit" | "pending" | "sold" | "written_off",
     public readonly availableKg: number,
     public readonly requestedKg: number,
   ) {
@@ -21,8 +21,10 @@ export class InsufficientStockError extends DomainError {
         : context === "warehouse"
           ? `Недостаточно кг на складе: доступно ${availableKg}, запрошено ${requestedKg}`
           : context === "sold"
-          ? `Недостаточно проданного кг для отмены: учтено ${availableKg}, запрошено ${requestedKg}`
-          : `Недостаточно кг в рейсе: доступно ${availableKg}, запрошено ${requestedKg}`;
+            ? `Недостаточно проданного кг для отмены: учтено ${availableKg}, запрошено ${requestedKg}`
+            : context === "written_off"
+              ? `Недостаточно списанного кг для отмены: учтено ${availableKg}, запрошено ${requestedKg}`
+              : `Недостаточно кг в рейсе: доступно ${availableKg}, запрошено ${requestedKg}`;
     super(message);
   }
 }

@@ -9,5 +9,7 @@ export type BatchWarehouseWriteOffAppend = {
 
 export interface BatchWarehouseWriteOffLedger {
   append(row: BatchWarehouseWriteOffAppend): Promise<void>;
+  findById(id: string): Promise<BatchWarehouseWriteOffAppend | null>;
+  deleteById(id: string): Promise<boolean>;
   totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
 }

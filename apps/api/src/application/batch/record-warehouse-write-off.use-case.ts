@@ -24,6 +24,10 @@ export type RecordWarehouseWriteOffTransactionRunner = (
 
 const REASON: BatchWarehouseWriteOffReason = "quality_reject";
 
+export type RecordWarehouseWriteOffResult = {
+  writeOffId: string;
+};
+
 export class RecordWarehouseWriteOffUseCase {
   constructor(
     private readonly batches: BatchRepository,
@@ -31,7 +35,7 @@ export class RecordWarehouseWriteOffUseCase {
     private readonly runInTransaction?: RecordWarehouseWriteOffTransactionRunner,
   ) {}
 
-  async execute(input: RecordWarehouseWriteOffInput): Promise<void> {
+  async execute(input: RecordWarehouseWriteOffInput): Promise<RecordWarehouseWriteOffResult> {
     if (input.reason !== REASON) {
       throw new Error(`unsupported_write_off_kind:${input.reason}`);
     }
@@ -57,5 +61,6 @@ export class RecordWarehouseWriteOffUseCase {
     } else {
       await persist(this.batches, this.ledger);
     }
+    return { writeOffId: id };
   }
 }

@@ -16,6 +16,36 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
     });
   }
 
+  async findById(id: string): Promise<BatchWarehouseWriteOffAppend | null> {
+    const [row] = await this.db
+      .select({
+        id: batchWarehouseWriteOffs.id,
+        batchId: batchWarehouseWriteOffs.batchId,
+        grams: batchWarehouseWriteOffs.grams,
+        reason: batchWarehouseWriteOffs.reason,
+      })
+      .from(batchWarehouseWriteOffs)
+      .where(eq(batchWarehouseWriteOffs.id, id))
+      .limit(1);
+    if (!row) {
+      return null;
+    }
+    return {
+      id: row.id,
+      batchId: row.batchId,
+      grams: row.grams,
+      reason: row.reason as BatchWarehouseWriteOffAppend["reason"],
+    };
+  }
+
+  async deleteById(id: string): Promise<boolean> {
+    const deleted = await this.db
+      .delete(batchWarehouseWriteOffs)
+      .where(eq(batchWarehouseWriteOffs.id, id))
+      .returning({ id: batchWarehouseWriteOffs.id });
+    return deleted.length > 0;
+  }
+
   async totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>> {
     const m = new Map<string, bigint>();
     if (batchIds.length === 0) {

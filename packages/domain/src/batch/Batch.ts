@@ -152,6 +152,17 @@ export class Batch {
     this.assertInvariant();
   }
 
+  /** Отмена списания со склада: возврат массы в остаток на складе. */
+  reverseWarehouseWriteOff(kg: number): void {
+    Batch.assertPositiveFinite(kg, "kg");
+    if (kg > this.writtenOffKg) {
+      throw new InsufficientStockError("written_off", this.writtenOffKg, kg);
+    }
+    this.writtenOffKg -= kg;
+    this.onWarehouseKg += kg;
+    this.assertInvariant();
+  }
+
   remainingKg(): number {
     return this.onWarehouseKg + this.inTransitKg;
   }

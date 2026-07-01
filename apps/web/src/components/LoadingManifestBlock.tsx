@@ -7,7 +7,7 @@ import {
   aggregateBatchesByCaliberLine,
   aggregateBatchesByPurchaseDocument,
   filterBatchesForLoadingManifest,
-  formatLoadingManifestDisplayName,
+  formatLoadingManifestCardHeader,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
@@ -24,7 +24,7 @@ export type LoadingManifestWriteOffProps = {
   errorMessage?: string | null;
   rejectInput: Record<string, string>;
   onRejectInputChange: (key: string, value: string) => void;
-  onSubmitWriteOff: (inputKey: string, items: { batchId: string; kg: number }[]) => void;
+  onSubmitWriteOff: (inputKey: string, items: { batchId: string; kg: number }[], label: string) => void;
 };
 
 type Props = {
@@ -135,13 +135,20 @@ export function LoadingManifestBlock({
       </h3>
       {manifest ? (
         <p style={{ margin: "0 0 0.55rem", fontSize: "0.92rem" }}>
-          <strong>
-            {formatLoadingManifestDisplayName({
+          {(() => {
+            const header = formatLoadingManifestCardHeader({
               manifestNumber: manifest.manifestNumber,
               destinationName: manifest.destinationName,
-            })}
-          </strong>{" "}
-          от {manifest.docDate} · {manifest.warehouseName}
+              docDate: manifest.docDate,
+              warehouseLabel: manifest.warehouseName,
+            });
+            return (
+              <>
+                <strong>{header.title}</strong>
+                {header.meta ? <> · {header.meta}</> : null}
+              </>
+            );
+          })()}
         </p>
       ) : (
         <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>
@@ -300,7 +307,7 @@ export function LoadingManifestBlock({
                                         }
                                       }
                                       if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items);
+                                        writeOff.onSubmitWriteOff(inputKey, items, row.lineLabel);
                                       }
                                     }}
                                   >
@@ -367,7 +374,7 @@ export function LoadingManifestBlock({
                                         }
                                       }
                                       if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items);
+                                        writeOff.onSubmitWriteOff(inputKey, items, row.displayLabel);
                                       }
                                     }}
                                   >

@@ -28,6 +28,7 @@ import {
   TripShortageExceedsNetError,
   WarehouseCodeConflictError,
   WarehouseNotFoundError,
+  WarehouseWriteOffNotFoundError,
   WholesalerNotFoundError,
 } from "../application/errors.js";
 
@@ -42,6 +43,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "batch_not_found",
       batchId: error.batchId,
+    });
+  }
+  if (error instanceof WarehouseWriteOffNotFoundError) {
+    return reply.code(404).send({
+      error: "warehouse_write_off_not_found",
+      writeOffId: error.writeOffId,
+      message: error.message,
     });
   }
   if (error instanceof TripNotFoundError) {
