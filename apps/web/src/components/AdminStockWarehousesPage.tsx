@@ -1,6 +1,6 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
@@ -8,6 +8,7 @@ import type { CreateWarehouseResponse } from "../api/types.js";
 import {
   batchesForWarehouseQueryOptions,
   queryRoots,
+  stockBalancesQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { adminRoutes } from "../routes.js";
@@ -26,15 +27,44 @@ export function AdminStockWarehousesPage() {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.warehouses });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.stockBalances });
   };
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
-  const batchesEnabled = selectedWarehouseId.trim().length > 0;
+  const stockBalancesQ = useQuery(stockBalancesQueryOptions());
+  const selectedWhId = selectedWarehouseId.trim();
   const batchesQ = useQuery({
-    ...batchesForWarehouseQueryOptions(selectedWarehouseId, 500),
-    enabled: batchesEnabled,
+    ...batchesForWarehouseQueryOptions(selectedWhId, 500),
+    enabled: selectedWhId.length > 0,
     refetchOnMount: "always",
   });
+
+  const warehouseKgById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of stockBalancesQ.data?.byWarehouse ?? []) {
+      map.set(row.warehouseId, row.onWarehouseKg);
+    }
+    return map;
+  }, [stockBalancesQ.data?.byWarehouse]);
+
+  useEffect(() => {
+    if (selectedWarehouseId.trim().length > 0 || !warehousesQ.isSuccess || stockBalancesQ.isPending) {
+      return;
+    }
+    const withStock = stockBalancesQ.data?.byWarehouse
+      .filter((row) => row.onWarehouseKg > 0)
+      .sort((a, b) => b.onWarehouseKg - a.onWarehouseKg);
+    const pick = withStock?.[0]?.warehouseId ?? warehousesQ.data?.warehouses?.[0]?.id;
+    if (pick) {
+      setSelectedWarehouseId(pick);
+    }
+  }, [
+    selectedWarehouseId,
+    warehousesQ.isSuccess,
+    warehousesQ.data?.warehouses,
+    stockBalancesQ.isPending,
+    stockBalancesQ.data?.byWarehouse,
+  ]);
 
   const createWarehouse = useMutation({
     mutationFn: async () => {
@@ -67,17 +97,13 @@ export function AdminStockWarehousesPage() {
 
   /** Суммы по партициям одного калибра и вида на выбранном складе (без разбивки по накладным). */
   const gradeStockAggregates = useMemo(() => {
-    const wid = selectedWarehouseId.trim();
-    if (!wid) {
+    if (!selectedWhId) {
       return [];
     }
     const q = gradeSearch.trim().toLowerCase();
     type Agg = { gradeCode: string; productGroup: string; onWarehouseKg: number; inTransitKg: number; soldKg: number };
     const map = new Map<string, Agg>();
     for (const b of batchesQ.data?.batches ?? []) {
-      if ((b.nakladnaya?.warehouseId ?? "") !== wid) {
-        continue;
-      }
       const gradeCode = (b.nakladnaya?.productGradeCode ?? "").trim() || "—";
       const productGroup = (b.nakladnaya?.productGroup ?? "").trim() || "—";
       const key = `${gradeCode}\0${productGroup}`;
@@ -104,9 +130,10 @@ export function AdminStockWarehousesPage() {
       return compareProductGradeCodes(a.gradeCode, b.gradeCode);
     });
     return rows;
-  }, [batchesQ.data?.batches, selectedWarehouseId, gradeSearch]);
+  }, [batchesQ.data?.batches, selectedWhId, gradeSearch]);
 
-  const loading = warehousesQ.isPending || (batchesEnabled && batchesQ.isPending);
+  const loading =
+    warehousesQ.isPending || stockBalancesQ.isPending || (selectedWhId.length > 0 && batchesQ.isPending);
 
   return (
     <div className="birzha-admin-dash birzha-section-shell" role="region" aria-labelledby="stock-wh-h">
@@ -131,6 +158,9 @@ export function AdminStockWarehousesPage() {
 
       {loading ? <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={4} /> : null}
       {warehousesQ.isError ? <ErrorAlert message="Склады не загрузились." title="Склады" /> : null}
+      {stockBalancesQ.isError ? (
+        <ErrorAlert message="Остатки по складам не загрузились." title="Остатки" />
+      ) : null}
 
       {!loading && !warehousesQ.isError ? (
         <>
@@ -165,10 +195,8 @@ export function AdminStockWarehousesPage() {
                 </thead>
                 <tbody>
                   {(warehousesQ.data?.warehouses ?? []).map((w) => {
-                    const kg = (batchesQ.data?.batches ?? [])
-                      .filter((b) => (b.nakladnaya?.warehouseId ?? "") === w.id)
-                      .reduce((s, b) => s + (b.onWarehouseKg ?? 0), 0);
-                    const active = selectedWarehouseId === w.id;
+                    const kg = warehouseKgById.get(w.id) ?? 0;
+                    const active = selectedWhId === w.id;
                     return (
                       <tr key={w.id}>
                         <td style={thtdDense}>
@@ -215,7 +243,13 @@ export function AdminStockWarehousesPage() {
             defaultOpen
             title={<span className="birzha-section-title-inline">Остатки по выбранному складу</span>}
           >
-            {!selectedWarehouseId ? null : (
+            {!selectedWhId ? (
+              <p className="birzha-text-muted birzha-ui-sm" role="status">
+                Выберите склад в таблице выше.
+              </p>
+            ) : batchesQ.isError ? (
+              <ErrorAlert message="Не удалось загрузить партии по складу." title="Остатки по калибру" />
+            ) : (
               <>
                 <label className="birzha-field-label" htmlFor="stock-grade-search">
                   Поиск по калибру и виду товара
@@ -228,7 +262,12 @@ export function AdminStockWarehousesPage() {
                   placeholder="Например №5 или помидоры"
                   autoComplete="off"
                 />
-                {gradeStockAggregates.length === 0 ? null : (
+                {gradeStockAggregates.length === 0 && !batchesQ.isPending ? (
+                  <p className="birzha-text-muted birzha-ui-sm" role="status">
+                    На этом складе нет остатка по партиям.
+                  </p>
+                ) : null}
+                {gradeStockAggregates.length > 0 ? (
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
                     <table style={{ ...tableStyle, minWidth: 420 }}>
                       <thead>
@@ -257,7 +296,7 @@ export function AdminStockWarehousesPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
+                ) : null}
               </>
             )}
           </BirzhaDisclosure>
