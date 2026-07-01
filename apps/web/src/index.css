@@ -143,23 +143,36 @@ label,
   bottom: auto;
   transform: translate(-50%, -50%);
   z-index: 9999;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.55rem;
+  max-width: min(calc(100vw - 24px), 52rem);
+  text-align: left;
 }
 
-.birzha-pwa-install__text,
-.birzha-pwa-toast__text {
+.birzha-pwa-install__text {
   margin: 0 0 0.5rem;
 }
 
-.birzha-pwa-install__actions,
-.birzha-pwa-toast__actions {
+.birzha-pwa-toast__text {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.birzha-pwa-toast__btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.birzha-pwa-install__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.birzha-pwa-toast__actions {
-  justify-content: center;
 }
 
 html[data-birzha-theme="dark"] .birzha-pwa-install,
