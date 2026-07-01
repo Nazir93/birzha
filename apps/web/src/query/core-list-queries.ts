@@ -262,10 +262,6 @@ export const loadingManifestDetailQueryOptions = (manifestId: string) =>
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
-/** @deprecated Используйте `loadingManifestsPagedQueryOptions`. */
-export const loadingManifestsListQueryOptions = () =>
-  loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" });
-
 export const loadingManifestsPagedQueryOptions = (opts: {
   limit: number;
   offset: number;

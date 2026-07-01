@@ -62,23 +62,6 @@ export const btnClass = "birzha-btn";
 export const btnClassSpaced = "birzha-btn birzha-btn--spaced";
 export const btnClassInline = "birzha-btn birzha-btn--inline";
 
-/** @deprecated margins only — визуал через `btnClassSpaced` */
-export const btnStyle: CSSProperties = {
-  marginTop: "0.65rem",
-  marginRight: "0.5rem",
-};
-
-/** @deprecated margins only — визуал через `btnClassInline` */
-export const btnStyleInline: CSSProperties = {
-  marginTop: 0,
-  marginRight: "0.5rem",
-};
-
-/** @deprecated визуал через `birzha-btn` */
-export const btnSecondary: CSSProperties = {
-  marginLeft: "0.75rem",
-};
-
 export const tableStyle: CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",

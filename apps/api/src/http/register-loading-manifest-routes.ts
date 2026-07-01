@@ -23,8 +23,9 @@ import {
   loadingManifestTripAssignLockMessage,
 } from "../application/trip/loading-manifest-trip-assign-lock.js";
 import { DeleteLoadingManifestUseCase } from "../application/trip/delete-loading-manifest.use-case.js";
-import { DetachLoadingManifestTripUseCase } from "../application/trip/detach-loading-manifest-trip.use-case.js";
 import {
+  assertManifestExists,
+  detachManifestTripId,
   loadLoadingManifestTripDetachState,
   loadLoadingManifestTripLinkContext,
   unshipManifestFromLinkedTrip,
@@ -114,7 +115,6 @@ export function registerLoadingManifestRoutes(
   tripRead?: TripRepository,
 ): void {
   const deleteLoadingManifest = new DeleteLoadingManifestUseCase(db);
-  const detachLoadingManifestTrip = new DetachLoadingManifestTripUseCase(db);
   const updateLoadingManifestHeader = new UpdateLoadingManifestHeaderUseCase(db);
   app.post("/loading-manifests", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
@@ -496,7 +496,8 @@ export function registerLoadingManifestRoutes(
   app.post("/loading-manifests/:manifestId/detach-trip", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
       const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
-      await detachLoadingManifestTrip.execute(params.manifestId);
+      await assertManifestExists(db, params.manifestId);
+      await detachManifestTripId(db, params.manifestId);
       return reply.send({ ok: true });
     } catch (error) {
       return sendMappedError(reply, error);

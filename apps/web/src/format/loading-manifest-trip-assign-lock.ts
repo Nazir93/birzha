@@ -5,7 +5,7 @@ export type LoadingManifestTripAssignLockCode = "already_assigned" | "already_sh
 export function loadingManifestTripAssignLockMessage(code: LoadingManifestTripAssignLockCode): string {
   switch (code) {
     case "already_assigned":
-      return "Погрузочная накладная уже привязана к рейсу. Смена или повторная привязка недоступны.";
+      return "Смена или отвязка от рейса недоступны — по партиям уже есть продажи, недостачи или рейс закрыт.";
     case "already_shipped":
       return "Масса по партиям уже отгружена в рейс — привязка накладной недоступна.";
     case "no_stock":
