@@ -12,10 +12,6 @@ import {
   filterBatchesForLoadingManifest,
 } from "../../format/loading-manifest.js";
 import { sortLoadingManifestsByCreatedAtDesc } from "../../format/loading-manifest-list.js";
-import {
-  listTripLinkedWarehouseIdsFromManifests,
-  tripSellerBlocksCrossWarehouseLoading,
-} from "../../format/trip-seller-loading-guard.js";
 import { humanizeErrorMessage } from "../../format/user-facing-error.js";
 import {
   batchesForWarehouseQueryOptions,
@@ -77,7 +73,6 @@ export type UseDistributionWorkspaceParams = {
   selectedWarehouse: string;
   manifestListPage: number;
   savedManifestId: string;
-  newManifestTripId: string;
   appendTargetManifestId: string | null;
   loadNaklSelection: ReadonlySet<string>;
   distributionBase: string;
@@ -88,7 +83,6 @@ export function useDistributionWorkspace({
   selectedWarehouse,
   manifestListPage,
   savedManifestId,
-  newManifestTripId,
   appendTargetManifestId,
   loadNaklSelection,
   distributionBase,
@@ -207,22 +201,6 @@ export function useDistributionWorkspace({
     [tripsQuery.data?.trips],
   );
 
-  const selectedTripForManifest = useMemo(() => {
-    const tripId = newManifestTripId.trim();
-    if (!tripId) {
-      return null;
-    }
-    return openTripsForAssign.find((t) => t.id === tripId) ?? null;
-  }, [newManifestTripId, openTripsForAssign]);
-
-  const linkedWarehouseIdsForSelectedTrip = useMemo(() => {
-    const tripId = newManifestTripId.trim();
-    if (!tripId) {
-      return [];
-    }
-    return listTripLinkedWarehouseIdsFromManifests(tripId, activeManifests);
-  }, [newManifestTripId, activeManifests]);
-
   const appendTargetManifest = useMemo(
     () => (appendTargetManifestId ? activeManifests.find((m) => m.id === appendTargetManifestId) ?? null : null),
     [activeManifests, appendTargetManifestId],
@@ -253,42 +231,6 @@ export function useDistributionWorkspace({
     const tid = routeDetail.tripId?.trim();
     return Boolean(tid && closedIds.has(tid));
   }, [routeManifestId, routeDetail, closedIds]);
-
-  const tripForOpenManifest = useMemo(() => {
-    const tripId = openManifestSummary?.tripId?.trim();
-    if (!tripId) {
-      return null;
-    }
-    return (tripsQuery.data?.trips ?? []).find((t) => t.id === tripId) ?? null;
-  }, [openManifestSummary?.tripId, tripsQuery.data?.trips]);
-
-  const crossWarehouseBlocked = useMemo(() => {
-    if (!selectedWarehouse.trim()) {
-      return false;
-    }
-    const tripId = appendMode
-      ? (appendTargetManifest?.tripId?.trim() ?? newManifestTripId.trim())
-      : newManifestTripId.trim();
-    const trip =
-      (tripId ? (tripsQuery.data?.trips ?? []).find((t) => t.id === tripId) : null) ?? selectedTripForManifest;
-    const linked = tripId
-      ? listTripLinkedWarehouseIdsFromManifests(tripId, activeManifests)
-      : linkedWarehouseIdsForSelectedTrip;
-    return tripSellerBlocksCrossWarehouseLoading({
-      trip,
-      warehouseId: selectedWarehouse,
-      linkedWarehouseIds: linked,
-    });
-  }, [
-    appendMode,
-    appendTargetManifest?.tripId,
-    selectedWarehouse,
-    selectedTripForManifest,
-    linkedWarehouseIdsForSelectedTrip,
-    newManifestTripId,
-    tripsQuery.data?.trips,
-    activeManifests,
-  ]);
 
   const batchesOnWarehouse = useMemo(
     () => batchesMerged.filter((b) => b.onWarehouseKg > 0),
@@ -439,8 +381,6 @@ export function useDistributionWorkspace({
     routeDetail,
     openManifestSummary,
     viewingArchivedManifest,
-    tripForOpenManifest,
-    crossWarehouseBlocked,
     warehouseName,
     viewingSaved,
     activeManifestId,

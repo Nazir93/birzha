@@ -1,3 +1,5 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
+
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { maxSellablePackageCountForRowForSell, type TripBatchTableRow } from "./trip-report-rows.js";
@@ -85,7 +87,7 @@ export function groupSellableRowsByCaliber(
     });
   }
   out.sort((a, b) => {
-    const c = a.lineLabel.localeCompare(b.lineLabel, "ru");
+    const c = compareProductGradeLineLabels(a.lineLabel, b.lineLabel);
     if (c !== 0) {
       return c;
     }

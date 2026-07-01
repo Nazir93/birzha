@@ -1,3 +1,5 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
+
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { salesCaliberAggregateKey, salesCaliberLineLabel } from "./batch-label.js";
 import { salesBatchLinesForChannel, type SaleChannelFilter } from "./trip-sales-channel.js";
@@ -50,5 +52,5 @@ export function aggregateTripSalesByProductLine(
     row.debt += bi(s.debtKopecks);
     row.card += bi(s.cardTransferKopecks ?? "0");
   }
-  return [...m.values()].sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
+  return [...m.values()].sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
 }

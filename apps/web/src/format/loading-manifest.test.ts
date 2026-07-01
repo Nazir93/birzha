@@ -221,6 +221,27 @@ describe("aggregateLoadingManifestLinesByCaliber", () => {
     const r8 = rows.find((r) => r.caliberLabel.includes("№8"));
     expect(r8?.totalPackages).toBeNull();
   });
+
+  it("сортирует калибры по канону 5–8, НС+, НС-, ОМ", () => {
+    const rows = aggregateLoadingManifestLinesByCaliber([
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "Ом." },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "НС-" },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "№8" },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "НС+" },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "№5" },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "№7" },
+      { kg: 1, packageCount: null, productGroup: "Помидоры", productGradeCode: "№6" },
+    ]);
+    expect(rows.map((r) => r.caliberLabel)).toEqual([
+      "Помидоры · №5",
+      "Помидоры · №6",
+      "Помидоры · №7",
+      "Помидоры · №8",
+      "Помидоры · НС+",
+      "Помидоры · НС-",
+      "Помидоры · Ом.",
+    ]);
+  });
 });
 
 describe("formatLoadingManifestTableNumberLabel", () => {

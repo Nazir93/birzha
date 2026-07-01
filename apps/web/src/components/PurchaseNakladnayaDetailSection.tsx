@@ -1,3 +1,4 @@
+import { compareProductGradeCodes } from "@birzha/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -51,6 +52,20 @@ export function PurchaseNakladnayaDetailSection() {
     const allKop = lineKopSum + extraKop;
     return { totalKg, totalPackages, lineKopSum, extraKop, allKop };
   }, [docQ.data]);
+
+  const displayLines = useMemo(() => {
+    const lines = docQ.data?.lines;
+    if (!lines?.length) {
+      return [];
+    }
+    return [...lines].sort((a, b) => {
+      const c = compareProductGradeCodes(a.productGradeCode, b.productGradeCode);
+      if (c !== 0) {
+        return c;
+      }
+      return a.lineNo - b.lineNo;
+    });
+  }, [docQ.data?.lines]);
 
   const warehouseLabel = (wid: string) => {
     const w = warehousesQ.data?.warehouses.find((x) => x.id === wid);
@@ -174,7 +189,7 @@ export function PurchaseNakladnayaDetailSection() {
             </tr>
           </thead>
           <tbody>
-            {doc.lines.map((line) => (
+            {displayLines.map((line) => (
               <tr key={`${line.lineNo}-${line.batchId}`}>
                 <td style={thtdDense}>{line.lineNo}</td>
                 <td style={thtdDense}>{line.productGradeCode}</td>

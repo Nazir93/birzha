@@ -17,8 +17,8 @@ const SEED: readonly ProductGradeRecord[] = [
   { id: "pg-n6", code: "№6", displayName: "Калибр №6", productGroup: "Помидоры", sortOrder: 6 },
   { id: "pg-n7", code: "№7", displayName: "Калибр №7", productGroup: "Помидоры", sortOrder: 7 },
   { id: "pg-n8", code: "№8", displayName: "Калибр №8", productGroup: "Помидоры", sortOrder: 8 },
-  { id: "pg-nsm", code: "НС-", displayName: "НС-", productGroup: "Помидоры", sortOrder: 20 },
-  { id: "pg-nsp", code: "НС+", displayName: "НС+", productGroup: "Помидоры", sortOrder: 21 },
+  { id: "pg-nsp", code: "НС+", displayName: "НС+", productGroup: "Помидоры", sortOrder: 20 },
+  { id: "pg-nsm", code: "НС-", displayName: "НС-", productGroup: "Помидоры", sortOrder: 21 },
   { id: "pg-om", code: "Ом.", displayName: "Ом.", productGroup: "Помидоры", sortOrder: 30 },
 ];
 

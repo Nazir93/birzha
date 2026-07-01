@@ -1,4 +1,4 @@
-import { nonnegativeDecimalStringToNumber } from "@birzha/contracts";
+import { compareProductGradeCodes, compareProductGradeLineLabels, nonnegativeDecimalStringToNumber } from "@birzha/contracts";
 
 import type { BatchListItem, PurchaseDocumentLineDetail } from "../api/types.js";
 import {
@@ -28,7 +28,7 @@ export function totalsByGradeFromPurchaseDocumentLines(
   }
   return [...map.entries()]
     .map(([gradeCode, v]) => ({ gradeCode, ...v }))
-    .sort((a, b) => a.gradeCode.localeCompare(b.gradeCode, "ru", { numeric: true }));
+    .sort((a, b) => compareProductGradeCodes(a.gradeCode, b.gradeCode));
 }
 
 export type NakladnayaFormLineDraft = {
@@ -67,7 +67,7 @@ export function totalsByGradeFromNakladnayaFormLines(
   }
   return [...map.entries()]
     .map(([gradeKey, v]) => ({ gradeKey, ...v }))
-    .sort((a, b) => a.label.localeCompare(b.label, "ru", { numeric: true }));
+    .sort((a, b) => compareProductGradeLineLabels(a.label, b.label));
 }
 
 export type BatchesNakladnayaTotalsByGradeRow = {
@@ -97,5 +97,5 @@ export function totalsByGradeFromNakladnayaBatches(
   }
   return [...map.entries()]
     .map(([gradeCode, v]) => ({ gradeCode, ...v }))
-    .sort((a, b) => a.gradeCode.localeCompare(b.gradeCode, "ru", { numeric: true }));
+    .sort((a, b) => compareProductGradeCodes(a.gradeCode, b.gradeCode));
 }

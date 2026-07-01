@@ -1,3 +1,4 @@
+import { compareProductGradeCodes } from "@birzha/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
@@ -52,7 +53,7 @@ function shipmentProductLabel(
   if (codes.size === 0) {
     return report.shipment.byBatch.length === 0 ? "—" : "…";
   }
-  return [...codes].sort((a, b) => a.localeCompare(b, "ru")).join(", ");
+  return [...codes].sort(compareProductGradeCodes).join(", ");
 }
 
 export function SellerDispatchPanel() {

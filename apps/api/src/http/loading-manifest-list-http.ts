@@ -1,3 +1,4 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
 import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
@@ -148,7 +149,7 @@ async function enrichManifestRows(db: DbClient, rows: ManifestRow[]) {
     calibersByManifest.set(c.manifestId, arr);
   }
   for (const arr of calibersByManifest.values()) {
-    arr.sort((a, b) => a.label.localeCompare(b.label, "ru"));
+    arr.sort((a, b) => compareProductGradeLineLabels(a.label, b.label));
   }
 
   const lineWarehouseNamesByManifest = new Map<string, string[]>();

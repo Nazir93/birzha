@@ -21,6 +21,10 @@ export {
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "./purchase-line-kopecks.js";
 export {
+  compareProductGradeCodes,
+  compareProductGradeLineLabels,
+} from "./product-grade-sort.js";
+export {
   kopecksFromNakladnayaAmountField,
   kopecksFromNakladnayaAmountFieldForSum,
   kopecksToNakladnayaRubleFieldString,

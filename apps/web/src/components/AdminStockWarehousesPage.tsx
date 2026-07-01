@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { compareProductGradeCodes } from "@birzha/contracts";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -95,7 +96,13 @@ export function AdminStockWarehousesPage() {
         return hay.includes(q);
       });
     }
-    rows.sort((a, b) => a.gradeCode.localeCompare(b.gradeCode, "ru"));
+    rows.sort((a, b) => {
+      const pg = a.productGroup.localeCompare(b.productGroup, "ru");
+      if (pg !== 0) {
+        return pg;
+      }
+      return compareProductGradeCodes(a.gradeCode, b.gradeCode);
+    });
     return rows;
   }, [batchesQ.data?.batches, selectedWarehouseId, gradeSearch]);
 

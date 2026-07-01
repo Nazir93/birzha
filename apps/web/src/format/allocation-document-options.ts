@@ -1,3 +1,5 @@
+import { compareProductGradeCodes } from "@birzha/contracts";
+
 import type { BatchListItem } from "../api/types.js";
 
 const STOCK_EPS_KG = 1e-6;
@@ -41,7 +43,7 @@ export function documentOptionsForAllocation(batches: BatchListItem[]): Allocati
   }
   return base.map((o) => {
     const dup = (byNumberCount.get(o.number) ?? 0) > 1;
-    const gradeHint = [...o.grades].sort((a, b) => a.localeCompare(b, "ru")).join(", ");
+    const gradeHint = [...o.grades].sort(compareProductGradeCodes).join(", ");
     const checkboxLabel = dup && gradeHint ? `№ ${o.number} · ${gradeHint}` : `№ ${o.number}`;
     return { id: o.id, number: o.number, checkboxLabel };
   });

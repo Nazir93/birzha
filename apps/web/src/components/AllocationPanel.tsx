@@ -28,7 +28,7 @@ import { LoadingManifestAccordion } from "./loading-manifest/LoadingManifestAcco
 import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
-import { WriteOffUndoToast } from "./distribution/WriteOffUndoToast.js";
+import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
@@ -64,20 +64,15 @@ export function AllocationPanel() {
   const [manifestListPage, setManifestListPage] = useState(0);
   const [deleteManifestError, setDeleteManifestError] = useState<string | null>(null);
   const [deletingManifestId, setDeletingManifestId] = useState<string | null>(null);
-  const [writeOffUndo, setWriteOffUndo] = useState<{
-    writeOffIds: string[];
-    totalKg: number;
-    label: string;
-    expiresAt: number;
-  } | null>(null);
+  const [recentWriteOffs, setRecentWriteOffs] = useState<RecentWriteOffRow[]>([]);
   const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
+  const [undoingWriteOffId, setUndoingWriteOffId] = useState<string | null>(null);
 
   const workspace = useDistributionWorkspace({
     routeManifestId,
     selectedWarehouse,
     manifestListPage,
     savedManifestId,
-    newManifestTripId,
     appendTargetManifestId,
     loadNaklSelection,
     distributionBase,
@@ -121,8 +116,6 @@ export function AllocationPanel() {
     routeDetail,
     openManifestSummary,
     viewingArchivedManifest,
-    tripForOpenManifest,
-    crossWarehouseBlocked,
     warehouseName,
     viewingSaved,
     activeManifestId,
@@ -130,13 +123,16 @@ export function AllocationPanel() {
 
   const startAnotherWarehouseLoad = useCallback(
     (tripId: string, manifestId: string, destinationCode: string) => {
-      const id = tripId.trim();
-      if (!id) {
+      const mid = manifestId.trim();
+      if (!mid) {
         return;
       }
-      setNewManifestTripId(id);
-      setAppendTargetManifestId(manifestId.trim() || null);
-      writePreferredLoadingTripId(id);
+      const id = tripId.trim();
+      if (id) {
+        setNewManifestTripId(id);
+        writePreferredLoadingTripId(id);
+      }
+      setAppendTargetManifestId(mid);
       setSelectedWarehouse("");
       writePreferredWarehouseId(null);
       setManifestFormOpen(false);
@@ -162,19 +158,6 @@ export function AllocationPanel() {
       writePreferredLoadingTripId(null);
     }
   }, [tripsQuery.isSuccess, openTripsForAssign, newManifestTripId]);
-
-  useEffect(() => {
-    if (!writeOffUndo) {
-      return;
-    }
-    const ms = writeOffUndo.expiresAt - Date.now();
-    if (ms <= 0) {
-      setWriteOffUndo(null);
-      return;
-    }
-    const timer = window.setTimeout(() => setWriteOffUndo(null), ms);
-    return () => window.clearTimeout(timer);
-  }, [writeOffUndo]);
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -237,14 +220,12 @@ export function AllocationPanel() {
       items: { batchId: string; kg: number }[];
       label: string;
     }) => {
-      const writeOffIds: string[] = [];
-      let totalKg = 0;
+      const entries: RecentWriteOffRow[] = [];
       for (const item of items) {
         const { writeOffId } = await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
-        writeOffIds.push(writeOffId);
-        totalKg += item.kg;
+        entries.push({ writeOffId, kg: item.kg, label });
       }
-      return { writeOffIds, totalKg, label };
+      return { entries };
     },
     onSuccess: (result, { inputKey }) => {
       setWriteOffUndoError(null);
@@ -253,30 +234,25 @@ export function AllocationPanel() {
         delete next[inputKey];
         return next;
       });
-      setWriteOffUndo({
-        writeOffIds: result.writeOffIds,
-        totalKg: result.totalKg,
-        label: result.label,
-        expiresAt: Date.now() + 60_000,
-      });
+      setRecentWriteOffs((prev) => [...prev, ...result.entries]);
       void refreshDistributionLists(queryClient);
       void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
   });
 
   const undoWriteOff = useMutation({
-    mutationFn: async (writeOffIds: string[]) => {
+    mutationFn: async (writeOffId: string) => {
       setWriteOffUndoError(null);
-      for (const id of writeOffIds) {
-        await deleteWarehouseWriteOffById(id);
-      }
+      setUndoingWriteOffId(writeOffId);
+      await deleteWarehouseWriteOffById(writeOffId);
     },
-    onSuccess: () => {
-      setWriteOffUndo(null);
+    onSuccess: (_data, writeOffId) => {
+      setRecentWriteOffs((prev) => prev.filter((r) => r.writeOffId !== writeOffId));
       void refreshDistributionLists(queryClient);
       void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
     onError: (e: unknown) => setWriteOffUndoError(humanizeErrorMessage(e)),
+    onSettled: () => setUndoingWriteOffId(null),
   });
 
   const createManifest = useMutation({
@@ -536,6 +512,7 @@ export function AllocationPanel() {
                 const v = e.target.value;
                 setSelectedWarehouse(v);
                 writePreferredWarehouseId(v === "" ? null : v);
+                setRecentWriteOffs([]);
                 if (routeManifestId.trim()) {
                   void navigate(distributionBase);
                 }
@@ -599,6 +576,10 @@ export function AllocationPanel() {
                     rejectInput: rejectScrapInput,
                     onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
                     onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
+                    recentWriteOffs,
+                    undoingWriteOffId,
+                    undoError: writeOffUndoError,
+                    onUndoWriteOff: (writeOffId) => void undoWriteOff.mutate(writeOffId),
                   }
                 : null
             }
@@ -736,28 +717,6 @@ export function AllocationPanel() {
               {createManifestWarning ? (
                 <WarningAlert title="Проверьте привязку рейса">{createManifestWarning}</WarningAlert>
               ) : null}
-              {openManifestSummary?.tripId && !viewingArchivedManifest && !tripForOpenManifest?.assignedSellerUserId ? (
-                <p className="no-print" style={{ margin: "0 0 0.75rem" }}>
-                  <button
-                    type="button"
-                    style={btnStyle}
-                    onClick={() =>
-                      startAnotherWarehouseLoad(
-                        openManifestSummary.tripId!,
-                        openManifestSummary.id,
-                        openManifestSummary.destinationCode,
-                      )
-                    }
-                  >
-                    Загрузить ещё с другого склада в этот рейс
-                  </button>
-                </p>
-              ) : openManifestSummary?.tripId && tripForOpenManifest?.assignedSellerUserId ? (
-                <InfoAlert title="Погрузка закрыта для новых складов">
-                  Рейс закреплён за продавцом — догрузка с другого склада недоступна. Можно добавлять партии только на
-                  уже участвовавших складах.
-                </InfoAlert>
-              ) : null}
               {openManifestSummary ? (
                 <LoadingManifestAccordion
                   m={openManifestSummary}
@@ -771,6 +730,14 @@ export function AllocationPanel() {
                   setAssignTripId={setAssignTripId}
                   assignTrip={assignTrip}
                   trips={openTripsForAssign}
+                  canAppendLoad={!viewingArchivedManifest}
+                  onAppendLoad={() =>
+                    startAnotherWarehouseLoad(
+                      openManifestSummary.tripId ?? "",
+                      openManifestSummary.id,
+                      openManifestSummary.destinationCode,
+                    )
+                  }
                 />
               ) : routeDetailQuery.isPending ? (
                 <LoadingBlock label="Загрузка погрузочной накладной…" minHeight={80} skeleton skeletonRows={3} />
@@ -820,7 +787,6 @@ export function AllocationPanel() {
           labelDest={labelDest}
           openTripsForAssign={openTripsForAssign}
           tripsPending={tripsQuery.isPending}
-          crossWarehouseBlocked={crossWarehouseBlocked}
           selectedWarehouse={selectedWarehouse}
           tableRows={tableRows}
           takenManifestNumbers={(manifestsListQuery.data?.loadingManifests ?? []).map((m) => m.manifestNumber)}
@@ -828,19 +794,6 @@ export function AllocationPanel() {
           createError={createManifest.isError ? createManifest.error : null}
           tripsBase={tripsBase}
           onSave={(payload) => createManifest.mutate(payload)}
-        />
-      ) : null}
-
-      {writeOffUndoError ? (
-        <ErrorAlert message={writeOffUndoError} title="Отмена списания" />
-      ) : null}
-      {writeOffUndo ? (
-        <WriteOffUndoToast
-          label={writeOffUndo.label}
-          totalKg={writeOffUndo.totalKg}
-          undoing={undoWriteOff.isPending}
-          onUndo={() => void undoWriteOff.mutate(writeOffUndo.writeOffIds)}
-          onDismiss={() => setWriteOffUndo(null)}
         />
       ) : null}
     </section>

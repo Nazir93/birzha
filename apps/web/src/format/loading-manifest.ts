@@ -1,3 +1,5 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
+
 import type { BatchListItem } from "../api/types.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
@@ -105,7 +107,7 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
       g.linesWithPkg += 1;
     }
   }
-  return Array.from(m.values()).sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
+  return Array.from(m.values()).sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
 }
 
 /** Ключ строки без id закупочной накладной в данных (все такие партии в одной строке). */
@@ -302,7 +304,7 @@ export function aggregateLoadingManifestLinesByCaliber(
       totalKg: v.totalKg,
       totalPackages: v.pkgLines > 0 ? Math.round(v.pkgSum) : null,
     }))
-    .sort((a, b) => a.caliberLabel.localeCompare(b.caliberLabel, "ru"));
+    .sort((a, b) => compareProductGradeLineLabels(a.caliberLabel, b.caliberLabel));
 }
 
 export type LoadingManifestRoadCsvParams = {

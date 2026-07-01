@@ -1,3 +1,4 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,7 +15,7 @@ import {
 } from "../../format/loading-manifest-trip-assign-lock.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
-import { fieldStyle } from "../../ui/styles.js";
+import { btnStyle, fieldStyle } from "../../ui/styles.js";
 
 function formatPkg(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) {
@@ -38,6 +39,8 @@ export function LoadingManifestAccordion({
   setAssignTripId,
   assignTrip,
   trips,
+  canAppendLoad = false,
+  onAppendLoad,
 }: {
   m: LoadingManifestSummary;
   manifestId: string;
@@ -55,12 +58,28 @@ export function LoadingManifestAccordion({
     error: unknown;
   };
   trips: { id: string; tripNumber: string; status: string }[];
+  canAppendLoad?: boolean;
+  onAppendLoad?: () => void;
 }) {
   const navigate = useNavigate();
   const caliberRows = useMemo(
     () => (detail ? aggregateLoadingManifestLinesByCaliber(detail.lines) : []),
     [detail],
   );
+  const partyLinesSorted = useMemo(() => {
+    if (!detail) {
+      return [];
+    }
+    return [...detail.lines].sort((a, b) => {
+      const labelA = `${a.productGroup?.trim() || "Товар"} · ${a.productGradeCode?.trim() || "—"}`;
+      const labelB = `${b.productGroup?.trim() || "Товар"} · ${b.productGradeCode?.trim() || "—"}`;
+      const c = compareProductGradeLineLabels(labelA, labelB);
+      if (c !== 0) {
+        return c;
+      }
+      return a.lineNo - b.lineNo;
+    });
+  }, [detail]);
   const warehouseLabel = formatManifestWarehouseNames(
     detail?.lineWarehouseNames ??
       m.lineWarehouseNames ??
@@ -185,6 +204,11 @@ export function LoadingManifestAccordion({
                 </table>
               </div>
               <div className="no-print birzha-clean-ops-row-actions" style={{ marginTop: "0.65rem" }}>
+                {canAppendLoad && onAppendLoad ? (
+                  <button type="button" style={btnStyle} onClick={onAppendLoad}>
+                    Догрузить товар
+                  </button>
+                ) : null}
                 <button type="button" className="birzha-clean-ops-row-action" onClick={() => window.print()}>
                   Печать накладной
                 </button>
@@ -290,7 +314,7 @@ export function LoadingManifestAccordion({
                       </tr>
                     </thead>
                     <tbody>
-                      {detail.lines.map((line) => (
+                      {partyLinesSorted.map((line) => (
                         <tr key={line.batchId}>
                           <td>{line.lineNo}</td>
                           {showLineWarehouseColumn ? (

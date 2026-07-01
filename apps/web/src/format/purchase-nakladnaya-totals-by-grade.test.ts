@@ -36,6 +36,52 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
     expect(r[0]!.totalPackages).toBe(3);
     expect(r[0]!.lineKopSum).toBe(750000);
   });
+
+  it("сортирует калибры по канону 5–8, НС+, НС-, ОМ", () => {
+    const r = totalsByGradeFromPurchaseDocumentLines([
+      {
+        lineNo: 1,
+        productGradeId: "g-om",
+        productGradeCode: "Ом.",
+        batchId: "b1",
+        totalKg: 1,
+        packageCount: null,
+        pricePerKg: 1,
+        lineTotalKopecks: "100",
+      },
+      {
+        lineNo: 2,
+        productGradeId: "g-5",
+        productGradeCode: "№5",
+        batchId: "b2",
+        totalKg: 1,
+        packageCount: null,
+        pricePerKg: 1,
+        lineTotalKopecks: "100",
+      },
+      {
+        lineNo: 3,
+        productGradeId: "g-nsp",
+        productGradeCode: "НС+",
+        batchId: "b3",
+        totalKg: 1,
+        packageCount: null,
+        pricePerKg: 1,
+        lineTotalKopecks: "100",
+      },
+      {
+        lineNo: 4,
+        productGradeId: "g-nsm",
+        productGradeCode: "НС-",
+        batchId: "b4",
+        totalKg: 1,
+        packageCount: null,
+        pricePerKg: 1,
+        lineTotalKopecks: "100",
+      },
+    ]);
+    expect(r.map((row) => row.gradeCode)).toEqual(["№5", "НС+", "НС-", "Ом."]);
+  });
 });
 
 describe("totalsByGradeFromNakladnayaFormLines", () => {

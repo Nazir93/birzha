@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
+import { compareProductGradeCodes } from "@birzha/contracts";
 import { apiPostJson } from "../api/fetch-api.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -52,7 +53,7 @@ export function OperationsPanel() {
         const ga = a.nakladnaya?.productGradeCode ?? "";
         const gb = b.nakladnaya?.productGradeCode ?? "";
         if (ga !== gb) {
-          return ga.localeCompare(gb, "ru");
+          return compareProductGradeCodes(ga, gb);
         }
         return a.id.localeCompare(b.id);
       });

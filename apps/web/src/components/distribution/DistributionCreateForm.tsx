@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 
 import type { BatchListItem, LoadingManifestSummary } from "../../api/types.js";
-import { TRIP_SELLER_CROSS_WAREHOUSE_LOADING_MESSAGE } from "../../format/trip-seller-loading-guard.js";
 import { formatLoadingManifestDisplayName, resolveLoadingManifestNumberForSave } from "../../format/loading-manifest.js";
 import { formatTripSelectLabel } from "../../format/trip-label.js";
 import type { TripJson } from "../../api/types.js";
 import { BirzhaDateField } from "../BirzhaCalendarFields.js";
-import { ErrorAlert, InfoAlert, WarningAlert } from "../../ui/ErrorAlerts.js";
+import { ErrorAlert, InfoAlert } from "../../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle } from "../../ui/styles.js";
 
 type CreatePayload = {
@@ -32,7 +31,6 @@ type Props = {
   labelDest: Record<string, string>;
   openTripsForAssign: TripJson[];
   tripsPending: boolean;
-  crossWarehouseBlocked: boolean;
   selectedWarehouse: string;
   tableRows: BatchListItem[];
   takenManifestNumbers: string[];
@@ -56,7 +54,6 @@ export function DistributionCreateForm({
   labelDest,
   openTripsForAssign,
   tripsPending,
-  crossWarehouseBlocked,
   selectedWarehouse,
   tableRows,
   takenManifestNumbers,
@@ -166,9 +163,6 @@ export function DistributionCreateForm({
           , затем выберите его здесь — кг уйдут в рейс при сохранении.
         </p>
       ) : null}
-      {crossWarehouseBlocked ? (
-        <WarningAlert title="Другой склад недоступен">{TRIP_SELLER_CROSS_WAREHOUSE_LOADING_MESSAGE}</WarningAlert>
-      ) : null}
       <p className="birzha-clean-ops-form-actions">
         <button
           type="button"
@@ -176,7 +170,6 @@ export function DistributionCreateForm({
           disabled={
             createPending ||
             tableRows.length === 0 ||
-            crossWarehouseBlocked ||
             (!appendMode &&
               (!manifestDate ||
                 !manifestDestinationCode ||

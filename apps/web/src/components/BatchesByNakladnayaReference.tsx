@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { compareProductGradeCodes } from "@birzha/contracts";
+
 import type { BatchListItem } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
@@ -44,7 +46,7 @@ export function groupBatchesByPurchaseDocument(
     const documentNumber = batches[0]?.nakladnaya?.documentNumber ?? null;
     batches.sort(
       (a, c) =>
-        (a.nakladnaya?.productGradeCode ?? "").localeCompare(c.nakladnaya?.productGradeCode ?? "", "ru") ||
+        compareProductGradeCodes(a.nakladnaya?.productGradeCode ?? "", c.nakladnaya?.productGradeCode ?? "") ||
         a.id.localeCompare(c.id),
     );
     groups.push({ documentId, documentNumber, batches });

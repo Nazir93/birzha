@@ -167,14 +167,6 @@ html[data-birzha-theme="dark"] .birzha-pwa-toast {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
 }
 
-.birzha-writeoff-undo-toast {
-  top: auto;
-  left: max(12px, env(safe-area-inset-left));
-  right: max(12px, env(safe-area-inset-right));
-  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-  transform: none;
-}
-
 /* Тёмная тема: токены переопределяются на корне (см. ThemeToggle + sync в main.tsx). */
 html[data-birzha-theme="dark"] {
   color-scheme: dark;

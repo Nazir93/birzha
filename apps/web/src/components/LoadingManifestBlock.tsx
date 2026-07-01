@@ -13,6 +13,7 @@ import {
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { WriteOffRecentList, type RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { btnStyle, btnStyleInline, fieldStyle } from "../ui/styles.js";
 
 export type LoadingManifestDocOption = { id: string; checkboxLabel: string };
@@ -25,6 +26,10 @@ export type LoadingManifestWriteOffProps = {
   rejectInput: Record<string, string>;
   onRejectInputChange: (key: string, value: string) => void;
   onSubmitWriteOff: (inputKey: string, items: { batchId: string; kg: number }[], label: string) => void;
+  recentWriteOffs: RecentWriteOffRow[];
+  undoingWriteOffId: string | null;
+  undoError: string | null;
+  onUndoWriteOff: (writeOffId: string) => void;
 };
 
 type Props = {
@@ -391,6 +396,14 @@ export function LoadingManifestBlock({
               {writeOff.isError && writeOff.errorMessage ? (
                 <ErrorAlert message={writeOff.errorMessage} title="Списание" />
               ) : null}
+              {writeOff.undoError ? (
+                <ErrorAlert message={writeOff.undoError} title="Возврат списания" />
+              ) : null}
+              <WriteOffRecentList
+                rows={writeOff.recentWriteOffs}
+                undoingWriteOffId={writeOff.undoingWriteOffId}
+                onUndo={writeOff.onUndoWriteOff}
+              />
             </div>
           ) : null}
 

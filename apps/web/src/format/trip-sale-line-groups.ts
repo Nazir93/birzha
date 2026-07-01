@@ -1,3 +1,5 @@
+import { compareProductGradeLineLabels } from "@birzha/contracts";
+
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
 import { formatNakladLineLabel, salesCaliberAggregateKey, salesCaliberLineLabel } from "./batch-label.js";
 import { kgNumberToGramsBigInt } from "./seller-trip-caliber-groups.js";
@@ -170,5 +172,5 @@ export function groupTripSaleLinesByCaliberForDisplay(
       ...row,
       totalKg: gramsBigIntToKgDecimalString(totalGrams),
     }))
-    .sort((a, b) => a.lineLabel.localeCompare(b.lineLabel, "ru"));
+    .sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
 }
