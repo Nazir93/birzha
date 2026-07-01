@@ -1631,10 +1631,6 @@ a.birzha-kpi-tile--link:focus-visible {
   white-space: nowrap;
 }
 
-.birzha-nakl-lines-table tbody tr:hover td {
-  background: var(--birzha-surface-muted);
-}
-
 .birzha-nakl-lines-table tfoot th,
 .birzha-nakl-lines-table tfoot td {
   background: var(--birzha-surface-muted) !important;
@@ -2078,7 +2074,6 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   color: var(--color-muted);
 }
 
-.birzha-clean-ops-page .birzha-nakl-lines-table tbody tr:hover td,
 .birzha-clean-ops-page .birzha-data-table tbody tr:hover td {
   background: color-mix(in srgb, var(--birzha-accent) 6%, transparent);
 }
@@ -6230,8 +6225,7 @@ html[data-birzha-theme="dark"] .birzha-table-scroll table tbody th {
 }
 
 html[data-birzha-theme="dark"] .birzha-table-scroll table tbody tr:not(.birzha-table-subtotal-row):hover td,
-html[data-birzha-theme="dark"] .birzha-data-table tbody tr:hover td,
-html[data-birzha-theme="dark"] .birzha-nakl-lines-table tbody tr:hover td {
+html[data-birzha-theme="dark"] .birzha-data-table tbody tr:hover td {
   background: rgba(51, 65, 85, 0.45);
 }
 
