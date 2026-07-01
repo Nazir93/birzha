@@ -221,7 +221,7 @@ html[data-birzha-theme="dark"] {
   --birzha-link-hover: #e0f2fe;
   --birzha-link-visited: #c4b5fd;
 
-  --birzha-field-outline: #d4d4d8;
+  --birzha-field-outline: transparent;
   --birzha-popup-accent: #2563eb;
   --birzha-popup-surface: #27272a;
 
@@ -733,6 +733,11 @@ main.app-shell {
 .birzha-clean-ops-row-action,
 .birzha-btn-primary,
 .birzha-btn-ghost {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
   font-family: var(--font-ui);
   font-size: 0.82rem;
   font-weight: 600;
@@ -2172,9 +2177,10 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   align-items: center;
 }
 
-.birzha-clean-ops-page .birzha-clean-ops-row-actions button {
-  margin-top: 0;
-  margin-right: 0;
+.birzha-clean-ops-row-actions .birzha-btn,
+.birzha-clean-ops-row-actions .birzha-clean-ops-row-action,
+.birzha-clean-ops-row-actions button {
+  margin: 0;
 }
 
 /* birzha-clean-ops-row-action — см. общий .birzha-btn выше */
@@ -3040,6 +3046,40 @@ html[data-birzha-theme="dark"] input:disabled,
 html[data-birzha-theme="dark"] select:disabled,
 html[data-birzha-theme="dark"] textarea:disabled {
   background: #1f1f23;
+}
+
+/* Тёмная тема: без светлой рамки у полей (фон + focus-ring достаточно) */
+html[data-birzha-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html[data-birzha-theme="dark"] select,
+html[data-birzha-theme="dark"] textarea,
+html[data-birzha-theme="dark"] .birzha-select__trigger,
+html[data-birzha-theme="dark"] .birzha-seller-trip-select,
+html[data-birzha-theme="dark"] .birzha-seller-sell-panel .birzha-seller-form-control {
+  border-color: transparent;
+}
+
+html[data-birzha-theme="dark"] input:hover:not(:disabled):not(:read-only),
+html[data-birzha-theme="dark"] select:hover:not(:disabled),
+html[data-birzha-theme="dark"] textarea:hover:not(:disabled):not(:read-only),
+html[data-birzha-theme="dark"] .birzha-select__trigger:hover:not(:disabled),
+html[data-birzha-theme="dark"] .birzha-seller-trip-select:hover:not(:disabled),
+html[data-birzha-theme="dark"] .birzha-seller-sell-panel .birzha-seller-form-control:hover:not(:disabled) {
+  border-color: transparent;
+}
+
+html[data-birzha-theme="dark"] input:focus-visible,
+html[data-birzha-theme="dark"] select:focus-visible,
+html[data-birzha-theme="dark"] textarea:focus-visible,
+html[data-birzha-theme="dark"] .birzha-select__trigger:focus-visible,
+html[data-birzha-theme="dark"] .birzha-seller-trip-select:focus-visible,
+html[data-birzha-theme="dark"] .birzha-seller-sell-panel .birzha-seller-form-control:focus-visible {
+  border-color: transparent;
+}
+
+html[data-birzha-theme="dark"] main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+html[data-birzha-theme="dark"] main select:focus,
+html[data-birzha-theme="dark"] main textarea:focus {
+  border-color: transparent !important;
 }
 
 /* Выпадающие списки: единый вид поля + тёмная панель опций с синим выделением */

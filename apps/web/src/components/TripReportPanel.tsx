@@ -394,7 +394,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
       {r && !fieldSellerSalesReport ? (
         <div style={{ marginTop: "1rem" }} role="region" aria-label={`Отчёт по рейсу ${r.trip.tripNumber}`}>
-          <p
+          <div
             style={{
               margin: "0 0 0.5rem",
               display: "flex",
@@ -406,24 +406,26 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             <span>
               <strong>{r.trip.tripNumber}</strong> · статус: <code>{formatTripReportStatusLabel(r)}</code>
             </span>
-            <button
-              type="button"
-              className="no-print birzha-btn birzha-btn--secondary"
-              onClick={printReport}
-              aria-label="Открыть диалог печати отчёта по рейсу"
-            >
-              Печать
-            </button>
-            {canTripWrite && r.trip.status === "open" ? (
+            <div className="no-print birzha-clean-ops-row-actions">
               <button
                 type="button"
-                className="no-print birzha-btn birzha-btn--spaced"
-                disabled={closeTripMutation.isPending}
-                onClick={() => closeTripMutation.mutate(r.trip.id)}
+                className="birzha-btn"
+                onClick={printReport}
+                aria-label="Открыть диалог печати отчёта по рейсу"
               >
-                {closeTripMutation.isPending ? "Закрытие…" : "Закрыть рейс"}
+                Печать
               </button>
-            ) : null}
+              {canTripWrite && r.trip.status === "open" ? (
+                <button
+                  type="button"
+                  className="birzha-btn"
+                  disabled={closeTripMutation.isPending}
+                  onClick={() => closeTripMutation.mutate(r.trip.id)}
+                >
+                  {closeTripMutation.isPending ? "Закрытие…" : "Закрыть рейс"}
+                </button>
+              ) : null}
+            </div>
             {(r.trip.vehicleLabel || r.trip.driverName || r.trip.departedAt) && (
               <span className="birzha-ui-sm" style={{ width: "100%", lineHeight: 1.45, margin: "0.25rem 0 0" }}>
                 {r.trip.vehicleLabel ? `ТС: ${r.trip.vehicleLabel}` : null}
@@ -433,7 +435,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 {r.trip.departedAt ? `Время: ${new Date(r.trip.departedAt).toLocaleString("ru-RU")}` : null}
               </span>
             )}
-          </p>
+          </div>
 
           <BirzhaDisclosure
             defaultOpen
@@ -676,11 +678,11 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </h3>
             }
           >
-            <div className="no-print" style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "0.35rem" }}>
+            <div className="no-print birzha-clean-ops-row-actions" style={{ marginBottom: "0.35rem" }}>
               {batchRows.length > 0 && (
                 <button
                   type="button"
-                  className="no-print birzha-btn birzha-btn--secondary"
+                  className="birzha-btn"
                   onClick={downloadBatchCsv}
                   aria-label="Скачать таблицу сверки по партиям в CSV для Excel"
                 >
