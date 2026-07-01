@@ -40,6 +40,55 @@ export class DrizzleTripShipmentRepository implements TripShipmentRepository {
     await this.db.delete(tripBatchShipments).where(inArray(tripBatchShipments.batchId, batchIds));
   }
 
+  async reduceForTripAndBatch(
+    tripId: string,
+    batchId: string,
+    gramsToRemove: bigint,
+    packageCountToRemove: bigint | null,
+  ): Promise<void> {
+    if (gramsToRemove <= 0n) {
+      return;
+    }
+    const rows = await this.db
+      .select()
+      .from(tripBatchShipments)
+      .where(and(eq(tripBatchShipments.tripId, tripId), eq(tripBatchShipments.batchId, batchId)))
+      .orderBy(tripBatchShipments.id);
+
+    let gramsLeft = gramsToRemove;
+    let pkgLeft = packageCountToRemove ?? 0n;
+
+    for (const row of rows) {
+      if (gramsLeft <= 0n) {
+        break;
+      }
+      if (row.grams <= gramsLeft) {
+        gramsLeft -= row.grams;
+        if (row.packageCount != null && row.packageCount > 0n && pkgLeft > 0n) {
+          pkgLeft -= row.packageCount < pkgLeft ? row.packageCount : pkgLeft;
+        }
+        await this.db.delete(tripBatchShipments).where(eq(tripBatchShipments.id, row.id));
+        continue;
+      }
+      const newGrams = row.grams - gramsLeft;
+      const rowPkg = row.packageCount ?? 0n;
+      let newPkg = rowPkg;
+      if (pkgLeft > 0n && rowPkg > 0n) {
+        const removePkg = rowPkg < pkgLeft ? rowPkg : pkgLeft;
+        newPkg = rowPkg - removePkg;
+        pkgLeft -= removePkg;
+      }
+      await this.db
+        .update(tripBatchShipments)
+        .set({
+          grams: newGrams,
+          packageCount: newPkg > 0n ? newPkg : null,
+        })
+        .where(eq(tripBatchShipments.id, row.id));
+      gramsLeft = 0n;
+    }
+  }
+
   async aggregateByTripId(tripId: string): Promise<TripShipmentAggregate> {
     const rows = await this.db
       .select()

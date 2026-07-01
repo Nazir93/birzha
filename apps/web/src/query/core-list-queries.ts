@@ -271,6 +271,7 @@ export const loadingManifestsPagedQueryOptions = (opts: {
   offset: number;
   scope?: LoadingManifestListScope;
   search?: string;
+  tripId?: string;
 }) =>
   queryOptions({
     queryKey: [
@@ -281,6 +282,7 @@ export const loadingManifestsPagedQueryOptions = (opts: {
       opts.limit,
       opts.offset,
       opts.search?.trim() ?? "",
+      opts.tripId?.trim() ?? "",
     ] as const,
     queryFn: () => {
       const p = new URLSearchParams();
@@ -292,6 +294,10 @@ export const loadingManifestsPagedQueryOptions = (opts: {
       const q = opts.search?.trim();
       if (q) {
         p.set("search", q);
+      }
+      const tripId = opts.tripId?.trim();
+      if (tripId) {
+        p.set("tripId", tripId);
       }
       return apiGetJson<LoadingManifestsListResponse>(`/api/loading-manifests?${p}`);
     },

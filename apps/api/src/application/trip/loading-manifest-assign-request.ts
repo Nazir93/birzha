@@ -1,14 +1,20 @@
-export type LoadingManifestAssignRequestDecision = "proceed" | "idempotent" | "change_forbidden";
+export type LoadingManifestAssignRequestDecision =
+  | "proceed"
+  | "idempotent"
+  | "change_forbidden"
+  | "change_allowed";
 
 /**
  * Решение для повторной привязки ПН:
  * - та же привязка к тому же рейсу => идемпотентный success;
- * - попытка сменить уже привязанный рейс => запрет;
- * - если ПН ещё без рейса => можно продолжать обычную проверку.
+ * - смена рейса => change_allowed, если canChangeTrip (нет продаж/недостач);
+ * - иначе change_forbidden;
+ * - если ПН ещё без рейса => proceed.
  */
 export function classifyLoadingManifestAssignRequest(input: {
   existingTripId: string | null | undefined;
   requestedTripId: string;
+  canChangeTrip?: boolean;
 }): LoadingManifestAssignRequestDecision {
   const existing = input.existingTripId?.trim() ?? "";
   const requested = input.requestedTripId.trim();
@@ -18,5 +24,5 @@ export function classifyLoadingManifestAssignRequest(input: {
   if (existing === requested) {
     return "idempotent";
   }
-  return "change_forbidden";
+  return input.canChangeTrip ? "change_allowed" : "change_forbidden";
 }

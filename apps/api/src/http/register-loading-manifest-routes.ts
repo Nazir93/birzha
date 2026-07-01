@@ -13,6 +13,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
+import { LoadingManifestTripDetachForbiddenError } from "../application/errors.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
@@ -22,6 +23,13 @@ import {
   loadingManifestTripAssignLockMessage,
 } from "../application/trip/loading-manifest-trip-assign-lock.js";
 import { DeleteLoadingManifestUseCase } from "../application/trip/delete-loading-manifest.use-case.js";
+import { DetachLoadingManifestTripUseCase } from "../application/trip/detach-loading-manifest-trip.use-case.js";
+import {
+  loadLoadingManifestTripDetachState,
+  loadLoadingManifestTripLinkContext,
+  unshipManifestFromLinkedTrip,
+} from "../application/trip/loading-manifest-trip-detach-context.js";
+import { loadingManifestTripDetachLockMessage } from "../application/trip/loading-manifest-trip-detachable.js";
 import { UpdateLoadingManifestHeaderUseCase } from "../application/trip/update-loading-manifest-header.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import type { DbClient } from "../db/client.js";
@@ -106,6 +114,7 @@ export function registerLoadingManifestRoutes(
   tripRead?: TripRepository,
 ): void {
   const deleteLoadingManifest = new DeleteLoadingManifestUseCase(db);
+  const detachLoadingManifestTrip = new DetachLoadingManifestTripUseCase(db);
   const updateLoadingManifestHeader = new UpdateLoadingManifestHeaderUseCase(db);
   app.post("/loading-manifests", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
     try {
@@ -187,6 +196,7 @@ export function registerLoadingManifestRoutes(
       const d = parsed.data;
       const payload = await listLoadingManifestsForHttp(db, {
         search: d.search,
+        tripId: d.tripId,
         limit: d.limit ?? 100,
         offset: d.offset ?? 0,
         scope: d.scope,
@@ -268,6 +278,7 @@ export function registerLoadingManifestRoutes(
         tripId: header.manifest.tripId,
         lineMasses,
       });
+      const detachState = await loadLoadingManifestTripDetachState(db, params.manifestId, header.manifest.tripId);
       return reply.send({
         manifest: {
           id: header.manifest.id,
@@ -282,6 +293,8 @@ export function registerLoadingManifestRoutes(
           createdAt: header.manifest.createdAt.toISOString(),
           tripAssignLocked: assignLock.locked,
           tripAssignLockedReason: assignLock.code ?? null,
+          tripDetachLocked: detachState.tripDetachLocked,
+          tripDetachLockedReason: detachState.tripDetachLockedReason,
           lineWarehouseNames,
           lines: rows
             .map((r) => ({
@@ -318,39 +331,52 @@ export function registerLoadingManifestRoutes(
       if (!existing) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
+
+      const linkContext = existing.tripId?.trim()
+        ? await loadLoadingManifestTripLinkContext(db, manifestId)
+        : null;
+      const canChangeTrip = linkContext != null && !linkContext.detachState.tripDetachLocked;
+
       const assignDecision = classifyLoadingManifestAssignRequest({
         existingTripId: existing.tripId,
         requestedTripId: body.tripId,
+        canChangeTrip,
       });
       if (assignDecision === "idempotent") {
         return reply.send({ ok: true });
       }
       if (assignDecision === "change_forbidden") {
+        const message =
+          linkContext?.detachState.tripDetachLockedReason != null
+            ? loadingManifestTripDetachLockMessage(linkContext.detachState.tripDetachLockedReason)
+            : loadingManifestTripAssignLockMessage("already_assigned");
         return reply.code(400).send({
           error: "loading_manifest_trip_change_forbidden",
-          message: loadingManifestTripAssignLockMessage("already_assigned"),
+          message,
         });
       }
 
-      const lineMassRows = await db
-        .select({
-          onWarehouseGrams: batches.onWarehouseGrams,
-          inTransitGrams: batches.inTransitGrams,
-        })
-        .from(loadingManifestLines)
-        .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
-        .where(eq(loadingManifestLines.manifestId, manifestId));
+      if (assignDecision === "proceed") {
+        const lineMassRows = await db
+          .select({
+            onWarehouseGrams: batches.onWarehouseGrams,
+            inTransitGrams: batches.inTransitGrams,
+          })
+          .from(loadingManifestLines)
+          .innerJoin(batches, eq(loadingManifestLines.batchId, batches.id))
+          .where(eq(loadingManifestLines.manifestId, manifestId));
 
-      const assignLock = loadingManifestTripAssignLock({
-        tripId: existing.tripId,
-        lineMasses: lineMassRows,
-      });
-      if (assignLock.locked) {
-        const code = assignLock.code ?? "already_assigned";
-        return reply.code(400).send({
-          error: "loading_manifest_trip_assign_forbidden",
-          message: loadingManifestTripAssignLockMessage(code),
+        const assignLock = loadingManifestTripAssignLock({
+          tripId: existing.tripId,
+          lineMasses: lineMassRows,
         });
+        if (assignLock.locked) {
+          const code = assignLock.code ?? "already_assigned";
+          return reply.code(400).send({
+            error: "loading_manifest_trip_assign_forbidden",
+            message: loadingManifestTripAssignLockMessage(code),
+          });
+        }
       }
 
       const [manifestRow] = await db
@@ -378,6 +404,19 @@ export function registerLoadingManifestRoutes(
 
       await db.transaction(async (tx) => {
         const exec = tx as unknown as DbClient;
+
+        if (assignDecision === "change_allowed") {
+          const changeLink = await loadLoadingManifestTripLinkContext(exec, manifestId);
+          if (!changeLink) {
+            throw new LoadingManifestTripDetachForbiddenError(
+              manifestId,
+              "not_linked",
+              loadingManifestTripDetachLockMessage("not_linked"),
+            );
+          }
+          await unshipManifestFromLinkedTrip(exec, manifestId, changeLink);
+        }
+
         await exec
           .update(loadingManifests)
           .set({ tripId: body.tripId })
@@ -448,6 +487,16 @@ export function registerLoadingManifestRoutes(
         }
       });
 
+      return reply.send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/loading-manifests/:manifestId/detach-trip", { ...withPreHandlers(routeAuth.ship) }, async (req, reply) => {
+    try {
+      const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
+      await detachLoadingManifestTrip.execute(params.manifestId);
       return reply.send({ ok: true });
     } catch (error) {
       return sendMappedError(reply, error);

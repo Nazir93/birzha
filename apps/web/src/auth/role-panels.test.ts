@@ -5,6 +5,7 @@ import {
   canAccessCabinet,
   canAccessPanel,
   canCreateTrip,
+  canShipLoadingManifest,
   canManageInventoryCatalog,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
@@ -118,6 +119,14 @@ describe("role-panels", () => {
     expect(canCreateTrip(userWithRoles("seller"))).toBe(false);
     expect(canCreateTrip(userWithRoles("accountant"))).toBe(false);
     expect(canCreateTrip(userWithRoles("warehouse"))).toBe(false);
+  });
+
+  it("canShipLoadingManifest совпадает с ship на API", () => {
+    expect(canShipLoadingManifest(userWithRoles("admin"))).toBe(true);
+    expect(canShipLoadingManifest(userWithRoles("warehouse"))).toBe(true);
+    expect(canShipLoadingManifest(userWithRoles("logistics"))).toBe(true);
+    expect(canShipLoadingManifest(userWithRoles("seller"))).toBe(false);
+    expect(canShipLoadingManifest(null)).toBe(false);
   });
 
   it("canWriteCounterpartyCatalog — как CATALOG_WRITE на API (admin, manager, accountant)", () => {

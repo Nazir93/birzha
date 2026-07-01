@@ -27,4 +27,11 @@ export interface TripShipmentRepository {
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
   /** Удалить строки журнала, относящиеся к перечисленным партиям (удаление накладной). */
   deleteByBatchIds(batchIds: string[]): Promise<void>;
+  /** Уменьшить сумму отгрузок по рейсу и партии (отвязка ПН). */
+  reduceForTripAndBatch(
+    tripId: string,
+    batchId: string,
+    gramsToRemove: bigint,
+    packageCountToRemove: bigint | null,
+  ): Promise<void>;
 }

@@ -14,6 +14,7 @@ import {
   LoadingManifestNotEmptyError,
   LoadingManifestNotFoundError,
   LoadingManifestNumberConflictError,
+  LoadingManifestTripDetachForbiddenError,
   PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
   ResourceInUseError,
@@ -86,6 +87,14 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "loading_manifest_not_empty",
       manifestId: error.manifestId,
+      message: error.message,
+    });
+  }
+  if (error instanceof LoadingManifestTripDetachForbiddenError) {
+    return reply.code(409).send({
+      error: "loading_manifest_trip_detach_forbidden",
+      manifestId: error.manifestId,
+      code: error.code,
       message: error.message,
     });
   }

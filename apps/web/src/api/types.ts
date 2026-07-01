@@ -261,6 +261,9 @@ export type LoadingManifestDetail = {
   /** После привязки или отгрузки партий — форма assign-trip скрыта (GET /loading-manifests/:id). */
   tripAssignLocked?: boolean;
   tripAssignLockedReason?: "already_assigned" | "already_shipped" | "no_stock" | null;
+  /** Отвязка от рейса недоступна (GET /loading-manifests/:id). */
+  tripDetachLocked?: boolean;
+  tripDetachLockedReason?: "not_linked" | "trip_closed" | "sales_or_shortage" | "shipment_mismatch" | null;
   createdAt: string;
   /** Уникальные склады по строкам (если ПН пополняли с других складов). */
   lineWarehouseNames?: string[];

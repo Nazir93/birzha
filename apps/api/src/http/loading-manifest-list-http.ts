@@ -16,6 +16,7 @@ import {
 
 export const loadingManifestsListQuerySchema = z.object({
   search: z.string().optional(),
+  tripId: z.string().min(1).max(200).optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   scope: z.enum(["active", "archived", "all"]).optional(),
@@ -46,11 +47,19 @@ function scopeWhere(scope: LoadingManifestListScope | undefined): SQL | undefine
   return undefined;
 }
 
-function listWhere(search: string | undefined, scope: LoadingManifestListScope | undefined): SQL | undefined {
+function listWhere(
+  search: string | undefined,
+  scope: LoadingManifestListScope | undefined,
+  tripId: string | undefined,
+): SQL | undefined {
   const parts: SQL[] = [];
   const q = search?.trim();
   if (q) {
     parts.push(ilike(loadingManifests.manifestNumber, `%${q}%`));
+  }
+  const tripFilter = tripId?.trim();
+  if (tripFilter) {
+    parts.push(eq(loadingManifests.tripId, tripFilter));
   }
   const sw = scopeWhere(scope);
   if (sw) {
@@ -228,6 +237,7 @@ export async function listLoadingManifestsForHttp(
   db: DbClient,
   options?: {
     search?: string;
+    tripId?: string;
     limit?: number;
     offset?: number;
     scope?: LoadingManifestListScope;
@@ -236,7 +246,7 @@ export async function listLoadingManifestsForHttp(
   loadingManifests: Awaited<ReturnType<typeof enrichManifestRows>>;
   listMeta: { limit: number; offset: number; hasMore: boolean; totalCount: number };
 }> {
-  const where = listWhere(options?.search, options?.scope);
+  const where = listWhere(options?.search, options?.scope, options?.tripId);
   const limit = options?.limit ?? 100;
   const offset = options?.offset ?? 0;
 

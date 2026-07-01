@@ -113,12 +113,28 @@ export function canManageInventoryCatalog(user: AuthUser): boolean {
 /** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics. */
 const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics"]);
 
+/** Привязка/отвязка ПН, отгрузка — как `ship` в API: admin, manager, warehouse, logistics. */
+const SHIP_LOADING_MANIFEST_ROLES = new Set<string>(["admin", "manager", "warehouse", "logistics"]);
+
 export function canCreateTrip(user: AuthUser | null): boolean {
   if (!user) {
     return false;
   }
   const codes = globalRoleCodes(user);
   for (const r of TRIP_WRITE_ROLES) {
+    if (codes.has(r)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function canShipLoadingManifest(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  for (const r of SHIP_LOADING_MANIFEST_ROLES) {
     if (codes.has(r)) {
       return true;
     }

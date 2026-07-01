@@ -221,6 +221,18 @@ export const assignLoadingManifestTripBodySchema = z.object({
   tripId: z.string().min(1).max(200).transform((s) => s.trim()),
 });
 
+/** POST /loading-manifests/:manifestId/detach-trip — тело пустое. */
+export const detachLoadingManifestTripBodySchema = z.object({}).optional();
+
+export const loadingManifestTripDetachLockReasonSchema = z.enum([
+  "not_linked",
+  "trip_closed",
+  "sales_or_shortage",
+  "shipment_mismatch",
+]);
+
+export const loadingManifestTripActionOkSchema = z.object({ ok: z.literal(true) });
+
 /** POST /loading-manifests/:manifestId/add-batches */
 export const appendLoadingManifestBatchesBodySchema = z.object({
   batchIds: z.array(z.string().min(1).max(200)).min(1),

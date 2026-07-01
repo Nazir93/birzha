@@ -1,8 +1,9 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
+import type { LoadingManifestSummary } from "../api/types.js";
 import {
   buildTripDisplayNumber,
   formatTripDepartedAtRu,
@@ -12,9 +13,11 @@ import {
 } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
-import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import { queryRoots, loadingManifestDetailQueryOptions, loadingManifestsPagedQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import { loadingManifestTripDetachLockMessage } from "../format/loading-manifest-trip-detach-lock.js";
+import type { LoadingManifestTripDetachLockCode } from "../format/loading-manifest-trip-detach-lock.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canCreateTrip } from "../auth/role-panels.js";
+import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -31,6 +34,7 @@ export function AdminTripsLogisticsPanel() {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const canWriteTrips = canCreateTrip(user);
+  const canDetachManifest = canShipLoadingManifest(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const [newTripNumber, setNewTripNumber] = useState("");
@@ -38,8 +42,10 @@ export function AdminTripsLogisticsPanel() {
   const [newTripDriver, setNewTripDriver] = useState("");
   const [newTripDeparted, setNewTripDeparted] = useState("");
   const [tripError, setTripError] = useState<string | null>(null);
+  const [detachingManifestId, setDetachingManifestId] = useState<string | null>(null);
 
   const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
+  const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
 
   const invalidateTrips = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
@@ -51,6 +57,53 @@ export function AdminTripsLogisticsPanel() {
     ...tripsFullListQueryOptions(),
     enabled: tripsApiEnabled,
   });
+
+  const manifestsQ = useQuery({
+    ...loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" }),
+    enabled: tripsApiEnabled,
+  });
+
+  const manifestsByTripId = useMemo(() => {
+    const map = new Map<string, LoadingManifestSummary[]>();
+    for (const m of manifestsQ.data?.loadingManifests ?? []) {
+      const tripId = m.tripId?.trim();
+      if (!tripId) {
+        continue;
+      }
+      const arr = map.get(tripId) ?? [];
+      arr.push(m);
+      map.set(tripId, arr);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => a.manifestNumber.localeCompare(b.manifestNumber, "ru"));
+    }
+    return map;
+  }, [manifestsQ.data?.loadingManifests]);
+
+  const linkedManifestIds = useMemo(
+    () => [...manifestsByTripId.values()].flat().map((m) => m.id),
+    [manifestsByTripId],
+  );
+
+  const linkedManifestDetails = useQueries({
+    queries: linkedManifestIds.map((id) => loadingManifestDetailQueryOptions(id)),
+  });
+
+  const detachLockByManifestId = useMemo(() => {
+    const map = new Map<string, { locked: boolean; reason?: LoadingManifestTripDetachLockCode }>();
+    linkedManifestIds.forEach((id, index) => {
+      const row = linkedManifestDetails[index];
+      const manifest = row?.data?.manifest;
+      if (!manifest) {
+        return;
+      }
+      map.set(id, {
+        locked: manifest.tripDetachLocked !== false,
+        reason: manifest.tripDetachLockedReason ?? undefined,
+      });
+    });
+    return map;
+  }, [linkedManifestDetails, linkedManifestIds]);
 
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const openTrips = useMemo(
@@ -155,6 +208,27 @@ export function AdminTripsLogisticsPanel() {
     },
   });
 
+  const detachManifest = useMutation({
+    mutationFn: async (manifestId: string) => {
+      setTripError(null);
+      setDetachingManifestId(manifestId);
+      await apiPostJsonOr403(
+        `/api/loading-manifests/${encodeURIComponent(manifestId)}/detach-trip`,
+        {},
+        "Нет прав: отвязка погрузочной накладной — роли admin, manager, warehouse, logistics",
+      );
+    },
+    onSuccess: () => {
+      invalidateTrips();
+    },
+    onError: (e: Error) => {
+      setTripError(e.message);
+    },
+    onSettled: () => {
+      setDetachingManifestId(null);
+    },
+  });
+
   const disclosureTitle = (
     <div className="birzha-section-heading">
       <div>
@@ -254,6 +328,7 @@ export function AdminTripsLogisticsPanel() {
                     <th>Водитель</th>
                     <th>Машина</th>
                     <th>Отправление</th>
+                    <th>Погрузочные накладные</th>
                     <th>Статус</th>
                     <th>Действия</th>
                   </tr>
@@ -261,12 +336,14 @@ export function AdminTripsLogisticsPanel() {
                 <tbody>
                   {openTrips.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="birzha-text-muted">
+                      <td colSpan={7} className="birzha-text-muted">
                         Нет рейсов в работе
                       </td>
                     </tr>
                   ) : null}
-                  {openTrips.map((t) => (
+                  {openTrips.map((t) => {
+                    const linkedManifests = manifestsByTripId.get(t.id) ?? [];
+                    return (
                     <tr key={t.id}>
                       <td>
                         <strong>{t.tripNumber}</strong>
@@ -274,6 +351,56 @@ export function AdminTripsLogisticsPanel() {
                       <td>{t.driverName ?? "—"}</td>
                       <td>{t.vehicleLabel ?? "—"}</td>
                       <td className="birzha-data-table__emph">{formatTripDepartedAtRu(t.departedAt)}</td>
+                      <td>
+                        {linkedManifests.length === 0 ? (
+                          <span className="birzha-text-muted birzha-ui-sm">—</span>
+                        ) : (
+                          <ul className="birzha-trip-manifest-list">
+                            {linkedManifests.map((m) => (
+                              <li key={m.id} className="birzha-trip-manifest-list__item">
+                                <Link to={`${distributionPath}/${m.id}`} className="birzha-ui-sm">
+                                  <strong>{m.manifestNumber}</strong>
+                                </Link>
+                                <span className="birzha-text-muted birzha-ui-sm">
+                                  {" "}
+                                  · {m.destinationName} · {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
+                                </span>
+                                {canDetachManifest ? (
+                                  detachLockByManifestId.get(m.id)?.locked === false ? (
+                                    <button
+                                      type="button"
+                                      className="birzha-clean-ops-row-action birzha-ui-sm"
+                                      disabled={detachingManifestId === m.id}
+                                      onClick={() => {
+                                        if (
+                                          window.confirm(
+                                            `Отвязать погрузочную «${m.manifestNumber}» от рейса ${t.tripNumber}? Масса вернётся на склад, если ещё не было продаж.`,
+                                          )
+                                        ) {
+                                          void detachManifest.mutate(m.id);
+                                        }
+                                      }}
+                                    >
+                                      {detachingManifestId === m.id ? "…" : "Открепить"}
+                                    </button>
+                                  ) : detachLockByManifestId.get(m.id)?.reason ? (
+                                    <span
+                                      className="birzha-text-muted birzha-ui-sm"
+                                      title={loadingManifestTripDetachLockMessage(
+                                        detachLockByManifestId.get(m.id)!.reason!,
+                                      )}
+                                    >
+                                      отвязка недоступна
+                                    </span>
+                                  ) : linkedManifestDetails.some((q) => q.isPending) ? (
+                                    <span className="birzha-text-muted birzha-ui-sm">…</span>
+                                  ) : null
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
                       <td>
                         <span style={{ fontWeight: 600 }}>{formatTripListStatusLabel(t)}</span>
                         {tripListFullySold(t) ? (
@@ -324,7 +451,8 @@ export function AdminTripsLogisticsPanel() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

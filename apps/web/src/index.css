@@ -2244,6 +2244,22 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   padding: 0.35rem 0.25rem;
 }
 
+.birzha-trip-manifest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.birzha-trip-manifest-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
 .birzha-clean-ops-list {
   margin-top: 1.35rem;
   padding-top: 0.25rem;

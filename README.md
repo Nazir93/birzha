@@ -60,7 +60,9 @@ Next.js по умолчанию не используем.
 | `POST` | `/batches/:batchId/sell-from-trip` | `tripId`, `kg`, `saleId`, **`pricePerKg`** (руб/кг, ≥ 0); опционально **`paymentKind`**: `cash` (по умолчанию), `debt` (вся выручка в долг), `mixed` — тогда **`cashKopecksMixed`** (копейки налом, строка цифр или целое; остальное в долг); опционально **`counterpartyId`** (справочник) **или** **`clientLabel`** (до 120 симв., произвольная подпись) — для отчёта «по клиентам»; при **`counterpartyId`** имя берётся из справочника (снимок в БД) |
 | `GET` | `/counterparties` | — активные контрагенты (`id`, `displayName`) |
 | `POST` | `/counterparties` | `displayName` — создать контрагента (**201** `{ counterparty }`) |
-| `POST` | `/batches/:batchId/record-trip-shortage` | `tripId`, `kg`, `reason` — недостача при приёмке рейса; списание из «в пути», запись в `trip_batch_shortages` |
+| `POST` | `/batches/:batchId/record-trip-shortage` | `tripId`, `kg`, `reason` — недостача при приёмке рейса; списание из «в пути», запись в `trip_batch_shortages` (роли: admin, manager, warehouse, logistics, receiver) |
+| `POST` | `/loading-manifests/:manifestId/assign-trip` | `tripId` — привязать ПН к рейсу или сменить рейс, если нет продаж/недостач по партиям (роли ship: admin, manager, warehouse, logistics) |
+| `POST` | `/loading-manifests/:manifestId/detach-trip` | — открепить ПН от открытого рейса, вернуть массу на склад (те же ограничения и роли ship) |
 | `POST` | `/auth/login` | `login`, `password` — при успехе **200**: `{ token, user }`, cookie `birzha_access` (HttpOnly). Любой неуспешный вход — **401** (`invalid_credentials`) без раскрытия причины (включая отключённые учётные записи). Требуются PostgreSQL, миграции с таблицей `users` и **`JWT_SECRET`** в окружении. |
 | `POST` | `/auth/logout` | **200** `{ ok: true }`, сброс cookie доступа. |
 | `GET` | `/auth/me` | Текущий пользователь по `Authorization: Bearer <token>` или cookie; **401** без/с невалидным токеном. |

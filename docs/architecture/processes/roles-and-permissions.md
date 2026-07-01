@@ -90,6 +90,13 @@
 
 **Назначение продавца на рейс:** список кандидатов — **`GET /api/trips/field-seller-options`** (роли `admin`, `manager`, `purchaser`, `logistics`), активные пользователи с глобальной ролью `seller`.
 
+**Погрузочная накладная и рейс (API):**
+- **`POST /api/loading-manifests/:manifestId/assign-trip`** — привязать ПН к рейсу или **сменить рейс**, если по партиям нет продаж/недостач (`change_allowed` в коде). Роли: `admin`, `manager`, `warehouse`, `logistics` (`ship` в `route-auth.ts`).
+- **`POST /api/loading-manifests/:manifestId/detach-trip`** — открепить ПН от открытого рейса, вернуть массу на склад (те же ограничения). Те же роли `ship`.
+- **`GET /api/loading-manifests/:manifestId`** — в ответе `tripDetachLocked` / `tripDetachLockedReason` для UI.
+
+**Недостача по рейсу:** **`POST /api/batches/:batchId/record-trip-shortage`** — роли `admin`, `manager`, `warehouse`, `logistics`, `receiver` (`SHORTAGE_ROLES` в `route-auth.ts`).
+
 - руководитель видит агрегаты и детализацию по ролям и регионам
 
 ## Разделение действий

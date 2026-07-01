@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiGetJson, apiPostJson, deleteLoadingManifestById, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canShipLoadingManifest } from "../auth/role-panels.js";
 import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
@@ -43,7 +44,8 @@ export function AllocationPanel() {
   const { manifestId: routeManifestId = "" } = useParams();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { meta } = useAuth();
+  const { meta, user } = useAuth();
+  const canShip = canShipLoadingManifest(user);
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
   const archiveBase = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
@@ -169,6 +171,15 @@ export function AllocationPanel() {
       await apiPostJson(`/api/loading-manifests/${encodeURIComponent(id)}/assign-trip`, {
         tripId: assignTripId.trim(),
       });
+    },
+    onSuccess: () => {
+      void refreshDistributionLists(queryClient);
+    },
+  });
+
+  const detachTrip = useMutation({
+    mutationFn: async (manifestId: string) => {
+      await apiPostJson(`/api/loading-manifests/${encodeURIComponent(manifestId)}/detach-trip`, {});
     },
     onSuccess: () => {
       void refreshDistributionLists(queryClient);
@@ -592,14 +603,20 @@ export function AllocationPanel() {
                 <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
               </span>
             ) : null}
-            <button
-              type="button"
-              className={btnClassSpaced}
-              disabled={tableRows.length === 0}
-              onClick={() => setManifestFormOpen(true)}
-            >
-              Готово — погрузочная накладная
-            </button>
+            {canShip ? (
+              <button
+                type="button"
+                className={btnClassSpaced}
+                disabled={tableRows.length === 0}
+                onClick={() => setManifestFormOpen(true)}
+              >
+                Готово — погрузочная накладная
+              </button>
+            ) : (
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
+                Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста. Здесь доступен просмотр.
+              </p>
+            )}
           </p>
         </>
       ) : null}
@@ -730,8 +747,10 @@ export function AllocationPanel() {
                   assignTripId={assignTripId}
                   setAssignTripId={setAssignTripId}
                   assignTrip={assignTrip}
+                  detachTrip={canShip ? detachTrip : undefined}
                   trips={openTripsForAssign}
-                  canAppendLoad={!viewingArchivedManifest}
+                  canAppendLoad={!viewingArchivedManifest && canShip}
+                  canShipTrip={canShip}
                   onAppendLoad={() =>
                     startAnotherWarehouseLoad(
                       openManifestSummary.tripId ?? "",
@@ -767,7 +786,7 @@ export function AllocationPanel() {
             </div>
           ) : null}
 
-      {manifestFormOpen && selectedWarehouse && !viewingSaved ? (
+      {manifestFormOpen && selectedWarehouse && !viewingSaved && canShip ? (
         <DistributionCreateForm
           appendMode={appendMode}
           appendTargetManifest={appendTargetManifest}

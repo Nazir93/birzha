@@ -31,7 +31,7 @@ const SHIP_ROLES = ["admin", "manager", "warehouse", "logistics"] as const;
 const SELL_ROLES = ["admin", "manager", "seller"] as const;
 
 /** Недостача по рейсу. */
-const SHORTAGE_ROLES = ["admin", "manager", "warehouse", "receiver"] as const;
+const SHORTAGE_ROLES = ["admin", "manager", "warehouse", "logistics", "receiver"] as const;
 
 /** GET /counterparties — все роли MVP (нужны продавцу, бухгалтеру и т.д.). */
 const CATALOG_READ_ROLES = MVP_ROLE_CODES;

@@ -201,6 +201,20 @@ export class LoadingManifestNotFoundError extends Error {
   }
 }
 
+/** Отвязка ПН от рейса запрещена (продажи, закрытый рейс и т.п.). */
+export class LoadingManifestTripDetachForbiddenError extends Error {
+  readonly manifestId: string;
+  readonly code: string;
+
+  constructor(manifestId: string, code: string, message: string) {
+    super(message);
+    this.name = "LoadingManifestTripDetachForbiddenError";
+    this.manifestId = manifestId;
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Удаление запрещено: по накладной уже есть отгрузка в рейс. */
 export class LoadingManifestNotEmptyError extends Error {
   readonly manifestId: string;

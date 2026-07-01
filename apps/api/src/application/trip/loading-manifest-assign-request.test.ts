@@ -21,12 +21,22 @@ describe("classifyLoadingManifestAssignRequest", () => {
     ).toBe("idempotent");
   });
 
-  it("change_forbidden when attempting to switch trip", () => {
+  it("change_forbidden when attempting to switch trip without permission", () => {
     expect(
       classifyLoadingManifestAssignRequest({
         existingTripId: "trip-1",
         requestedTripId: "trip-2",
       }),
     ).toBe("change_forbidden");
+  });
+
+  it("change_allowed when canChangeTrip is true", () => {
+    expect(
+      classifyLoadingManifestAssignRequest({
+        existingTripId: "trip-1",
+        requestedTripId: "trip-2",
+        canChangeTrip: true,
+      }),
+    ).toBe("change_allowed");
   });
 });
