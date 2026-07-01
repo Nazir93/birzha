@@ -19,6 +19,7 @@ import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
 const SELLER_ASSIGN_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
@@ -114,20 +115,21 @@ export function SellerTripAssignBlock() {
       <label htmlFor="assign-block-seller" className="birzha-form-label birzha-form-label--block">
         Продавец *
       </label>
-      <select
+      <BirzhaSelect
         id="assign-block-seller"
         value={assignSellerUserId}
-        onChange={(e) => setAssignSellerUserId(e.target.value)}
+        onChange={setAssignSellerUserId}
         style={{ ...selectWide, marginBottom: "0.45rem" }}
         disabled={sellerOptions.length === 0}
-      >
-        <option value="">{sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}</option>
-        {sellerOptions.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.login}
-          </option>
-        ))}
-      </select>
+        placeholder={sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}
+        options={[
+          {
+            value: "",
+            label: sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —",
+          },
+          ...sellerOptions.map((s) => ({ value: s.id, label: s.login })),
+        ]}
+      />
 
       <label htmlFor="assign-block-trip" className="birzha-form-label">
         Рейс *
@@ -137,26 +139,34 @@ export function SellerTripAssignBlock() {
           <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
         </p>
       ) : null}
-      <select
+      <BirzhaSelect
         id="assign-block-trip"
         value={assignTripId}
-        onChange={(e) => setAssignTripId(e.target.value)}
+        onChange={setAssignTripId}
         style={selectWide}
         disabled={tripsQuery.isPending}
-      >
-        <option value="">
-          {tripsQuery.isPending
+        placeholder={
+          tripsQuery.isPending
             ? "— загрузка рейсов —"
             : tripsAvailableForAssignment.length === 0
               ? "— нет свободных рейсов —"
-              : "— выберите рейс —"}
-        </option>
-        {tripsAvailableForAssignment.map((t) => (
-          <option key={t.id} value={t.id}>
-            {formatTripSelectLabel(t)}
-          </option>
-        ))}
-      </select>
+              : "— выберите рейс —"
+        }
+        options={[
+          {
+            value: "",
+            label: tripsQuery.isPending
+              ? "— загрузка рейсов —"
+              : tripsAvailableForAssignment.length === 0
+                ? "— нет свободных рейсов —"
+                : "— выберите рейс —",
+          },
+          ...tripsAvailableForAssignment.map((t) => ({
+            value: t.id,
+            label: formatTripSelectLabel(t),
+          })),
+        ]}
+      />
       {fieldSellersQuery.isError ? (
         <ErrorAlert message="Список продавцов не загрузился." title="Продавцы" />
       ) : null}

@@ -33,6 +33,7 @@ import { useDistributionWorkspace } from "./distribution/useDistributionWorkspac
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, InfoAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function todayDateOnly(): string {
   return new Date().toISOString().slice(0, 10);
@@ -505,11 +506,10 @@ export function AllocationPanel() {
         <div className="no-print birzha-clean-ops-meta-grid birzha-clean-ops-meta-grid--warehouse">
           <label htmlFor="alloc-sel-warehouse" className="birzha-form-label">
             Склад *
-            <select
+            <BirzhaSelect
               id="alloc-sel-warehouse"
               value={selectedWarehouse}
-              onChange={(e) => {
-                const v = e.target.value;
+              onChange={(v) => {
                 setSelectedWarehouse(v);
                 writePreferredWarehouseId(v === "" ? null : v);
                 setRecentWriteOffs([]);
@@ -518,16 +518,17 @@ export function AllocationPanel() {
                 }
               }}
               style={fieldStyle}
-            >
-              <option value="">— выберите склад —</option>
-              {allocationWarehouseOptions.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {warehouseName(row.id)} — {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
-                  {row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""}
-                  {`, ${row.batchCount} парт.`}
-                </option>
-              ))}
-            </select>
+              placeholder="— выберите склад —"
+              options={[
+                { value: "", label: "— выберите склад —" },
+                ...allocationWarehouseOptions.map((row) => ({
+                  value: row.id,
+                  label: `${warehouseName(row.id)} — ${row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг${
+                    row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""
+                  }, ${row.batchCount} парт.`,
+                })),
+              ]}
+            />
           </label>
           {selectedWarehouse ? (
             <div className="birzha-distribution-warehouse-meta birzha-form-label">

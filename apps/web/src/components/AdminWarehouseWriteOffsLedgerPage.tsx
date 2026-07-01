@@ -8,7 +8,8 @@ import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { tableStyle, thHead, thtd } from "../ui/styles.js";
+import { tableStyle, thHead, thtd, fieldStyle } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 /**
  * Журнал списаний массы с остатка на складе (брак / quality_reject), по данным PostgreSQL.
@@ -51,34 +52,36 @@ export function AdminWarehouseWriteOffsLedgerPage() {
       <div className="birzha-form-grid" style={{ marginBottom: "0.75rem", maxWidth: 480 }}>
         <label>
           Склад (фильтр)
-          <select
+          <BirzhaSelect
             value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            style={{ width: "100%", marginTop: 4, padding: "0.35rem 0.45rem" }}
-          >
-            <option value="">Все склады</option>
-            {(warehousesQ.data?.warehouses ?? [])
-              .slice()
-              .sort((a, b) => a.name.localeCompare(b.name, "ru"))
-              .map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name} ({w.code})
-                </option>
-              ))}
-          </select>
+            onChange={setWarehouseId}
+            style={{ ...fieldStyle, marginTop: 4 }}
+            placeholder="Все склады"
+            options={[
+              { value: "", label: "Все склады" },
+              ...(warehousesQ.data?.warehouses ?? [])
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name, "ru"))
+                .map((w) => ({
+                  value: w.id,
+                  label: `${w.name} (${w.code})`,
+                })),
+            ]}
+          />
         </label>
         <label>
           Лимит строк
-          <select
+          <BirzhaSelect
             value={String(limit)}
-            onChange={(e) => setLimit(Number(e.target.value))}
-            style={{ width: "100%", marginTop: 4, padding: "0.35rem 0.45rem" }}
-          >
-            <option value="100">100</option>
-            <option value="200">200</option>
-            <option value="300">300</option>
-            <option value="500">500</option>
-          </select>
+            onChange={(v) => setLimit(Number(v))}
+            style={{ ...fieldStyle, marginTop: 4 }}
+            options={[
+              { value: "100", label: "100" },
+              { value: "200", label: "200" },
+              { value: "300", label: "300" },
+              { value: "500", label: "500" },
+            ]}
+          />
         </label>
       </div>
 

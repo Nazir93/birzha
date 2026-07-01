@@ -48,6 +48,7 @@ import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { SellerSaleSuccessOverlay } from "./SellerSaleSuccessOverlay.js";
 import { btnStyle, fieldStyle } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -813,12 +814,11 @@ export function SellFromTripSection() {
             </div>
           )}
           {sellerTripsListQ.isSuccess && sellerTripOptions.length > 0 && (
-            <select
+            <BirzhaSelect
               id={`${idPrefix}-sel-trip`}
               className={sellerFieldClass}
               value={sellTripId}
-              onChange={(e) => {
-                const v = e.target.value;
+              onChange={(v) => {
                 setSellTripId(v);
                 setSellBatchId("");
                 setSellKg("");
@@ -826,14 +826,15 @@ export function SellFromTripSection() {
               }}
               aria-busy={sellerTripsListQ.isFetching || undefined}
               style={sellerFieldMb}
-            >
-              <option value="">— Выберите рейс —</option>
-              {sellerTripOptions.map((t: TripJson) => (
-                <option key={t.id} value={t.id}>
-                  {formatTripSelectLabel(t)}
-                </option>
-              ))}
-            </select>
+              placeholder="— Выберите рейс —"
+              options={[
+                { value: "", label: "— Выберите рейс —" },
+                ...sellerTripOptions.map((t: TripJson) => ({
+                  value: t.id,
+                  label: formatTripSelectLabel(t),
+                })),
+              ]}
+            />
           )}
       </>
       {sellTripIdTrim && !selectedTripOpen ? (
@@ -1016,20 +1017,22 @@ export function SellFromTripSection() {
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Как оплачивает клиент *
       </label>
-      <select
+      <BirzhaSelect
         id={`${idPrefix}-sel-pay`}
         value={paymentKind}
-        onChange={(e) =>
-          setPaymentKind(e.target.value as "cash" | "debt" | "mixed" | "card_transfer")
-        }
+        onChange={(v) => setPaymentKind(v as "cash" | "debt" | "mixed" | "card_transfer")}
         className={sellerFieldClass}
         style={sellerFieldMb}
-      >
-        <option value="cash">Наличными целиком</option>
-        <option value="debt">В долг целиком (без наличных)</option>
-        <option value="mixed">Наличные + долг (сумма наличными — в рублях ниже)</option>
-        <option value="card_transfer">Онлайн-перевод на карту + наличные (остаток наличными, не терминал)</option>
-      </select>
+        options={[
+          { value: "cash", label: "Наличными целиком" },
+          { value: "debt", label: "В долг целиком (без наличных)" },
+          { value: "mixed", label: "Наличные + долг (сумма наличными — в рублях ниже)" },
+          {
+            value: "card_transfer",
+            label: "Онлайн-перевод на карту + наличные (остаток наличными, не терминал)",
+          },
+        ]}
+      />
       {saleChannel === "retail" && (paymentKind === "debt" || paymentKind === "mixed") ? (
         <>
           <label

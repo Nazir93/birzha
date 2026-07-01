@@ -7,6 +7,7 @@ import type { TripJson } from "../../api/types.js";
 import { BirzhaDateField } from "../BirzhaCalendarFields.js";
 import { ErrorAlert, InfoAlert } from "../../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle } from "../../ui/styles.js";
+import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 type CreatePayload = {
   appendToManifestId?: string;
@@ -114,40 +115,46 @@ export function DistributionCreateForm({
       <div className="birzha-clean-ops-meta-grid">
         <label className="birzha-form-label">
           Рейс *
-          <select
+          <BirzhaSelect
             value={newManifestTripId}
-            onChange={(e) => onNewManifestTripIdChange(e.target.value)}
+            onChange={onNewManifestTripIdChange}
             style={fieldStyle}
             disabled={tripsPending || appendMode}
-          >
-            <option value="">
-              {tripsPending
+            placeholder={
+              tripsPending
                 ? "— загрузка рейсов —"
                 : openTripsForAssign.length === 0
                   ? "— сначала создайте рейс —"
-                  : "— выберите рейс —"}
-            </option>
-            {openTripsForAssign.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-              </option>
-            ))}
-          </select>
+                  : "— выберите рейс —"
+            }
+            options={[
+              {
+                value: "",
+                label: tripsPending
+                  ? "— загрузка рейсов —"
+                  : openTripsForAssign.length === 0
+                    ? "— сначала создайте рейс —"
+                    : "— выберите рейс —",
+              },
+              ...openTripsForAssign.map((t) => ({
+                value: t.id,
+                label: formatTripSelectLabel(t),
+              })),
+            ]}
+          />
         </label>
         <label className="birzha-form-label">
           Город / направление *
-          <select
+          <BirzhaSelect
             value={manifestDestinationCode}
-            onChange={(e) => onManifestDestinationCodeChange(e.target.value)}
+            onChange={onManifestDestinationCodeChange}
             style={fieldStyle}
             disabled={appendMode}
-          >
-            {destAllowed.map((d) => (
-              <option key={d} value={d}>
-                {labelDest[d] ?? d}
-              </option>
-            ))}
-          </select>
+            options={destAllowed.map((d) => ({
+              value: d,
+              label: labelDest[d] ?? d,
+            }))}
+          />
         </label>
         <label className="birzha-form-label">
           Дата *

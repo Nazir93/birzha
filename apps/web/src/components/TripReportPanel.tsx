@@ -44,6 +44,7 @@ import {
   thHead,
   thtd,
 } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function sanitizeFilenamePart(s: string): string {
   return s.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 80);
@@ -302,17 +303,23 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           >
             {fieldSellerSalesReport ? "Выберите закреплённый за вами рейс" : "Выберите рейс"}
           </label>
-          <select id="trip-select" value={tripId} onChange={(e) => setTripId(e.target.value)} style={fieldStyleFullWidth}>
-            <option value="">—</option>
-            {tripsForSelect.map((t) => {
-              const label = formatTripSelectLabel(t);
-              return (
-                <option key={t.id} value={t.id}>
-                  {label.length > 120 ? `${label.slice(0, 117)}…` : label}
-                </option>
-              );
-            })}
-          </select>
+          <BirzhaSelect
+            id="trip-select"
+            value={tripId}
+            onChange={setTripId}
+            style={fieldStyleFullWidth}
+            placeholder="—"
+            options={[
+              { value: "", label: "—" },
+              ...tripsForSelect.map((t) => {
+                const label = formatTripSelectLabel(t);
+                return {
+                  value: t.id,
+                  label: label.length > 120 ? `${label.slice(0, 117)}…` : label,
+                };
+              }),
+            ]}
+          />
           {archivedTripCount > 0 ? (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
               {viewContext === "accounting" ? (

@@ -49,6 +49,7 @@ import {
   successText,
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const NAKLAD_LIST_PAGE_SIZE = 25;
 
@@ -363,22 +364,22 @@ export function PurchaseNakladnayaSection() {
         </label>
         <label className="birzha-form-label">
           Склад *
-          <select
+          <BirzhaSelect
             value={warehouseId}
-            onChange={(e) => {
-              const v = e.target.value;
+            onChange={(v) => {
               setWarehouseId(v);
               writePreferredWarehouseId(v === "" ? null : v);
             }}
             style={{ ...fieldStyle, maxWidth: "100%" }}
-          >
-            <option value="">— выберите —</option>
-            {(warehousesQ.data?.warehouses ?? []).map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} ({w.code})
-              </option>
-            ))}
-          </select>
+            placeholder="— выберите —"
+            options={[
+              { value: "", label: "— выберите —" },
+              ...(warehousesQ.data?.warehouses ?? []).map((w) => ({
+                value: w.id,
+                label: `${w.name} (${w.code})`,
+              })),
+            ]}
+          />
         </label>
         <label className="birzha-form-label">
           Покупатель / подпись (опц.)
@@ -421,24 +422,21 @@ export function PurchaseNakladnayaSection() {
             {lines.map((line) => (
               <tr key={line.key}>
                 <td className="birzha-nakl-lines-table__grade-cell" data-label="Товар / калибр">
-                  <select
+                  <BirzhaSelect
                     value={line.productGradeId}
-                    onChange={(e) => updateLine(line.key, { productGradeId: e.target.value })}
+                    onChange={(v) => updateLine(line.key, { productGradeId: v })}
                     className="birzha-nakl-line-field birzha-nakl-line-field--grade"
                     style={fieldStyle}
                     disabled={gradesQ.isPending}
-                  >
-                    <option value="">{gradesQ.isPending ? "Загрузка…" : "— выберите —"}</option>
-                    {gradeOptionGroups.map((grp) => (
-                      <optgroup key={grp.key} label={grp.label}>
-                        {grp.grades.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {productGradeOptionLabel(g.code, g.displayName)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                    placeholder={gradesQ.isPending ? "Загрузка…" : "— выберите —"}
+                    groups={gradeOptionGroups.map((grp) => ({
+                      label: grp.label,
+                      options: grp.grades.map((g) => ({
+                        value: g.id,
+                        label: productGradeOptionLabel(g.code, g.displayName),
+                      })),
+                    }))}
+                  />
                 </td>
                 <td className="birzha-nakl-lines-table__num-cell" data-label="Кг">
                   <input

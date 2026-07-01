@@ -34,6 +34,7 @@ import { FieldError } from "../ui/FieldError.js";
 import { LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 function gramsBigIntToKgDecimalString(g: bigint): string {
   if (g === 0n) {
@@ -223,23 +224,26 @@ function SellerTripSaleEditForm({
         inputMode="decimal"
       />
       <label className="birzha-form-label birzha-form-label--block">Тип сделки</label>
-      <select
+      <BirzhaSelect
         value={saleChannel}
-        onChange={(e) => {
-          const v = e.target.value as "retail" | "wholesale";
-          setSaleChannel(v);
-          if (v === "retail") {
+        onChange={(v) => {
+          const next = v as "retail" | "wholesale";
+          setSaleChannel(next);
+          if (next === "retail") {
             setWholesaleBuyerId("");
           }
         }}
         className="birzha-seller-form-control"
         style={fieldMb}
-      >
-        <option value="retail">Розница</option>
-        <option value="wholesale" disabled={!wholesalersCatalog}>
-          Опт {!wholesalersCatalog ? "(недоступно)" : ""}
-        </option>
-      </select>
+        options={[
+          { value: "retail", label: "Розница" },
+          {
+            value: "wholesale",
+            label: `Опт ${!wholesalersCatalog ? "(недоступно)" : ""}`,
+            disabled: !wholesalersCatalog,
+          },
+        ]}
+      />
       {saleChannel === "wholesale" ? (
         <div style={{ marginTop: "0.35rem" }}>
           <SellerWholesalerPicker
@@ -252,17 +256,18 @@ function SellerTripSaleEditForm({
         </div>
       ) : null}
       <label className="birzha-form-label birzha-form-label--block">Оплата</label>
-      <select
+      <BirzhaSelect
         value={paymentKind}
-        onChange={(e) => setPaymentKind(e.target.value as typeof paymentKind)}
+        onChange={(v) => setPaymentKind(v as typeof paymentKind)}
         className="birzha-seller-form-control"
         style={fieldMb}
-      >
-        <option value="cash">Наличными</option>
-        <option value="debt">В долг</option>
-        <option value="mixed">Наличные + долг</option>
-        <option value="card_transfer">Перевод + наличные</option>
-      </select>
+        options={[
+          { value: "cash", label: "Наличными" },
+          { value: "debt", label: "В долг" },
+          { value: "mixed", label: "Наличные + долг" },
+          { value: "card_transfer", label: "Перевод + наличные" },
+        ]}
+      />
       {paymentKind === "mixed" ? (
         <>
           <label className="birzha-form-label birzha-form-label--block">Наличными, руб *</label>

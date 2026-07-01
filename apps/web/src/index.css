@@ -1076,6 +1076,25 @@ a.birzha-kpi-tile--link:focus-visible {
   box-shadow: 0 0 0 2px var(--birzha-accent-soft);
 }
 
+.birzha-seller-sell-panel .birzha-seller-form-control.birzha-select {
+  margin-top: 0.35rem;
+}
+
+.birzha-seller-sell-panel .birzha-seller-form-control.birzha-select .birzha-select__trigger {
+  margin-top: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 1.02rem;
+  border-radius: var(--birzha-radius-sm);
+  border-color: var(--color-border);
+  background: var(--birzha-surface);
+  min-height: 2.75rem;
+}
+
+.birzha-seller-sell-panel .birzha-seller-form-control.birzha-select .birzha-select__trigger:focus-visible {
+  border-color: var(--birzha-accent);
+  box-shadow: 0 0 0 2px var(--birzha-accent-soft);
+}
+
 /* Сетка калибров — кабинет продавца */
 .birzha-seller-caliber-fieldset {
   width: 100%;
@@ -3055,6 +3074,153 @@ select:focus-visible {
   border-color: var(--color-border-focus);
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+/* Кастомный select (BirzhaSelect): тёмная панель, нейтральное выделение */
+.birzha-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+}
+
+.birzha-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.625rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--birzha-popup-surface, var(--color-surface-input));
+  border: 1px solid var(--birzha-field-outline, var(--color-border));
+  border-radius: 8px;
+  box-sizing: border-box;
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.birzha-select__trigger:hover:not(:disabled) {
+  border-color: var(--color-border-focus);
+}
+
+.birzha-select__trigger:focus-visible {
+  border-color: var(--color-border-focus);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.birzha-select__trigger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f4f4f5;
+}
+
+html[data-birzha-theme="dark"] .birzha-select__trigger:disabled {
+  background: #1f1f23;
+}
+
+.birzha-select__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.birzha-select__value--placeholder {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.birzha-select__chevron {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  opacity: 0.9;
+}
+
+.birzha-select__menu {
+  position: fixed;
+  z-index: 10050;
+  overflow: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--birzha-field-outline, var(--color-border));
+  border-radius: 10px;
+  background: var(--birzha-popup-surface, var(--color-surface-input));
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.12),
+    0 16px 32px -8px rgba(0, 0, 0, 0.28);
+}
+
+html[data-birzha-theme="dark"] .birzha-select__menu {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.birzha-select__group + .birzha-select__group {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.birzha-select__group-label {
+  padding: 0.25rem 0.55rem 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.birzha-select__option {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  cursor: var(--birzha-cursor-red);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.birzha-select__option:hover:not(:disabled),
+.birzha-select__option--active:not(:disabled) {
+  background: var(--birzha-accent-soft);
+  color: var(--color-text);
+}
+
+.birzha-select__option--selected {
+  background: color-mix(in srgb, var(--birzha-accent-soft) 85%, var(--color-text) 15%);
+  font-weight: 600;
+}
+
+.birzha-select__option--selected.birzha-select__option--active {
+  background: var(--birzha-accent-soft);
+}
+
+.birzha-select__option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.birzha-nakl-line-field.birzha-select,
+.birzha-nakl-line-field.birzha-select .birzha-select__trigger {
+  margin-top: 0;
 }
 
 /*

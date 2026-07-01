@@ -34,6 +34,7 @@ import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { SellerTripAssignBlock } from "./SellerTripAssignBlock.js";
 
 const selectWide = { ...fieldStyle, maxWidth: "100%" as const };
@@ -216,20 +217,21 @@ export function AssignSellerPanel() {
               <LoadingIndicator size="sm" label="Загрузка…" />
             </p>
           ) : (
-            <select
+            <BirzhaSelect
               id="sales-seller"
               value={assignSellerUserId}
-              onChange={(e) => setAssignSellerUserId(e.target.value)}
+              onChange={setAssignSellerUserId}
               style={selectWide}
               disabled={sellerOptions.length === 0}
-            >
-              <option value="">{sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}</option>
-              {sellerOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.login}
-                </option>
-              ))}
-            </select>
+              placeholder={sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}
+              options={[
+                {
+                  value: "",
+                  label: sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —",
+                },
+                ...sellerOptions.map((s) => ({ value: s.id, label: s.login })),
+              ]}
+            />
           )}
         </div>
       </header>

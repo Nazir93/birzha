@@ -10,6 +10,7 @@ import { formatTripSelectLabel } from "../format/trip-label.js";
 import { clearDistributionShipPayload, readDistributionShipPayload } from "../distribution/distribution-ship-payload.js";
 import { WarningAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle, successText } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -134,21 +135,22 @@ export function OperationsPanel() {
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
             </p>
           )}
-          <select
+          <BirzhaSelect
             id="op-sel-ship-trip-dist"
             value={shipTripId}
-            onChange={(e) => setShipTripId(e.target.value)}
+            onChange={setShipTripId}
             style={{ ...selectWide, marginBottom: "0.75rem" }}
             disabled={tripsQuery.isPending}
             aria-busy={tripsQuery.isPending || undefined}
-          >
-            <option value="">{tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
-            {tripSelectOptions.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-              </option>
-            ))}
-          </select>
+            placeholder={tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}
+            options={[
+              { value: "", label: tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —" },
+              ...tripSelectOptions.map((t) => ({
+                value: t.id,
+                label: formatTripSelectLabel(t),
+              })),
+            ]}
+          />
 
           <div className="birzha-inline-panel" style={{ margin: "0 0 0.75rem" }}>
             <p className="birzha-callout-info" style={{ margin: 0 }}>
@@ -200,40 +202,42 @@ export function OperationsPanel() {
         <label htmlFor="op-in-short-batch" className="birzha-form-label">
           Партия *
         </label>
-        <select
+        <BirzhaSelect
           id="op-in-short-batch"
           value={shortBatchId}
-          onChange={(e) => setShortBatchId(e.target.value)}
+          onChange={setShortBatchId}
           style={selectWide}
           disabled={batchesQuery.isPending}
-        >
-          <option value="">{batchesQuery.isPending ? "— загрузка —" : "— выберите партию —"}</option>
-          {(batchesQuery.data?.batches ?? [])
-            .filter(isFromPurchaseNakladnaya)
-            .map((b) => (
-              <option key={b.id} value={b.id}>
-                {formatBatchPartyCaption(b)}
-              </option>
-            ))}
-        </select>
+          placeholder={batchesQuery.isPending ? "— загрузка —" : "— выберите партию —"}
+          options={[
+            { value: "", label: batchesQuery.isPending ? "— загрузка —" : "— выберите партию —" },
+            ...(batchesQuery.data?.batches ?? [])
+              .filter(isFromPurchaseNakladnaya)
+              .map((b) => ({
+                value: b.id,
+                label: formatBatchPartyCaption(b),
+              })),
+          ]}
+        />
         <label htmlFor="op-sel-short-trip" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Рейс *
         </label>
-        <select
+        <BirzhaSelect
           id="op-sel-short-trip"
           value={shortTripId}
-          onChange={(e) => setShortTripId(e.target.value)}
+          onChange={setShortTripId}
           style={selectWide}
           disabled={tripsQuery.isPending}
           aria-busy={tripsQuery.isPending || undefined}
-        >
-          <option value="">{tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}</option>
-          {tripSelectOptions.map((t) => (
-            <option key={t.id} value={t.id}>
-              {formatTripSelectLabel(t)}
-            </option>
-          ))}
-        </select>
+          placeholder={tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —"}
+          options={[
+            { value: "", label: tripsQuery.isPending ? "— загрузка —" : "— выберите рейс —" },
+            ...tripSelectOptions.map((t) => ({
+              value: t.id,
+              label: formatTripSelectLabel(t),
+            })),
+          ]}
+        />
         <label htmlFor="op-in-short-kg" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           kg *
         </label>

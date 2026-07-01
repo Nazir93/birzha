@@ -16,6 +16,7 @@ import {
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle } from "../../ui/styles.js";
+import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
 
 function formatPkg(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) {
@@ -260,18 +261,19 @@ export function LoadingManifestAccordion({
                 ) : (
                   <>
                     <div className="no-print birzha-clean-ops-row-actions">
-                      <select
+                      <BirzhaSelect
                         value={assignTripId}
-                        onChange={(e) => setAssignTripId(e.target.value)}
+                        onChange={setAssignTripId}
                         style={{ ...fieldStyle, minWidth: "16rem" }}
-                      >
-                        <option value="">— выбрать рейс —</option>
-                        {trips.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.tripNumber} · {t.status}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="— выбрать рейс —"
+                        options={[
+                          { value: "", label: "— выбрать рейс —" },
+                          ...trips.map((t) => ({
+                            value: t.id,
+                            label: `${t.tripNumber} · ${t.status}`,
+                          })),
+                        ]}
+                      />
                       <button
                         type="button"
                         className="birzha-clean-ops-row-action"

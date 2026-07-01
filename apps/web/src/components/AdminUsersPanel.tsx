@@ -7,6 +7,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, btnStyleInline, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Администратор",
@@ -376,13 +377,10 @@ export function AdminUsersPanel({ embedded = false }: AdminUsersPanelProps = {})
           </label>
           <label className="birzha-form-label birzha-form-label--block">
             Роль
-            <select value={roleCode} onChange={(e) => setRoleCode(e.target.value)} style={fieldStyle}>
-              {roleOptions.map((code) => (
-                <option key={code} value={code}>
-                  {ROLE_LABEL[code] ?? code}
-                </option>
-              ))}
-            </select>
+            <BirzhaSelect value={roleCode} onChange={setRoleCode} style={fieldStyle} options={roleOptions.map((code) => ({
+              value: code,
+              label: ROLE_LABEL[code] ?? code,
+            }))} />
           </label>
           <button
             type="button"

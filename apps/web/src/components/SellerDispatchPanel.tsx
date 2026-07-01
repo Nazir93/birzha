@@ -21,6 +21,7 @@ import {
 } from "../query/core-list-queries.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnStyle, fieldStyle, successText, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { FieldError } from "../ui/FieldError.js";
@@ -160,20 +161,21 @@ export function SellerDispatchPanel() {
           <label htmlFor="dispatch-seller" className="birzha-form-label birzha-form-label--block">
             Продавец *
           </label>
-          <select
+          <BirzhaSelect
             id="dispatch-seller"
             value={assignSellerUserId}
-            onChange={(e) => setAssignSellerUserId(e.target.value)}
+            onChange={setAssignSellerUserId}
             style={{ ...selectWide, marginBottom: "0.45rem" }}
             disabled={sellerOptions.length === 0}
-          >
-            <option value="">{sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}</option>
-            {sellerOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.login}
-              </option>
-            ))}
-          </select>
+            placeholder={sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —"}
+            options={[
+              {
+                value: "",
+                label: sellerOptions.length === 0 ? "— нет продавцов —" : "— выберите продавца —",
+              },
+              ...sellerOptions.map((s) => ({ value: s.id, label: s.login })),
+            ]}
+          />
 
           <label htmlFor="dispatch-trip" className="birzha-form-label">
             Рейс *
@@ -183,26 +185,34 @@ export function SellerDispatchPanel() {
               <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
             </p>
           ) : null}
-          <select
+          <BirzhaSelect
             id="dispatch-trip"
             value={assignTripId}
-            onChange={(e) => setAssignTripId(e.target.value)}
+            onChange={setAssignTripId}
             style={selectWide}
             disabled={tripsQuery.isPending}
-          >
-            <option value="">
-              {tripsQuery.isPending
+            placeholder={
+              tripsQuery.isPending
                 ? "— загрузка рейсов —"
                 : tripsAvailableForAssignment.length === 0
                   ? "— нет свободных рейсов —"
-                  : "— выберите рейс —"}
-            </option>
-            {tripsAvailableForAssignment.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-              </option>
-            ))}
-          </select>
+                  : "— выберите рейс —"
+            }
+            options={[
+              {
+                value: "",
+                label: tripsQuery.isPending
+                  ? "— загрузка рейсов —"
+                  : tripsAvailableForAssignment.length === 0
+                    ? "— нет свободных рейсов —"
+                    : "— выберите рейс —",
+              },
+              ...tripsAvailableForAssignment.map((t) => ({
+                value: t.id,
+                label: formatTripSelectLabel(t),
+              })),
+            ]}
+          />
           {fieldSellersQuery.isError ? (
             <ErrorAlert message="Список продавцов не загрузился." title="Продавцы" />
           ) : null}
