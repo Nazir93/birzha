@@ -339,7 +339,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               <button
                 type="button"
                 className="no-print birzha-btn-danger-outline"
-                style={btnStyle}
                 disabled={deleteTripMutation.isPending}
                 onClick={() => {
                   if (

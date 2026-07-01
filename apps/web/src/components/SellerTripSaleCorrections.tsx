@@ -400,7 +400,12 @@ function SellerTripSaleCorrectionsGroupRow({
             <button type="button" style={btnStyle} onClick={() => onEditGroup(group.key)}>
               Исправить
             </button>
-            <button type="button" style={btnStyle} disabled={remove.isPending} onClick={deleteGroup}>
+            <button
+              type="button"
+              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+              disabled={remove.isPending}
+              onClick={deleteGroup}
+            >
               Удалить
             </button>
           </span>

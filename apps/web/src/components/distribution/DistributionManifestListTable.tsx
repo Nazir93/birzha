@@ -78,17 +78,19 @@ export function DistributionManifestListTable({
                   </td>
                   <td className="birzha-data-table__num">{formatManifestPackages(m.packagesApprox)}</td>
                   <td className="birzha-distribution-manifest-row__actions">
-                    <Link to={`${distributionBase}/${encodeURIComponent(m.id)}`} className="birzha-clean-ops-text-btn">
-                      {isCurrent ? "Открыта" : "Открыть"}
-                    </Link>
-                    <button
-                      type="button"
-                      className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                    <div className="birzha-clean-ops-row-actions">
+                      <Link to={`${distributionBase}/${encodeURIComponent(m.id)}`} className="birzha-clean-ops-text-btn">
+                        {isCurrent ? "Открыта" : "Открыть"}
+                      </Link>
+                      <button
+                        type="button"
+                        className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                       disabled={deletingManifestId != null}
                       onClick={() => onDelete(m)}
                     >
                       {deleting ? "…" : "Удалить"}
                     </button>
+                    </div>
                   </td>
                 </tr>
               );

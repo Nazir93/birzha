@@ -534,7 +534,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                             {r.isActive ? (
                               <button
                                 type="button"
-                                style={{ ...btnStyle, fontSize: "0.82rem", padding: "0.25rem 0.5rem" }}
+                                className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                                 disabled={deleteWholesaler.isPending}
                                 onClick={() => {
                                   if (window.confirm(`Снять оптовика «${r.name}»?`)) {

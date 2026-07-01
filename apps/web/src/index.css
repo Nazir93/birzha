@@ -2202,6 +2202,54 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   color: var(--birzha-danger);
 }
 
+/* Кнопка «Удалить»: красный текст, без рамки и фона (как в таблице рейсов) */
+.birzha-btn-danger-outline,
+.birzha-btn-danger-text {
+  font-family: inherit;
+  cursor: var(--birzha-cursor-red);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--birzha-danger) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 8px;
+  box-shadow: none !important;
+  padding: 0.35rem 0.25rem;
+  margin-top: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.birzha-btn-danger-outline:hover:not(:disabled),
+.birzha-btn-danger-text:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--birzha-danger) 12%, transparent) !important;
+  color: var(--birzha-danger) !important;
+}
+
+.birzha-btn-danger-outline:focus-visible,
+.birzha-btn-danger-text:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring) !important;
+}
+
+.birzha-btn-danger-outline:disabled,
+.birzha-btn-danger-text:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.birzha-btn-danger-outline--compact,
+.birzha-btn-danger-text--compact {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.25rem !important;
+}
+
+.birzha-clean-ops-page .birzha-clean-ops-row-actions .birzha-btn-danger-outline,
+.birzha-clean-ops-page .birzha-clean-ops-row-actions .birzha-clean-ops-row-action--danger {
+  margin-top: 0;
+  margin-right: 0;
+  padding: 0.35rem 0.25rem;
+}
+
 .birzha-clean-ops-list {
   margin-top: 1.35rem;
   padding-top: 0.25rem;
@@ -2849,41 +2897,6 @@ html[data-birzha-theme="dark"] p[role="alert"].birzha-text-danger {
   padding-top: 0.35rem;
   border-top: 1px solid var(--color-border);
   font-weight: 600;
-}
-
-.birzha-btn-danger-outline {
-  font-family: inherit;
-  cursor: var(--birzha-cursor-red);
-  font-weight: 600;
-  color: var(--color-text) !important;
-  background: var(--birzha-btn-outline-bg) !important;
-  border: 2px solid var(--birzha-danger) !important;
-  border-radius: var(--birzha-radius-sm);
-  box-shadow: var(--birzha-btn-outline-shadow);
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.birzha-btn-danger-outline:hover:not(:disabled) {
-  background: var(--birzha-surface-muted) !important;
-  border-color: var(--birzha-danger) !important;
-}
-
-.birzha-btn-danger-outline:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring), var(--birzha-btn-outline-shadow);
-}
-
-.birzha-btn-danger-outline:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.birzha-btn-danger-outline--compact {
-  font-size: 0.82rem;
-  padding: 0.25rem 0.5rem !important;
 }
 
 /* Индикаторы загрузки (см. `ui/LoadingIndicator.tsx`) */
