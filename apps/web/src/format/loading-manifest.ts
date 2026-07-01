@@ -459,6 +459,64 @@ export function formatLoadingManifestTableNumberLabel(m: LoadingManifestTableLab
   return `№ ${kept.join(" · ")}`;
 }
 
+export type LoadingManifestCardHeaderFields = LoadingManifestTableLabelFields & {
+  warehouseLabel?: string;
+};
+
+function titleIncludesFragment(title: string, fragment: string): boolean {
+  const normalized = normalizeManifestLabelPart(fragment);
+  if (!normalized) {
+    return true;
+  }
+  return normalizeManifestLabelPart(title).includes(normalized);
+}
+
+function manifestNumberCoversTrip(manifestNumber: string, tripLabel: string): boolean {
+  const trip = tripLabel.trim();
+  if (!trip) {
+    return false;
+  }
+  const numNorm = normalizeManifestLabelPart(manifestNumber);
+  const tripParts = trip.split("·").map((p) => p.trim()).filter(Boolean);
+  return tripParts.length > 0 && tripParts.every((p) => numNorm.includes(normalizeManifestLabelPart(p)));
+}
+
+/** Заголовок карточки ПН: короткий title и meta (дата, склады, рейс) без повторов. */
+export function formatLoadingManifestCardHeader(m: LoadingManifestCardHeaderFields): {
+  title: string;
+  meta: string;
+} {
+  const tripLabel = m.tripLabel?.trim() ?? "";
+  const destination = m.destinationName.trim() || "—";
+  const docDate = m.docDate.trim();
+  const numberLabel = formatLoadingManifestTableNumberLabel({
+    manifestNumber: m.manifestNumber,
+    destinationName: m.destinationName,
+    docDate,
+    tripLabel,
+  });
+  const title = numberLabel === "—" ? destination : numberLabel;
+
+  const metaParts: string[] = [];
+  if (docDate && !titleIncludesFragment(title, docDate)) {
+    metaParts.push(docDate);
+  }
+  const wh = m.warehouseLabel?.trim();
+  if (wh) {
+    metaParts.push(wh);
+  }
+  if (
+    tripLabel &&
+    tripLabel !== "—" &&
+    !manifestNumberCoversTrip(m.manifestNumber, tripLabel) &&
+    !titleIncludesFragment(title, tripLabel)
+  ) {
+    metaParts.push(`рейс: ${tripLabel}`);
+  }
+
+  return { title, meta: metaParts.join(" · ") };
+}
+
 function uniquifyManifestNumber(base: string, taken: Set<string>): string {
   const trimmed = base.slice(0, 80);
   if (!taken.has(trimmed)) {

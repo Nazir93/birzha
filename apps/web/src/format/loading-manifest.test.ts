@@ -7,6 +7,7 @@ import {
   aggregateBatchesByPurchaseDocument,
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
+  formatLoadingManifestCardHeader,
   formatLoadingManifestDisplayName,
   formatLoadingManifestTableNumberLabel,
   formatManifestWarehouseNames,
@@ -252,6 +253,37 @@ describe("formatLoadingManifestTableNumberLabel", () => {
         docDate: "2026-06-05",
       }),
     ).toBe("№ Фура-12");
+  });
+});
+
+describe("formatLoadingManifestCardHeader", () => {
+  it("убирает повтор рейса и длинного номера — остаются город, дата и склады", () => {
+    expect(
+      formatLoadingManifestCardHeader({
+        manifestNumber: "01 Курбан · а123но05 · 29.06.2026 · Москва · 2026-06-29",
+        destinationName: "Москва",
+        docDate: "2026-06-29",
+        tripLabel: "01 Курбан · а123но05 · 29.06.2026",
+        warehouseLabel: "Дербент, Каякент, Манас",
+      }),
+    ).toEqual({
+      title: "Москва",
+      meta: "2026-06-29 · Дербент, Каякент, Манас",
+    });
+  });
+
+  it("для короткого номера без рейса — номер, дата, склад", () => {
+    expect(
+      formatLoadingManifestCardHeader({
+        manifestNumber: "С айгид · Ф500ФФ · 29.06.2026 · Москва · 2026-06-29",
+        destinationName: "Москва",
+        docDate: "2026-06-29",
+        warehouseLabel: "Каякент",
+      }),
+    ).toEqual({
+      title: "№ С айгид · Ф500ФФ",
+      meta: "2026-06-29 · Каякент",
+    });
   });
 });
 

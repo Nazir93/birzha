@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { LoadingManifestDetail, LoadingManifestSummary } from "../../api/types.js";
 import {
   aggregateLoadingManifestLinesByCaliber,
-  formatLoadingManifestDisplayName,
+  formatLoadingManifestCardHeader,
   formatManifestWarehouseNames,
   loadingManifestRoadCsvContent,
 } from "../../format/loading-manifest.js";
@@ -87,6 +87,13 @@ export function LoadingManifestAccordion({
   const tripLabel = m.tripId ? (tripNumberById.get(m.tripId) ?? m.tripId) : "—";
   const isOpen = manifestId === m.id;
   const detailPath = `${manifestBasePath}/${encodeURIComponent(m.id)}`;
+  const cardHeader = formatLoadingManifestCardHeader({
+    manifestNumber: detail?.manifestNumber ?? m.manifestNumber,
+    destinationName: detail?.destinationName ?? m.destinationName,
+    docDate: detail?.docDate ?? m.docDate,
+    tripLabel: detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : tripLabel !== "—" ? tripLabel : "",
+    warehouseLabel,
+  });
 
   return (
     <details className="birzha-disclosure birzha-disclosure--nested" open={isOpen}>
@@ -102,13 +109,8 @@ export function LoadingManifestAccordion({
         }}
       >
         <span>
-          <strong>
-            {formatLoadingManifestDisplayName({
-              manifestNumber: m.manifestNumber,
-              destinationName: m.destinationName,
-            })}
-          </strong>{" "}
-          · {m.docDate} · {warehouseLabel} · рейс: {tripLabel}
+          <strong>{cardHeader.title}</strong>
+          {!isOpen && cardHeader.meta ? <> · {cardHeader.meta}</> : null}
         </span>
         <span className="birzha-disclosure__hint">
           {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг · {m.lineCount} парт. · ящ. ≈{" "}
@@ -132,20 +134,12 @@ export function LoadingManifestAccordion({
               <h3 id={`road-manifest-${detail.id}`} style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>
                 Погрузочная накладная
               </h3>
-              <p style={{ margin: "0 0 0.55rem", fontSize: "0.88rem", lineHeight: 1.45 }} className="birzha-text-muted">
-                <strong>
-                  {formatLoadingManifestDisplayName({
-                    manifestNumber: detail.manifestNumber,
-                    destinationName: detail.destinationName,
-                  })}
-                </strong>{" "}
-                · {detail.docDate} · {warehouseLabel}
-                {detail.tripId ? (
-                  <>
-                    {" "}
-                    · рейс: <strong>{roadTripLabel}</strong>
-                  </>
-                ) : null}
+              <p
+                className="birzha-loading-manifest-card-meta birzha-text-muted loading-manifest-print-meta"
+                style={{ margin: "0 0 0.55rem", fontSize: "0.88rem", lineHeight: 1.45 }}
+              >
+                <strong>{cardHeader.title}</strong>
+                {cardHeader.meta ? <> · {cardHeader.meta}</> : null}
               </p>
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
                 <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 420 }}>
@@ -211,12 +205,7 @@ export function LoadingManifestAccordion({
                     const a = document.createElement("a");
                     a.href = url;
                     const slug =
-                      formatLoadingManifestDisplayName({
-                        manifestNumber: detail.manifestNumber,
-                        destinationName: detail.destinationName,
-                      })
-                        .replace(/[/\\?%*:|"<>]/g, "-")
-                        .slice(0, 72) || "pn";
+                      cardHeader.title.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 72) || "pn";
                     a.download = `nakladnaya-na-mashinu-${slug}-${detail.docDate}.csv`;
                     a.rel = "noopener";
                     document.body.append(a);
