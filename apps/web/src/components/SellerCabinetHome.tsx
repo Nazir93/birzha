@@ -20,8 +20,13 @@ export function SellerCabinetHome() {
         <div>
           <p className="birzha-home-hero__eyebrow">Продажи</p>
           <h2 id="seller-cabinet-h" className="birzha-home-hero__title">
-            Кабинет продавца
+            {fieldSellerOnly ? "Продажа с рейса" : "Кабинет продавца"}
           </h2>
+          {fieldSellerOnly ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "36rem" }}>
+              Шаг за шагом: тип сделки → рейс → калибр → количество → оплата. Итоги — в меню «Отчёт по рейсу» и «Архив».
+            </p>
+          ) : null}
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
           {fieldSellerOnly ? (

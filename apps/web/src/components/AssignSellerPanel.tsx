@@ -18,6 +18,7 @@ import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.j
 import {
   aggregateSellerShipmentReports,
   clientSalePaymentLabelRu,
+  formatPackageCountLabel,
   tripLedgerMetrics,
 } from "../format/seller-trip-metrics.js";
 import {
@@ -268,6 +269,9 @@ export function AssignSellerPanel() {
               <div className="birzha-assign-seller__kpi-card">
                 <span className="birzha-assign-seller__kpi-label">Продано</span>
                 <span className="birzha-assign-seller__kpi-value">{gramsToKgLabel(sellerTotals.sold.toString())} кг</span>
+                <span className="birzha-assign-seller__kpi-hint birzha-ui-sm">
+                  {formatPackageCountLabel(sellerTotals.soldPackages)} ящ.
+                </span>
               </div>
               <div className="birzha-assign-seller__kpi-card birzha-assign-seller__kpi-card--accent">
                 <span className="birzha-assign-seller__kpi-label">Остаток погруженного</span>

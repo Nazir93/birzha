@@ -18,6 +18,7 @@ const minimalReport = (id: string, tripNumber: string): ShipmentReportResponse =
   },
   sales: {
     totalGrams: "400",
+    totalPackageCount: "4",
     totalRevenueKopecks: "40000",
     totalCashKopecks: "25000",
     totalDebtKopecks: "15000",
@@ -36,6 +37,7 @@ const minimalReport = (id: string, tripNumber: string): ShipmentReportResponse =
       {
         batchId: "b1",
         grams: "400",
+        packageCount: "4",
         revenueKopecks: "40000",
         cashKopecks: "25000",
         debtKopecks: "15000",
@@ -86,6 +88,7 @@ describe("aggregateSellerShipmentReports", () => {
     b.shipment.totalGrams = "2000";
     b.shipment.byBatch = [{ batchId: "b2", grams: "2000", packageCount: "20" }];
     b.sales.totalGrams = "500";
+    b.sales.totalPackageCount = "5";
     b.sales.totalRevenueKopecks = "50000";
     b.sales.retailGrams = "500";
     b.sales.wholesaleGrams = "0";
@@ -98,6 +101,7 @@ describe("aggregateSellerShipmentReports", () => {
       {
         batchId: "b2",
         grams: "500",
+        packageCount: "5",
         revenueKopecks: "50000",
         cashKopecks: "50000",
         debtKopecks: "0",
@@ -108,6 +112,7 @@ describe("aggregateSellerShipmentReports", () => {
     const tot = aggregateSellerShipmentReports([a, b]);
     expect(tot.shipped).toBe(3000n);
     expect(tot.sold).toBe(900n);
+    expect(tot.soldPackages).toBe(9n);
     expect(tot.revenue).toBe(90000n);
     expect(tot.cash).toBe(75000n);
     expect(tot.debt).toBe(15000n);
@@ -119,6 +124,7 @@ describe("aggregateSellerShipmentReports", () => {
     expect(aggregateSellerShipmentReports([])).toEqual({
       shipped: 0n,
       sold: 0n,
+      soldPackages: 0n,
       shortage: 0n,
       netTransit: 0n,
       revenue: 0n,

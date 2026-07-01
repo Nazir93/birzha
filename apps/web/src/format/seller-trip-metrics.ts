@@ -21,6 +21,7 @@ export function tripLedgerMetrics(r: ShipmentReportResponse) {
 export type SellerShipmentTotals = {
   shipped: bigint;
   sold: bigint;
+  soldPackages: bigint;
   shortage: bigint;
   netTransit: bigint;
   revenue: bigint;
@@ -29,9 +30,17 @@ export type SellerShipmentTotals = {
   cardTransfer: bigint;
 };
 
+export function formatPackageCountLabel(count: bigint): string {
+  if (count <= 0n) {
+    return "—";
+  }
+  return count.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+}
+
 export function aggregateSellerShipmentReports(reports: readonly ShipmentReportResponse[]): SellerShipmentTotals {
   let shipped = 0n;
   let sold = 0n;
+  let soldPackages = 0n;
   let shortage = 0n;
   let netTransit = 0n;
   let revenue = 0n;
@@ -41,6 +50,7 @@ export function aggregateSellerShipmentReports(reports: readonly ShipmentReportR
   for (const r of reports) {
     shipped += BigInt(r.shipment.totalGrams);
     sold += BigInt(r.sales.totalGrams);
+    soldPackages += BigInt(r.sales.totalPackageCount?.trim() || "0");
     shortage += BigInt(r.shortage.totalGrams);
     revenue += BigInt(r.sales.totalRevenueKopecks);
     cash += BigInt(r.sales.totalCashKopecks);
@@ -48,7 +58,7 @@ export function aggregateSellerShipmentReports(reports: readonly ShipmentReportR
     cardTransfer += BigInt(r.sales.totalCardTransferKopecks || "0");
     netTransit += tripLedgerMetrics(r).netTransitKg;
   }
-  return { shipped, sold, shortage, netTransit, revenue, cash, debt, cardTransfer };
+  return { shipped, sold, soldPackages, shortage, netTransit, revenue, cash, debt, cardTransfer };
 }
 
 /** Рейсы без закреплённого продавца — доступны для первичной привязки (повторно выбрать нельзя). */

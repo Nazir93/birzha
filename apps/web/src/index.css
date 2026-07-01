@@ -1043,6 +1043,18 @@ a.birzha-kpi-tile--link:focus-visible {
   background: var(--birzha-surface-muted);
 }
 
+.birzha-seller-sell-step {
+  margin-bottom: 1.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.birzha-seller-sell-step:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
 .birzha-seller-trip-card {
   border-left: 4px solid #a1a1aa;
 }
@@ -5991,6 +6003,13 @@ html[data-birzha-theme="dark"] .birzha-assign-seller__trip-row--active td {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text);
+}
+
+.birzha-assign-seller__kpi-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-muted);
+  font-weight: 500;
 }
 
 .birzha-assign-seller__section-title {

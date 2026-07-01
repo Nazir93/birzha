@@ -3,7 +3,7 @@
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
@@ -65,8 +65,34 @@ function gramsBigIntToKgDecimalString(g: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
+function SellerSellStep({
+  step,
+  title,
+  muted,
+  children,
+  headingId: stepHeadingId,
+}: {
+  step: number;
+  title: string;
+  muted?: boolean;
+  children: ReactNode;
+  headingId: string;
+}) {
+  return (
+    <section className="birzha-seller-sell-step" aria-labelledby={stepHeadingId}>
+      <span className={`birzha-seller-step-badge${muted ? " birzha-seller-step-badge--muted" : ""}`}>
+        Шаг {step}
+      </span>
+      <h4 id={stepHeadingId} className="birzha-seller-label" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
 /**
- * Форма продажи с рейса для кабинета продавца (/s): рейс → партия (калибр) → кг, цена, оплата.
+ * Форма продажи с рейса для кабинета продавца (/s): тип → рейс → калибр → количество → оплата.
  */
 export function SellFromTripSection() {
   const { meta } = useAuth();
@@ -320,15 +346,14 @@ export function SellFromTripSection() {
     ],
   );
 
+  const sellerDealTypeReady =
+    saleChannel === "retail" || (saleChannel === "wholesale" && wholesaleBuyerId.trim().length > 0);
+
   const applySellerCaliberTile = useCallback((tile: (typeof sellerTripSellTiles)[number]) => {
     setSellCaliberKey(tile.key);
     setSellBatchId(tile.group.primaryBatchId);
-    setSellKg(gramsBigIntToKgDecimalString(tile.group.totalNetG));
-    const estPkg = tile.group.rows.reduce(
-      (s, r) => s + estimateNetTransitPackageCountForSell(r, batchByIdForSell.get(r.batchId)),
-      0n,
-    );
-    setSellPackages(estPkg > 0n ? String(estPkg) : "");
+    setSellKg("");
+    setSellPackages("");
   }, []);
 
   const clearSellerSaleInputs = useCallback(() => {
@@ -741,195 +766,207 @@ export function SellFromTripSection() {
       {sellerSaleFlash ? (
         <SellerSaleSuccessOverlay data={sellerSaleFlash} onDismiss={() => setSellerSaleFlash(null)} />
       ) : null}
-      <section
-        className="birzha-seller-deal-kind"
-        aria-labelledby={`${idPrefix}-deal-kind-h`}
-        style={{ marginBottom: "0.9rem" }}
-      >
-        <h4 id={`${idPrefix}-deal-kind-h`} className="birzha-seller-label" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
-          Сначала выберите тип сделки
-        </h4>
-        <div className="birzha-seller-channel-pills" role="group" aria-label="Розница или опт">
-          <button
-            type="button"
-            className={`birzha-seller-channel-pills__btn${saleChannel === "retail" ? " birzha-seller-channel-pills__btn--active" : ""}`}
-            aria-pressed={saleChannel === "retail"}
-            onClick={() => {
-              setSaleChannel("retail");
-              setWholesaleBuyerId("");
-            }}
-          >
-            Розница
-          </button>
-          <button
-            type="button"
-            className={`birzha-seller-channel-pills__btn${saleChannel === "wholesale" ? " birzha-seller-channel-pills__btn--active" : ""}`}
-            aria-pressed={saleChannel === "wholesale"}
-            disabled={!wholesalersCatalog}
-            title={wholesalersCatalog ? undefined : "Опт недоступен"}
-            onClick={() => {
-              if (!wholesalersCatalog) {
-                return;
-              }
-              setSaleChannel("wholesale");
-              setSellClientLabel("");
-            }}
-          >
-            Опт
-          </button>
-        </div>
-        {!wholesalersCatalog ? (
-          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
-            Опт недоступен — розница.
-          </p>
-        ) : null}
-        {saleChannel === "wholesale" && wholesalersCatalog ? (
-          <div style={{ marginTop: "0.85rem" }}>
-            <SellerWholesalerPicker idPrefix={idPrefix} value={wholesaleBuyerId} onChange={setWholesaleBuyerId} />
+      <SellerSellStep step={1} title="Тип сделки" headingId={`${idPrefix}-deal-kind-h`}>
+        <div className="birzha-seller-deal-kind" aria-labelledby={`${idPrefix}-deal-kind-h`}>
+          <div className="birzha-seller-channel-pills" role="group" aria-label="Розница или опт">
+            <button
+              type="button"
+              className={`birzha-seller-channel-pills__btn${saleChannel === "retail" ? " birzha-seller-channel-pills__btn--active" : ""}`}
+              aria-pressed={saleChannel === "retail"}
+              onClick={() => {
+                setSaleChannel("retail");
+                setWholesaleBuyerId("");
+              }}
+            >
+              Розница
+            </button>
+            <button
+              type="button"
+              className={`birzha-seller-channel-pills__btn${saleChannel === "wholesale" ? " birzha-seller-channel-pills__btn--active" : ""}`}
+              aria-pressed={saleChannel === "wholesale"}
+              disabled={!wholesalersCatalog}
+              title={wholesalersCatalog ? undefined : "Опт недоступен"}
+              onClick={() => {
+                if (!wholesalersCatalog) {
+                  return;
+                }
+                setSaleChannel("wholesale");
+                setSellClientLabel("");
+              }}
+            >
+              Опт
+            </button>
           </div>
-        ) : null}
-      </section>
+          {!wholesalersCatalog ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.45rem 0 0" }}>
+              Опт недоступен — розница.
+            </p>
+          ) : null}
+          {saleChannel === "wholesale" && wholesalersCatalog ? (
+            <div style={{ marginTop: "0.85rem" }}>
+              <SellerWholesalerPicker idPrefix={idPrefix} value={wholesaleBuyerId} onChange={setWholesaleBuyerId} />
+            </div>
+          ) : null}
+        </div>
+      </SellerSellStep>
 
-      <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">Рейс *</span>
-      <>
-          {sellerTripsListQ.isPending && (
-            <p style={{ margin: "0 0 0.5rem" }} role="status">
-              <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
+      <SellerSellStep
+        step={2}
+        title="Рейс"
+        headingId={`${idPrefix}-trip-h`}
+        muted={!sellerDealTypeReady}
+      >
+        {!sellerDealTypeReady ? (
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
+            Сначала выберите оптового покупателя.
+          </p>
+        ) : (
+          <>
+            <span className="birzha-form-label birzha-form-label--block birzha-form-label--mb-xs">Рейс *</span>
+            {sellerTripsListQ.isPending && (
+              <p style={{ margin: "0 0 0.5rem" }} role="status">
+                <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
+              </p>
+            )}
+            {sellerTripsListQ.isError ? (
+              <ErrorAlert message="Рейсы не загрузились. Проверьте связь и обновите страницу." title="Список рейсов" />
+            ) : null}
+            {sellerTripsListQ.isSuccess && sellerTripOptions.length === 0 && (
+              <div style={{ marginBottom: "0.5rem" }}>
+                <BirzhaEmptyState
+                  compact
+                  title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
+                  description={
+                    sellerHasAssignedClosedOnly
+                      ? "Активных рейсов нет. Итоги по проданным и закрытым — в разделе «Архив» в меню."
+                      : undefined
+                  }
+                />
+              </div>
+            )}
+            {sellerTripsListQ.isSuccess && sellerTripOptions.length > 0 && (
+              <BirzhaSelect
+                id={`${idPrefix}-sel-trip`}
+                className={sellerFieldClass}
+                value={sellTripId}
+                onChange={(v) => {
+                  setSellTripId(v);
+                  setSellBatchId("");
+                  setSellCaliberKey(null);
+                  setSellKg("");
+                  setSellPackages("");
+                }}
+                aria-busy={sellerTripsListQ.isFetching || undefined}
+                style={sellerFieldMb}
+                placeholder="— Выберите рейс —"
+                options={[
+                  { value: "", label: "— Выберите рейс —" },
+                  ...sellerTripOptions.map((t: TripJson) => ({
+                    value: t.id,
+                    label: formatTripSelectLabel(t),
+                  })),
+                ]}
+              />
+            )}
+            {sellTripIdTrim && !selectedTripOpen ? (
+              <div style={{ marginTop: "0.65rem" }}>
+                <BirzhaAlert variant="info" title="Рейс закрыт" role="status" className="birzha-ui-sm">
+                  Продажи и остатки по этому рейсу скрыты. Итоги — в разделе{" "}
+                  <Link to={sales.archive} style={{ fontWeight: 600 }}>
+                    «Архив»
+                  </Link>
+                  .
+                </BirzhaAlert>
+              </div>
+            ) : null}
+          </>
+        )}
+      </SellerSellStep>
+
+      {selectedTripOpen && sellTripIdTrim ? (
+        <SellerSellStep step={3} title="Калибр на рейсе" headingId={`${idPrefix}-caliber-h`}>
+          {sellReportQuery.isFetching && (
+            <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
+              <LoadingIndicator
+                size="sm"
+                label={
+                  sellReportQuery.isPending ? "Загрузка остатков по рейсу…" : "Обновление остатков по рейсу…"
+                }
+              />
             </p>
           )}
-          {sellerTripsListQ.isError ? (
-            <ErrorAlert message="Рейсы не загрузились. Проверьте связь и обновите страницу." title="Список рейсов" />
+          {sellReportQuery.isError ? (
+            <WarningAlert title="Данные рейса">
+              Не удалось загрузить остатки по рейсу. Повторите позже или обратитесь к администратору.
+            </WarningAlert>
           ) : null}
-          {sellerTripsListQ.isSuccess && sellerTripOptions.length === 0 && (
-            <div style={{ marginBottom: "0.5rem" }}>
+          {sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
+            <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
               <BirzhaEmptyState
                 compact
-                title={sellerHasAssignedClosedOnly ? "Активных рейсов нет" : "Нет закреплённых рейсов"}
-                description={
-                  sellerHasAssignedClosedOnly
-                    ? "Активных рейсов нет. Итоги по проданным и закрытым — в разделе «Архив» в меню."
-                    : undefined
-                }
+                title={!tripHasPositiveShipment ? "Нет отгрузки в рейс" : "Нечего продавать"}
               />
             </div>
           )}
-          {sellerTripsListQ.isSuccess && sellerTripOptions.length > 0 && (
-            <BirzhaSelect
-              id={`${idPrefix}-sel-trip`}
-              className={sellerFieldClass}
-              value={sellTripId}
-              onChange={(v) => {
-                setSellTripId(v);
-                setSellBatchId("");
-                setSellKg("");
-                setSellPackages("");
-              }}
-              aria-busy={sellerTripsListQ.isFetching || undefined}
-              style={sellerFieldMb}
-              placeholder="— Выберите рейс —"
-              options={[
-                { value: "", label: "— Выберите рейс —" },
-                ...sellerTripOptions.map((t: TripJson) => ({
-                  value: t.id,
-                  label: formatTripSelectLabel(t),
-                })),
-              ]}
-            />
-          )}
-      </>
-      {sellTripIdTrim && !selectedTripOpen ? (
-        <div style={{ marginTop: "0.65rem" }}>
-          <BirzhaAlert variant="info" title="Рейс закрыт" role="status" className="birzha-ui-sm">
-            Продажи и остатки по этому рейсу скрыты. Итоги — в разделе{" "}
-            <Link to={sales.archive} style={{ fontWeight: 600 }}>
-              «Архив»
-            </Link>
-            .
-          </BirzhaAlert>
-        </div>
-      ) : null}
-      {selectedTripOpen && sellReportQuery.isFetching && (
-        <p style={{ marginTop: 0, marginBottom: "0.5rem" }} role="status" aria-live="polite">
-          <LoadingIndicator
-            size="sm"
-            label={
-              sellReportQuery.isPending ? "Загрузка остатков по рейсу…" : "Обновление остатков по рейсу…"
-            }
-          />
-        </p>
-      )}
-      {selectedTripOpen && sellReportQuery.isError ? (
-        <WarningAlert title="Данные рейса">
-          Не удалось загрузить остатки по рейсу. Повторите позже или обратитесь к администратору.
-        </WarningAlert>
-      ) : null}
-      {selectedTripOpen && sellReportQuery.isSuccess && sellableOnTripRows.length === 0 && (
-        <div style={{ marginTop: 0, marginBottom: "0.5rem" }}>
-          <BirzhaEmptyState
-            compact
-            title={!tripHasPositiveShipment ? "Нет отгрузки в рейс" : "Нечего продавать"}
-          />
-        </div>
-      )}
-      {selectedTripOpen && sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
-        <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
-          <LoadingIndicator size="sm" label="Загрузка калибров…" />
-        </p>
-      )}
-      {selectedTripOpen ? (
-      <fieldset
-          className="birzha-seller-caliber-fieldset"
-          style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
-        >
-          <legend className="birzha-form-label" style={{ padding: 0, marginBottom: "0.35rem" }}>
-            Калибр на рейсе *
-          </legend>
-          {sellBatchSelectDisabled ? (
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              {sellerCaliberGridStatusMessage}
+          {sellReportQuery.isSuccess && sellableOnTripRows.length > 0 && batchesForTripQuery.isFetching && (
+            <p style={{ marginTop: 0, marginBottom: "0.45rem", fontSize: "0.86rem" }} role="status">
+              <LoadingIndicator size="sm" label="Загрузка калибров…" />
             </p>
-          ) : (
-            <>
-              {sellerTripSellTiles.length === 0 ? (
-                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-                  Нет строк.
-                </p>
-              ) : (
-                <div
-                  className="birzha-seller-caliber-grid"
-                  role="listbox"
-                  aria-label="Калибры на рейсе (остаток в машине)"
-                  id={`${idPrefix}-sel-batch`}
-                >
-                  {sellerTripSellTiles.map((t) => {
-                    const selected = sellCaliberKey === t.key;
-                    const kgLine = gramsBigIntToKgDecimalString(t.totalNetG);
-                    return (
-                      <button
-                        key={t.key}
-                        type="button"
-                        className={
-                          selected
-                            ? "birzha-seller-caliber-tile birzha-seller-caliber-tile--selected"
-                            : "birzha-seller-caliber-tile"
-                        }
-                        role="option"
-                        aria-selected={selected}
-                        onClick={() => applySellerCaliberTile(t)}
-                      >
-                        <span className="birzha-seller-caliber-tile__line">{t.headline}</span>
-                        <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </>
           )}
-        </fieldset>
+          <fieldset
+            className="birzha-seller-caliber-fieldset"
+            style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}
+          >
+            <legend className="birzha-sr-only">Калибр на рейсе</legend>
+            {sellBatchSelectDisabled ? (
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+                {sellerCaliberGridStatusMessage}
+              </p>
+            ) : (
+              <>
+                {sellerTripSellTiles.length === 0 ? (
+                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
+                    Нет строк.
+                  </p>
+                ) : (
+                  <div
+                    className="birzha-seller-caliber-grid"
+                    role="listbox"
+                    aria-label="Калибры на рейсе (остаток в машине)"
+                    id={`${idPrefix}-sel-batch`}
+                  >
+                    {sellerTripSellTiles.map((t) => {
+                      const selected = sellCaliberKey === t.key;
+                      const kgLine = gramsBigIntToKgDecimalString(t.totalNetG);
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          className={
+                            selected
+                              ? "birzha-seller-caliber-tile birzha-seller-caliber-tile--selected"
+                              : "birzha-seller-caliber-tile"
+                          }
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => applySellerCaliberTile(t)}
+                        >
+                          <span className="birzha-seller-caliber-tile__line">{t.headline}</span>
+                          <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </fieldset>
+        </SellerSellStep>
       ) : null}
-      {selectedTripOpen ? (
+
+      {selectedTripOpen && sellCaliberKey ? (
         <>
+      <SellerSellStep step={4} title="Количество и цена" headingId={`${idPrefix}-qty-h`}>
       {sellSelectionSummary && (
         <p
           className="birzha-callout-info"
@@ -1014,6 +1051,9 @@ export function SellFromTripSection() {
           <span className="birzha-text-muted">—</span>
         )}
       </p>
+      </SellerSellStep>
+
+      <SellerSellStep step={5} title="Оплата и сохранение" headingId={`${idPrefix}-pay-h`}>
       <label htmlFor={`${idPrefix}-sel-pay`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
         Как оплачивает клиент *
       </label>
@@ -1132,6 +1172,7 @@ export function SellFromTripSection() {
         {sell.isPending ? "Сохранение…" : "Зафиксировать продажу"}
       </button>
       <FieldError error={sell.error as Error | null} />
+      </SellerSellStep>
         </>
       ) : null}
       {selectedTripOpen && sellTripIdTrim ? (
