@@ -76,6 +76,8 @@ export type UseDistributionWorkspaceParams = {
   appendTargetManifestId: string | null;
   loadNaklSelection: ReadonlySet<string>;
   distributionBase: string;
+  /** Режим экрана: append — догрузка (склад всегда), trip — только привязка рейса. */
+  workspaceMode?: "default" | "append" | "trip";
 };
 
 export function useDistributionWorkspace({
@@ -86,6 +88,7 @@ export function useDistributionWorkspace({
   appendTargetManifestId,
   loadNaklSelection,
   distributionBase,
+  workspaceMode = "default",
 }: UseDistributionWorkspaceParams) {
   const { meta } = useAuth();
   const queryClient = useQueryClient();
@@ -141,7 +144,12 @@ export function useDistributionWorkspace({
     enabled: Boolean(routeManifestId.trim()),
   });
 
-  const viewingSaved = Boolean(routeManifestId.trim());
+  const viewingSaved =
+    workspaceMode === "append"
+      ? false
+      : workspaceMode === "trip"
+        ? Boolean(routeManifestId.trim())
+        : Boolean(routeManifestId.trim());
   const activeManifestId = routeManifestId.trim() || savedManifestId;
 
   const warehouseName = useCallback(

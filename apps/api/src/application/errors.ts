@@ -156,6 +156,18 @@ export class WarehouseCodeConflictError extends Error {
   }
 }
 
+/** Склад с таким названием уже есть. */
+export class WarehouseNameConflictError extends Error {
+  readonly warehouseName: string;
+
+  constructor(warehouseName: string) {
+    super(`Склад с таким названием уже есть: ${warehouseName}`);
+    this.name = "WarehouseNameConflictError";
+    this.warehouseName = warehouseName;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Код калибра уже занят (уникальный `product_grades.code`). */
 export class ProductGradeCodeConflictError extends Error {
   readonly code: string;

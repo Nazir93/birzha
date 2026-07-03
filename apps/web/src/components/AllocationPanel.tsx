@@ -48,10 +48,11 @@ export function AllocationPanel() {
   const canShip = canShipLoadingManifest(user);
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
+  const appendBase = adminAwarePathForPath(pathname, adminRoutes.loadingAppend, ops.loadingAppend);
+  const tripBase = adminAwarePathForPath(pathname, adminRoutes.loadingTrip, ops.loadingTrip);
   const archiveBase = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const tripsBase = adminAwarePathForPath(pathname, adminRoutes.trips, ops.trips);
   const queryClient = useQueryClient();
-  const [assignTripId, setAssignTripId] = useState("");
   const [newManifestTripId, setNewManifestTripId] = useState(() => readPreferredLoadingTripId() ?? "");
   const [appendTargetManifestId, setAppendTargetManifestId] = useState<string | null>(null);
 
@@ -124,33 +125,6 @@ export function AllocationPanel() {
     activeManifestId,
   } = workspace;
 
-  const startAnotherWarehouseLoad = useCallback(
-    (tripId: string, manifestId: string, destinationCode: string) => {
-      const mid = manifestId.trim();
-      if (!mid) {
-        return;
-      }
-      const id = tripId.trim();
-      if (id) {
-        setNewManifestTripId(id);
-        writePreferredLoadingTripId(id);
-      }
-      setAppendTargetManifestId(mid);
-      setSelectedWarehouse("");
-      writePreferredWarehouseId(null);
-      setManifestFormOpen(false);
-      setLoadNaklSelection(new Set());
-      setSavedManifestId("");
-      if (destinationCode.trim()) {
-        setManifestDestinationCode(destinationCode.trim());
-      }
-      if (routeManifestId.trim()) {
-        void navigate(distributionBase);
-      }
-    },
-    [navigate, distributionBase, routeManifestId],
-  );
-
   useEffect(() => {
     if (!tripsQuery.isSuccess || !newManifestTripId.trim()) {
       return;
@@ -161,30 +135,6 @@ export function AllocationPanel() {
       writePreferredLoadingTripId(null);
     }
   }, [tripsQuery.isSuccess, openTripsForAssign, newManifestTripId]);
-
-  const assignTrip = useMutation({
-    mutationFn: async () => {
-      const id = routeManifestId.trim();
-      if (!id || !assignTripId.trim()) {
-        throw new Error("Выберите рейс для привязки.");
-      }
-      await apiPostJson(`/api/loading-manifests/${encodeURIComponent(id)}/assign-trip`, {
-        tripId: assignTripId.trim(),
-      });
-    },
-    onSuccess: () => {
-      void refreshDistributionLists(queryClient);
-    },
-  });
-
-  const detachTrip = useMutation({
-    mutationFn: async (manifestId: string) => {
-      await apiPostJson(`/api/loading-manifests/${encodeURIComponent(manifestId)}/detach-trip`, {});
-    },
-    onSuccess: () => {
-      void refreshDistributionLists(queryClient);
-    },
-  });
 
   const deleteLoadingManifest = useMutation({
     mutationFn: async (manifestId: string) => {
@@ -333,7 +283,6 @@ export function AllocationPanel() {
       setAppendTargetManifestId(null);
       setCreateManifestWarning(res.assignTripWarning ?? null);
       if (tripId) {
-        setAssignTripId(tripId);
         writePreferredLoadingTripId(tripId);
       }
       if (manifestDestinationCode) {
@@ -744,19 +693,20 @@ export function AllocationPanel() {
                   detail={routeDetail && routeDetail.id === openManifestSummary.id ? routeDetail : null}
                   detailLoading={routeDetailQuery.isPending}
                   detailError={routeDetailQuery.isError}
-                  assignTripId={assignTripId}
-                  setAssignTripId={setAssignTripId}
-                  assignTrip={assignTrip}
-                  detachTrip={canShip ? detachTrip : undefined}
-                  trips={openTripsForAssign}
-                  canAppendLoad={!viewingArchivedManifest && canShip}
-                  canShipTrip={canShip}
-                  onAppendLoad={() =>
-                    startAnotherWarehouseLoad(
-                      openManifestSummary.tripId ?? "",
-                      openManifestSummary.id,
-                      openManifestSummary.destinationCode,
-                    )
+                  assignTripId=""
+                  setAssignTripId={() => undefined}
+                  assignTrip={{ mutate: () => undefined, isPending: false, isError: false, error: null }}
+                  trips={[]}
+                  variant="view"
+                  appendSectionPath={
+                    !viewingArchivedManifest && canShip
+                      ? `${appendBase}/${encodeURIComponent(openManifestSummary.id)}`
+                      : undefined
+                  }
+                  tripSectionPath={
+                    !viewingArchivedManifest
+                      ? `${tripBase}/${encodeURIComponent(openManifestSummary.id)}`
+                      : undefined
                   }
                 />
               ) : routeDetailQuery.isPending ? (

@@ -2,6 +2,13 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "@playwright/test";
 
+import {
+  birzhaSelectTrigger,
+  expectBirzhaSelectHasOption,
+  labelPattern,
+  pickBirzhaSelectByLabel,
+  pickBirzhaSelectFirstRealOption,
+} from "./birzha-select-helpers.js";
 import { kopecksToRubLabel } from "./kopecks-label.js";
 
 /** Как `apps/api/src/application/units/rub-kopecks.ts` — только для сверки с отчётом в E2E. */
@@ -52,10 +59,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
 
-    const select = page.locator("#trip-select");
+    const select = birzhaSelectTrigger(page, "#trip-select");
     await expect(select).toBeVisible({ timeout: 15_000 });
-    // <option> в закрытом <select> не «visible» для Playwright — проверяем состав списка по тексту
-    await expect(select).toContainText(tripNumber);
+    await expectBirzhaSelectHasOption(page, "#trip-select", labelPattern(tripNumber));
   });
 
   test("отчёты: выбор рейса загружает блок отчёта (shipment-report)", async ({ page, request }) => {
@@ -69,7 +75,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
 
-    await page.selectOption("#trip-select", id);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
       timeout: 15_000,
     });
@@ -121,7 +127,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
       timeout: 15_000,
     });
@@ -168,7 +174,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
     await expect(region.getByRole("heading", { name: "Массы, кг (из граммов)" })).toBeVisible();
@@ -227,7 +233,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
     await page.goto("/o/reports");
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
     await expect(region).toContainText(`${cashLabel} ₽ / ${cardLabel} ₽ / ${debtLabel} ₽`);
@@ -290,7 +296,7 @@ test.describe("золотой smoke (UI + API)", () => {
     const debtLabel = kopecksToRubLabel(report.sales.totalDebtKopecks);
 
     await page.goto("/o/reports");
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
     await expect(region).toContainText(`${cashLabel} ₽ / ${cardLabel} ₽ / ${debtLabel} ₽`);
@@ -394,7 +400,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     const region = page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` });
     await expect(region).toBeVisible({ timeout: 15_000 });
 
@@ -434,7 +440,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 30_000 });
-    await page.selectOption("#trip-select", tripId);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
       timeout: 15_000,
     });
@@ -472,7 +478,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto(`/o/reports?trip=${encodeURIComponent(id)}`);
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#trip-select")).toHaveValue(id, { timeout: 15_000 });
+    await expect(birzhaSelectTrigger(page, "#trip-select")).toContainText(tripNumber, { timeout: 15_000 });
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
       timeout: 15_000,
     });
@@ -488,7 +494,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
-    await page.selectOption("#trip-select", id);
+    await pickBirzhaSelectByLabel(page, "#trip-select", labelPattern(tripNumber));
     await expect(page.getByRole("region", { name: `Отчёт по рейсу ${tripNumber}` })).toBeVisible({
       timeout: 15_000,
     });
@@ -496,8 +502,8 @@ test.describe("золотой smoke (UI + API)", () => {
 
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Удалить пустой рейс" }).click();
-    await expect(page.locator("#trip-select")).toHaveValue("", { timeout: 15_000 });
-    await expect(page.locator("#trip-select")).not.toContainText(tripNumber);
+    await expect(birzhaSelectTrigger(page, "#trip-select")).toContainText("—", { timeout: 15_000 });
+    await expect(birzhaSelectTrigger(page, "#trip-select")).not.toContainText(tripNumber);
   });
 
   test("погрузка: раздел и legacy /distribution → /o/distribution", async ({ page }) => {
@@ -511,6 +517,18 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/o/loading-manifests");
     await expect(page).toHaveURL(/\/o\/distribution$/);
+  });
+
+  test("догрузка и смена рейса: отдельные разделы /o", async ({ page }) => {
+    await page.goto("/o/loading-append");
+    await expect(page).toHaveURL(/\/o\/loading-append$/);
+    await expect(page.getByRole("region", { name: "Догрузка" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Догрузка" })).toBeVisible();
+
+    await page.goto("/o/loading-trip");
+    await expect(page).toHaveURL(/\/o\/loading-trip$/);
+    await expect(page.getByRole("region", { name: "Смена рейса" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Смена рейса" })).toBeVisible();
   });
 
   test("операции: панель и таблица партий (GET /api/batches)", async ({ page, request }) => {
@@ -598,8 +616,8 @@ test.describe("золотой smoke (UI + API)", () => {
       timeout: 15_000,
     });
 
-    await page.selectOption("#op-in-short-batch", batchId);
-    await page.selectOption("#op-sel-short-trip", tripId);
+    await pickBirzhaSelectFirstRealOption(page, "#op-in-short-batch");
+    await pickBirzhaSelectByLabel(page, "#op-sel-short-trip", labelPattern(tripNumber));
     await page.fill("#op-in-short-kg", "2");
     await page.fill("#op-in-short-reason", reason);
     await page.getByRole("button", { name: "Зафиксировать недостачу" }).click();
@@ -680,11 +698,11 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByText("А111АА 77")).toBeVisible();
   });
 
-  test("погрузка: остаток после закупки → отбор и шаг «Готово — погрузочная накладная»", async ({ page, request }) => {
+  test("погрузка: остаток после закупки → отбор (in-memory, просмотр)", async ({ page, request }) => {
     const suffix = `${Date.now()}`;
     const docId = `e2e-dist-nakl-${suffix}`;
 
-    let res = await request.post("/api/purchase-documents", {
+    const res = await request.post("/api/purchase-documents", {
       data: {
         id: docId,
         documentNumber: `НФ-DIST-${suffix.slice(-8)}`,
@@ -705,27 +723,17 @@ test.describe("золотой smoke (UI + API)", () => {
     });
     expect(res.ok()).toBeTruthy();
 
-    res = await request.post("/api/trips", {
-      data: { id: `e2e-dist-trip-${suffix}`, tripNumber: `DIST-${suffix.slice(-8)}` },
-    });
-    expect(res.ok()).toBeTruthy();
-
     await page.goto("/o/distribution");
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
-    await page.selectOption("#alloc-sel-warehouse", "wh-manas");
+    await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
     await expect(page.getByText("1. Списание и отбор партий")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: new RegExp(docId) })).toBeVisible({ timeout: 15_000 });
 
-    const readyBtn = page.getByRole("button", { name: "Готово — погрузочная накладная" });
-    await expect(readyBtn).toBeEnabled({ timeout: 15_000 });
-    await readyBtn.click();
-
-    await expect(page.getByRole("region", { name: "Новая погрузочная накладная" })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByRole("button", { name: "Сохранить погрузочную накладную" })).toBeVisible();
-    await expect(page.locator("option", { hasText: `DIST-${suffix.slice(-8)}` })).toHaveCount(1);
+    await expect(
+      page.getByText("Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста"),
+    ).toBeVisible();
   });
 
   test("продавец и продажи: раздел /o/assign-seller и редирект seller-dispatch", async ({ page }) => {
@@ -741,9 +749,11 @@ test.describe("золотой smoke (UI + API)", () => {
     await page.goto("/s");
     await expect(page.getByRole("heading", { name: "Кабинет продавца" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Продажа с рейса" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Тип сделки" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Розница или опт" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Розница" })).toBeVisible();
-    await expect(page.getByText("Сначала выберите тип сделки")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Рейс" })).toBeVisible();
+    await expect(birzhaSelectTrigger(page, "#seller-sell-sel-trip")).toBeVisible();
   });
 
   test("продавец: после отгрузки в рейс — калибры на /s", async ({ page, request }) => {
@@ -775,11 +785,16 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto(`/s?trip=${encodeURIComponent(tripId)}`);
     await expect(page.getByRole("heading", { name: "Продажа с рейса" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#seller-sell-sel-trip")).toHaveValue(tripId, { timeout: 15_000 });
+    await expect(birzhaSelectTrigger(page, "#seller-sell-sel-trip")).toContainText(tripNumber, {
+      timeout: 15_000,
+    });
     await expect(page.getByRole("listbox", { name: "Калибры на рейсе (остаток в машине)" })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole("option", { name: /12 кг/ })).toBeVisible();
+    const caliberOption = page.getByRole("option", { name: /12 кг/ });
+    await expect(caliberOption).toBeVisible();
+    await caliberOption.click();
+    await expect(page.getByRole("region", { name: "Количество и цена" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByLabel("Сколько килограмм в этой сделке *")).toBeVisible();
     await expect(page.getByLabel("Цена за 1 кг, руб *")).toBeVisible();
   });
@@ -886,6 +901,8 @@ test.describe("золотой smoke (UI + API)", () => {
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible({ timeout: 15_000 });
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Догрузка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Смена рейса" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Архив" })).toBeVisible();
@@ -901,8 +918,8 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/a/reports");
     await expect(page.getByRole("heading", { name: "Рейсы и отчёт по фуре" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#trip-select")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#trip-select")).toContainText(tripNumber);
+    await expect(birzhaSelectTrigger(page, "#trip-select")).toBeVisible({ timeout: 15_000 });
+    await expectBirzhaSelectHasOption(page, "#trip-select", labelPattern(tripNumber));
   });
 
   test("админ: без PostgreSQL — dashboard-summary недоступен", async ({ page, request }) => {
@@ -978,15 +995,17 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёт по рейсу" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Деньги, остатки и рейсы" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Сверка по рейсам" })).toBeVisible();
   });
 
-  test("бухгалтерия: /b без PostgreSQL — остатки не загружаются", async ({ page, request }) => {
+  test("бухгалтерия: /b без PostgreSQL — только деньги по рейсам", async ({ page, request }) => {
     const res = await request.get("/api/stock-balances");
     expect(res.status()).toBe(404);
 
     await page.goto("/b");
-    await expect(page.getByText("Остатки не загрузились")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Сверка по рейсам" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Остатки не загрузились")).toHaveCount(0);
+    await expect(page.getByText("Выручка, себестоимость и валовая прибыль")).toBeVisible();
   });
 
   test("бухгалтерия: /b/reports — отчёт (сверка)", async ({ page, request }) => {
@@ -999,8 +1018,8 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await page.goto("/b/reports");
     await expect(page.getByRole("heading", { name: "Отчёт по рейсу (сверка)" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#trip-select")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator("#trip-select")).toContainText(tripNumber);
+    await expect(birzhaSelectTrigger(page, "#trip-select")).toBeVisible({ timeout: 15_000 });
+    await expectBirzhaSelectHasOption(page, "#trip-select", labelPattern(tripNumber));
   });
 
   test("бухгалтерия: /b/counterparties — справочник (in-memory)", async ({ page, request }) => {
@@ -1022,7 +1041,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/b\/?$/);
   });
 
-  test("навигация: боковое меню /o (закупка → рейсы → погрузка → недостача → отчёты)", async ({ page }) => {
+  test("навигация: боковое меню /o (закупка → рейсы → погрузка → догрузка → смена рейса)", async ({ page }) => {
     await page.goto("/o/reports");
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible();
@@ -1038,6 +1057,14 @@ test.describe("золотой smoke (UI + API)", () => {
     await nav.getByRole("link", { name: "Погрузка на машину" }).click();
     await expect(page).toHaveURL(/\/o\/distribution$/);
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
+
+    await nav.getByRole("link", { name: "Догрузка" }).click();
+    await expect(page).toHaveURL(/\/o\/loading-append$/);
+    await expect(page.getByRole("region", { name: "Догрузка" })).toBeVisible({ timeout: 15_000 });
+
+    await nav.getByRole("link", { name: "Смена рейса" }).click();
+    await expect(page).toHaveURL(/\/o\/loading-trip$/);
+    await expect(page.getByRole("region", { name: "Смена рейса" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Недостача по рейсу" }).click();
     await expect(page).toHaveURL(/\/o\/operations$/);

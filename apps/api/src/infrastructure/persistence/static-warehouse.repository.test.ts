@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { WarehouseCodeConflictError } from "../../application/errors.js";
+import { WarehouseCodeConflictError, WarehouseNameConflictError } from "../../application/errors.js";
 
 import { StaticWarehouseRepository } from "./static-warehouse.repository.js";
 
@@ -19,5 +19,10 @@ describe("StaticWarehouseRepository", () => {
   it("бросает при конфликте явного кода", async () => {
     const r = new StaticWarehouseRepository();
     await expect(r.create({ name: "Дубль", code: "MANAS" })).rejects.toThrow(WarehouseCodeConflictError);
+  });
+
+  it("бросает при дубликате названия", async () => {
+    const r = new StaticWarehouseRepository();
+    await expect(r.create({ name: "Манас" })).rejects.toThrow(WarehouseNameConflictError);
   });
 });

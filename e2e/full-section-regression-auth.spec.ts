@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { birzhaSelectTrigger, labelPattern, pickBirzhaSelectByLabel } from "./birzha-select-helpers.js";
+
 const E2E_DEFAULT_TEST_PASSWORD = "E2e-birzha-test-99";
 const authPg = !!process.env.E2E_DATABASE_URL;
 const describeAuth = authPg ? test.describe : test.describe.skip;
@@ -16,6 +18,13 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await page.getByRole("button", { name: "Войти" }).click();
   }
 
+  async function apiLogin(request: import("@playwright/test").APIRequestContext, user: string): Promise<string> {
+    const res = await request.post("/api/auth/login", { data: { login: user, password } });
+    expect(res.status()).toBe(200);
+    const body = (await res.json()) as { token: string };
+    return body.token;
+  }
+
   test("админ: все разделы /a доступны и содержат ключевые кнопки", async ({ page }) => {
     await login(page, "e2e_admin");
     await expect(page).toHaveURL(/\/a\/?$/, { timeout: 20_000 });
@@ -29,6 +38,12 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await page.goto("/a/distribution");
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible();
     await expect(page.getByLabel("Склад *")).toBeVisible();
+
+    await page.goto("/a/loading-append");
+    await expect(page.getByRole("region", { name: "Догрузка" })).toBeVisible();
+
+    await page.goto("/a/loading-trip");
+    await expect(page.getByRole("region", { name: "Смена рейса" })).toBeVisible();
 
     await page.goto("/a/trips");
     await expect(page.getByRole("heading", { name: "Рейсы", exact: true })).toBeVisible();
@@ -60,6 +75,8 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Погрузка на машину" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Догрузка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Смена рейса" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Настройки" })).toHaveCount(0);
@@ -77,11 +94,84 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await page.goto("/o/distribution");
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible();
 
+    await page.goto("/o/loading-append");
+    await expect(page.getByRole("region", { name: "Догрузка" })).toBeVisible();
+
+    await page.goto("/o/loading-trip");
+    await expect(page.getByRole("region", { name: "Смена рейса" })).toBeVisible();
+
     await page.goto("/o/assign-seller");
     await expect(page.getByRole("heading", { name: "Продажи по продавцу" })).toBeVisible();
 
     await page.goto("/o/operations");
     await expect(page.getByRole("button", { name: "Зафиксировать недостачу" })).toBeVisible();
+  });
+
+  test("логист: ПН без рейса → ссылки догрузки/смены рейса и привязка", async ({ page, request }) => {
+    await login(page, "e2e_logistics");
+    await expect(page).toHaveURL(/\/o\/reports$/, { timeout: 20_000 });
+
+    const token = await apiLogin(request, "e2e_logistics");
+    const auth = { authorization: `Bearer ${token}` };
+    const suffix = `${Date.now()}`;
+    const docId = `e2e-pg-pn-${suffix}`;
+    const tripNumber = `PG-PN-${suffix.slice(-8)}`;
+
+    let res = await request.post("/api/purchase-documents", {
+      headers: auth,
+      data: {
+        id: docId,
+        documentNumber: `НФ-PG-${suffix.slice(-8)}`,
+        docDate: "2026-06-07",
+        warehouseId: "wh-manas",
+        supplierName: `E2E-PG-${suffix.slice(-6)}`,
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 15,
+            packageCount: 3,
+            pricePerKg: 30,
+            lineTotalKopecks: 45_000,
+          },
+        ],
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    const docRes = await request.get(`/api/purchase-documents/${docId}`, { headers: auth });
+    expect(docRes.ok()).toBeTruthy();
+    const doc = (await docRes.json()) as { lines: { batchId: string }[] };
+    const batchIds = doc.lines.map((l) => l.batchId);
+
+    res = await request.post("/api/trips", {
+      headers: auth,
+      data: { id: `e2e-pg-trip-${suffix}`, tripNumber },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    res = await request.post("/api/loading-manifests", {
+      headers: auth,
+      data: {
+        warehouseId: "wh-manas",
+        destinationCode: "regions",
+        batchIds,
+        docDate: "2026-06-07",
+        manifestNumber: `E2E-PG-PN-${suffix.slice(-8)}`,
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+    const { manifestId } = (await res.json()) as { manifestId: string };
+
+    await page.goto(`/o/distribution/${encodeURIComponent(manifestId)}`);
+    await expect(page.getByRole("link", { name: "Догрузить товар →" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "Сменить рейс →" })).toBeVisible();
+
+    await page.goto(`/o/loading-trip/${encodeURIComponent(manifestId)}`);
+    await expect(page.getByRole("region", { name: "Смена рейса" })).toBeVisible({ timeout: 15_000 });
+    await pickBirzhaSelectByLabel(page, "#loading-trip-select", labelPattern(tripNumber));
+    await page.getByRole("button", { name: "Привязать к рейсу" }).click();
+    await expect(birzhaSelectTrigger(page, "#loading-trip-select")).toContainText(tripNumber, { timeout: 15_000 });
   });
 
   test("продавец: /s только seller-разделы", async ({ page }) => {

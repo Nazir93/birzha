@@ -7,7 +7,6 @@ import { formatTripStatusLabel } from "../format/trip-label.js";
 import { shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
-import { HorizontalBarChart } from "../ui/charts/HorizontalBarChart.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
@@ -36,32 +35,6 @@ export function AccountingTripsSummary() {
 
   const anyLoading = reportQueries.some((q) => q.isPending) && sortedTrips.length > 0;
   const hasError = reportQueries.some((q) => q.isError);
-
-  const reportRevenueFingerprint = reportQueries
-    .map((q) => `${q.status}:${q.data?.financials.revenueKopecks ?? ""}`)
-    .join("|");
-
-  const revenueChartItems = useMemo(() => {
-    const items: { label: string; value: number; display: string }[] = [];
-    for (let i = 0; i < sortedTrips.length; i++) {
-      const q = reportQueries[i];
-      const t = sortedTrips[i];
-      if (!t || !q?.data) {
-        continue;
-      }
-      const kopecks = Number(q.data.financials.revenueKopecks || 0);
-      const rub = kopecks / 100;
-      if (rub <= 0) {
-        continue;
-      }
-      items.push({
-        label: t.tripNumber,
-        value: rub,
-        display: `${rub.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₽`,
-      });
-    }
-    return items;
-  }, [sortedTrips, reportRevenueFingerprint]);
 
   const tripTotals = useMemo(() => {
     let kg = 0n;
@@ -117,16 +90,6 @@ export function AccountingTripsSummary() {
         </span>
       }
     >
-      {revenueChartItems.length > 0 ? (
-        <div className="birzha-chart-card birzha-chart-card--premium" style={{ marginBottom: "0.9rem" }}>
-          <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", fontWeight: 600 }}>Выручка по рейсам</h4>
-          <HorizontalBarChart
-            items={revenueChartItems}
-            emptyHint="Нет данных для диаграммы."
-            valueSuffix="₽"
-          />
-        </div>
-      ) : null}
       {anyLoading && (
         <p style={{ margin: "0 0 0.5rem" }} role="status" aria-live="polite">
           <LoadingIndicator size="sm" label="Загрузка отчётов по рейсам…" />

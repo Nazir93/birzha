@@ -49,6 +49,13 @@ describe("role-panels", () => {
     expect(hrefForPanelInCabinet(admin, "settings", "admin")).toBe(adminRoutes.settingsCatalog);
   });
 
+  it("loadingAppend и loadingTrip доступны тем же ролям, что и distribution", () => {
+    const u = userWithRoles("warehouse");
+    expect(hrefForPanelInCabinet(u, "loadingAppend", "operations")).toBe(ops.loadingAppend);
+    expect(hrefForPanelInCabinet(userWithRoles("admin"), "loadingTrip", "admin")).toBe(adminRoutes.loadingTrip);
+    expect(canAccessPanel(userWithRoles("accountant"), "loadingAppend")).toBe(false);
+  });
+
   it("loadingManifests ведёт на единый раздел distribution", () => {
     expect(hrefForPanelInCabinet(userWithRoles("warehouse"), "loadingManifests", "operations")).toBe(
       ops.distribution,
@@ -102,10 +109,12 @@ describe("role-panels", () => {
     expect(order[0]).toBe("reports");
   });
 
-  it("operationsPanelOrder: рейсы выше погрузки (создание рейса до ПН)", () => {
+  it("operationsPanelOrder: рейсы выше погрузки; догрузка и смена рейса после погрузки", () => {
     const order = operationsPanelOrder(userWithRoles("warehouse"));
     expect(order.indexOf("trips")).toBeGreaterThan(order.indexOf("nakladnaya"));
     expect(order.indexOf("distribution")).toBeGreaterThan(order.indexOf("trips"));
+    expect(order.indexOf("loadingAppend")).toBeGreaterThan(order.indexOf("distribution"));
+    expect(order.indexOf("loadingTrip")).toBeGreaterThan(order.indexOf("loadingAppend"));
   });
 
   it("operationsPanelOrder: только seller — отчёт по рейсу в кабинете продаж", () => {

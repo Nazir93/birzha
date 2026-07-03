@@ -114,7 +114,7 @@ export function DistributionCreateForm({
       ) : null}
       <div className="birzha-clean-ops-meta-grid">
         <label className="birzha-form-label">
-          Рейс *
+          Рейс
           <BirzhaSelect
             value={newManifestTripId}
             onChange={onNewManifestTripIdChange}
@@ -125,7 +125,7 @@ export function DistributionCreateForm({
                 ? "— загрузка рейсов —"
                 : openTripsForAssign.length === 0
                   ? "— сначала создайте рейс —"
-                  : "— выберите рейс —"
+                  : "— выберите рейс (необязательно) —"
             }
             options={[
               {
@@ -134,7 +134,7 @@ export function DistributionCreateForm({
                   ? "— загрузка рейсов —"
                   : openTripsForAssign.length === 0
                     ? "— сначала создайте рейс —"
-                    : "— выберите рейс —",
+                    : "— без рейса (привязать позже) —",
               },
               ...openTripsForAssign.map((t) => ({
                 value: t.id,
@@ -167,7 +167,11 @@ export function DistributionCreateForm({
           <Link to={tripsBase} style={{ fontWeight: 600 }}>
             «Рейсы»
           </Link>
-          , затем выберите его здесь — кг уйдут в рейс при сохранении.
+          , затем выберите его здесь или привяжите позже в разделе «Смена рейса».
+        </p>
+      ) : !appendMode ? (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+          Рейс можно не выбирать — сохраните накладную и привяжите рейс в разделе «Смена рейса».
         </p>
       ) : null}
       <p className="birzha-clean-ops-form-actions">
@@ -177,11 +181,7 @@ export function DistributionCreateForm({
           disabled={
             createPending ||
             tableRows.length === 0 ||
-            (!appendMode &&
-              (!manifestDate ||
-                !manifestDestinationCode ||
-                !newManifestTripId.trim() ||
-                openTripsForAssign.length === 0))
+            (!appendMode && (!manifestDate || !manifestDestinationCode))
           }
           onClick={handleSave}
         >
@@ -195,7 +195,7 @@ export function DistributionCreateForm({
       {createError ? (
         <ErrorAlert
           error={createError}
-          message="Не удалось сохранить. Выберите рейс, город, дату и отмеченные партии."
+          message="Не удалось сохранить. Выберите город, дату и отмеченные партии."
           title="Сохранение"
         />
       ) : null}

@@ -1,3 +1,5 @@
+import { compareProductGradeCodes } from "@birzha/contracts";
+
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../application/units/rub-kopecks.js";
 
 export function gramsToKg(grams: bigint | number | null | undefined): number {
@@ -115,6 +117,17 @@ export function remainingValueKopecks(remainingGrams: bigint, pricePerKg: string
   return revenueKopecksFromGramsAndPricePerKg(remainingGrams, rubPerKgToKopecksPerKg(rub));
 }
 
+/** Калибры: сначала вид товара, затем канонический порядок (5 → 6 → 7 → 8 → НС+ → НС- → ОМ). */
+export function sortMappedGradeStockRows(rows: MappedGradeStockRow[]): MappedGradeStockRow[] {
+  return [...rows].sort((a, b) => {
+    const pg = (a.productGroup ?? "").localeCompare(b.productGroup ?? "", "ru");
+    if (pg !== 0) {
+      return pg;
+    }
+    return compareProductGradeCodes(a.code, b.code);
+  });
+}
+
 export function mapGradeStockRows(rows: RawGradeStockRow[]): {
   byGrade: MappedGradeStockRow[];
   stockTotals: DashboardStockTotals;
@@ -138,13 +151,14 @@ export function mapGradeStockRows(rows: RawGradeStockRow[]): {
         packages,
         valueKopecks: valueKopecks.toString(),
       };
-    })
-    .sort((a, b) => b.kg - a.kg);
+    });
 
-  const stockValueKopecks = sumKopecks(byGrade.map((row) => row.valueKopecks));
+  const sortedByGrade = sortMappedGradeStockRows(byGrade);
+
+  const stockValueKopecks = sumKopecks(sortedByGrade.map((row) => row.valueKopecks));
 
   return {
-    byGrade,
+    byGrade: sortedByGrade,
     stockTotals: {
       kg: stockKg,
       packages: stockPackages,
@@ -202,7 +216,7 @@ export function mapWarehouseWithGradeStockRows(rows: RawWarehouseGradeStockRow[]
 
   return [...byWarehouseId.values()]
     .map((warehouse) => {
-      const byGrade = warehouse.byGrade.sort((a, b) => b.kg - a.kg);
+      const byGrade = sortMappedGradeStockRows(warehouse.byGrade);
       return {
         warehouseId: warehouse.warehouseId,
         warehouseName: warehouse.warehouseName,

@@ -22,6 +22,9 @@ type Props = {
   deletingManifestId: string | null;
   onPageChange: (page: number) => void;
   onDelete: (manifest: LoadingManifestSummary) => void;
+  openLinkLabel?: string;
+  openLinkLabelCurrent?: string;
+  showDelete?: boolean;
 };
 
 export function DistributionManifestListTable({
@@ -35,6 +38,9 @@ export function DistributionManifestListTable({
   deletingManifestId,
   onPageChange,
   onDelete,
+  openLinkLabel = "Открыть",
+  openLinkLabelCurrent = "Открыта",
+  showDelete = true,
 }: Props) {
   return (
     <div className="birzha-clean-ops-list">
@@ -80,8 +86,9 @@ export function DistributionManifestListTable({
                   <td className="birzha-distribution-manifest-row__actions">
                     <div className="birzha-clean-ops-row-actions">
                       <Link to={`${distributionBase}/${encodeURIComponent(m.id)}`} className="birzha-clean-ops-text-btn">
-                        {isCurrent ? "Открыта" : "Открыть"}
+                        {isCurrent ? openLinkLabelCurrent : openLinkLabel}
                       </Link>
+                      {showDelete ? (
                       <button
                         type="button"
                         className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
@@ -90,6 +97,7 @@ export function DistributionManifestListTable({
                     >
                       {deleting ? "…" : "Удалить"}
                     </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

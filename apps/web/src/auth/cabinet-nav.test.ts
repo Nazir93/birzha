@@ -4,15 +4,17 @@ import { buildCabinetNavEntries, cabinetNavLinkUsesEnd, splitCabinetNavForSideba
 import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 describe("cabinet-nav", () => {
-  it("аноним: операции — шесть ссылок /o (в т.ч. Рейсы и Архив)", () => {
+  it("аноним: операции — восемь ссылок /o (в т.ч. догрузка и смена рейса)", () => {
     const links = buildCabinetNavEntries("operations", null, false);
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(8);
     expect(links[0]?.to).toBe(ops.purchaseNakladnaya);
     expect(links[1]?.to).toBe(ops.trips);
     expect(links[2]?.to).toBe(ops.distribution);
-    expect(links[3]?.to).toBe(ops.reports);
-    expect(links[4]?.to).toBe(ops.operations);
-    expect(links[5]?.to).toBe(ops.archive);
+    expect(links[3]?.to).toBe(ops.loadingAppend);
+    expect(links[4]?.to).toBe(ops.loadingTrip);
+    expect(links[5]?.to).toBe(ops.reports);
+    expect(links[6]?.to).toBe(ops.operations);
+    expect(links[7]?.to).toBe(ops.archive);
   });
 
   it("аноним: админ — сводка /a + операции (единая погрузка)", () => {
@@ -21,10 +23,12 @@ describe("cabinet-nav", () => {
     expect(links[1]?.to).toBe(adminRoutes.purchaseNakladnaya);
     expect(links[2]?.to).toBe(adminRoutes.trips);
     expect(links[3]?.to).toBe(adminRoutes.distribution);
+    expect(links.find((x) => x.key === "append")?.to).toBe(adminRoutes.loadingAppend);
+    expect(links.find((x) => x.key === "trip")?.to).toBe(adminRoutes.loadingTrip);
     expect(links.find((x) => x.key === "assign")?.to).toBe(adminRoutes.assignSeller);
     expect(links.find((x) => x.key === "rep")?.to).toBe(adminRoutes.reports);
     expect(links[links.length - 1]?.to).toBe(adminRoutes.archive);
-    expect(links).toHaveLength(8);
+    expect(links).toHaveLength(10);
   });
 
   it("admin: рабочие ссылки остаются внутри /a", () => {

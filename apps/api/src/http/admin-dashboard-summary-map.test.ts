@@ -8,6 +8,7 @@ import {
   mapWarehouseWithGradeStockRows,
   proportionalPackageCount,
   remainingValueKopecks,
+  sortMappedGradeStockRows,
   sumKopecks,
   toKopecksBigInt,
 } from "./admin-dashboard-summary-map.js";
@@ -37,15 +38,15 @@ describe("admin dashboard stock formulas", () => {
 });
 
 describe("mapGradeStockRows", () => {
-  it("сортирует по кг и суммирует stockTotals", () => {
+  it("сортирует по канону калибров (не по кг) и суммирует stockTotals", () => {
     const { byGrade, stockTotals } = mapGradeStockRows([
       {
         productGradeId: "g2",
         code: "№6",
         displayName: "Калибр №6",
         productGroup: "Помидоры",
-        grams: 300_000n,
-        packages: 30,
+        grams: 600_000n,
+        packages: 60,
         valueKopecks: 900_000n,
       },
       {
@@ -64,8 +65,8 @@ describe("mapGradeStockRows", () => {
     expect(byGrade[0]!.kg).toBe(500);
     expect(byGrade[0]!.packages).toBe(41);
     expect(byGrade[1]!.code).toBe("№6");
-    expect(stockTotals.kg).toBe(800);
-    expect(stockTotals.packages).toBe(71);
+    expect(stockTotals.kg).toBe(1100);
+    expect(stockTotals.packages).toBe(101);
     expect(stockTotals.valueKopecks).toBe("1900000");
   });
 
@@ -120,7 +121,7 @@ describe("mapWarehouseStockRows", () => {
 });
 
 describe("mapWarehouseWithGradeStockRows", () => {
-  it("группирует калибры по складу и сортирует", () => {
+  it("группирует калибры по складу и сортирует по канону", () => {
     const rows = mapWarehouseWithGradeStockRows([
       {
         warehouseId: "wh-a",
@@ -129,9 +130,9 @@ describe("mapWarehouseWithGradeStockRows", () => {
         code: "№6",
         displayName: "Калибр №6",
         productGroup: "Помидоры",
-        grams: 300_000n,
-        packages: 30,
-        valueKopecks: 300_000n,
+        grams: 600_000n,
+        packages: 60,
+        valueKopecks: 600_000n,
       },
       {
         warehouseId: "wh-a",
@@ -159,11 +160,56 @@ describe("mapWarehouseWithGradeStockRows", () => {
 
     expect(rows).toHaveLength(2);
     expect(rows[0]!.warehouseName).toBe("Манас");
-    expect(rows[0]!.kg).toBe(800);
+    expect(rows[0]!.kg).toBe(1100);
     expect(rows[0]!.byGrade).toHaveLength(2);
     expect(rows[0]!.byGrade[0]!.code).toBe("№5");
+    expect(rows[0]!.byGrade[1]!.code).toBe("№6");
     expect(rows[1]!.warehouseName).toBe("Каякент");
     expect(rows[1]!.byGrade[0]!.code).toBe("№8");
+  });
+});
+
+describe("sortMappedGradeStockRows", () => {
+  it("5 → 6 → 7 → 8 → НС+ → НС- → ОМ внутри вида товара", () => {
+    const sorted = sortMappedGradeStockRows([
+      {
+        productGradeId: "g8",
+        code: "№8",
+        displayName: "№8",
+        productGroup: "Помидоры",
+        kg: 1,
+        packages: 1,
+        valueKopecks: "0",
+      },
+      {
+        productGradeId: "gns",
+        code: "НС-",
+        displayName: "НС-",
+        productGroup: "Помидоры",
+        kg: 2,
+        packages: 1,
+        valueKopecks: "0",
+      },
+      {
+        productGradeId: "g6",
+        code: "№6",
+        displayName: "№6",
+        productGroup: "Помидоры",
+        kg: 99,
+        packages: 1,
+        valueKopecks: "0",
+      },
+      {
+        productGradeId: "g5",
+        code: "№5",
+        displayName: "№5",
+        productGroup: "Помидоры",
+        kg: 1,
+        packages: 1,
+        valueKopecks: "0",
+      },
+    ]);
+    expect(sorted.map((r) => r.code)).toEqual(["№5", "№6", "№8", "НС-"]);
   });
 });
 

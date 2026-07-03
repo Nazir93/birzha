@@ -274,6 +274,7 @@ export function AdminStockWarehousesPage() {
                             }}
                           >
                             {w.name}
+                            <span className="birzha-text-muted birzha-ui-sm"> ({w.code})</span>
                           </button>
                         </td>
                         <td style={thtdDense}>{kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</td>

@@ -15,6 +15,8 @@ export type PanelId =
   | "reports"
   | "nakladnaya"
   | "distribution"
+  | "loadingAppend"
+  | "loadingTrip"
   | "trips"
   | "archive"
   | "loadingManifests"
@@ -29,6 +31,8 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Погрузка на машину",
+  loadingAppend: "Догрузка",
+  loadingTrip: "Смена рейса",
   trips: "Рейсы",
   archive: "Архив",
   loadingManifests: "Погрузка",
@@ -47,6 +51,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  loadingAppend: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  loadingTrip: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   trips: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   archive: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
@@ -292,6 +298,8 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "trips",
     "distribution",
+    "loadingAppend",
+    "loadingTrip",
     "assignSeller",
     "reports",
     "operations",
@@ -319,6 +327,8 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
     "nakladnaya",
     "trips",
     "distribution",
+    "loadingAppend",
+    "loadingTrip",
     "assignSeller",
     "reports",
     "operations",
@@ -332,6 +342,8 @@ const SHARED_OPS_PANELS = [
   "nakladnaya",
   "trips",
   "distribution",
+  "loadingAppend",
+  "loadingTrip",
   "archive",
   "sellerDispatch",
   "assignSeller",

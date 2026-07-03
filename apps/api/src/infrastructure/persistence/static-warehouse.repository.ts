@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   SeededResourceDeleteForbiddenError,
   WarehouseCodeConflictError,
+  WarehouseNameConflictError,
   WarehouseNotFoundError,
 } from "../../application/errors.js";
 import type {
@@ -12,6 +13,7 @@ import type {
 } from "../../application/ports/warehouse-repository.port.js";
 
 import { autoWarehouseCode } from "./warehouse-code.js";
+import { normalizeWarehouseName } from "./warehouse-name.js";
 
 /** Совпадает с сидом миграции `0011_purchase_nakladnaya`; без PostgreSQL список можно дополнять через `create`. */
 const SEED: readonly WarehouseRecord[] = [
@@ -41,8 +43,12 @@ export class StaticWarehouseRepository implements WarehouseRepository {
   async create(input: CreateWarehouseInput): Promise<WarehouseRecord> {
     const id = `wh-${randomUUID()}`;
     const name = input.name.trim();
-    const explicit = input.code?.trim();
+    const normalized = normalizeWarehouseName(name);
     const rows = getRows();
+    if (rows.some((w) => normalizeWarehouseName(w.name) === normalized)) {
+      throw new WarehouseNameConflictError(name);
+    }
+    const explicit = input.code?.trim();
     if (explicit) {
       const code = explicit.toUpperCase();
       if (rows.some((w) => w.code === code)) {

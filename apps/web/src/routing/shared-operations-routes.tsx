@@ -23,6 +23,12 @@ const AllocationPanel = lazy(() =>
 const AdminTripsLogisticsPanel = lazy(() =>
   import("../components/AdminTripsLogisticsPanel.js").then((m) => ({ default: m.AdminTripsLogisticsPanel })),
 );
+const LoadingAppendPanel = lazy(() =>
+  import("../components/LoadingAppendPanel.js").then((m) => ({ default: m.LoadingAppendPanel })),
+);
+const LoadingTripPanel = lazy(() =>
+  import("../components/LoadingTripPanel.js").then((m) => ({ default: m.LoadingTripPanel })),
+);
 const ArchivePage = lazy(() => import("../components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })));
 const OperationsPanel = lazy(() =>
   import("../components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
@@ -74,6 +80,32 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
       >
         <Route index element={<AllocationPanel />} />
         <Route path=":manifestId" element={<AllocationPanel />} />
+      </Route>
+      <Route
+        path="loading-append"
+        element={
+          <RequirePanel panel="loadingAppend">
+            <section className="birzha-card">
+              <Outlet />
+            </section>
+          </RequirePanel>
+        }
+      >
+        <Route index element={<LoadingAppendPanel />} />
+        <Route path=":manifestId" element={<LoadingAppendPanel />} />
+      </Route>
+      <Route
+        path="loading-trip"
+        element={
+          <RequirePanel panel="loadingTrip">
+            <section className="birzha-card">
+              <Outlet />
+            </section>
+          </RequirePanel>
+        }
+      >
+        <Route index element={<LoadingTripPanel />} />
+        <Route path=":manifestId" element={<LoadingTripPanel />} />
       </Route>
       <Route
         path="trips"

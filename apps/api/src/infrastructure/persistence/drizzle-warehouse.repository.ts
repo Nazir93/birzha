@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { asc, eq } from "drizzle-orm";
 
-import { WarehouseCodeConflictError, WarehouseNotFoundError } from "../../application/errors.js";
+import { WarehouseCodeConflictError, WarehouseNameConflictError, WarehouseNotFoundError } from "../../application/errors.js";
 import type {
   CreateWarehouseInput,
   WarehouseRecord,
@@ -12,6 +12,7 @@ import type { DbClient } from "../../db/client.js";
 import { warehouses } from "../../db/schema.js";
 
 import { autoWarehouseCode, isPgUniqueViolation } from "./warehouse-code.js";
+import { normalizeWarehouseName } from "./warehouse-name.js";
 
 export class DrizzleWarehouseRepository implements WarehouseRepository {
   constructor(private readonly db: DbClient) {}
@@ -44,6 +45,11 @@ export class DrizzleWarehouseRepository implements WarehouseRepository {
   async create(input: CreateWarehouseInput): Promise<WarehouseRecord> {
     const id = `wh-${randomUUID()}`;
     const name = input.name.trim();
+    const normalized = normalizeWarehouseName(name);
+    const existing = await this.list();
+    if (existing.some((w) => normalizeWarehouseName(w.name) === normalized)) {
+      throw new WarehouseNameConflictError(name);
+    }
     const explicit = input.code?.trim();
     if (explicit) {
       const code = explicit.toUpperCase();

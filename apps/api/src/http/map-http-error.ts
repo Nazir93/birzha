@@ -28,6 +28,7 @@ import {
   TripSaleLineNotFoundError,
   TripShortageExceedsNetError,
   WarehouseCodeConflictError,
+  WarehouseNameConflictError,
   WarehouseNotFoundError,
   WarehouseWriteOffNotFoundError,
   WholesalerNotFoundError,
@@ -128,6 +129,12 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "warehouse_code_conflict",
       code: error.code,
+    });
+  }
+  if (error instanceof WarehouseNameConflictError) {
+    return reply.code(409).send({
+      error: "warehouse_name_conflict",
+      name: error.warehouseName,
     });
   }
   if (error instanceof ProductGradeNotFoundError) {
