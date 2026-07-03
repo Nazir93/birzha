@@ -17,7 +17,8 @@
     "dev:api": "pnpm --filter @birzha/api dev",
     "dev:web": "pnpm --filter @birzha/web dev",
     "load:smoke": "node scripts/load-smoke.mjs",
-    "load:distribution": "node scripts/load-distribution.mjs"
+    "load:distribution": "node scripts/load-distribution.mjs",
+    "security:smoke": "node scripts/security-smoke.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
-import type { CreateWarehouseResponse } from "../api/types.js";
+import type { BatchListItem, CreateWarehouseResponse } from "../api/types.js";
 import {
+  adminDashboardSummaryQueryOptions,
   batchesForWarehouseQueryOptions,
   queryRoots,
   stockBalancesQueryOptions,
@@ -32,6 +33,7 @@ export function AdminStockWarehousesPage() {
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
   const stockBalancesQ = useQuery(stockBalancesQueryOptions());
+  const dashboardSummaryQ = useQuery(adminDashboardSummaryQueryOptions());
   const selectedWhId = selectedWarehouseId.trim();
   const batchesQ = useQuery({
     ...batchesForWarehouseQueryOptions(selectedWhId, 500),
@@ -46,6 +48,14 @@ export function AdminStockWarehousesPage() {
     }
     return map;
   }, [stockBalancesQ.data?.byWarehouse]);
+
+  const warehousePackagesById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of dashboardSummaryQ.data?.warehouse.byWarehouse ?? []) {
+      map.set(row.warehouseId, row.packages);
+    }
+    return map;
+  }, [dashboardSummaryQ.data?.warehouse.byWarehouse]);
 
   useEffect(() => {
     if (selectedWarehouseId.trim().length > 0 || !warehousesQ.isSuccess || stockBalancesQ.isPending) {
@@ -95,20 +105,48 @@ export function AdminStockWarehousesPage() {
     },
   });
 
+  function estimateWarehousePackages(batch: BatchListItem): number {
+    const totalKg = Number(batch.totalKg ?? 0);
+    const onWarehouseKg = Number(batch.onWarehouseKg ?? 0);
+    const linePackageCount = Number(batch.nakladnaya?.linePackageCount ?? 0);
+    if (!Number.isFinite(totalKg) || !Number.isFinite(onWarehouseKg) || !Number.isFinite(linePackageCount)) {
+      return 0;
+    }
+    if (totalKg <= 0 || onWarehouseKg <= 0 || linePackageCount <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.round((linePackageCount * onWarehouseKg) / totalKg));
+  }
+
   /** Суммы по партициям одного калибра и вида на выбранном складе (без разбивки по накладным). */
   const gradeStockAggregates = useMemo(() => {
     if (!selectedWhId) {
       return [];
     }
     const q = gradeSearch.trim().toLowerCase();
-    type Agg = { gradeCode: string; productGroup: string; onWarehouseKg: number; inTransitKg: number; soldKg: number };
+    type Agg = {
+      gradeCode: string;
+      productGroup: string;
+      onWarehouseKg: number;
+      onWarehousePackages: number;
+      inTransitKg: number;
+      soldKg: number;
+    };
     const map = new Map<string, Agg>();
     for (const b of batchesQ.data?.batches ?? []) {
       const gradeCode = (b.nakladnaya?.productGradeCode ?? "").trim() || "—";
       const productGroup = (b.nakladnaya?.productGroup ?? "").trim() || "—";
       const key = `${gradeCode}\0${productGroup}`;
-      const prev = map.get(key) ?? { gradeCode, productGroup, onWarehouseKg: 0, inTransitKg: 0, soldKg: 0 };
+      const prev = map.get(key) ?? {
+        gradeCode,
+        productGroup,
+        onWarehouseKg: 0,
+        onWarehousePackages: 0,
+        inTransitKg: 0,
+        soldKg: 0,
+      };
       prev.onWarehouseKg += b.onWarehouseKg ?? 0;
+      prev.onWarehousePackages += estimateWarehousePackages(b);
       prev.inTransitKg += b.inTransitKg ?? 0;
       prev.soldKg += b.soldKg ?? 0;
       map.set(key, prev);
@@ -131,6 +169,28 @@ export function AdminStockWarehousesPage() {
     });
     return rows;
   }, [batchesQ.data?.batches, selectedWhId, gradeSearch]);
+
+  const selectedWarehouseStats = useMemo(() => {
+    const rows = gradeStockAggregates;
+    if (rows.length === 0) {
+      return null;
+    }
+    const totalKg = rows.reduce((acc, row) => acc + row.onWarehouseKg, 0);
+    const totalPackages = rows.reduce((acc, row) => acc + row.onWarehousePackages, 0);
+    return {
+      calibersCount: rows.length,
+      totalKg,
+      totalPackages,
+    };
+  }, [gradeStockAggregates]);
+
+  const selectedWarehouseName = useMemo(() => {
+    if (!selectedWhId) {
+      return "";
+    }
+    const found = (warehousesQ.data?.warehouses ?? []).find((w) => w.id === selectedWhId);
+    return found?.name ?? "";
+  }, [warehousesQ.data?.warehouses, selectedWhId]);
 
   const loading =
     warehousesQ.isPending || stockBalancesQ.isPending || (selectedWhId.length > 0 && batchesQ.isPending);
@@ -190,12 +250,14 @@ export function AdminStockWarehousesPage() {
                   <tr>
                     <th style={thHeadDense}>Название</th>
                     <th style={thHeadDense}>Остаток на складе</th>
+                    <th style={thHeadDense}>Ящики на складе</th>
                     <th style={thHeadDense} />
                   </tr>
                 </thead>
                 <tbody>
                   {(warehousesQ.data?.warehouses ?? []).map((w) => {
                     const kg = warehouseKgById.get(w.id) ?? 0;
+                    const packages = warehousePackagesById.get(w.id) ?? 0;
                     const active = selectedWhId === w.id;
                     return (
                       <tr key={w.id}>
@@ -217,6 +279,7 @@ export function AdminStockWarehousesPage() {
                           </button>
                         </td>
                         <td style={thtdDense}>{kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</td>
+                        <td style={thtdDense}>{packages.toLocaleString("ru-RU")} ящ.</td>
                         <td style={thtdDense}>
                           <button
                             type="button"
@@ -241,7 +304,12 @@ export function AdminStockWarehousesPage() {
 
           <BirzhaDisclosure
             defaultOpen
-            title={<span className="birzha-section-title-inline">Остатки по выбранному складу</span>}
+            title={
+              <span className="birzha-section-title-inline">
+                Остатки по выбранному складу
+                {selectedWarehouseName ? `: ${selectedWarehouseName}` : ""}
+              </span>
+            }
           >
             {!selectedWhId ? (
               <p className="birzha-text-muted birzha-ui-sm" role="status">
@@ -251,6 +319,16 @@ export function AdminStockWarehousesPage() {
               <ErrorAlert message="Не удалось загрузить партии по складу." title="Остатки по калибру" />
             ) : (
               <>
+                {selectedWarehouseStats ? (
+                  <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
+                    Калибров: <strong>{selectedWarehouseStats.calibersCount}</strong>
+                    <span className="birzha-text-muted"> · </span>
+                    На складе:{" "}
+                    <strong>{selectedWarehouseStats.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг</strong>
+                    <span className="birzha-text-muted"> · </span>
+                    Ящики: <strong>{selectedWarehouseStats.totalPackages.toLocaleString("ru-RU")} ящ.</strong>
+                  </p>
+                ) : null}
                 <label className="birzha-field-label" htmlFor="stock-grade-search">
                   Поиск по калибру и виду товара
                 </label>
@@ -275,6 +353,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>Калибр</th>
                           <th style={thHeadDense}>Вид</th>
                           <th style={thHeadDense}>На складе, кг</th>
+                          <th style={thHeadDense}>На складе, ящ.</th>
                           <th style={thHeadDense}>Погружено, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
                         </tr>
@@ -289,6 +368,7 @@ export function AdminStockWarehousesPage() {
                             <td style={thtdDense}>
                               {r.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
                             </td>
+                            <td style={thtdDense}>{r.onWarehousePackages.toLocaleString("ru-RU")}</td>
                             <td style={thtdDense}>{r.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
                             <td style={thtdDense}>{r.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
                           </tr>

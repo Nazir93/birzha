@@ -56,6 +56,24 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     clearLoginLockStateForTests();
   });
 
+  async function createGlobalUser(roleCode: string, plainPassword: string): Promise<{ id: string; login: string }> {
+    const id = randomUUID();
+    const loginName = `u_${roleCode}_${randomUUID().slice(0, 8)}`;
+    await db.insert(schema.users).values({
+      id,
+      login: loginName,
+      passwordHash: hashPassword(plainPassword),
+      isActive: true,
+    });
+    await db.insert(schema.userRoles).values({
+      userId: id,
+      roleCode,
+      scopeType: "global",
+      scopeId: "",
+    });
+    return { id, login: loginName };
+  }
+
   it("POST /auth/login, GET /auth/me по Bearer и cookie, неверный пароль 401", async () => {
     const env = loadEnv({
       NODE_ENV: "test",
@@ -240,6 +258,125 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
 
     await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, whUserId));
     await db.delete(schema.users).where(eq(schema.users.id, whUserId));
+    await app.close();
+  });
+
+  it("REQUIRE_API_AUTH: роли для purchase-documents и counterparties", async () => {
+    const purchaser = await createGlobalUser("purchaser", password);
+    const accountant = await createGlobalUser("accountant", password);
+    const seller = await createGlobalUser("seller", password);
+
+    const env = loadEnv({
+      NODE_ENV: "test",
+      DATABASE_URL: pgUrl,
+      JWT_SECRET: "k".repeat(32),
+      REQUIRE_API_AUTH: "true",
+    });
+    const app = await buildApp({ env, db });
+
+    const adminTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login, password } })).body,
+    ) as { token: string }).token;
+    const purchaserTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login: purchaser.login, password } })).body,
+    ) as { token: string }).token;
+    const accountantTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login: accountant.login, password } })).body,
+    ) as { token: string }).token;
+    const sellerTok = (JSON.parse(
+      (await app.inject({ method: "POST", url: "/auth/login", payload: { login: seller.login, password } })).body,
+    ) as { token: string }).token;
+
+    const warehouseId = `wh_auth_${randomUUID().slice(0, 8)}`;
+    const gradeId = `pg_auth_${randomUUID().slice(0, 8)}`;
+
+    const whCreate = await app.inject({
+      method: "POST",
+      url: "/warehouses",
+      headers: { authorization: `Bearer ${adminTok}` },
+      payload: { name: `Auth WH ${warehouseId}`, code: `W${warehouseId.slice(-4).toUpperCase()}` },
+    });
+    expect(whCreate.statusCode).toBe(201);
+    const createdWh = JSON.parse(whCreate.body) as { warehouse: { id: string } };
+
+    const gradeCreate = await app.inject({
+      method: "POST",
+      url: "/product-grades",
+      headers: { authorization: `Bearer ${adminTok}` },
+      payload: { id: gradeId, code: `№${Math.floor(Math.random() * 90) + 10}`, displayName: "Auth grade", sortOrder: 1 },
+    });
+    expect(gradeCreate.statusCode).toBe(201);
+    const createdGrade = JSON.parse(gradeCreate.body) as { productGrade: { id: string } };
+
+    const docId = `pd_auth_${randomUUID().slice(0, 8)}`;
+    const purchaserCreate = await app.inject({
+      method: "POST",
+      url: "/purchase-documents",
+      headers: { authorization: `Bearer ${purchaserTok}` },
+      payload: {
+        id: docId,
+        documentNumber: `AUTH-${Date.now()}`,
+        docDate: "2026-07-01",
+        warehouseId: createdWh.warehouse.id,
+        supplierName: "Auth supplier",
+        lines: [
+          {
+            productGradeId: createdGrade.productGrade.id,
+            totalKg: 10,
+            packageCount: 2,
+            pricePerKg: 30,
+            lineTotalKopecks: 300_000,
+          },
+        ],
+      },
+    });
+    expect(purchaserCreate.statusCode).toBe(201);
+
+    const sellerCreate = await app.inject({
+      method: "POST",
+      url: "/purchase-documents",
+      headers: { authorization: `Bearer ${sellerTok}` },
+      payload: {
+        id: `pd_forbid_${randomUUID().slice(0, 8)}`,
+        documentNumber: "FORBID",
+        docDate: "2026-07-01",
+        warehouseId: createdWh.warehouse.id,
+        supplierName: "Forbidden",
+        lines: [
+          {
+            productGradeId: createdGrade.productGrade.id,
+            totalKg: 5,
+            packageCount: 1,
+            pricePerKg: 10,
+            lineTotalKopecks: 50_000,
+          },
+        ],
+      },
+    });
+    expect(sellerCreate.statusCode).toBe(403);
+
+    const accountantCounterparty = await app.inject({
+      method: "POST",
+      url: "/counterparties",
+      headers: { authorization: `Bearer ${accountantTok}` },
+      payload: { displayName: `Auth buyer ${Date.now()}` },
+    });
+    expect(accountantCounterparty.statusCode).toBe(201);
+
+    const sellerCounterparty = await app.inject({
+      method: "POST",
+      url: "/counterparties",
+      headers: { authorization: `Bearer ${sellerTok}` },
+      payload: { displayName: `Seller forbidden ${Date.now()}` },
+    });
+    expect(sellerCounterparty.statusCode).toBe(403);
+
+    await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, purchaser.id));
+    await db.delete(schema.users).where(eq(schema.users.id, purchaser.id));
+    await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, accountant.id));
+    await db.delete(schema.users).where(eq(schema.users.id, accountant.id));
+    await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, seller.id));
+    await db.delete(schema.users).where(eq(schema.users.id, seller.id));
     await app.close();
   });
 });

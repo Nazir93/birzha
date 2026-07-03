@@ -1,0 +1,168 @@
+{
+  "version": "2026-07-03",
+  "sourceOfTruth": {
+    "webRoles": "apps/web/src/auth/role-panels.ts",
+    "apiGuards": "apps/api/src/http/route-auth.ts",
+    "routes": "apps/web/src/routes.ts"
+  },
+  "cabinets": [
+    {
+      "id": "admin",
+      "basePath": "/a",
+      "roles": ["admin"],
+      "screens": [
+        {
+          "id": "admin-home",
+          "path": "/a",
+          "component": "apps/web/src/components/AdminCabinetHome.tsx",
+          "actions": [
+            { "id": "open-trip-report", "kind": "link", "label": "Открыть", "roleAccess": ["admin"], "apiGuard": "tripReportRead" },
+            { "id": "close-trip", "kind": "button", "label": "Закрыть рейс", "roleAccess": ["admin"], "apiGuard": "tripWrite" },
+            { "id": "go-purchase", "kind": "link", "label": "Закупка", "roleAccess": ["admin"], "apiGuard": "dataRead" },
+            { "id": "go-distribution", "kind": "link", "label": "Погрузка", "roleAccess": ["admin"], "apiGuard": "dataRead" }
+          ]
+        },
+        {
+          "id": "admin-users",
+          "path": "/a/settings/team",
+          "component": "apps/web/src/components/AdminUsersPanel.tsx",
+          "actions": [
+            { "id": "create-user", "kind": "button", "label": "Создать", "roleAccess": ["admin"], "apiGuard": "userManagement" },
+            { "id": "delete-user", "kind": "button", "label": "Удалить", "roleAccess": ["admin"], "apiGuard": "userManagement" }
+          ]
+        },
+        {
+          "id": "admin-inventory",
+          "path": "/a/settings/catalog",
+          "component": "apps/web/src/components/InventoryAdminPanel.tsx",
+          "actions": [
+            { "id": "create-warehouse", "kind": "button", "label": "Добавить склад", "roleAccess": ["admin"], "apiGuard": "inventoryCatalogWrite" },
+            { "id": "delete-warehouse", "kind": "button", "label": "Удалить", "roleAccess": ["admin"], "apiGuard": "inventoryCatalogWrite" },
+            { "id": "create-grade", "kind": "button", "label": "Добавить калибр", "roleAccess": ["admin"], "apiGuard": "inventoryCatalogWrite" },
+            { "id": "delete-grade", "kind": "button", "label": "Удалить", "roleAccess": ["admin"], "apiGuard": "inventoryCatalogWrite" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "operations",
+      "basePath": "/o",
+      "roles": ["manager", "purchaser", "warehouse", "logistics", "receiver"],
+      "screens": [
+        {
+          "id": "purchase-nakladnaya",
+          "path": "/o/purchase-nakladnaya",
+          "component": "apps/web/src/components/PurchaseNakladnayaSection.tsx",
+          "actions": [
+            { "id": "create-purchase-document", "kind": "button", "label": "Создать накладную", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "batchCreate" },
+            { "id": "calc-line-total", "kind": "button", "label": "=кг×цена", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "batchCreate" },
+            { "id": "open-document-card", "kind": "link", "label": "№ накладной", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "dataRead" }
+          ]
+        },
+        {
+          "id": "distribution",
+          "path": "/o/distribution",
+          "component": "apps/web/src/components/AllocationPanel.tsx",
+          "actions": [
+            { "id": "ready-manifest", "kind": "button", "label": "Готово — погрузочная накладная", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "ship" },
+            { "id": "save-loading-manifest", "kind": "button", "label": "Сохранить погрузочную накладную", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "ship" },
+            { "id": "change-trip", "kind": "button", "label": "Сменить рейс", "roleAccess": ["admin", "manager", "purchaser", "logistics"], "apiGuard": "tripAssignSeller" }
+          ]
+        },
+        {
+          "id": "trips",
+          "path": "/o/trips",
+          "component": "apps/web/src/components/AdminTripsLogisticsPanel.tsx",
+          "actions": [
+            { "id": "create-trip", "kind": "button", "label": "Создать рейс", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" },
+            { "id": "close-trip", "kind": "button", "label": "Закрыть рейс", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" },
+            { "id": "delete-trip", "kind": "button", "label": "Удалить", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" }
+          ]
+        },
+        {
+          "id": "assign-seller",
+          "path": "/o/assign-seller",
+          "component": "apps/web/src/components/AssignSellerPanel.tsx",
+          "actions": [
+            { "id": "assign-trip-to-seller", "kind": "button", "label": "Закрепить", "roleAccess": ["manager", "purchaser", "logistics"], "apiGuard": "tripAssignSeller" },
+            { "id": "unassign-trip-from-seller", "kind": "button", "label": "Открепить", "roleAccess": ["manager", "purchaser", "logistics"], "apiGuard": "tripAssignSeller" }
+          ]
+        },
+        {
+          "id": "operations-shortage",
+          "path": "/o/operations",
+          "component": "apps/web/src/components/OperationsPanel.tsx",
+          "actions": [
+            { "id": "ship-distribution-selection", "kind": "button", "label": "Отгрузить собранное в этот рейс", "roleAccess": ["manager", "warehouse", "logistics"], "apiGuard": "ship" },
+            { "id": "record-shortage", "kind": "button", "label": "Зафиксировать недостачу", "roleAccess": ["manager", "warehouse", "logistics", "receiver"], "apiGuard": "shortage" }
+          ]
+        },
+        {
+          "id": "reports",
+          "path": "/o/reports",
+          "component": "apps/web/src/components/TripReportPanel.tsx",
+          "actions": [
+            { "id": "print-report", "kind": "button", "label": "Открыть диалог печати отчёта по рейсу", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "tripReportRead" },
+            { "id": "download-csv", "kind": "button", "label": "Скачать таблицу сверки по партиям в CSV для Excel", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "tripReportRead" },
+            { "id": "delete-empty-trip", "kind": "button", "label": "Удалить пустой рейс", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sales",
+      "basePath": "/s",
+      "roles": ["seller"],
+      "screens": [
+        {
+          "id": "sales-home",
+          "path": "/s",
+          "component": "apps/web/src/components/SellFromTripSection.tsx",
+          "actions": [
+            { "id": "pick-sale-channel", "kind": "button", "label": "Розница/Опт", "roleAccess": ["seller"], "apiGuard": "sell" },
+            { "id": "save-sale", "kind": "button", "label": "Сохранить продажу", "roleAccess": ["seller"], "apiGuard": "sell" },
+            { "id": "delete-sale-line", "kind": "button", "label": "Удалить", "roleAccess": ["seller"], "apiGuard": "sell" }
+          ]
+        },
+        {
+          "id": "sales-reports",
+          "path": "/s/reports",
+          "component": "apps/web/src/components/TripReportPanel.tsx",
+          "actions": [
+            { "id": "open-trip-report", "kind": "link", "label": "Открыть", "roleAccess": ["seller"], "apiGuard": "tripReportRead" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accounting",
+      "basePath": "/b",
+      "roles": ["accountant"],
+      "screens": [
+        {
+          "id": "accounting-home",
+          "path": "/b",
+          "component": "apps/web/src/components/AccountingCabinetHome.tsx",
+          "actions": [
+            { "id": "open-accounting-reports", "kind": "link", "label": "Отчёт по рейсу", "roleAccess": ["accountant"], "apiGuard": "tripReportRead" },
+            { "id": "open-counterparties", "kind": "link", "label": "Контрагенты", "roleAccess": ["accountant"], "apiGuard": "catalogRead" }
+          ]
+        },
+        {
+          "id": "counterparties",
+          "path": "/b/counterparties",
+          "component": "apps/web/src/components/CounterpartiesPanel.tsx",
+          "actions": [
+            { "id": "create-counterparty", "kind": "button", "label": "Добавить контрагента", "roleAccess": ["accountant"], "apiGuard": "catalogWrite" },
+            { "id": "delete-counterparty", "kind": "button", "label": "Удалить", "roleAccess": ["accountant"], "apiGuard": "catalogWrite" }
+          ]
+        }
+      ]
+    }
+  ],
+  "coveragePolicy": {
+    "minimumChecksPerAction": ["positive", "forbidden-or-validation-error", "post-condition-readback"],
+    "testLevels": ["unit", "integration-memory", "integration-postgres", "e2e"],
+    "requiredEnvironments": ["ci", "staging", "production"]
+  }
+}

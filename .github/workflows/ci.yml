@@ -101,8 +101,8 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
 
-      - name: Playwright E2E (роли, REQUIRE_API_AUTH + PostgreSQL)
-        run: pnpm exec playwright test e2e/role-nav-auth.spec.ts
+      - name: Playwright E2E (роли и полный регресс, REQUIRE_API_AUTH + PostgreSQL)
+        run: pnpm exec playwright test e2e/role-nav-auth.spec.ts e2e/full-section-regression-auth.spec.ts
 
   # Интеграция Drizzle + Postgres (тесты с `TEST_DATABASE_URL` иначе пропущены)
   api-pg:
@@ -145,3 +145,84 @@ jobs:
 
       - name: API tests with PostgreSQL (Drizzle migrations in tests)
         run: pnpm --filter @birzha/api test
+
+  nonfunctional-smoke:
+    needs: [ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+      TZ: UTC
+      E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/birzha_nf
+      E2E_JWT_SECRET: e2e-nonfunctional-jwt-secret-minimum-32chars
+      E2E_TEST_PASSWORD: E2e-birzha-test-99
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: birzha_nf
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm exec turbo run build --filter=@birzha/contracts --filter=@birzha/domain
+
+      - name: Wait for Postgres
+        run: pnpm exec wait-on -t 120000 tcp:127.0.0.1:5432
+
+      - name: Start API (PostgreSQL + auth)
+        run: |
+          pnpm --filter @birzha/api exec tsx src/e2e-server.ts > /tmp/e2e-api.log 2>&1 &
+          echo $! > /tmp/e2e-api.pid
+          pnpm exec wait-on -t 120000 http-get://127.0.0.1:3099/health
+
+      - name: Smoke load gate
+        run: BASE_URL=http://127.0.0.1:3099 TOTAL=120 CONCURRENCY=12 MAX_P95_MS=800 MIN_RPS=40 pnpm load:smoke
+
+      - name: Distribution load gate
+        run: BASE_URL=http://127.0.0.1:3099 LOGIN=e2e_admin PASSWORD=$E2E_TEST_PASSWORD TOTAL=20 CONCURRENCY=5 MAX_P95_MS=1200 MAX_FAIL=0 pnpm load:distribution
+
+      - name: Security smoke gate
+        run: BASE_URL=http://127.0.0.1:3099 EXPECT_AUTH=1 LOGIN=e2e_seller PASSWORD=$E2E_TEST_PASSWORD pnpm security:smoke
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/e2e-api.pid ]; then
+            kill "$(cat /tmp/e2e-api.pid)" || true
+          fi
+          if [ -f /tmp/e2e-api.log ]; then
+            tail -n 200 /tmp/e2e-api.log || true
+          fi
+
+  release-gate-summary:
+    needs: [ci, e2e-auth-nav, api-pg, nonfunctional-smoke]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Release gate verdict
+        run: |
+          echo "ci=${{ needs.ci.result }}"
+          echo "e2e-auth-nav=${{ needs.e2e-auth-nav.result }}"
+          echo "api-pg=${{ needs.api-pg.result }}"
+          echo "nonfunctional-smoke=${{ needs.nonfunctional-smoke.result }}"
+          [ "${{ needs.ci.result }}" = "success" ] || exit 1
+          [ "${{ needs.e2e-auth-nav.result }}" = "success" ] || exit 1
+          [ "${{ needs.api-pg.result }}" = "success" ] || exit 1
+          [ "${{ needs.nonfunctional-smoke.result }}" = "success" ] || exit 1

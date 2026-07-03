@@ -8,10 +8,14 @@ import * as schema from "./db/schema.js";
 export const E2E_DEFAULT_TEST_PASSWORD = "E2e-birzha-test-99";
 
 const E2E_USERS: { id: string; login: string; roleCode: string }[] = [
+  { id: "e2e-user-admin", login: "e2e_admin", roleCode: "admin" },
   { id: "e2e-user-accountant", login: "e2e_accountant", roleCode: "accountant" },
-  { id: "e2e-user-warehouse", login: "e2e_warehouse", roleCode: "warehouse" },
   { id: "e2e-user-manager", login: "e2e_manager", roleCode: "manager" },
-  { id: "e2e-user-seller", login: "e2e_seller", roleCode: "seller" },
+  { id: "e2e-user-purchaser", login: "e2e_purchaser", roleCode: "purchaser" },
+  { id: "e2e-user-warehouse", login: "e2e_warehouse", roleCode: "warehouse" },
+  { id: "e2e-user-logistics", login: "e2e_logistics", roleCode: "logistics" },
+  { id: "e2e-user-receiver", login: "e2e_receiver", roleCode: "receiver" },
+  { id: "e2e-user-seller", login: "e2e_seller", roleCode: "seller" }
 ];
 
 /**

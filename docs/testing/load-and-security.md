@@ -27,6 +27,13 @@ pnpm load:smoke
 
 Параметры через переменные окружения: `BASE_URL`, `LOAD_PATH` (по умолчанию `/health`), `TOTAL`, `CONCURRENCY`.
 
+Пороги (release gate): `MAX_P95_MS`, `MIN_RPS`.  
+Пример:
+
+```bash
+BASE_URL=http://127.0.0.1:3000 TOTAL=120 CONCURRENCY=12 MAX_P95_MS=800 MIN_RPS=40 pnpm load:smoke
+```
+
 ## Нагрузка «Распределение» (5000+ погрузочных)
 
 Сценарий для проверки списков `/a/distribution` при большом объёме данных.
@@ -53,6 +60,13 @@ pnpm load:distribution
 
 Переменные: `BASE_URL`, `TOTAL`, `CONCURRENCY`, `PATHS`, при `REQUIRE_API_AUTH=true` — `LOGIN` и `PASSWORD`.
 
+Пороги (release gate): `MAX_P95_MS`, `MAX_FAIL`.  
+Пример:
+
+```bash
+BASE_URL=http://127.0.0.1:3000 LOGIN=e2e_admin PASSWORD=E2e-birzha-test-99 TOTAL=20 CONCURRENCY=5 MAX_P95_MS=1200 MAX_FAIL=0 pnpm load:distribution
+```
+
 Скрипт меряет latency и размер ответа для `GET /loading-manifests`, `/trips`, `/batches`, `/loading-manifests/reserved-batch-ids` и `/warehouses`. В отчёте смотрите `itemCount`, `responseBytesMax`, `latencyMs.p95`.
 
 ## Масштабирование списков (10k+ записей)
@@ -74,3 +88,15 @@ pnpm load:distribution
 UI «Распределение», «Архив» и «Настройки → документы» используют пагинацию; при добавлении новых экранов со списками — только постраничные запросы, не `GET` без параметров в цикле по всей таблице.
 
 Для более серьёзных сценариев (сценарии, SLA, отчёты) можно подключить [k6](https://k6.io/) или аналог и описать сценарии отдельно; в CI по умолчанию полный load-тест не гоняется — только unit/integration тесты API.
+
+## Security smoke (локально/CI)
+
+Скрипт проверяет security-заголовки на `/health` и (опционально) требования авторизации.
+
+```bash
+# без обязательного auth
+BASE_URL=http://127.0.0.1:3000 pnpm security:smoke
+
+# с REQUIRE_API_AUTH=true
+BASE_URL=http://127.0.0.1:3000 EXPECT_AUTH=1 LOGIN=e2e_seller PASSWORD=E2e-birzha-test-99 pnpm security:smoke
+```

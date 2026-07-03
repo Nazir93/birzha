@@ -14,11 +14,15 @@
  *   TOTAL          — запросов на каждый путь (по умолчанию 30)
  *   CONCURRENCY    — параллельных воркеров (по умолчанию 10)
  *   PATHS          — через запятую; по умолчанию набор distribution
+ *   MAX_P95_MS     — порог p95 latency на каждый путь
+ *   MAX_FAIL       — допустимое число ошибок (по умолчанию 0)
  */
 
 const BASE_URL = process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const TOTAL = Math.max(1, Number(process.env.TOTAL ?? 30));
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY ?? 10));
+const MAX_P95_MS = process.env.MAX_P95_MS ? Number(process.env.MAX_P95_MS) : null;
+const MAX_FAIL = Math.max(0, Number(process.env.MAX_FAIL ?? 0));
 const LOGIN = process.env.LOGIN ?? process.env.BIRZHA_LOAD_LOGIN ?? "";
 const PASSWORD = process.env.PASSWORD ?? process.env.BIRZHA_LOAD_PASSWORD ?? "";
 
@@ -117,6 +121,7 @@ const report = {
   concurrency: CONCURRENCY,
   paths: [],
   fail: 0,
+  gateFailed: false,
 };
 
 for (const path of PATHS) {
@@ -161,10 +166,19 @@ for (const path of PATHS) {
   };
   report.paths.push(entry);
   report.fail += fail;
+  if (MAX_P95_MS != null && Number.isFinite(MAX_P95_MS) && entry.latencyMs.p95 > MAX_P95_MS) {
+    report.gateFailed = true;
+  }
 }
 
 console.log(JSON.stringify(report, null, 2));
 
-if (report.fail > 0) {
+if (report.fail > MAX_FAIL || report.gateFailed) {
+  if (report.fail > MAX_FAIL) {
+    console.error(`load-distribution gate failed: fail=${report.fail} > MAX_FAIL=${MAX_FAIL}`);
+  }
+  if (report.gateFailed && MAX_P95_MS != null) {
+    console.error(`load-distribution gate failed: p95 on at least one path > MAX_P95_MS=${MAX_P95_MS}`);
+  }
   process.exitCode = 1;
 }
