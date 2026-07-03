@@ -6,7 +6,6 @@ import { Link } from "react-router-dom";
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
 import type { BatchListItem, CreateWarehouseResponse } from "../api/types.js";
 import {
-  adminDashboardSummaryQueryOptions,
   batchesForWarehouseQueryOptions,
   queryRoots,
   stockBalancesQueryOptions,
@@ -33,7 +32,6 @@ export function AdminStockWarehousesPage() {
 
   const warehousesQ = useQuery(warehousesFullListQueryOptions());
   const stockBalancesQ = useQuery(stockBalancesQueryOptions());
-  const dashboardSummaryQ = useQuery(adminDashboardSummaryQueryOptions());
   const selectedWhId = selectedWarehouseId.trim();
   const batchesQ = useQuery({
     ...batchesForWarehouseQueryOptions(selectedWhId, 500),
@@ -51,11 +49,11 @@ export function AdminStockWarehousesPage() {
 
   const warehousePackagesById = useMemo(() => {
     const map = new Map<string, number>();
-    for (const row of dashboardSummaryQ.data?.warehouse.byWarehouse ?? []) {
-      map.set(row.warehouseId, row.packages);
+    for (const row of stockBalancesQ.data?.byWarehouse ?? []) {
+      map.set(row.warehouseId, row.onWarehousePackages ?? 0);
     }
     return map;
-  }, [dashboardSummaryQ.data?.warehouse.byWarehouse]);
+  }, [stockBalancesQ.data?.byWarehouse]);
 
   useEffect(() => {
     if (selectedWarehouseId.trim().length > 0 || !warehousesQ.isSuccess || stockBalancesQ.isPending) {

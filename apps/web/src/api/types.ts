@@ -134,6 +134,7 @@ export type StockBalancesResponse = {
     warehouseName: string;
     warehouseCode: string;
     onWarehouseKg: number;
+    onWarehousePackages?: number;
     inTransitKg: number;
     valueWarehouseKopecks: string;
     valueTransitKopecks: string;

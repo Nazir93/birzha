@@ -24,6 +24,11 @@ export async function getStockBalancesSummary(db: DbClient) {
       warehouseCode: warehouses.code,
       onWarehouseGrams: sql<bigint>`coalesce(sum(${batches.onWarehouseGrams}), 0)`,
       inTransitGrams: sql<bigint>`coalesce(sum(${batches.inTransitGrams}), 0)`,
+      onWarehousePackages: sql<number>`coalesce(sum(
+        case when ${batches.totalGrams} > 0 then
+          ${batches.onWarehouseGrams}::numeric / ${batches.totalGrams}::numeric * coalesce(${purchaseDocumentLines.packageCount}, 0)
+        else 0 end
+      ), 0)::float`,
       valueWhKopecks: sql<bigint>`coalesce(sum((${batches.onWarehouseGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000)::bigint), 0)`,
       valueTrKopecks: sql<bigint>`coalesce(sum((${batches.inTransitGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000)::bigint), 0)`,
     })
@@ -50,6 +55,7 @@ export async function getStockBalancesSummary(db: DbClient) {
       warehouseName: r.warehouseName,
       warehouseCode: r.warehouseCode,
       onWarehouseKg: whKg,
+      onWarehousePackages: Math.round(r.onWarehousePackages),
       inTransitKg: trKg,
       valueWarehouseKopecks: r.valueWhKopecks.toString(),
       valueTransitKopecks: r.valueTrKopecks.toString(),
