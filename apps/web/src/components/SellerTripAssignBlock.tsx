@@ -8,7 +8,9 @@ import { filterTripsInWork } from "../format/archive.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
+import { groupLoadingManifestNumbersByTripId } from "../format/loading-manifest-list.js";
 import {
+  loadingManifestsPagedQueryOptions,
   queryRoots,
   tripsFieldSellerOptionsQueryOptions,
   tripsFullListQueryOptions,
@@ -31,6 +33,13 @@ export function SellerTripAssignBlock() {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
+  const manifestsQuery = useQuery(
+    loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" }),
+  );
+  const manifestNumbersByTripId = useMemo(
+    () => groupLoadingManifestNumbersByTripId(manifestsQuery.data?.loadingManifests ?? []),
+    [manifestsQuery.data?.loadingManifests],
+  );
   const canAssignSeller = SELLER_ASSIGN_ROLES.some((r) => hasGlobalRole(user, r));
   const fieldSellersQuery = useQuery({
     ...tripsFieldSellerOptionsQueryOptions(),
@@ -163,7 +172,9 @@ export function SellerTripAssignBlock() {
           },
           ...tripsAvailableForAssignment.map((t) => ({
             value: t.id,
-            label: formatTripSelectLabel(t),
+            label: formatTripSelectLabel(t, {
+              linkedManifestNumbers: manifestNumbersByTripId.get(t.id),
+            }),
           })),
         ]}
       />

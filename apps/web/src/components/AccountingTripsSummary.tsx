@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -11,9 +11,9 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
-
-const MAX_TRIPS = 50;
 
 /**
  * Сводка по **всем** рейсам для бухгалтера: выручка, себестоимость проданного, валовая, нал/долг.
@@ -22,18 +22,31 @@ const MAX_TRIPS = 50;
 export function AccountingTripsSummary() {
   const tripsQuery = useQuery(tripsFullListQueryOptions());
 
-  const sortedTrips = useMemo(() => {
-    return sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []).slice(0, MAX_TRIPS);
-  }, [tripsQuery.data?.trips]);
+  const sortedTrips = useMemo(
+    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
+    [tripsQuery.data?.trips],
+  );
+
+  const [tripsPage, setTripsPage] = useState(0);
+  const tripsPageCount = listPageCount(sortedTrips.length, WORK_LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setTripsPage((p) => clampListPageIndex(p, sortedTrips.length, WORK_LIST_PAGE_SIZE));
+  }, [sortedTrips.length]);
+
+  const tripsPageSlice = useMemo(
+    () => sliceListPage(sortedTrips, tripsPage, WORK_LIST_PAGE_SIZE),
+    [sortedTrips, tripsPage],
+  );
 
   const reportQueries = useQueries({
-    queries: sortedTrips.map((t) => ({
+    queries: tripsPageSlice.map((t) => ({
       ...shipmentReportQueryOptions(t.id),
-      enabled: sortedTrips.length > 0,
+      enabled: tripsPageSlice.length > 0,
     })),
   });
 
-  const anyLoading = reportQueries.some((q) => q.isPending) && sortedTrips.length > 0;
+  const anyLoading = reportQueries.some((q) => q.isPending) && tripsPageSlice.length > 0;
   const hasError = reportQueries.some((q) => q.isError);
 
   const tripTotals = useMemo(() => {
@@ -46,7 +59,7 @@ export function AccountingTripsSummary() {
     let debt = 0n;
     let card = 0n;
     let rows = 0;
-    for (let i = 0; i < sortedTrips.length; i++) {
+    for (let i = 0; i < tripsPageSlice.length; i++) {
       const q = reportQueries[i];
       if (!q?.data) {
         continue;
@@ -63,7 +76,7 @@ export function AccountingTripsSummary() {
       rows += 1;
     }
     return { kg, revenue, costSold, costShort, gross, cash, debt, card, rows };
-  }, [sortedTrips, reportQueries]);
+  }, [tripsPageSlice, reportQueries]);
 
   if (tripsQuery.isPending) {
     return <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={6} />;
@@ -126,7 +139,7 @@ export function AccountingTripsSummary() {
             </tr>
           </thead>
           <tbody>
-            {sortedTrips.map((t, i) => {
+            {tripsPageSlice.map((t, i) => {
               const q = reportQueries[i];
               if (!q) {
                 return null;
@@ -192,7 +205,7 @@ export function AccountingTripsSummary() {
             {!anyLoading && tripTotals.rows > 0 && (
               <tr className="birzha-table-subtotal-row">
                 <th scope="row" style={{ ...thtd, textAlign: "left" }}>
-                  Итого ({tripTotals.rows} рейс.)
+                  Итого на странице ({tripTotals.rows} рейс.)
                 </th>
                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(tripTotals.kg.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.revenue.toString())}</td>
@@ -209,6 +222,12 @@ export function AccountingTripsSummary() {
           </tbody>
         </table>
       </div>
+      <BirzhaPagination
+        pageIndex={tripsPage}
+        pageCount={tripsPageCount}
+        itemLabel="рейсов"
+        onPageChange={setTripsPage}
+      />
       {hasError && !anyLoading ? (
         <WarningAlert title="Отчёты">Часть отчётов не загрузилась — обновите страницу.</WarningAlert>
       ) : null}

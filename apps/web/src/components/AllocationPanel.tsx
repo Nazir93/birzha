@@ -7,6 +7,7 @@ import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../a
 import { useAuth } from "../auth/auth-context.js";
 import { canShipLoadingManifest } from "../auth/role-panels.js";
 import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
+import { formatAllocationWarehouseSelectLabel } from "../format/allocation-warehouse-option.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
@@ -483,9 +484,7 @@ export function AllocationPanel() {
                 { value: "", label: "— выберите склад —" },
                 ...allocationWarehouseOptions.map((row) => ({
                   value: row.id,
-                  label: `${warehouseName(row.id)} — ${row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг${
-                    row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""
-                  }, ${row.batchCount} парт.`,
+                  label: formatAllocationWarehouseSelectLabel(warehouseName(row.id), row),
                 })),
               ]}
             />
@@ -517,6 +516,20 @@ export function AllocationPanel() {
             <p className="birzha-callout-info" role="status">
               На складе нет привязки к номеру накладной — показаны все партии с остатком.
             </p>
+          ) : null}
+          {selectedWarehouseRow != null &&
+          selectedWarehouseRow.batchCount === 0 &&
+          selectedWarehouseRow.totalBatchCountOnWarehouse > 0 ? (
+            <InfoAlert title="Остаток в погрузочной накладной">
+              На складе{" "}
+              <strong>
+                {selectedWarehouseRow.totalKgOnWarehouse.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+              </strong>{" "}
+              ({selectedWarehouseRow.totalBatchCountOnWarehouse} парт.) уже учтены в активных погрузочных накладных — для
+              нового отбора свободных партий нет. Откройте сохранённую накладную в таблице выше или раздел{" "}
+              <Link to={appendBase}>«Догрузка»</Link>, если
+              нужно добавить партии.
+            </InfoAlert>
           ) : null}
           <LoadingManifestBlock
             documentOptions={manifestDocumentOptions}

@@ -23,13 +23,14 @@ import { adminRoutes } from "../routes.js";
 import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/trip-label.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
+import { SETTINGS_LIST_PAGE_SIZE } from "../format/list-page-sizes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { dateFieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 
-const SETTINGS_MANIFEST_PAGE_SIZE = 50;
+const SETTINGS_MANIFEST_PAGE_SIZE = SETTINGS_LIST_PAGE_SIZE;
 
 type SettingsDocumentsAdminPanelProps = {
   embedded?: boolean;

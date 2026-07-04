@@ -6,6 +6,7 @@ import { apiPostJson, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQua
 import { useAuth } from "../auth/auth-context.js";
 import { canShipLoadingManifest } from "../auth/role-panels.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
+import { formatAllocationWarehouseSelectLabel } from "../format/allocation-warehouse-option.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import { queryRoots } from "../query/core-list-queries.js";
@@ -346,9 +347,7 @@ export function LoadingAppendPanel() {
                     { value: "", label: "— выберите склад —" },
                     ...allocationWarehouseOptions.map((row) => ({
                       value: row.id,
-                      label: `${warehouseName(row.id)} — ${row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг${
-                        row.linesWithBoxData > 0 ? `, ≈ ${row.packageEstimate.toLocaleString("ru-RU")} ящ.` : ""
-                      }, ${row.batchCount} парт.`,
+                      label: formatAllocationWarehouseSelectLabel(warehouseName(row.id), row),
                     })),
                   ]}
                 />

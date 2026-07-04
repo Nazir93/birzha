@@ -15,6 +15,7 @@ import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelec
 import { resolveUserLogin } from "../format/user-display.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
 import {
   aggregateSellerShipmentReports,
   clientSalePaymentLabelRu,
@@ -36,6 +37,7 @@ import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { selectFieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { SellerTripAssignBlock } from "./SellerTripAssignBlock.js";
 
 const selectWide = selectFieldStyle;
@@ -88,6 +90,7 @@ export function AssignSellerPanel() {
 
   const [assignSellerUserId, setAssignSellerUserId] = useState("");
   const [activeTripId, setActiveTripId] = useState("");
+  const [sellerTripsPage, setSellerTripsPage] = useState(0);
 
   useEffect(() => {
     if (!assignSellerUserId && sellerOptions.length > 0) {
@@ -165,6 +168,17 @@ export function AssignSellerPanel() {
       return { trip: t, report: r, metrics: tripLedgerMetrics(r) };
     });
   }, [reportByTripId, selectedSellerTrips]);
+
+  const sellerTripsPageCount = listPageCount(tripRows.length, WORK_LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setSellerTripsPage((p) => clampListPageIndex(p, tripRows.length, WORK_LIST_PAGE_SIZE));
+  }, [tripRows.length, assignSellerUserId]);
+
+  const tripRowsPageSlice = useMemo(
+    () => sliceListPage(tripRows, sellerTripsPage, WORK_LIST_PAGE_SIZE),
+    [tripRows, sellerTripsPage],
+  );
 
   const activeReport = activeTripId ? reportByTripId.get(activeTripId) ?? null : null;
 
@@ -313,6 +327,7 @@ export function AssignSellerPanel() {
             {selectedSellerTrips.length === 0 ? (
               <BirzhaEmptyState compact title="Нет закреплённых рейсов" />
             ) : (
+              <>
               <div className="birzha-assign-seller__trip-table-wrap birzha-table-scroll birzha-table-scroll--sticky-head">
                 <table className="birzha-assign-seller__trip-table" style={tableStyle}>
                   <thead>
@@ -337,7 +352,7 @@ export function AssignSellerPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tripRows.map(({ trip: t, report: r, metrics: m }) => {
+                    {tripRowsPageSlice.map(({ trip: t, report: r, metrics: m }) => {
                       const active = t.id === activeTripId;
                       return (
                         <tr
@@ -389,6 +404,13 @@ export function AssignSellerPanel() {
                   </tbody>
                 </table>
               </div>
+              <BirzhaPagination
+                pageIndex={sellerTripsPage}
+                pageCount={sellerTripsPageCount}
+                itemLabel="рейсов"
+                onPageChange={setSellerTripsPage}
+              />
+              </>
             )}
           </BirzhaDisclosure>
 

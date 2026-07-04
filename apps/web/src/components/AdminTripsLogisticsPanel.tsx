@@ -19,7 +19,9 @@ import type { LoadingManifestTripDetachLockCode } from "../format/loading-manife
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle } from "../ui/styles.js";
@@ -43,6 +45,7 @@ export function AdminTripsLogisticsPanel() {
   const [newTripDeparted, setNewTripDeparted] = useState("");
   const [tripError, setTripError] = useState<string | null>(null);
   const [detachingManifestId, setDetachingManifestId] = useState<string | null>(null);
+  const [tripsPage, setTripsPage] = useState(0);
 
   const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
   const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
@@ -109,6 +112,17 @@ export function AdminTripsLogisticsPanel() {
   const openTrips = useMemo(
     () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
     [tripsQ.data?.trips],
+  );
+
+  const tripsPageCount = listPageCount(openTrips.length, WORK_LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setTripsPage((p) => clampListPageIndex(p, openTrips.length, WORK_LIST_PAGE_SIZE));
+  }, [openTrips.length]);
+
+  const openTripsPageSlice = useMemo(
+    () => sliceListPage(openTrips, tripsPage, WORK_LIST_PAGE_SIZE),
+    [openTrips, tripsPage],
   );
 
   const suggestedTripNumber = useMemo(
@@ -341,7 +355,7 @@ export function AdminTripsLogisticsPanel() {
                       </td>
                     </tr>
                   ) : null}
-                  {openTrips.map((t) => {
+                  {openTripsPageSlice.map((t) => {
                     const linkedManifests = manifestsByTripId.get(t.id) ?? [];
                     return (
                     <tr key={t.id}>
@@ -456,6 +470,12 @@ export function AdminTripsLogisticsPanel() {
                 </tbody>
               </table>
             </div>
+          <BirzhaPagination
+            pageIndex={tripsPage}
+            pageCount={tripsPageCount}
+            itemLabel="рейсов"
+            onPageChange={setTripsPage}
+          />
           <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.75rem 0 0" }}>
             Закрытые рейсы — в разделе <Link to={archivePath}>«Архив»</Link>.
           </p>

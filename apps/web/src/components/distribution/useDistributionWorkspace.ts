@@ -6,6 +6,10 @@ import type { BatchListItem, LoadingManifestSummary } from "../../api/types.js";
 import { useAuth } from "../../auth/auth-context.js";
 import { closedTripIdSet, filterTripsInWork } from "../../format/archive.js";
 import { documentOptionsForAllocation } from "../../format/allocation-document-options.js";
+import {
+  buildAllocationWarehouseOptions,
+  type AllocationWarehouseOption,
+} from "../../format/allocation-warehouse-option.js";
 import { batchWarehouseId, isEligibleForLoadingAllocation } from "../../format/batch-warehouse.js";
 import {
   estimatedPackageCountOnShelf,
@@ -13,6 +17,10 @@ import {
 } from "../../format/loading-manifest.js";
 import { sortLoadingManifestsByCreatedAtDesc } from "../../format/loading-manifest-list.js";
 import { humanizeErrorMessage } from "../../format/user-facing-error.js";
+import {
+  WORK_LIST_PAGE_SIZE,
+  listPageCount,
+} from "../../format/list-page-sizes.js";
 import {
   batchesForWarehouseQueryOptions,
   loadingManifestDetailQueryOptions,
@@ -33,7 +41,7 @@ const labelsDestination: Record<(typeof BATCH_DESTINATIONS)[number], string> = {
   writeoff: "Списание",
 };
 
-export const MANIFEST_LIST_PAGE_SIZE = 50;
+export { WORK_LIST_PAGE_SIZE as MANIFEST_LIST_PAGE_SIZE };
 
 function groupBatchesByWarehouse(stock: BatchListItem[]): {
   byWarehouse: Map<string, BatchListItem[]>;
@@ -51,9 +59,6 @@ function groupBatchesByWarehouse(stock: BatchListItem[]): {
   return { byWarehouse, order };
 }
 
-function sumOnWarehouseKg(batches: BatchListItem[]): number {
-  return batches.reduce((a, b) => a + b.onWarehouseKg, 0);
-}
 
 function sumPackageEstimatesForWarehouse(batches: BatchListItem[]): { sum: number; linesWithBoxData: number } {
   let sum = 0;
@@ -167,8 +172,8 @@ export function useDistributionWorkspace({
 
   const manifestsListQuery = useQuery(
     loadingManifestsPagedQueryOptions({
-      limit: MANIFEST_LIST_PAGE_SIZE,
-      offset: manifestListPage * MANIFEST_LIST_PAGE_SIZE,
+      limit: WORK_LIST_PAGE_SIZE,
+      offset: manifestListPage * WORK_LIST_PAGE_SIZE,
       scope: "active",
     }),
   );
@@ -188,7 +193,7 @@ export function useDistributionWorkspace({
   const closedIds = useMemo(() => closedTripIdSet(tripsQuery.data?.trips ?? []), [tripsQuery.data?.trips]);
   const activeManifests = manifestsListQuery.data?.loadingManifests ?? [];
   const manifestListTotal = manifestsListQuery.data?.listMeta?.totalCount ?? activeManifests.length;
-  const manifestListPageCount = Math.max(1, Math.ceil(manifestListTotal / MANIFEST_LIST_PAGE_SIZE));
+  const manifestListPageCount = listPageCount(manifestListTotal, WORK_LIST_PAGE_SIZE);
   const distributionManifestListReady = tripsQuery.isSuccess && manifestsListQuery.isSuccess;
 
   const allActiveManifestsSorted = useMemo(
@@ -253,58 +258,41 @@ export function useDistributionWorkspace({
     [batchesOnWarehouse, reservedBatchIdSet],
   );
 
+  const eligibleBatchesOnWarehouse = useMemo(
+    () => batchesOnWarehouse.filter(isEligibleForLoadingAllocation),
+    [batchesOnWarehouse],
+  );
+
   const loading = batchesQueryPending;
   const refetching = batchesQueryFetching && !batchesQueryPending;
 
   const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
 
-  const allocationWarehouseOptions = useMemo((): {
-    id: string;
-    batchCount: number;
-    totalKg: number;
-    packageEstimate: number;
-    linesWithBoxData: number;
-  }[] => {
-    const out: {
-      id: string;
-      batchCount: number;
-      totalKg: number;
-      packageEstimate: number;
-      linesWithBoxData: number;
-    }[] = [];
-    const cat = (warehousesQuery.data?.warehouses ?? [])
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
-    const add = (id: string) => {
-      const bs = byWarehouse.get(id) ?? [];
-      const { sum, linesWithBoxData } = sumPackageEstimatesForWarehouse(bs);
-      out.push({
-        id,
-        batchCount: bs.length,
-        totalKg: sumOnWarehouseKg(bs),
-        packageEstimate: sum,
-        linesWithBoxData,
-      });
-    };
-    for (const w of cat) {
-      add(w.id);
-    }
-    for (const id of warehouseOrder) {
-      if (cat.some((w) => w.id === id)) {
-        continue;
-      }
-      add(id);
-    }
-    return out;
-  }, [warehousesQuery.data?.warehouses, byWarehouse, warehouseOrder]);
+  const { byWarehouse: eligibleByWarehouse, order: eligibleWarehouseOrder } = useMemo(
+    () => groupBatchesByWarehouse(eligibleBatchesOnWarehouse),
+    [eligibleBatchesOnWarehouse],
+  );
+
+  const allocationWarehouseOptions = useMemo((): AllocationWarehouseOption[] => {
+    return buildAllocationWarehouseOptions({
+      warehouseCatalog: warehousesQuery.data?.warehouses ?? [],
+      availableByWarehouse: byWarehouse,
+      eligibleByWarehouse,
+      extraWarehouseOrder: [...warehouseOrder, ...eligibleWarehouseOrder],
+      reservedBatchIds: reservedBatchIdSet,
+      sumPackageEstimatesForWarehouse,
+    });
+  }, [
+    warehousesQuery.data?.warehouses,
+    byWarehouse,
+    eligibleByWarehouse,
+    warehouseOrder,
+    eligibleWarehouseOrder,
+    reservedBatchIdSet,
+  ]);
 
   const showWorkspace =
     !loading && (viewingSaved || list.length > 0 || allocationWarehouseOptions.length > 0);
-
-  const eligibleBatchesOnWarehouse = useMemo(
-    () => batchesOnWarehouse.filter(isEligibleForLoadingAllocation),
-    [batchesOnWarehouse],
-  );
 
   const batchesOnWarehouseWithoutWarehouse = useMemo(
     () => batchesOnWarehouse.filter((b) => !batchWarehouseId(b)),

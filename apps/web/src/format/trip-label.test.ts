@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatTripListStatusLabel, formatTripSelectLabel, formatTripStatusLabel, buildTripDisplayNumber, suggestNextTripNumber } from "./trip-label.js";
+import { formatTripListStatusLabel, formatTripSelectLabel, formatTripStatusLabel, buildTripDisplayNumber, suggestNextTripNumber, formatLinkedManifestsTripSelectSuffix } from "./trip-label.js";
 
 const baseTrip = {
   id: "trip-1",
@@ -121,5 +121,17 @@ describe("trip-label", () => {
       { includeTechnicalId: true },
     );
     expect(label).toBe("Р-12 · Сидоров · Камаз · 10.05.2026 (Открыт) — trip-1");
+  });
+
+  it("показывает привязанную ПН в подписи рейса", () => {
+    const label = formatTripSelectLabel(baseTrip, {
+      linkedManifestNumbers: ["18.04-2026-MAN-05"],
+    });
+    expect(label).toContain("(Открыт)");
+    expect(label).toContain("· ПН 18.04-2026-MAN-05");
+  });
+
+  it("formatLinkedManifestsTripSelectSuffix — несколько ПН", () => {
+    expect(formatLinkedManifestsTripSelectSuffix(["A", "B", "C"])).toBe(" · ПН: A, B +1");
   });
 });

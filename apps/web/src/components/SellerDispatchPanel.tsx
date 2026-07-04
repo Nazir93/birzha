@@ -11,9 +11,11 @@ import { filterTripsInWork } from "../format/archive.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripSelectLabel, formatTripStatusLabel } from "../format/trip-label.js";
+import { groupLoadingManifestNumbersByTripId } from "../format/loading-manifest-list.js";
 import { resolveUserLogin } from "../format/user-display.js";
 import {
   batchesFullListQueryOptions,
+  loadingManifestsPagedQueryOptions,
   queryRoots,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
@@ -61,6 +63,13 @@ export function SellerDispatchPanel() {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const tripsQuery = useQuery(tripsFullListQueryOptions());
+  const manifestsQuery = useQuery(
+    loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" }),
+  );
+  const manifestNumbersByTripId = useMemo(
+    () => groupLoadingManifestNumbersByTripId(manifestsQuery.data?.loadingManifests ?? []),
+    [manifestsQuery.data?.loadingManifests],
+  );
   const batchesQuery = useQuery(batchesFullListQueryOptions());
   const canAssignSeller = SELLER_ASSIGN_ROLES.some((r) => hasGlobalRole(user, r));
   const fieldSellersQuery = useQuery({
@@ -209,7 +218,9 @@ export function SellerDispatchPanel() {
               },
               ...tripsAvailableForAssignment.map((t) => ({
                 value: t.id,
-                label: formatTripSelectLabel(t),
+                label: formatTripSelectLabel(t, {
+                  linkedManifestNumbers: manifestNumbersByTripId.get(t.id),
+                }),
               })),
             ]}
           />
@@ -298,7 +309,11 @@ export function SellerDispatchPanel() {
                     const product = shipmentProductLabel(rq?.data, batchById, rq?.isPending ?? false);
                     return (
                       <tr key={t.id}>
-                        <td style={thtd}>{formatTripSelectLabel(t)}</td>
+                        <td style={thtd}>
+                          {formatTripSelectLabel(t, {
+                            linkedManifestNumbers: manifestNumbersByTripId.get(t.id),
+                          })}
+                        </td>
                         <td style={thtd}>{formatTripStatusLabel(t.status)}</td>
                         <td style={thtd}>{seller}</td>
                         <td style={thtd}>{product}</td>

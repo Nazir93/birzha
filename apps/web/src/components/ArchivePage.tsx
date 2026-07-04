@@ -19,6 +19,7 @@ import { filterTripsAssignedToSellerForReports } from "../format/seller-workspac
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
 import { formatTripListStatusLabel } from "../format/trip-label.js";
+import { ARCHIVE_LIST_PAGE_SIZE } from "../format/list-page-sizes.js";
 import {
   loadingManifestsPagedQueryOptions,
   purchaseDocumentsPagedQueryOptions,
@@ -41,7 +42,7 @@ import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { tableStyle, thHead, thtd, fieldStyle } from "../ui/styles.js";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = ARCHIVE_LIST_PAGE_SIZE;
 
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);

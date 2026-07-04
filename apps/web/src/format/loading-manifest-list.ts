@@ -9,9 +9,30 @@ export function sortLoadingManifestsByCreatedAtDesc(
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-/**
- * Погрузочные накладные по одному складу, новее — выше (для блока «Распределение»).
- */
+/** Номера погрузочных по рейсу (для подписи в select). */
+export function groupLoadingManifestNumbersByTripId(
+  manifests: readonly LoadingManifestSummary[],
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const m of manifests) {
+    const tripId = m.tripId?.trim();
+    if (!tripId) {
+      continue;
+    }
+    const num = m.manifestNumber.trim();
+    if (!num) {
+      continue;
+    }
+    const arr = map.get(tripId) ?? [];
+    arr.push(num);
+    map.set(tripId, arr);
+  }
+  for (const arr of map.values()) {
+    arr.sort((a, b) => a.localeCompare(b, "ru"));
+  }
+  return map;
+}
+
 export function manifestsForWarehouseSorted(
   manifests: readonly LoadingManifestSummary[] | undefined,
   warehouseId: string,

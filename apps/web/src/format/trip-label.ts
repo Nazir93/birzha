@@ -134,7 +134,22 @@ export function formatTripDepartedAtRu(iso: string | null | undefined): string {
 export type FormatTripSelectLabelOptions = {
   /** Показывать технический id в конце (только для отладки; в UI не используем). */
   includeTechnicalId?: boolean;
+  /** Номера погрузочных накладных, привязанных к рейсу. */
+  linkedManifestNumbers?: readonly string[];
 };
+
+/** Хвост подписи рейса: привязанные погрузочные накладные. */
+export function formatLinkedManifestsTripSelectSuffix(manifestNumbers: readonly string[]): string {
+  if (manifestNumbers.length === 0) {
+    return "";
+  }
+  if (manifestNumbers.length === 1) {
+    return ` · ПН ${manifestNumbers[0]}`;
+  }
+  const shown = manifestNumbers.slice(0, 2).join(", ");
+  const extra = manifestNumbers.length > 2 ? ` +${manifestNumbers.length - 2}` : "";
+  return ` · ПН: ${shown}${extra}`;
+}
 
 /** Подпись рейса в селекторах: №, водитель, машина, дата, статус. */
 export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
@@ -146,7 +161,8 @@ export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelO
       : num && !display.startsWith(num)
         ? `${num} · ${display}`
         : display;
-  const label = `${head} (${formatTripListStatusLabel(t)})`;
+  let label = `${head} (${formatTripListStatusLabel(t)})`;
+  label += formatLinkedManifestsTripSelectSuffix(opts?.linkedManifestNumbers ?? []);
   if (opts?.includeTechnicalId === true) {
     return `${label} — ${t.id}`;
   }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LoadingManifestSummary } from "../api/types.js";
 
-import { manifestsForWarehouseSorted, sortLoadingManifestsByCreatedAtDesc } from "./loading-manifest-list.js";
+import { groupLoadingManifestNumbersByTripId, manifestsForWarehouseSorted, sortLoadingManifestsByCreatedAtDesc } from "./loading-manifest-list.js";
 
 function m(p: Partial<LoadingManifestSummary> & Pick<LoadingManifestSummary, "id" | "warehouseId" | "createdAt">): LoadingManifestSummary {
   return {
@@ -28,6 +28,18 @@ describe("sortLoadingManifestsByCreatedAtDesc", () => {
       m({ id: "new", warehouseId: "wh-2", createdAt: "2024-06-01T12:00:00.000Z" }),
     ];
     expect(sortLoadingManifestsByCreatedAtDesc(rows).map((x) => x.id)).toEqual(["new", "old"]);
+  });
+});
+
+describe("groupLoadingManifestNumbersByTripId", () => {
+  it("группирует номера ПН по tripId", () => {
+    const map = groupLoadingManifestNumbersByTripId([
+      m({ id: "m1", warehouseId: "wh-1", createdAt: "2024-01-01T10:00:00.000Z", tripId: "t1", manifestNumber: "PN-2" }),
+      m({ id: "m2", warehouseId: "wh-1", createdAt: "2024-01-02T10:00:00.000Z", tripId: "t1", manifestNumber: "PN-1" }),
+      m({ id: "m3", warehouseId: "wh-2", createdAt: "2024-01-03T10:00:00.000Z", tripId: null, manifestNumber: "PN-3" }),
+    ]);
+    expect(map.get("t1")).toEqual(["PN-1", "PN-2"]);
+    expect(map.has("t2")).toBe(false);
   });
 });
 

@@ -36,11 +36,9 @@ import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
 
 const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
-
-const ADMIN_TRIPS_PAGE_SIZE = 15;
 
 /**
  * Дашборд администратора: KPI, распределение массы, сводка по складам, рейсы.
@@ -109,17 +107,16 @@ export function AdminCabinetHome() {
   );
 
   const [tripsPage, setTripsPage] = useState(0);
-  const tripsPageCount = Math.max(1, Math.ceil(sortedTripsOpen.length / ADMIN_TRIPS_PAGE_SIZE));
+  const tripsPageCount = listPageCount(sortedTripsOpen.length, WORK_LIST_PAGE_SIZE);
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(sortedTripsOpen.length / ADMIN_TRIPS_PAGE_SIZE) - 1);
-    setTripsPage((p) => Math.min(p, maxPage));
+    setTripsPage((p) => clampListPageIndex(p, sortedTripsOpen.length, WORK_LIST_PAGE_SIZE));
   }, [sortedTripsOpen.length]);
 
-  const tripsPageSlice = useMemo(() => {
-    const start = tripsPage * ADMIN_TRIPS_PAGE_SIZE;
-    return sortedTripsOpen.slice(start, start + ADMIN_TRIPS_PAGE_SIZE);
-  }, [sortedTripsOpen, tripsPage]);
+  const tripsPageSlice = useMemo(
+    () => sliceListPage(sortedTripsOpen, tripsPage, WORK_LIST_PAGE_SIZE),
+    [sortedTripsOpen, tripsPage],
+  );
 
   const gradeRows = useMemo(() => gradeTableRows(aggregates.byGrade), [aggregates.byGrade]);
   const warehouseRows = useMemo(() => warehouseTableRows(aggregates.byWarehouse), [aggregates.byWarehouse]);

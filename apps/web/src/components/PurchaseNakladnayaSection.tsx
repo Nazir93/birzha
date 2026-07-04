@@ -52,7 +52,7 @@ import {
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 
-const NAKLAD_LIST_PAGE_SIZE = 25;
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -147,17 +147,16 @@ export function PurchaseNakladnayaSection() {
 
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
 
-  const nakladPageCount = Math.max(1, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE));
+  const nakladPageCount = listPageCount(activePurchaseDocs.length, WORK_LIST_PAGE_SIZE);
 
   useEffect(() => {
-    const maxPage = Math.max(0, Math.ceil(activePurchaseDocs.length / NAKLAD_LIST_PAGE_SIZE) - 1);
-    setNakladListPage((p) => Math.min(p, maxPage));
+    setNakladListPage((p) => clampListPageIndex(p, activePurchaseDocs.length, WORK_LIST_PAGE_SIZE));
   }, [activePurchaseDocs.length]);
 
-  const nakladPageSlice = useMemo(() => {
-    const start = nakladListPage * NAKLAD_LIST_PAGE_SIZE;
-    return activePurchaseDocs.slice(start, start + NAKLAD_LIST_PAGE_SIZE);
-  }, [activePurchaseDocs, nakladListPage]);
+  const nakladPageSlice = useMemo(
+    () => sliceListPage(activePurchaseDocs, nakladListPage, WORK_LIST_PAGE_SIZE),
+    [activePurchaseDocs, nakladListPage],
+  );
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
