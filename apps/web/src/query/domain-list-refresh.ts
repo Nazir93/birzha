@@ -13,12 +13,11 @@ export async function refreshPurchaseAndBatchLists(queryClient: QueryClient): Pr
   ]);
 }
 
-/** Свежие списки для «Погрузка на машину»: партии, ПН, резерв, рейсы. */
+/** Свежие списки для «Погрузка на машину»: партии, ПН (список и карточки), резерв, рейсы. */
 export async function refreshDistributionLists(queryClient: QueryClient): Promise<void> {
   await Promise.all([
     queryClient.refetchQueries({ queryKey: queryRoots.batches }),
-    queryClient.refetchQueries({ queryKey: [...queryRoots.loadingManifest, "list"] }),
-    queryClient.refetchQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] }),
+    queryClient.refetchQueries({ queryKey: queryRoots.loadingManifest }),
     queryClient.refetchQueries({ queryKey: queryRoots.trips }),
   ]);
 }

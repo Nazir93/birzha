@@ -67,9 +67,9 @@ export function LoadingTripPanel() {
         tripId: assignTripId.trim(),
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setAssignTripId("");
-      void refreshDistributionLists(queryClient);
+      await refreshDistributionLists(queryClient);
     },
   });
 
@@ -77,9 +77,9 @@ export function LoadingTripPanel() {
     mutationFn: async (manifestId: string) => {
       await apiPostJson(`/api/loading-manifests/${encodeURIComponent(manifestId)}/detach-trip`, {});
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setAssignTripId("");
-      void refreshDistributionLists(queryClient);
+      await refreshDistributionLists(queryClient);
     },
   });
 
