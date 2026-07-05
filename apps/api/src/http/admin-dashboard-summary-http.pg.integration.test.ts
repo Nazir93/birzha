@@ -23,8 +23,8 @@ describe.skipIf(!pgUrl)("admin dashboard summary stock breakdown (PostgreSQL)", 
   const suffix = randomUUID().slice(0, 8);
   const wh1Id = `dash_wh1_${suffix}`;
   const wh2Id = `dash_wh2_${suffix}`;
-  const grade1Id = `dash_g1_${suffix}`;
-  const grade2Id = `dash_g2_${suffix}`;
+  const grade1Id = "pg-n5";
+  const grade2Id = "pg-n6";
   const batch1Id = `dash_b1_${suffix}`;
   const batch2Id = `dash_b2_${suffix}`;
   const doc1Id = `dash_doc1_${suffix}`;
@@ -42,20 +42,6 @@ describe.skipIf(!pgUrl)("admin dashboard summary stock breakdown (PostgreSQL)", 
     await db.insert(schema.warehouses).values([
       { id: wh1Id, code: `D1${suffix}`, name: `Dash WH1 ${suffix}` },
       { id: wh2Id, code: `D2${suffix}`, name: `Dash WH2 ${suffix}` },
-    ]);
-    await db.insert(schema.productGrades).values([
-      {
-        id: grade1Id,
-        code: "№5",
-        displayName: "Калибр №5",
-        productGroup: "Помидоры",
-      },
-      {
-        id: grade2Id,
-        code: "№6",
-        displayName: "Калибр №6",
-        productGroup: "Помидоры",
-      },
     ]);
 
     const batch1Total = 500_000n;
@@ -137,8 +123,6 @@ describe.skipIf(!pgUrl)("admin dashboard summary stock breakdown (PostgreSQL)", 
     await db.delete(schema.purchaseDocuments).where(eq(schema.purchaseDocuments.id, doc2Id));
     await db.delete(schema.batches).where(eq(schema.batches.id, batch1Id));
     await db.delete(schema.batches).where(eq(schema.batches.id, batch2Id));
-    await db.delete(schema.productGrades).where(eq(schema.productGrades.id, grade1Id));
-    await db.delete(schema.productGrades).where(eq(schema.productGrades.id, grade2Id));
     await db.delete(schema.warehouses).where(eq(schema.warehouses.id, wh1Id));
     await db.delete(schema.warehouses).where(eq(schema.warehouses.id, wh2Id));
     await sql.end({ timeout: 10 });
