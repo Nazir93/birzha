@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import type { BatchListFilter, BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DbClient } from "../db/client.js";
-import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
+import { gramsToKg } from "../application/units/mass.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { batches as batchesTable, productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
 

@@ -1,4 +1,5 @@
 import { DomainError } from "../errors.js";
+import { gramsToKg } from "../units/mass.js";
 
 export class InvalidKgError extends DomainError {
   constructor(
@@ -12,9 +13,11 @@ export class InvalidKgError extends DomainError {
 export class InsufficientStockError extends DomainError {
   constructor(
     public readonly context: "warehouse" | "transit" | "pending" | "sold" | "written_off",
-    public readonly availableKg: number,
-    public readonly requestedKg: number,
+    public readonly availableGrams: bigint,
+    public readonly requestedGrams: bigint,
   ) {
+    const availableKg = gramsToKg(availableGrams);
+    const requestedKg = gramsToKg(requestedGrams);
     const message =
       context === "pending"
         ? `Недостаточно кг в ожидании поступления: доступно ${availableKg}, запрошено ${requestedKg}`

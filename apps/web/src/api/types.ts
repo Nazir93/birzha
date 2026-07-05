@@ -42,6 +42,13 @@ export type WarehouseWriteOffsRecentResponse = {
   ledger: "recent";
   warehouseIdFilter: string | null;
   limit: number;
+  offset?: number;
+  listMeta?: {
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+    totalCount: number;
+  };
   totalKg: number;
   lines: {
     id: string;
@@ -60,6 +67,7 @@ export type BatchesListMeta = {
   limit: number;
   offset: number;
   hasMore: boolean;
+  totalCount?: number;
 };
 
 export type BatchesListResponse = {

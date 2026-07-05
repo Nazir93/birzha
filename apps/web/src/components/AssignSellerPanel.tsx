@@ -8,14 +8,13 @@ import { useAuth } from "../auth/auth-context.js";
 import { hasGlobalRole } from "../auth/global-roles.js";
 import { canCreateTrip } from "../auth/role-panels.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
-import { filterTripsInWork } from "../format/archive.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripListStatusLabel, formatTripReportStatusLabel, formatTripSelectLabel, tripListShowsSoldOut, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { resolveUserLogin } from "../format/user-display.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
-import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import {
   aggregateSellerShipmentReports,
   clientSalePaymentLabelRu,
@@ -24,11 +23,10 @@ import {
 } from "../format/seller-trip-metrics.js";
 import {
   batchesByIdsQueryOptions,
-  batchesFullListQueryOptions,
   queryRoots,
   shipmentReportQueryOptions,
   tripsFieldSellerOptionsQueryOptions,
-  tripsFullListQueryOptions,
+  tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
 import { batchIdsFromShipmentReport } from "../format/shipment-report-batch-ids.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
@@ -50,8 +48,6 @@ export function AssignSellerPanel() {
   const navigate = useNavigate();
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const queryClient = useQueryClient();
-  const tripsQuery = useQuery(tripsFullListQueryOptions());
-  const batchesQuery = useQuery(batchesFullListQueryOptions());
   const fieldSellersQuery = useQuery(tripsFieldSellerOptionsQueryOptions());
   const canManageUsers = hasGlobalRole(user, "admin") || hasGlobalRole(user, "manager");
   const showAdminUsersApi = meta?.adminUsersApi === "enabled" && user != null;
@@ -67,10 +63,6 @@ export function AssignSellerPanel() {
     enabled: canManageUsers && showAdminUsersApi,
   });
 
-  const tripSelectOptions = useMemo(
-    () => sortTripsByTripNumberAsc(filterTripsInWork(tripsQuery.data?.trips ?? [])),
-    [tripsQuery.data?.trips],
-  );
   const sellerLoginById = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of sellerUsersQuery.data ?? []) {
@@ -98,10 +90,23 @@ export function AssignSellerPanel() {
     }
   }, [assignSellerUserId, sellerOptions]);
 
+  const sellerTripsPageOffset = sellerTripsPage * WORK_LIST_PAGE_SIZE;
+  const sellerTripsQuery = useQuery({
+    ...tripsPickerQueryOptions({
+      limit: WORK_LIST_PAGE_SIZE,
+      offset: sellerTripsPageOffset,
+      status: "open",
+      order: "tripNumber",
+      assignedSellerUserId: assignSellerUserId,
+    }),
+    enabled: Boolean(assignSellerUserId),
+  });
+
   const selectedSellerTrips = useMemo(
-    () => tripSelectOptions.filter((t) => t.assignedSellerUserId === assignSellerUserId),
-    [assignSellerUserId, tripSelectOptions],
+    () => sortTripsByTripNumberAsc(sellerTripsQuery.data?.trips ?? []),
+    [sellerTripsQuery.data?.trips],
   );
+  const sellerTripsTotalCount = sellerTripsQuery.data?.listMeta?.totalCount ?? selectedSellerTrips.length;
 
   useEffect(() => {
     if (selectedSellerTrips.length === 0) {
@@ -116,7 +121,7 @@ export function AssignSellerPanel() {
   const reportQueries = useQueries({
     queries: selectedSellerTrips.map((trip) => ({
       ...shipmentReportQueryOptions(trip.id),
-      enabled: Boolean(assignSellerUserId),
+      enabled: Boolean(assignSellerUserId) && selectedSellerTrips.length > 0,
     })),
   });
   const reportLoading = reportQueries.some((q) => q.isPending);
@@ -148,14 +153,11 @@ export function AssignSellerPanel() {
 
   const batchById = useMemo(() => {
     const m = new Map<string, BatchListItem>();
-    for (const b of batchesQuery.data?.batches ?? []) {
-      m.set(b.id, b);
-    }
     for (const b of batchesByIdsQuery.data?.batches ?? []) {
       m.set(b.id, b);
     }
     return m;
-  }, [batchesQuery.data?.batches, batchesByIdsQuery.data?.batches]);
+  }, [batchesByIdsQuery.data?.batches]);
 
   const sellerTotals = useMemo(() => aggregateSellerShipmentReports(loadedReports), [loadedReports]);
 
@@ -169,16 +171,13 @@ export function AssignSellerPanel() {
     });
   }, [reportByTripId, selectedSellerTrips]);
 
-  const sellerTripsPageCount = listPageCount(tripRows.length, WORK_LIST_PAGE_SIZE);
+  const sellerTripsPageCount = listPageCount(sellerTripsTotalCount, WORK_LIST_PAGE_SIZE);
 
   useEffect(() => {
-    setSellerTripsPage((p) => clampListPageIndex(p, tripRows.length, WORK_LIST_PAGE_SIZE));
-  }, [tripRows.length, assignSellerUserId]);
+    setSellerTripsPage((p) => clampListPageIndex(p, sellerTripsTotalCount, WORK_LIST_PAGE_SIZE));
+  }, [sellerTripsTotalCount, assignSellerUserId]);
 
-  const tripRowsPageSlice = useMemo(
-    () => sliceListPage(tripRows, sellerTripsPage, WORK_LIST_PAGE_SIZE),
-    [tripRows, sellerTripsPage],
-  );
+  const tripRowsPageSlice = tripRows;
 
   const activeReport = activeTripId ? reportByTripId.get(activeTripId) ?? null : null;
 
@@ -227,7 +226,7 @@ export function AssignSellerPanel() {
           <label className="birzha-field-label" htmlFor="sales-seller">
             Продавец
           </label>
-          {tripsQuery.isPending ? (
+          {(fieldSellersQuery.isPending || sellerUsersQuery.isPending) ? (
             <p className="birzha-assign-seller__pick-status" role="status">
               <LoadingIndicator size="sm" label="Загрузка…" />
             </p>

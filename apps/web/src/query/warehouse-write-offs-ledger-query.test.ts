@@ -19,11 +19,11 @@ describe("warehouseWriteOffsLedgerQueryOptions", () => {
     });
 
     const opt = warehouseWriteOffsLedgerQueryOptions({ warehouseId: "wh-1", limit: 150 });
-    expect(opt.queryKey).toEqual(["warehouse-write-offs-ledger", "wh-1", 150]);
+    expect(opt.queryKey).toEqual(["warehouse-write-offs-ledger", "wh-1", 150, 0]);
 
     await opt.queryFn!();
 
-    expect(spy).toHaveBeenCalledWith("/api/warehouse-write-offs?limit=150&warehouseId=wh-1");
+    expect(spy).toHaveBeenCalledWith("/api/warehouse-write-offs?limit=150&offset=0&warehouseId=wh-1");
   });
 
   it("без склада — только limit в query string", async () => {
@@ -37,10 +37,10 @@ describe("warehouseWriteOffsLedgerQueryOptions", () => {
     });
 
     const opt = warehouseWriteOffsLedgerQueryOptions({});
-    expect(opt.queryKey).toEqual(["warehouse-write-offs-ledger", "", 300]);
+    expect(opt.queryKey).toEqual(["warehouse-write-offs-ledger", "", 300, 0]);
 
     await opt.queryFn!();
 
-    expect(spy).toHaveBeenCalledWith("/api/warehouse-write-offs?limit=300");
+    expect(spy).toHaveBeenCalledWith("/api/warehouse-write-offs?limit=300&offset=0");
   });
 });

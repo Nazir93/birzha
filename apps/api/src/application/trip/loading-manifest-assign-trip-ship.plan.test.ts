@@ -12,6 +12,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 0n,
         onWarehouseGrams: 5000n,
         inTransitGrams: 0n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "none" });
   });
@@ -25,6 +26,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 0n,
         onWarehouseGrams: 3000n,
         inTransitGrams: 0n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ship_from_warehouse", grams: 3000n, packageCount: 60n });
   });
@@ -38,6 +40,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 0n,
         onWarehouseGrams: 0n,
         inTransitGrams: 10_000n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ledger_append_in_transit", grams: 10_000n, packageCount: 250n });
   });
@@ -51,6 +54,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 0n,
         onWarehouseGrams: 0n,
         inTransitGrams: 4000n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
   });
@@ -64,6 +68,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 0n,
         onWarehouseGrams: 0n,
         inTransitGrams: 5000n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
   });
@@ -77,6 +82,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 140n,
         onWarehouseGrams: 0n,
         inTransitGrams: 5_000n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
   });
@@ -90,7 +96,22 @@ describe("planLoadingManifestAssignTripShipment", () => {
         ledgerPackageCountForTripBatch: 250n,
         onWarehouseGrams: 0n,
         inTransitGrams: 5_000n,
+        shipmentGramsOtherTrips: 0n,
       }),
     ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: null });
+  });
+
+  it("in-transit уже приписан другому рейсу — ledger_append не дублирует", () => {
+    expect(
+      planLoadingManifestAssignTripShipment({
+        lineGrams: 10_000n,
+        linePackageCount: null,
+        ledgerGramsForTripBatch: 0n,
+        ledgerPackageCountForTripBatch: 0n,
+        onWarehouseGrams: 0n,
+        inTransitGrams: 10_000n,
+        shipmentGramsOtherTrips: 10_000n,
+      }),
+    ).toEqual({ kind: "none" });
   });
 });

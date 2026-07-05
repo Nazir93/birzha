@@ -1,4 +1,4 @@
-import { Batch, InsufficientStockError } from "@birzha/domain";
+import { Batch, gramsToKg, InsufficientStockError } from "@birzha/domain";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
@@ -22,7 +22,7 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(writeOffId.length).toBeGreaterThan(0);
     const reloaded = await batches.findById("b-w1");
     expect(reloaded).not.toBeNull();
-    expect(reloaded!.toPersistenceState().onWarehouseKg).toBe(185);
+    expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(185);
     const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-w1"]);
     expect(sums.get("b-w1") ?? 0n).toBe(15_000n);
   });

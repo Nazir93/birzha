@@ -11,15 +11,13 @@ import {
   suggestNextTripNumber,
   tripListFullySold,
 } from "../format/trip-label.js";
-import { filterTripsInWork } from "../format/archive.js";
-import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
-import { queryRoots, loadingManifestDetailQueryOptions, loadingManifestsPagedQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import { queryRoots, invalidateStockQueries, loadingManifestDetailQueryOptions, loadingManifestsPagedQueryOptions, tripsPickerQueryOptions } from "../query/core-list-queries.js";
 import { loadingManifestTripDetachLockMessage } from "../format/loading-manifest-trip-detach-lock.js";
 import type { LoadingManifestTripDetachLockCode } from "../format/loading-manifest-trip-detach-lock.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
-import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -52,36 +50,56 @@ export function AdminTripsLogisticsPanel() {
 
   const invalidateTrips = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    invalidateStockQueries(queryClient);
     void queryClient.invalidateQueries({ queryKey: queryRoots.loadingManifest });
   }, [queryClient]);
 
+  const tripsPageOffset = tripsPage * WORK_LIST_PAGE_SIZE;
   const tripsQ = useQuery({
-    ...tripsFullListQueryOptions(),
+    ...tripsPickerQueryOptions({
+      limit: WORK_LIST_PAGE_SIZE,
+      offset: tripsPageOffset,
+      status: "open",
+      order: "departedAtDesc",
+    }),
     enabled: tripsApiEnabled,
   });
 
-  const manifestsQ = useQuery({
-    ...loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" }),
-    enabled: tripsApiEnabled,
+  const tripsSuggestQ = useQuery({
+    ...tripsPickerQueryOptions({ limit: 200, offset: 0, status: "open", order: "tripNumber" }),
+    enabled: tripsApiEnabled && canWriteTrips,
+  });
+
+  const openTrips = useMemo(() => tripsQ.data?.trips ?? [], [tripsQ.data?.trips]);
+  const tripsTotalCount = tripsQ.data?.listMeta?.totalCount ?? openTrips.length;
+  const tripsPageCount = listPageCount(tripsTotalCount, WORK_LIST_PAGE_SIZE);
+
+  useEffect(() => {
+    setTripsPage((p) => clampListPageIndex(p, tripsTotalCount, WORK_LIST_PAGE_SIZE));
+  }, [tripsTotalCount]);
+
+  const tripIdsOnPage = useMemo(() => openTrips.map((t) => t.id), [openTrips]);
+
+  const manifestsByTripQueries = useQueries({
+    queries: tripIdsOnPage.map((tripId) => ({
+      ...loadingManifestsPagedQueryOptions({ limit: 50, offset: 0, scope: "active", tripId }),
+      enabled: tripsApiEnabled && tripId.length > 0,
+    })),
   });
 
   const manifestsByTripId = useMemo(() => {
     const map = new Map<string, LoadingManifestSummary[]>();
-    for (const m of manifestsQ.data?.loadingManifests ?? []) {
-      const tripId = m.tripId?.trim();
-      if (!tripId) {
-        continue;
+    tripIdsOnPage.forEach((tripId, index) => {
+      const rows = manifestsByTripQueries[index]?.data?.loadingManifests ?? [];
+      if (rows.length > 0) {
+        map.set(
+          tripId,
+          rows.slice().sort((a, b) => a.manifestNumber.localeCompare(b.manifestNumber, "ru")),
+        );
       }
-      const arr = map.get(tripId) ?? [];
-      arr.push(m);
-      map.set(tripId, arr);
-    }
-    for (const arr of map.values()) {
-      arr.sort((a, b) => a.manifestNumber.localeCompare(b.manifestNumber, "ru"));
-    }
+    });
     return map;
-  }, [manifestsQ.data?.loadingManifests]);
+  }, [manifestsByTripQueries, tripIdsOnPage]);
 
   const linkedManifestIds = useMemo(
     () => [...manifestsByTripId.values()].flat().map((m) => m.id),
@@ -109,25 +127,10 @@ export function AdminTripsLogisticsPanel() {
   }, [linkedManifestDetails, linkedManifestIds]);
 
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
-  const openTrips = useMemo(
-    () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
-    [tripsQ.data?.trips],
-  );
-
-  const tripsPageCount = listPageCount(openTrips.length, WORK_LIST_PAGE_SIZE);
-
-  useEffect(() => {
-    setTripsPage((p) => clampListPageIndex(p, openTrips.length, WORK_LIST_PAGE_SIZE));
-  }, [openTrips.length]);
-
-  const openTripsPageSlice = useMemo(
-    () => sliceListPage(openTrips, tripsPage, WORK_LIST_PAGE_SIZE),
-    [openTrips, tripsPage],
-  );
 
   const suggestedTripNumber = useMemo(
-    () => suggestNextTripNumber(tripsQ.data?.trips ?? []),
-    [tripsQ.data?.trips],
+    () => suggestNextTripNumber(tripsSuggestQ.data?.trips ?? openTrips),
+    [tripsSuggestQ.data?.trips, openTrips],
   );
 
   useEffect(() => {
@@ -355,7 +358,7 @@ export function AdminTripsLogisticsPanel() {
                       </td>
                     </tr>
                   ) : null}
-                  {openTripsPageSlice.map((t) => {
+                  {openTrips.map((t) => {
                     const linkedManifests = manifestsByTripId.get(t.id) ?? [];
                     return (
                     <tr key={t.id}>

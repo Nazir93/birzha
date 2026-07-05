@@ -2,16 +2,15 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripStatusLabel } from "../format/trip-label.js";
-import { shipmentReportQueryOptions, tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import { shipmentReportQueryOptions, tripsPickerQueryOptions } from "../query/core-list-queries.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock, LoadingIndicator } from "../ui/LoadingIndicator.js";
 import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
-import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
@@ -20,24 +19,24 @@ import { tableStyle, thHead, thtd } from "../ui/styles.js";
  * Каждая строка = тот же отчёт, что в «Отчётах» по рейсу, без N+1 ручного выбора.
  */
 export function AccountingTripsSummary() {
-  const tripsQuery = useQuery(tripsFullListQueryOptions());
-
-  const sortedTrips = useMemo(
-    () => sortTripsByTripNumberAsc(tripsQuery.data?.trips ?? []),
-    [tripsQuery.data?.trips],
+  const [tripsPage, setTripsPage] = useState(0);
+  const tripsPageOffset = tripsPage * WORK_LIST_PAGE_SIZE;
+  const tripsQuery = useQuery(
+    tripsPickerQueryOptions({
+      limit: WORK_LIST_PAGE_SIZE,
+      offset: tripsPageOffset,
+      status: "open",
+      order: "tripNumber",
+    }),
   );
 
-  const [tripsPage, setTripsPage] = useState(0);
-  const tripsPageCount = listPageCount(sortedTrips.length, WORK_LIST_PAGE_SIZE);
+  const tripsPageSlice = tripsQuery.data?.trips ?? [];
+  const tripsTotalCount = tripsQuery.data?.listMeta?.totalCount ?? tripsPageSlice.length;
+  const tripsPageCount = listPageCount(tripsTotalCount, WORK_LIST_PAGE_SIZE);
 
   useEffect(() => {
-    setTripsPage((p) => clampListPageIndex(p, sortedTrips.length, WORK_LIST_PAGE_SIZE));
-  }, [sortedTrips.length]);
-
-  const tripsPageSlice = useMemo(
-    () => sliceListPage(sortedTrips, tripsPage, WORK_LIST_PAGE_SIZE),
-    [sortedTrips, tripsPage],
-  );
+    setTripsPage((p) => clampListPageIndex(p, tripsTotalCount, WORK_LIST_PAGE_SIZE));
+  }, [tripsTotalCount]);
 
   const reportQueries = useQueries({
     queries: tripsPageSlice.map((t) => ({
@@ -86,7 +85,7 @@ export function AccountingTripsSummary() {
       <ErrorAlert message="Список рейсов не загрузился. Проверьте связь и повторите." title="Рейсы" />
     );
   }
-  if (sortedTrips.length === 0) {
+  if (tripsTotalCount === 0) {
     return <BirzhaEmptyState compact title="Пока нет рейсов" />;
   }
 

@@ -11,7 +11,7 @@ import type {
 import type { TripSaleRepository } from "../../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../../application/ports/trip-shortage-repository.port.js";
-import { gramsToKg } from "./batch-mass.js";
+import { gramsToKg } from "../../application/units/mass.js";
 
 export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepository {
   private readonly headers: PurchaseDocumentHeaderRow[] = [];

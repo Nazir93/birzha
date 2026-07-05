@@ -25,6 +25,8 @@ export interface TripShipmentRepository {
   aggregateByTripId(tripId: string): Promise<TripShipmentAggregate>;
   /** Сумма отгрузок в рейс по одной партии. */
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
+  /** Сумма отгрузок по партии во всех рейсах. */
+  totalGramsForBatch(batchId: string): Promise<bigint>;
   /** Удалить строки журнала, относящиеся к перечисленным партиям (удаление накладной). */
   deleteByBatchIds(batchIds: string[]): Promise<void>;
   /** Уменьшить сумму отгрузок по рейсу и партии (отвязка ПН). */

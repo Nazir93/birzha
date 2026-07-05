@@ -33,6 +33,16 @@ export class InMemoryTripShipmentRepository implements TripShipmentRepository {
     return sum;
   }
 
+  async totalGramsForBatch(batchId: string): Promise<bigint> {
+    let sum = 0n;
+    for (const r of this.rows) {
+      if (r.batchId === batchId) {
+        sum += r.grams;
+      }
+    }
+    return sum;
+  }
+
   async reduceForTripAndBatch(
     tripId: string,
     batchId: string,

@@ -6,5 +6,6 @@ export {
   InsufficientStockError,
   InvalidKgError,
 } from "./batch/index.js";
+export { gramsToKg, kgToGrams } from "./units/mass.js";
 export { Money, CurrencyMismatchError } from "./money/index.js";
 export { Trip, type TripStatus } from "./trip/index.js";

@@ -5,6 +5,7 @@ import {
   purchaseDocumentReadableByPurchaser,
 } from "../auth/purchase-scope.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
+import { globalRoleCodes } from "../auth/global-roles.js";
 import { warehouseReadScopeIds } from "../auth/warehouse-scope.js";
 import {
   createProductGradeBodySchema,
@@ -32,6 +33,23 @@ import {
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
 type JwtUser = { sub: string; roles: AuthRoleGrant[] };
+
+function purchaseListScopeForUser(user: JwtUser | undefined): {
+  warehouseIds?: string[];
+  purchaserUserId?: string;
+} {
+  if (!user) {
+    return {};
+  }
+  const scope = warehouseReadScopeIds(user);
+  const warehouseIds = scope && scope.size > 0 ? [...scope] : undefined;
+  const globals = globalRoleCodes(user);
+  const purchaserUserId =
+    !globals.includes("admin") && !globals.includes("manager") && globals.includes("purchaser")
+      ? user.sub
+      : undefined;
+  return { warehouseIds, purchaserUserId };
+}
 
 export function registerPurchaseDocumentRoutes(
   app: FastifyInstance,
@@ -139,6 +157,8 @@ export function registerPurchaseDocumentRoutes(
       }
       const limit = parsed.data.limit ?? 100;
       const offset = parsed.data.offset ?? 0;
+      const user = req.user as JwtUser | undefined;
+      const scopeOpts = purchaseListScopeForUser(user);
 
       let purchaseDocumentsOut;
       let listMeta: { limit: number; offset: number; hasMore: boolean; totalCount: number };
@@ -149,28 +169,29 @@ export function registerPurchaseDocumentRoutes(
           limit,
           offset,
           scope: parsed.data.scope,
+          warehouseIds: scopeOpts.warehouseIds,
+          purchaserUserId: scopeOpts.purchaserUserId,
         });
         purchaseDocumentsOut = payload.purchaseDocuments;
         listMeta = payload.listMeta;
       } else {
-        const documents = await purchaseDocuments.listSummaries();
+        let documents = await purchaseDocuments.listSummaries();
+        if (scopeOpts.warehouseIds && scopeOpts.warehouseIds.length > 0) {
+          const allowed = new Set(scopeOpts.warehouseIds);
+          documents = documents.filter((d) => allowed.has(d.warehouseId.trim()));
+        }
+        documents = filterPurchaseSummariesForPurchaserScope(documents, user, user?.sub);
+        const totalCount = documents.length;
         purchaseDocumentsOut = documents.slice(offset, offset + limit);
         listMeta = {
           limit,
           offset,
-          hasMore: offset + purchaseDocumentsOut.length < documents.length,
-          totalCount: documents.length,
+          hasMore: offset + purchaseDocumentsOut.length < totalCount,
+          totalCount,
         };
       }
 
-      const user = req.user as JwtUser | undefined;
-      const scope = user ? warehouseReadScopeIds(user) : null;
-      let filtered =
-        scope && scope.size > 0
-          ? purchaseDocumentsOut.filter((d) => scope.has(d.warehouseId.trim()))
-          : purchaseDocumentsOut;
-      filtered = filterPurchaseSummariesForPurchaserScope(filtered, user, user?.sub);
-      return reply.send({ purchaseDocuments: filtered, listMeta });
+      return reply.send({ purchaseDocuments: purchaseDocumentsOut, listMeta });
     } catch (error) {
       return sendMappedError(reply, error);
     }

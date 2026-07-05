@@ -33,6 +33,18 @@ export class DrizzleTripShipmentRepository implements TripShipmentRepository {
     return sum;
   }
 
+  async totalGramsForBatch(batchId: string): Promise<bigint> {
+    const rows = await this.db
+      .select()
+      .from(tripBatchShipments)
+      .where(eq(tripBatchShipments.batchId, batchId));
+    let sum = 0n;
+    for (const r of rows) {
+      sum += r.grams;
+    }
+    return sum;
+  }
+
   async deleteByBatchIds(batchIds: string[]): Promise<void> {
     if (batchIds.length === 0) {
       return;

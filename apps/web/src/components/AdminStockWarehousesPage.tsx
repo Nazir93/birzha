@@ -1,7 +1,7 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
 import type { BatchListItem, CreateWarehouseResponse } from "../api/types.js";
@@ -11,7 +11,11 @@ import {
   stockBalancesQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { adminRoutes } from "../routes.js";
+import { adminRoutes, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import {
+  aggregateWarehouseDocumentsFromBatches,
+  estimateBatchWarehousePackages,
+} from "../format/warehouse-purchase-documents-aggregate.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
@@ -19,8 +23,10 @@ import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js"
 
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
+  const { pathname } = useLocation();
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [gradeSearch, setGradeSearch] = useState("");
+  const [documentSearch, setDocumentSearch] = useState("");
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
 
@@ -104,16 +110,7 @@ export function AdminStockWarehousesPage() {
   });
 
   function estimateWarehousePackages(batch: BatchListItem): number {
-    const totalKg = Number(batch.totalKg ?? 0);
-    const onWarehouseKg = Number(batch.onWarehouseKg ?? 0);
-    const linePackageCount = Number(batch.nakladnaya?.linePackageCount ?? 0);
-    if (!Number.isFinite(totalKg) || !Number.isFinite(onWarehouseKg) || !Number.isFinite(linePackageCount)) {
-      return 0;
-    }
-    if (totalKg <= 0 || onWarehouseKg <= 0 || linePackageCount <= 0) {
-      return 0;
-    }
-    return Math.max(0, Math.round((linePackageCount * onWarehouseKg) / totalKg));
+    return estimateBatchWarehousePackages(batch);
   }
 
   /** Суммы по партициям одного калибра и вида на выбранном складе (без разбивки по накладным). */
@@ -182,6 +179,15 @@ export function AdminStockWarehousesPage() {
     };
   }, [gradeStockAggregates]);
 
+  const warehouseDocumentAggregates = useMemo(() => {
+    if (!selectedWhId) {
+      return [];
+    }
+    return aggregateWarehouseDocumentsFromBatches(batchesQ.data?.batches ?? [], {
+      search: documentSearch,
+    });
+  }, [batchesQ.data?.batches, selectedWhId, documentSearch]);
+
   const selectedWarehouseName = useMemo(() => {
     if (!selectedWhId) {
       return "";
@@ -209,8 +215,8 @@ export function AdminStockWarehousesPage() {
           Склады и остатки
         </h2>
         <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: 52 * 16 }}>
-          Справочник складов, добавление и удаление. Выберите склад — внизу итоги по калибру (все накладные суммируются в
-          одну строку на калибр). Поиск — по калибру и виду товара.
+          Справочник складов, добавление и удаление. Выберите склад — ниже закупочные накладные на этом складе и итоги по
+          калибру. Поиск — по номеру накладной или по калибру и виду товара.
         </p>
       </header>
 
@@ -318,6 +324,74 @@ export function AdminStockWarehousesPage() {
               <ErrorAlert message="Не удалось загрузить партии по складу." title="Остатки по калибру" />
             ) : (
               <>
+                <BirzhaDisclosure
+                  defaultOpen
+                  title={
+                    <span className="birzha-section-title-inline">
+                      Закупочные накладные на складе
+                      {selectedWarehouseName ? `: ${selectedWarehouseName}` : ""}
+                    </span>
+                  }
+                >
+                  <label className="birzha-field-label" htmlFor="stock-document-search">
+                    Поиск по номеру накладной
+                  </label>
+                  <input
+                    id="stock-document-search"
+                    value={documentSearch}
+                    onChange={(e) => setDocumentSearch(e.target.value)}
+                    style={{ ...fieldStyle, maxWidth: "24rem", marginBottom: "0.65rem" }}
+                    placeholder="Например НФ-0426"
+                    autoComplete="off"
+                  />
+                  {warehouseDocumentAggregates.length === 0 && !batchesQ.isPending ? (
+                    <p className="birzha-text-muted birzha-ui-sm" role="status">
+                      На этом складе нет накладных с остатком по партиям.
+                    </p>
+                  ) : null}
+                  {warehouseDocumentAggregates.length > 0 ? (
+                    <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                      <table style={{ ...tableStyle, minWidth: 480 }}>
+                        <thead>
+                          <tr>
+                            <th style={thHeadDense}>№ накладной</th>
+                            <th style={thHeadDense}>Строк</th>
+                            <th style={thHeadDense}>На складе, кг</th>
+                            <th style={thHeadDense}>На складе, ящ.</th>
+                            <th style={thHeadDense}>Погружено, кг</th>
+                            <th style={thHeadDense}>Продано, кг</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {warehouseDocumentAggregates.map((row) => (
+                            <tr key={row.documentId}>
+                              <td style={thtdDense}>
+                                <Link
+                                  to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
+                                  style={{ fontWeight: 600 }}
+                                >
+                                  {row.documentNumber}
+                                </Link>
+                              </td>
+                              <td style={thtdDense}>{row.lineCount}</td>
+                              <td style={thtdDense}>
+                                {row.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+                              </td>
+                              <td style={thtdDense}>{row.onWarehousePackages.toLocaleString("ru-RU")}</td>
+                              <td style={thtdDense}>
+                                {row.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+                              </td>
+                              <td style={thtdDense}>
+                                {row.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </BirzhaDisclosure>
+
                 {selectedWarehouseStats ? (
                   <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
                     Калибров: <strong>{selectedWarehouseStats.calibersCount}</strong>
@@ -328,6 +402,15 @@ export function AdminStockWarehousesPage() {
                     Ящики: <strong>{selectedWarehouseStats.totalPackages.toLocaleString("ru-RU")} ящ.</strong>
                   </p>
                 ) : null}
+                <BirzhaDisclosure
+                  defaultOpen
+                  title={
+                    <span className="birzha-section-title-inline">
+                      Остатки по калибру
+                      {selectedWarehouseName ? `: ${selectedWarehouseName}` : ""}
+                    </span>
+                  }
+                >
                 <label className="birzha-field-label" htmlFor="stock-grade-search">
                   Поиск по калибру и виду товара
                 </label>
@@ -376,6 +459,7 @@ export function AdminStockWarehousesPage() {
                     </table>
                   </div>
                 ) : null}
+                </BirzhaDisclosure>
               </>
             )}
           </BirzhaDisclosure>

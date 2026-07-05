@@ -12,9 +12,7 @@ import type {
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
-  kopecksToNakladnayaRubleFieldString,
   nonnegativeDecimalStringToNumber,
-  purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
 
 import {
@@ -22,17 +20,17 @@ import {
   lineTotalKopecksForNakladnayaSum,
   parseCreatePurchaseDocumentForm,
 } from "../validation/api-schemas.js";
-import { filterPurchaseDocumentsInWork } from "../format/archive.js";
+import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { nakladnayaLineSumFieldFromKgPrice } from "../format/purchase-nakladnaya-line-sum.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
-  batchesFullListQueryOptions,
   productGradesFullListQueryOptions,
-  purchaseDocumentsFullListQueryOptions,
+  purchaseDocumentsPagedQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
@@ -51,8 +49,6 @@ import {
 } from "../ui/styles.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
-
-import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount, sliceListPage } from "../format/list-page-sizes.js";
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -89,10 +85,19 @@ export function PurchaseNakladnayaSection() {
   const queryClient = useQueryClient();
   const enabled = meta?.purchaseDocumentsApi === "enabled";
 
+  const [nakladListPage, setNakladListPage] = useState(0);
+
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
-  const listQ = useQuery({ ...purchaseDocumentsFullListQueryOptions(), enabled });
-  const batchesQ = useQuery({ ...batchesFullListQueryOptions(), enabled });
+  const nakladPageOffset = nakladListPage * WORK_LIST_PAGE_SIZE;
+  const listQ = useQuery({
+    ...purchaseDocumentsPagedQueryOptions({
+      limit: WORK_LIST_PAGE_SIZE,
+      offset: nakladPageOffset,
+      scope: "inWork",
+    }),
+    enabled,
+  });
 
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
@@ -100,7 +105,6 @@ export function PurchaseNakladnayaSection() {
   const [buyerLabel, setBuyerLabel] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
-  const [nakladListPage, setNakladListPage] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastOk, setLastOk] = useState<string | null>(null);
   const refreshLists = useCallback(async () => {
@@ -137,26 +141,17 @@ export function PurchaseNakladnayaSection() {
     },
   });
 
-  const activePurchaseDocs = useMemo(() => {
-    const docs = listQ.data?.purchaseDocuments ?? [];
-    if (!batchesQ.isSuccess) {
-      return [];
-    }
-    return filterPurchaseDocumentsInWork(docs, batchesQ.data.batches);
-  }, [listQ.data?.purchaseDocuments, batchesQ.isSuccess, batchesQ.data?.batches]);
-
+  const activePurchaseDocs = listQ.data?.purchaseDocuments ?? [];
+  const nakladTotalCount = listQ.data?.listMeta?.totalCount ?? activePurchaseDocs.length;
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
 
-  const nakladPageCount = listPageCount(activePurchaseDocs.length, WORK_LIST_PAGE_SIZE);
+  const nakladPageCount = listPageCount(nakladTotalCount, WORK_LIST_PAGE_SIZE);
 
   useEffect(() => {
-    setNakladListPage((p) => clampListPageIndex(p, activePurchaseDocs.length, WORK_LIST_PAGE_SIZE));
-  }, [activePurchaseDocs.length]);
+    setNakladListPage((p) => clampListPageIndex(p, nakladTotalCount, WORK_LIST_PAGE_SIZE));
+  }, [nakladTotalCount]);
 
-  const nakladPageSlice = useMemo(
-    () => sliceListPage(activePurchaseDocs, nakladListPage, WORK_LIST_PAGE_SIZE),
-    [activePurchaseDocs, nakladListPage],
-  );
+  const nakladPageSlice = activePurchaseDocs;
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (key: string) => {
@@ -167,16 +162,19 @@ export function PurchaseNakladnayaSection() {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
-  const fillLineKopecks = (key: string) => {
-    const row = lines.find((l) => l.key === key);
-    if (!row) {
-      return;
-    }
-    const k = purchaseLineAmountKopecksFromDecimalStrings(row.totalKg, row.pricePerKg);
-    if (!Number.isFinite(k) || k < 0) {
-      return;
-    }
-    updateLine(key, { lineTotalKopecks: kopecksToNakladnayaRubleFieldString(k) });
+  const updateLineWithAutoSum = (key: string, patch: Partial<LineDraft>) => {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) {
+          return l;
+        }
+        const next = { ...l, ...patch };
+        if ("totalKg" in patch || "pricePerKg" in patch) {
+          next.lineTotalKopecks = nakladnayaLineSumFieldFromKgPrice(next.totalKg, next.pricePerKg);
+        }
+        return next;
+      }),
+    );
   };
 
   const gradeOptionGroups = useMemo(() => {
@@ -193,11 +191,11 @@ export function PurchaseNakladnayaSection() {
     });
     const byKey = new Map<string, ProductGradeJson[]>();
     for (const g of list) {
-      const key = (g.productGroup ?? "").trim() || "";
-      if (!byKey.has(key)) {
-        byKey.set(key, []);
+      const groupKey = (g.productGroup ?? "").trim() || "";
+      if (!byKey.has(groupKey)) {
+        byKey.set(groupKey, []);
       }
-      byKey.get(key)!.push(g);
+      byKey.get(groupKey)!.push(g);
     }
     const keys = [...byKey.keys()].sort((a, b) => {
       if (a === "" && b !== "") return 1;
@@ -412,7 +410,7 @@ export function PurchaseNakladnayaSection() {
               <th className="birzha-nakl-lines-table__num">₽/кг</th>
               <th
                 className="birzha-nakl-lines-table__num"
-                title="Сумма строки в копейках: целое число (50000) или «руб,коп» (16470,00). Кнопка «=кг×цена» подставит расчёт."
+                title="Сумма строки: считается автоматически (кг × ₽/кг); можно править вручную"
               >
                 Сумма, коп.
               </th>
@@ -442,7 +440,7 @@ export function PurchaseNakladnayaSection() {
                 <td className="birzha-nakl-lines-table__num-cell" data-label="Кг">
                   <input
                     value={line.totalKg}
-                    onChange={(e) => updateLine(line.key, { totalKg: e.target.value })}
+                    onChange={(e) => updateLineWithAutoSum(line.key, { totalKg: e.target.value })}
                     className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                     style={fieldStyle}
                     inputMode="decimal"
@@ -462,7 +460,7 @@ export function PurchaseNakladnayaSection() {
                 <td className="birzha-nakl-lines-table__num-cell" data-label="₽/кг">
                   <input
                     value={line.pricePerKg}
-                    onChange={(e) => updateLine(line.key, { pricePerKg: e.target.value })}
+                    onChange={(e) => updateLineWithAutoSum(line.key, { pricePerKg: e.target.value })}
                     className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                     style={fieldStyle}
                     inputMode="decimal"
@@ -476,19 +474,11 @@ export function PurchaseNakladnayaSection() {
                     style={fieldStyle}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="Копейки: целое число или «руб,коп»; кнопка «=кг×цена» подставит сумму по кг × ₽/кг"
+                    title="Считается автоматически: кг × ₽/кг; можно править вручную"
                   />
                 </td>
                 <td className="birzha-nakl-lines-table__actions-cell" data-label="Действия">
                   <div className="birzha-nakl-line-actions">
-                    <button
-                      type="button"
-                      className="birzha-nakl-line-action birzha-nakl-line-action--calc"
-                      onClick={() => fillLineKopecks(line.key)}
-                      title="Подставить сумму строки: кг × ₽/кг (допуск ±1 коп.)"
-                    >
-                      =кг×цена
-                    </button>
                     <button
                       type="button"
                       className="birzha-nakl-line-action birzha-nakl-line-action--remove"
@@ -588,23 +578,23 @@ export function PurchaseNakladnayaSection() {
         </div>
       )}
 
-      {listQ.data && listQ.data.purchaseDocuments.length > 0 && (
+      {listQ.data && (
         <div className="birzha-clean-ops-list">
           <h4 className="birzha-clean-ops-list__title">
             В работе
-            {batchesQ.isSuccess ? (
+            {listQ.isSuccess ? (
               <span className="birzha-text-muted" style={{ fontWeight: 400 }}>
                 {" "}
-                ({activePurchaseDocs.length})
+                ({nakladTotalCount})
               </span>
             ) : null}
           </h4>
-          {batchesQ.isPending && (
+          {listQ.isPending && (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              Уточняем остатки по партиям…
+              Загрузка списка накладных…
             </p>
           )}
-          {batchesQ.isSuccess && activePurchaseDocs.length === 0 ? (
+          {listQ.isSuccess && activePurchaseDocs.length === 0 ? (
             <BirzhaEmptyState
               compact
               title="Нет накладных в работе"
@@ -616,7 +606,7 @@ export function PurchaseNakladnayaSection() {
               }
             />
           ) : null}
-          {batchesQ.isSuccess && activePurchaseDocs.length > 0 ? (
+          {listQ.isSuccess && activePurchaseDocs.length > 0 ? (
             <>
               <PurchaseNakladnayaDocTable
                 docs={nakladPageSlice}

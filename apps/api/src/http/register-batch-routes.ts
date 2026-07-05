@@ -12,7 +12,7 @@ import {
   postWarehouseWriteOffBodySchema,
   updateBatchAllocationBodySchema,
 } from "@birzha/contracts";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { RecordWarehouseWriteOffUseCase } from "../application/batch/record-warehouse-write-off.use-case.js";
@@ -25,7 +25,7 @@ import {
   purchaseDocuments,
   warehouses as warehousesTable,
 } from "../db/schema.js";
-import { gramsToKg } from "../infrastructure/persistence/batch-mass.js";
+import { gramsToKg } from "../application/units/mass.js";
 import { DrizzlePurchaseLinePackageMetaRepository } from "../infrastructure/persistence/drizzle-purchase-line-package-meta.js";
 import { NullPurchaseLinePackageMetaPort } from "../infrastructure/persistence/null-purchase-line-package-meta.js";
 
@@ -142,43 +142,63 @@ export function registerBatchRoutes(
         return reply.code(400).send({ error: "invalid_query", issues: parsed.error.flatten() });
       }
       const d = parsed.data;
+      const user = req.user as JwtRequestUser | undefined;
       const ids =
         d.ids
           ?.split(",")
           .map((s) => s.trim())
           .filter(Boolean) ?? undefined;
 
-      let filter: BatchListFilter;
-      let listMeta: { limit: number; offset: number; hasMore: boolean; totalCount?: number } | undefined;
-
       if (ids && ids.length > 0) {
-        filter = { ids };
-      } else {
-        const limit = d.limit ?? 100;
-        const offset = d.offset ?? 0;
-        filter = {
-          search: d.search?.trim() || undefined,
-          limit,
-          offset,
-          warehouseId: d.warehouseId?.trim() || undefined,
-          stockOnly: d.stockOnly || undefined,
-        };
-        listMeta = { limit, offset, hasMore: false };
+        const payload = await listBatchesForHttp(batches, db, { ids });
+        const batchesOut = batchesPayloadForUser(payload, user);
+        return reply.send({ batches: batchesOut });
       }
 
-      let payload = await listBatchesForHttp(batches, db, filter);
-      if (listMeta && !filter.ids) {
-        listMeta = {
-          ...listMeta,
-          hasMore: payload.length === (filter.limit ?? 100),
-        };
+      const limit = d.limit ?? 100;
+      const offset = d.offset ?? 0;
+      const filter: BatchListFilter = {
+        search: d.search?.trim() || undefined,
+        limit,
+        offset,
+        warehouseId: d.warehouseId?.trim() || undefined,
+        stockOnly: d.stockOnly || undefined,
+      };
+      const countFilter = {
+        search: filter.search,
+        warehouseId: filter.warehouseId,
+        stockOnly: filter.stockOnly,
+      };
+      const [payload, totalCount] = await Promise.all([
+        listBatchesForHttp(batches, db, filter),
+        batches.count(countFilter),
+      ]);
+      const listMeta = {
+        limit,
+        offset,
+        hasMore: offset + payload.length < totalCount,
+        totalCount,
+      };
+      const batchesOut = batchesPayloadForUser(payload, user);
+      return reply.send({ batches: batchesOut, listMeta });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/batches/:batchId", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
+    try {
+      const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
+      const payload = await listBatchesForHttp(batches, db, { ids: [params.batchId] });
+      if (payload.length === 0) {
+        return reply.code(404).send({ error: "batch_not_found", batchId: params.batchId });
       }
       const user = req.user as JwtRequestUser | undefined;
-      const batchesOut = batchesPayloadForUser(payload, user);
-      if (listMeta) {
-        return reply.send({ batches: batchesOut, listMeta });
+      const [batchOut] = batchesPayloadForUser(payload, user);
+      if (!batchOut) {
+        return reply.code(404).send({ error: "batch_not_found", batchId: params.batchId });
       }
-      return reply.send({ batches: batchesOut });
+      return reply.send(batchOut);
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -474,6 +494,7 @@ export function registerBatchRoutes(
         const q = z.object({
           purchaseDocumentId: z.string().min(1).optional(),
           limit: z.coerce.number().int().min(1).max(500).optional(),
+          offset: z.coerce.number().int().min(0).optional(),
           warehouseId: z.string().min(1).optional(),
         });
         const parsed = q.parse(req.query);
@@ -521,10 +542,28 @@ export function registerBatchRoutes(
         }
 
         const limit = parsed.limit ?? 200;
+        const offset = parsed.offset ?? 0;
         const conditions = [eq(batchWarehouseWriteOffs.reason, "quality_reject")];
         if (parsed.warehouseId) {
           conditions.push(eq(batchesTable.warehouseId, parsed.warehouseId));
         }
+        const where = and(...conditions);
+
+        const countRow = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(batchWarehouseWriteOffs)
+          .innerJoin(batchesTable, eq(batchWarehouseWriteOffs.batchId, batchesTable.id))
+          .innerJoin(
+            purchaseDocumentLines,
+            eq(batchWarehouseWriteOffs.batchId, purchaseDocumentLines.batchId),
+          )
+          .innerJoin(
+            purchaseDocuments,
+            eq(purchaseDocumentLines.documentId, purchaseDocuments.id),
+          )
+          .where(where);
+        const totalCount = countRow[0]?.count ?? 0;
+
         const rows = await db
           .select({
             id: batchWarehouseWriteOffs.id,
@@ -549,14 +588,22 @@ export function registerBatchRoutes(
             eq(purchaseDocumentLines.documentId, purchaseDocuments.id),
           )
           .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
-          .where(and(...conditions))
+          .where(where)
           .orderBy(desc(batchWarehouseWriteOffs.createdAt))
-          .limit(limit);
+          .limit(limit)
+          .offset(offset);
 
         return reply.send({
           ledger: "recent",
           warehouseIdFilter: parsed.warehouseId ?? null,
           limit,
+          offset,
+          listMeta: {
+            limit,
+            offset,
+            hasMore: offset + rows.length < totalCount,
+            totalCount,
+          },
           totalKg: rows.reduce((a, r) => a + gramsToKg(r.grams), 0),
           lines: rows.map((r) => ({
             id: r.id,

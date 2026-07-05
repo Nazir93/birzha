@@ -2,14 +2,14 @@ import { randomUUID } from "node:crypto";
 
 import { InvalidKgError } from "@birzha/domain";
 
-import { loadBatchOrThrow } from "../load-batch.js";
+import { loadBatchForUpdateOrThrow } from "../load-batch.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type {
   BatchWarehouseWriteOffAppend,
   BatchWarehouseWriteOffLedger,
   BatchWarehouseWriteOffReason,
 } from "../ports/batch-warehouse-write-off-ledger.port.js";
-import { kgToGrams } from "../units/kg-grams.js";
+import { kgToGrams } from "../units/mass.js";
 
 export type RecordWarehouseWriteOffInput = {
   batchId: string;
@@ -50,7 +50,7 @@ export class RecordWarehouseWriteOffUseCase {
     const id = randomUUID();
     const row: BatchWarehouseWriteOffAppend = { id, batchId: input.batchId, grams, reason: REASON };
     const persist = async (batches: BatchRepository, l: BatchWarehouseWriteOffLedger) => {
-      const batch = await loadBatchOrThrow(batches, input.batchId);
+      const batch = await loadBatchForUpdateOrThrow(batches, input.batchId);
       batch.writeOff(input.kg, "quality_reject");
       await batches.save(batch);
       await l.append(row);

@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { queryRoots } from "./core-list-queries.js";
+import { invalidateStockQueries, queryRoots } from "./core-list-queries.js";
 
 /** Свести в один invalidate серию быстрых событий (visibility + focus + pageshow). */
 const DEBOUNCE_MS = 400;
@@ -23,7 +23,7 @@ export function RefetchDomainOnAppVisible() {
       }
       void qc.invalidateQueries({ queryKey: queryRoots.trips });
       void qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
-      void qc.invalidateQueries({ queryKey: queryRoots.batches });
+      invalidateStockQueries(qc);
     };
 
     const schedule = () => {

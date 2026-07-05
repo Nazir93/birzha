@@ -1,4 +1,4 @@
-import { Batch, InsufficientStockError } from "@birzha/domain";
+import { Batch, gramsToKg, InsufficientStockError, kgToGrams } from "@birzha/domain";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
@@ -25,7 +25,7 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
     await reverse.execute(writeOffId);
     const reloaded = await batches.findById("b-w1");
     expect(reloaded).not.toBeNull();
-    expect(reloaded!.toPersistenceState().onWarehouseKg).toBe(200);
+    expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(200);
     const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-w1"]);
     expect(sums.get("b-w1") ?? 0n).toBe(0n);
   });
@@ -56,8 +56,8 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
     await batches.save(
       Batch.restoreFromPersistence({
         ...state,
-        writtenOffKg: 5,
-        onWarehouseKg: state.onWarehouseKg + 5,
+        writtenOffGrams: kgToGrams(5),
+        onWarehouseGrams: state.onWarehouseGrams + kgToGrams(5),
       }),
     );
     await expect(reverse.execute(writeOffId)).rejects.toThrow(InsufficientStockError);

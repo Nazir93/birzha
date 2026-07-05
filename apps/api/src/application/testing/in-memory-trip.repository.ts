@@ -22,6 +22,9 @@ export class InMemoryTripRepository implements TripRepository {
     if (filter?.status) {
       arr = arr.filter((t) => t.getStatus() === filter.status);
     }
+    if (filter?.assignedSellerUserId) {
+      arr = arr.filter((t) => t.getAssignedSellerUserId() === filter.assignedSellerUserId);
+    }
     return arr;
   }
 

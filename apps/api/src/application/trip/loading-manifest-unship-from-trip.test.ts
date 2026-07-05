@@ -1,4 +1,4 @@
-import { Batch } from "@birzha/domain";
+import { Batch, gramsToKg } from "@birzha/domain";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
@@ -39,8 +39,8 @@ describe("unshipLoadingManifestBatchesFromTrip", () => {
     });
 
     const saved = await batches.findById("b1");
-    expect(saved?.toPersistenceState().onWarehouseKg).toBe(5000);
-    expect(saved?.toPersistenceState().inTransitKg).toBe(0);
+    expect(gramsToKg(saved!.toPersistenceState().onWarehouseGrams)).toBe(5000);
+    expect(gramsToKg(saved!.toPersistenceState().inTransitGrams)).toBe(0);
     expect(await shipments.totalGramsForTripAndBatch("trip-1", "b1")).toBe(0n);
   });
 });

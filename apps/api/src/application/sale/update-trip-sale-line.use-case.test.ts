@@ -1,4 +1,4 @@
-import { Batch, Trip } from "@birzha/domain";
+import { Batch, gramsToKg, Trip } from "@birzha/domain";
 import { describe, expect, it } from "vitest";
 
 import { TripSaleEditForbiddenError } from "../errors.js";
@@ -76,8 +76,8 @@ describe("UpdateTripSaleLineUseCase", () => {
     const line = await sales.findLineById("line1");
     expect(line?.grams).toBe(25_000n);
     const saved = await batches.findById("b1");
-    expect(saved?.toPersistenceState().soldKg).toBe(25);
-    expect(saved?.toPersistenceState().inTransitKg).toBe(25);
+    expect(gramsToKg(saved!.toPersistenceState().soldGrams)).toBe(25);
+    expect(gramsToKg(saved!.toPersistenceState().inTransitGrams)).toBe(25);
   });
 
   it("меняет канал на опт и подставляет имя оптовика", async () => {

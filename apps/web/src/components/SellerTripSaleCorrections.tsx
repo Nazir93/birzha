@@ -25,6 +25,7 @@ import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
 import { parseUpdateTripSaleForm } from "../validation/api-schemas.js";
 import {
   batchesByIdsQueryOptions,
+  invalidateStockQueries,
   queryRoots,
   tripSaleLinesQueryOptions,
 } from "../query/core-list-queries.js";
@@ -493,7 +494,7 @@ export function SellerTripSaleCorrections({
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    invalidateStockQueries(queryClient);
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
   };
 

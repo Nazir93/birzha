@@ -15,13 +15,12 @@ import type { TripShortageRepository } from "../ports/trip-shortage-repository.p
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
 import type { PurchaseLinePackageMetaPort } from "../ports/purchase-line-package-meta.port.js";
 import { NullPurchaseLinePackageMetaPort } from "../../infrastructure/persistence/null-purchase-line-package-meta.js";
-import { loadBatchOrThrow } from "../load-batch.js";
+import { loadBatchForUpdateOrThrow } from "../load-batch.js";
 import type { SellFromTripTransactionRunner } from "./sell-from-trip.use-case.js";
 import { assertMayEditTripSaleLine, assertTripOpenForSaleEdit } from "./trip-sale-edit-guard.js";
 import { resolveSalePaymentSplit } from "./trip-sale-payment.js";
 import { assertTripSalePackageCount, availableGramsForTripSaleCorrection } from "./trip-sale-stock.js";
-import { gramsToKg } from "../../infrastructure/persistence/batch-mass.js";
-import { kgToGrams } from "../units/kg-grams.js";
+import { gramsToKg, kgToGrams } from "../units/mass.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../units/rub-kopecks.js";
 
 export type UpdateTripSaleLineInput = {
@@ -157,17 +156,42 @@ export class UpdateTripSaleLineUseCase {
       packageCount: salePackageCount,
     };
 
-    const persist = async (batches: BatchRepository, saleRepo: TripSaleRepository) => {
-      const batch = await loadBatchOrThrow(batches, line.batchId);
+    const persist = async (ctx: {
+      batches: BatchRepository;
+      sales: TripSaleRepository;
+      shipments: TripShipmentRepository;
+      shortages: TripShortageRepository;
+    }) => {
+      const shippedLocked = await ctx.shipments.totalGramsForTripAndBatch(line.tripId, line.batchId);
+      const soldIncludingLocked = await ctx.sales.totalGramsForTripAndBatch(line.tripId, line.batchId);
+      const shortageLocked = await ctx.shortages.totalGramsForTripAndBatch(line.tripId, line.batchId);
+      const availableLocked = availableGramsForTripSaleCorrection({
+        shippedGrams: shippedLocked,
+        soldGramsIncludingLine: soldIncludingLocked,
+        shortageGrams: shortageLocked,
+        lineGrams: line.grams,
+      });
+      if (newGrams > availableLocked) {
+        throw new InsufficientStockForTripError(line.tripId, line.batchId, availableLocked, newGrams);
+      }
+
+      const batch = await loadBatchForUpdateOrThrow(ctx.batches, line.batchId);
       batch.adjustTripSaleKg(previousKg, input.kg);
-      await batches.save(batch);
-      await saleRepo.updateLine(updated);
+      await ctx.batches.save(batch);
+      await ctx.sales.updateLine(updated);
     };
 
     if (this.runInTransaction) {
-      await this.runInTransaction(persist);
+      await this.runInTransaction(async (txCtx) => {
+        await persist(txCtx);
+      });
     } else {
-      await persist(this.batches, this.sales);
+      await persist({
+        batches: this.batches,
+        sales: this.sales,
+        shipments: this.shipments,
+        shortages: this.shortages,
+      });
     }
   }
 }

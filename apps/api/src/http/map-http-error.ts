@@ -5,6 +5,8 @@ import {
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
 
+import { gramsToKg } from "../application/units/mass.js";
+
 import {
   BatchNotFoundError,
   CounterpartyNotFoundError,
@@ -218,8 +220,8 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "insufficient_stock",
       context: error.context,
-      availableKg: error.availableKg,
-      requestedKg: error.requestedKg,
+      availableKg: gramsToKg(error.availableGrams),
+      requestedKg: gramsToKg(error.requestedGrams),
       message: error.message,
     });
   }

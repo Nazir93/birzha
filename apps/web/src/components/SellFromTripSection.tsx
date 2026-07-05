@@ -31,6 +31,7 @@ import {
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesByIdsQueryOptions,
+  invalidateStockQueries,
   queryRoots,
   shipmentReportQueryOptions,
   tripsFullListQueryOptions,
@@ -109,7 +110,7 @@ export function SellFromTripSection() {
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     void queryClient.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    invalidateStockQueries(queryClient);
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
   };
 

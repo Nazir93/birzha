@@ -16,6 +16,7 @@ import { FieldError } from "../ui/FieldError.js";
 import { LoadingBlock, LoadingIndicator, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import {
   batchesStockOnlyQueryOptions,
+  invalidateStockQueries,
   queryRoots,
   tripsFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -29,7 +30,7 @@ export function OperationsPanel() {
 
   const invalidateDomain = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
-    void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+    invalidateStockQueries(queryClient);
   };
 
   const batchesQuery = useQuery(batchesStockOnlyQueryOptions(500));

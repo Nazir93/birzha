@@ -50,12 +50,12 @@ describe.skipIf(!pgUrl)("DrizzleBatchRepository (PostgreSQL)", () => {
     const b = loaded!.toPersistenceState();
     expect(b.id).toBe(a.id);
     expect(b.purchaseId).toBe(a.purchaseId);
-    expect(b.totalKg).toBeCloseTo(a.totalKg, 6);
+    expect(b.totalGrams).toBe(a.totalGrams);
     expect(b.pricePerKg).toBeCloseTo(a.pricePerKg, 6);
-    expect(b.pendingInboundKg).toBeCloseTo(a.pendingInboundKg, 6);
-    expect(b.onWarehouseKg).toBeCloseTo(a.onWarehouseKg, 6);
-    expect(b.inTransitKg).toBeCloseTo(a.inTransitKg, 6);
-    expect(b.soldKg).toBeCloseTo(a.soldKg, 6);
-    expect(b.writtenOffKg).toBeCloseTo(a.writtenOffKg, 6);
+    expect(b.pendingInboundGrams).toBe(a.pendingInboundGrams);
+    expect(b.onWarehouseGrams).toBe(a.onWarehouseGrams);
+    expect(b.inTransitGrams).toBe(a.inTransitGrams);
+    expect(b.soldGrams).toBe(a.soldGrams);
+    expect(b.writtenOffGrams).toBe(a.writtenOffGrams);
   });
 });

@@ -13,3 +13,14 @@ export async function loadBatchOrThrow(
   }
   return batch;
 }
+
+export async function loadBatchForUpdateOrThrow(
+  batches: BatchRepository,
+  batchId: string,
+): Promise<Batch> {
+  const batch = await batches.findByIdForUpdate(batchId);
+  if (!batch) {
+    throw new BatchNotFoundError(batchId);
+  }
+  return batch;
+}

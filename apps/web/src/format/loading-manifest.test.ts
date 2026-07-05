@@ -4,7 +4,9 @@ import type { BatchListItem } from "../api/types.js";
 import {
   AGGREGATE_NO_PURCHASE_DOCUMENT_KEY,
   aggregateBatchesByCaliberLine,
+  aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
+  buildWriteOffItemsFromBatches,
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
   formatLoadingManifestCardHeader,
@@ -392,5 +394,43 @@ describe("formatManifestWarehouseNames", () => {
 
   it("несколько складов — через запятую", () => {
     expect(formatManifestWarehouseNames(["Каякент", "Манас", "Манас"], "Манас")).toBe("Каякент, Манас");
+  });
+});
+
+describe("aggregateBatchesByDocumentCaliberLine", () => {
+  it("не смешивает один калибр из разных накладных", () => {
+    const nak = (docId: string, docNum: string, code: string) =>
+      ({
+        documentId: docId,
+        warehouseId: "w1",
+        productGradeCode: code,
+        productGroup: "Том",
+        documentNumber: docNum,
+      }) as BatchListItem["nakladnaya"];
+
+    const rows = aggregateBatchesByDocumentCaliberLine([
+      b({ id: "a1", totalKg: 10, onWarehouseKg: 10, nakladnaya: nak("d1", "100", "5") }),
+      b({ id: "a2", totalKg: 20, onWarehouseKg: 15, nakladnaya: nak("d2", "200", "5") }),
+    ]);
+
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.documentNumber).sort()).toEqual(["100", "200"]);
+    expect(rows.every((r) => r.totalKg > 0)).toBe(true);
+  });
+});
+
+describe("buildWriteOffItemsFromBatches", () => {
+  it("распределяет кг по партиям по порядку", () => {
+    const items = buildWriteOffItemsFromBatches(
+      [
+        b({ id: "b1", totalKg: 10, onWarehouseKg: 6 }),
+        b({ id: "b2", totalKg: 10, onWarehouseKg: 4 }),
+      ],
+      8,
+    );
+    expect(items).toEqual([
+      { batchId: "b1", kg: 6 },
+      { batchId: "b2", kg: 2 },
+    ]);
   });
 });

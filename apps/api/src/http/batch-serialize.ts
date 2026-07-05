@@ -1,5 +1,7 @@
 import type { Batch } from "@birzha/domain";
 
+import { gramsToKg } from "../application/units/mass.js";
+
 export type BatchJson = {
   id: string;
   purchaseId: string;
@@ -48,13 +50,13 @@ export function batchToJson(
   return {
     id: s.id,
     purchaseId: s.purchaseId,
-    totalKg: s.totalKg,
+    totalKg: gramsToKg(s.totalGrams),
     pricePerKg: s.pricePerKg,
-    pendingInboundKg: s.pendingInboundKg,
-    onWarehouseKg: s.onWarehouseKg,
-    inTransitKg: s.inTransitKg,
-    soldKg: s.soldKg,
-    writtenOffKg: s.writtenOffKg,
+    pendingInboundKg: gramsToKg(s.pendingInboundGrams),
+    onWarehouseKg: gramsToKg(s.onWarehouseGrams),
+    inTransitKg: gramsToKg(s.inTransitGrams),
+    soldKg: gramsToKg(s.soldGrams),
+    writtenOffKg: gramsToKg(s.writtenOffGrams),
     ...(nakladnaya ? { nakladnaya } : {}),
     ...(allocation ? { allocation } : {}),
     ...(extras ? { qualityRejectWrittenOffKg: extras.qualityRejectWrittenOffKg } : {}),

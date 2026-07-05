@@ -1,18 +1,18 @@
 import { InsufficientStockError, InvalidKgError } from "./batch.errors.js";
+import { gramsToKg, kgToGrams } from "../units/mass.js";
 
 export type BatchDistribution = "awaiting_receipt" | "on_hand";
 
 export type BatchPersistenceState = {
   id: string;
   purchaseId: string;
-  totalKg: number;
+  totalGrams: bigint;
   pricePerKg: number;
-  pendingInboundKg: number;
-  onWarehouseKg: number;
-  inTransitKg: number;
-  soldKg: number;
-  writtenOffKg: number;
-  /** Склад поступления (накладная); не участвует в инвариантах массы. */
+  pendingInboundGrams: bigint;
+  onWarehouseGrams: bigint;
+  inTransitGrams: bigint;
+  soldGrams: bigint;
+  writtenOffGrams: bigint;
   warehouseId?: string | null;
 };
 
@@ -20,13 +20,13 @@ export class Batch {
   private constructor(
     private readonly id: string,
     private readonly purchaseId: string,
-    private readonly totalKg: number,
+    private readonly totalGrams: bigint,
     private readonly pricePerKg: number,
-    private pendingInboundKg: number,
-    private onWarehouseKg: number,
-    private inTransitKg: number,
-    private soldKg: number,
-    private writtenOffKg: number,
+    private pendingInboundGrams: bigint,
+    private onWarehouseGrams: bigint,
+    private inTransitGrams: bigint,
+    private soldGrams: bigint,
+    private writtenOffGrams: bigint,
     private readonly warehouseId: string | null = null,
   ) {}
 
@@ -36,79 +36,66 @@ export class Batch {
     totalKg: number;
     pricePerKg: number;
     distribution: BatchDistribution;
-    /** Склад, на который оформлено поступление (накладная). */
     warehouseId?: string | null;
   }): Batch {
     const { id, purchaseId, totalKg, pricePerKg, distribution, warehouseId } = config;
     Batch.assertNonNegativeFinite(totalKg, "totalKg");
     Batch.assertNonNegativeFinite(pricePerKg, "pricePerKg");
     const wh = warehouseId ?? null;
+    const total = kgToGrams(totalKg);
 
     if (distribution === "awaiting_receipt") {
-      return new Batch(
-        id,
-        purchaseId,
-        totalKg,
-        pricePerKg,
-        totalKg,
-        0,
-        0,
-        0,
-        0,
-        wh,
-      );
+      return new Batch(id, purchaseId, total, pricePerKg, total, 0n, 0n, 0n, 0n, wh);
     }
 
-    return new Batch(id, purchaseId, totalKg, pricePerKg, 0, totalKg, 0, 0, 0, wh);
+    return new Batch(id, purchaseId, total, pricePerKg, 0n, total, 0n, 0n, 0n, wh);
   }
 
   receiveOnWarehouse(kg: number): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.pendingInboundKg) {
-      throw new InsufficientStockError("pending", this.pendingInboundKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.pendingInboundGrams) {
+      throw new InsufficientStockError("pending", this.pendingInboundGrams, grams);
     }
-    this.pendingInboundKg -= kg;
-    this.onWarehouseKg += kg;
+    this.pendingInboundGrams -= grams;
+    this.onWarehouseGrams += grams;
     this.assertInvariant();
   }
 
   shipToTrip(kg: number, tripId: string): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.onWarehouseKg) {
-      throw new InsufficientStockError("warehouse", this.onWarehouseKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.onWarehouseGrams) {
+      throw new InsufficientStockError("warehouse", this.onWarehouseGrams, grams);
     }
     void tripId;
-    this.onWarehouseKg -= kg;
-    this.inTransitKg += kg;
+    this.onWarehouseGrams -= grams;
+    this.inTransitGrams += grams;
     this.assertInvariant();
   }
 
   sellFromTrip(kg: number, saleId: string): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.inTransitKg) {
-      throw new InsufficientStockError("transit", this.inTransitKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.inTransitGrams) {
+      throw new InsufficientStockError("transit", this.inTransitGrams, grams);
     }
     void saleId;
-    this.inTransitKg -= kg;
-    this.soldKg += kg;
+    this.inTransitGrams -= grams;
+    this.soldGrams += grams;
     this.assertInvariant();
   }
 
-  /** Отмена учтённой продажи с рейса (возврат массы «в путь»). */
   reverseTripSale(kg: number): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.soldKg) {
-      throw new InsufficientStockError("sold", this.soldKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.soldGrams) {
+      throw new InsufficientStockError("sold", this.soldGrams, grams);
     }
-    this.soldKg -= kg;
-    this.inTransitKg += kg;
+    this.soldGrams -= grams;
+    this.inTransitGrams += grams;
     this.assertInvariant();
   }
 
-  /** Исправление кг по уже учтённой продаже с рейса. */
   adjustTripSaleKg(previousKg: number, newKg: number): void {
-    Batch.assertPositiveFinite(previousKg, "previousKg");
-    Batch.assertPositiveFinite(newKg, "newKg");
+    Batch.kgToPositiveGrams(previousKg, "previousKg");
+    Batch.kgToPositiveGrams(newKg, "newKg");
     if (previousKg === newKg) {
       return;
     }
@@ -116,59 +103,55 @@ export class Batch {
     this.sellFromTrip(newKg, "correction");
   }
 
-  /**
-   * Недостача / потеря массы в пути (приёмка рейса): списание из рейса в списанное без продажи.
-   */
   writeOffFromTransit(kg: number, reason: string): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.inTransitKg) {
-      throw new InsufficientStockError("transit", this.inTransitKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.inTransitGrams) {
+      throw new InsufficientStockError("transit", this.inTransitGrams, grams);
     }
     void reason;
-    this.inTransitKg -= kg;
-    this.writtenOffKg += kg;
+    this.inTransitGrams -= grams;
+    this.writtenOffGrams += grams;
     this.assertInvariant();
   }
 
   receiveBack(kg: number, reason: string): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.inTransitKg) {
-      throw new InsufficientStockError("transit", this.inTransitKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.inTransitGrams) {
+      throw new InsufficientStockError("transit", this.inTransitGrams, grams);
     }
     void reason;
-    this.inTransitKg -= kg;
-    this.onWarehouseKg += kg;
+    this.inTransitGrams -= grams;
+    this.onWarehouseGrams += grams;
     this.assertInvariant();
   }
 
   writeOff(kg: number, reason: string): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.onWarehouseKg) {
-      throw new InsufficientStockError("warehouse", this.onWarehouseKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.onWarehouseGrams) {
+      throw new InsufficientStockError("warehouse", this.onWarehouseGrams, grams);
     }
     void reason;
-    this.onWarehouseKg -= kg;
-    this.writtenOffKg += kg;
+    this.onWarehouseGrams -= grams;
+    this.writtenOffGrams += grams;
     this.assertInvariant();
   }
 
-  /** Отмена списания со склада: возврат массы в остаток на складе. */
   reverseWarehouseWriteOff(kg: number): void {
-    Batch.assertPositiveFinite(kg, "kg");
-    if (kg > this.writtenOffKg) {
-      throw new InsufficientStockError("written_off", this.writtenOffKg, kg);
+    const grams = Batch.kgToPositiveGrams(kg, "kg");
+    if (grams > this.writtenOffGrams) {
+      throw new InsufficientStockError("written_off", this.writtenOffGrams, grams);
     }
-    this.writtenOffKg -= kg;
-    this.onWarehouseKg += kg;
+    this.writtenOffGrams -= grams;
+    this.onWarehouseGrams += grams;
     this.assertInvariant();
   }
 
   remainingKg(): number {
-    return this.onWarehouseKg + this.inTransitKg;
+    return gramsToKg(this.onWarehouseGrams + this.inTransitGrams);
   }
 
   totalProcessedKg(): number {
-    return this.soldKg + this.writtenOffKg;
+    return gramsToKg(this.soldGrams + this.writtenOffGrams);
   }
 
   getId(): string {
@@ -187,71 +170,80 @@ export class Batch {
     return this.warehouseId;
   }
 
-  /**
-   * Снимок для сохранения в БД (кг — как в домене; инфраструктура переводит в граммы).
-   */
   toPersistenceState(): BatchPersistenceState {
     return {
       id: this.id,
       purchaseId: this.purchaseId,
-      totalKg: this.totalKg,
+      totalGrams: this.totalGrams,
       pricePerKg: this.pricePerKg,
-      pendingInboundKg: this.pendingInboundKg,
-      onWarehouseKg: this.onWarehouseKg,
-      inTransitKg: this.inTransitKg,
-      soldKg: this.soldKg,
-      writtenOffKg: this.writtenOffKg,
+      pendingInboundGrams: this.pendingInboundGrams,
+      onWarehouseGrams: this.onWarehouseGrams,
+      inTransitGrams: this.inTransitGrams,
+      soldGrams: this.soldGrams,
+      writtenOffGrams: this.writtenOffGrams,
       warehouseId: this.warehouseId,
     };
   }
 
-  /**
-   * Восстановление из БД после проверки инвариантов.
-   */
   static restoreFromPersistence(state: BatchPersistenceState): Batch {
-    Batch.assertNonNegativeFinite(state.totalKg, "totalKg");
+    Batch.assertNonNegativeGrams(state.totalGrams, "totalGrams");
     Batch.assertNonNegativeFinite(state.pricePerKg, "pricePerKg");
-    Batch.assertNonNegativeFinite(state.pendingInboundKg, "pendingInboundKg");
-    Batch.assertNonNegativeFinite(state.onWarehouseKg, "onWarehouseKg");
-    Batch.assertNonNegativeFinite(state.inTransitKg, "inTransitKg");
-    Batch.assertNonNegativeFinite(state.soldKg, "soldKg");
-    Batch.assertNonNegativeFinite(state.writtenOffKg, "writtenOffKg");
+    Batch.assertNonNegativeGrams(state.pendingInboundGrams, "pendingInboundGrams");
+    Batch.assertNonNegativeGrams(state.onWarehouseGrams, "onWarehouseGrams");
+    Batch.assertNonNegativeGrams(state.inTransitGrams, "inTransitGrams");
+    Batch.assertNonNegativeGrams(state.soldGrams, "soldGrams");
+    Batch.assertNonNegativeGrams(state.writtenOffGrams, "writtenOffGrams");
     const sum =
-      state.pendingInboundKg +
-      state.onWarehouseKg +
-      state.inTransitKg +
-      state.soldKg +
-      state.writtenOffKg;
-    if (Math.abs(sum - state.totalKg) > 1e-9) {
+      state.pendingInboundGrams +
+      state.onWarehouseGrams +
+      state.inTransitGrams +
+      state.soldGrams +
+      state.writtenOffGrams;
+    if (sum !== state.totalGrams) {
       throw new Error(
-        `Неконсистентный снимок партии ${state.id}: сумма частей ${sum} !== totalKg ${state.totalKg}`,
+        `Неконсистентный снимок партии ${state.id}: сумма частей ${sum.toString()} !== totalGrams ${state.totalGrams.toString()}`,
       );
     }
     return new Batch(
       state.id,
       state.purchaseId,
-      state.totalKg,
+      state.totalGrams,
       state.pricePerKg,
-      state.pendingInboundKg,
-      state.onWarehouseKg,
-      state.inTransitKg,
-      state.soldKg,
-      state.writtenOffKg,
+      state.pendingInboundGrams,
+      state.onWarehouseGrams,
+      state.inTransitGrams,
+      state.soldGrams,
+      state.writtenOffGrams,
       state.warehouseId ?? null,
     );
   }
 
   private assertInvariant(): void {
     const sum =
-      this.pendingInboundKg +
-      this.onWarehouseKg +
-      this.inTransitKg +
-      this.soldKg +
-      this.writtenOffKg;
-    if (Math.abs(sum - this.totalKg) > 1e-9) {
+      this.pendingInboundGrams +
+      this.onWarehouseGrams +
+      this.inTransitGrams +
+      this.soldGrams +
+      this.writtenOffGrams;
+    if (sum !== this.totalGrams) {
       throw new Error(
-        `Нарушен инвариант партии ${this.id}: сумма частей ${sum} !== totalKg ${this.totalKg}`,
+        `Нарушен инвариант партии ${this.id}: сумма частей ${sum.toString()} !== totalGrams ${this.totalGrams.toString()}`,
       );
+    }
+  }
+
+  private static kgToPositiveGrams(kg: number, field: string): bigint {
+    Batch.assertPositiveFinite(kg, field);
+    const grams = kgToGrams(kg);
+    if (grams <= 0n) {
+      throw new InvalidKgError(field, kg);
+    }
+    return grams;
+  }
+
+  private static assertNonNegativeGrams(value: bigint, field: string): void {
+    if (typeof value !== "bigint" || value < 0n) {
+      throw new InvalidKgError(field, value);
     }
   }
 

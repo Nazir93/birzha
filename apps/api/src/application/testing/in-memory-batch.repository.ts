@@ -13,6 +13,10 @@ export class InMemoryBatchRepository implements BatchRepository {
     return this.byId.get(id) ?? null;
   }
 
+  async findByIdForUpdate(id: string): Promise<Batch | null> {
+    return this.findById(id);
+  }
+
   async list(filter?: BatchListFilter): Promise<Batch[]> {
     if (!filter) {
       return Array.from(this.byId.values()).sort((a, b) => a.getId().localeCompare(b.getId()));
@@ -34,12 +38,31 @@ export class InMemoryBatchRepository implements BatchRepository {
       arr = arr.filter((b) => b.getWarehouseId() === filter.warehouseId!.trim());
     }
     if (filter.stockOnly) {
-      arr = arr.filter((b) => b.toPersistenceState().onWarehouseKg > 0);
+      arr = arr.filter((b) => b.toPersistenceState().onWarehouseGrams > 0n);
     }
     arr.sort((a, b) => a.getId().localeCompare(b.getId()));
     const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
     const offset = Math.max(filter.offset ?? 0, 0);
     return arr.slice(offset, offset + limit);
+  }
+
+  async count(filter?: Omit<BatchListFilter, "limit" | "offset" | "ids">): Promise<number> {
+    if (!filter) {
+      return this.byId.size;
+    }
+
+    let arr = Array.from(this.byId.values());
+    if (filter.search?.trim()) {
+      const s = filter.search.trim().toLowerCase();
+      arr = arr.filter((b) => b.getId().toLowerCase().includes(s));
+    }
+    if (filter.warehouseId?.trim()) {
+      arr = arr.filter((b) => b.getWarehouseId() === filter.warehouseId!.trim());
+    }
+    if (filter.stockOnly) {
+      arr = arr.filter((b) => b.toPersistenceState().onWarehouseGrams > 0n);
+    }
+    return arr.length;
   }
 
   async deleteById(id: string): Promise<void> {

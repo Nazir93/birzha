@@ -69,6 +69,9 @@ export class DrizzleTripRepository implements TripRepository {
     if (filter?.status) {
       parts.push(eq(trips.status, filter.status));
     }
+    if (filter?.assignedSellerUserId) {
+      parts.push(eq(trips.assignedSellerUserId, filter.assignedSellerUserId));
+    }
     if (parts.length === 0) {
       return undefined;
     }

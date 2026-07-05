@@ -3,10 +3,10 @@ import type { AuthRoleGrant } from "../../auth/role-grant.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
-import { loadBatchOrThrow } from "../load-batch.js";
+import { loadBatchForUpdateOrThrow } from "../load-batch.js";
 import type { SellFromTripTransactionRunner } from "./sell-from-trip.use-case.js";
 import { assertMayEditTripSaleLine, assertTripOpenForSaleEdit } from "./trip-sale-edit-guard.js";
-import { gramsToKg } from "../../infrastructure/persistence/batch-mass.js";
+import { gramsToKg } from "../units/mass.js";
 
 export type DeleteTripSaleLineInput = {
   lineId: string;
@@ -42,17 +42,19 @@ export class DeleteTripSaleLineUseCase {
 
     const kg = gramsToKg(line.grams);
 
-    const persist = async (batches: BatchRepository, saleRepo: TripSaleRepository) => {
-      const batch = await loadBatchOrThrow(batches, line.batchId);
+    const persist = async (ctx: { batches: BatchRepository; sales: TripSaleRepository }) => {
+      const batch = await loadBatchForUpdateOrThrow(ctx.batches, line.batchId);
       batch.reverseTripSale(kg);
-      await batches.save(batch);
-      await saleRepo.deleteLineById(line.id);
+      await ctx.batches.save(batch);
+      await ctx.sales.deleteLineById(line.id);
     };
 
     if (this.runInTransaction) {
-      await this.runInTransaction(persist);
+      await this.runInTransaction(async (txCtx) => {
+        await persist({ batches: txCtx.batches, sales: txCtx.sales });
+      });
     } else {
-      await persist(this.batches, this.sales);
+      await persist({ batches: this.batches, sales: this.sales });
     }
   }
 }

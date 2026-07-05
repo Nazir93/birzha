@@ -7,7 +7,7 @@ import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 import { loadBatchOrThrow } from "../load-batch.js";
-import { kgToGrams } from "../units/kg-grams.js";
+import { kgToGrams } from "../units/mass.js";
 
 export type RecordTripShortageInput = {
   batchId: string;

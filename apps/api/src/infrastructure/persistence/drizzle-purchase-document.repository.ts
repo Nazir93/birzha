@@ -18,7 +18,7 @@ import {
   tripBatchShipments,
   tripBatchShortages,
 } from "../../db/schema.js";
-import { gramsToKg } from "./batch-mass.js";
+import { gramsToKg } from "../../application/units/mass.js";
 
 import { DrizzleBatchRepository } from "./drizzle-batch.repository.js";
 

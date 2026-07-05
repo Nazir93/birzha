@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, inArray, notExists, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, isNull, notExists, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
@@ -63,6 +63,8 @@ export async function listPurchaseDocumentsForHttp(
     limit?: number;
     offset?: number;
     scope?: PurchaseDocumentListScope;
+    warehouseIds?: readonly string[];
+    purchaserUserId?: string;
   },
 ) {
   const limit = options?.limit ?? 100;
@@ -75,6 +77,18 @@ export async function listPurchaseDocumentsForHttp(
   const sw = scopeWhere(db, options?.scope);
   if (sw) {
     parts.push(sw);
+  }
+  if (options?.warehouseIds && options.warehouseIds.length > 0) {
+    parts.push(inArray(purchaseDocuments.warehouseId, [...options.warehouseIds]));
+  }
+  if (options?.purchaserUserId) {
+    const purchaserFilter = or(
+      isNull(purchaseDocuments.createdByUserId),
+      eq(purchaseDocuments.createdByUserId, options.purchaserUserId),
+    );
+    if (purchaserFilter) {
+      parts.push(purchaserFilter);
+    }
   }
   const where = parts.length === 0 ? undefined : parts.length === 1 ? parts[0] : and(...parts);
 

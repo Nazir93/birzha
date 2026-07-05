@@ -29,6 +29,8 @@ export function planLoadingManifestAssignTripShipment(input: {
   ledgerPackageCountForTripBatch: bigint;
   onWarehouseGrams: bigint;
   inTransitGrams: bigint;
+  /** Отгрузки по партии в журналах других рейсов (без текущего). */
+  shipmentGramsOtherTrips: bigint;
 }): LoadingManifestAssignTripShipPlan {
   const delta = input.lineGrams - input.ledgerGramsForTripBatch;
   if (delta <= 0n) {
@@ -46,7 +48,12 @@ export function planLoadingManifestAssignTripShipment(input: {
       packageCount: pkgPlanned,
     };
   }
-  const only = delta < input.inTransitGrams ? delta : input.inTransitGrams;
+  const onlyBase = delta < input.inTransitGrams ? delta : input.inTransitGrams;
+  const unallocatedInTransit =
+    input.inTransitGrams > input.shipmentGramsOtherTrips
+      ? input.inTransitGrams - input.shipmentGramsOtherTrips
+      : 0n;
+  const only = onlyBase < unallocatedInTransit ? onlyBase : unallocatedInTransit;
   if (only > 0n) {
     const pkgByMass = proportionalPackageCount(only, input.lineGrams, input.linePackageCount);
     const pkgPlanned = pkgByMass == null ? null : pkgDelta > 0n ? (pkgByMass < pkgDelta ? pkgByMass : pkgDelta) : null;

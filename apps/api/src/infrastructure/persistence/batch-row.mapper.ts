@@ -1,22 +1,22 @@
 import type { BatchPersistenceState } from "@birzha/domain";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-import type { batches } from "../../db/schema.js";
-import { gramsToKg, kgToGrams } from "./batch-mass.js";
+import { gramsToKg } from "../../application/units/mass.js";
+import { batches } from "../../db/schema.js";
 
-export type BatchRow = typeof batches.$inferSelect;
-export type BatchInsert = typeof batches.$inferInsert;
-
+type BatchInsert = InferInsertModel<typeof batches>;
+type BatchRow = InferSelectModel<typeof batches>;
 export function persistenceStateToInsert(state: BatchPersistenceState): BatchInsert {
   return {
     id: state.id,
     purchaseId: state.purchaseId,
-    totalGrams: kgToGrams(state.totalKg),
-    pendingInboundGrams: kgToGrams(state.pendingInboundKg),
-    onWarehouseGrams: kgToGrams(state.onWarehouseKg),
-    inTransitGrams: kgToGrams(state.inTransitKg),
-    soldGrams: kgToGrams(state.soldKg),
-    writtenOffGrams: kgToGrams(state.writtenOffKg),
-    pricePerKg: state.pricePerKg.toFixed(6),
+    totalGrams: state.totalGrams,
+    pendingInboundGrams: state.pendingInboundGrams,
+    onWarehouseGrams: state.onWarehouseGrams,
+    inTransitGrams: state.inTransitGrams,
+    soldGrams: state.soldGrams,
+    writtenOffGrams: state.writtenOffGrams,
+    pricePerKg: String(state.pricePerKg),
     warehouseId: state.warehouseId ?? null,
   };
 }
@@ -25,13 +25,22 @@ export function rowToPersistenceState(row: BatchRow): BatchPersistenceState {
   return {
     id: row.id,
     purchaseId: row.purchaseId,
-    totalKg: gramsToKg(row.totalGrams),
-    pendingInboundKg: gramsToKg(row.pendingInboundGrams),
-    onWarehouseKg: gramsToKg(row.onWarehouseGrams),
-    inTransitKg: gramsToKg(row.inTransitGrams),
-    soldKg: gramsToKg(row.soldGrams),
-    writtenOffKg: gramsToKg(row.writtenOffGrams),
+    totalGrams: row.totalGrams,
     pricePerKg: Number(row.pricePerKg),
-    warehouseId: row.warehouseId ?? null,
+    pendingInboundGrams: row.pendingInboundGrams,
+    onWarehouseGrams: row.onWarehouseGrams,
+    inTransitGrams: row.inTransitGrams,
+    soldGrams: row.soldGrams,
+    writtenOffGrams: row.writtenOffGrams,
+    warehouseId: row.warehouseId,
   };
+}
+
+/** Кг для HTTP/UI из снимка партии. */
+export function persistenceStateOnWarehouseKg(state: BatchPersistenceState): number {
+  return gramsToKg(state.onWarehouseGrams);
+}
+
+export function persistenceStateSoldKg(state: BatchPersistenceState): number {
+  return gramsToKg(state.soldGrams);
 }

@@ -5,7 +5,7 @@ import type {
   BatchWarehouseWriteOffReason,
 } from "../ports/batch-warehouse-write-off-ledger.port.js";
 import { WarehouseWriteOffNotFoundError } from "../errors.js";
-import { gramsToKg } from "../../infrastructure/persistence/batch-mass.js";
+import { gramsToKg } from "../units/mass.js";
 import type { RecordWarehouseWriteOffTransactionRunner } from "./record-warehouse-write-off.use-case.js";
 
 const REASON: BatchWarehouseWriteOffReason = "quality_reject";

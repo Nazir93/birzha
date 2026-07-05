@@ -8,6 +8,8 @@ export type TripListFilter = {
   /** По умолчанию для подборщика — сначала свежие по дате выезда. */
   order?: "tripNumberAsc" | "departedAtDesc";
   status?: "open" | "closed";
+  /** Только рейсы, закреплённые за этим продавцом (полевой seller). */
+  assignedSellerUserId?: string;
 };
 
 export interface TripRepository {

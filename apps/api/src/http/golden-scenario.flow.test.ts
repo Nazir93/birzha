@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../application/testing/in-memory-batch.repository.js";
-import { kgToGrams } from "../application/units/kg-grams.js";
+import { assertGoldenTripBatchReconcile } from "../application/reconciliation/batch-journal-reconcile.js";
+import { kgToGrams } from "../application/units/mass.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../application/units/rub-kopecks.js";
 import { buildApp } from "../app.js";
 import { loadEnv } from "../config.js";
@@ -129,6 +130,20 @@ describe("golden scenario (HTTP flow)", () => {
     expect(batch).not.toBeNull();
     expect(batch!.remainingKg()).toBe(2000);
     expect(batch!.totalProcessedKg()).toBe(3000);
+
+    assertGoldenTripBatchReconcile({
+      batch: batch!,
+      reportSoldGrams: soldGrams,
+      reportShippedGrams: 3_000_000n,
+      reportShortageGrams: 100_000n,
+    });
+
+    r = await app.inject({ method: "GET", url: `/batches/${batchId}` });
+    expect(r.statusCode).toBe(200);
+    const batchJson = JSON.parse(r.body) as { soldKg: number; inTransitKg: number; onWarehouseKg: number };
+    expect(batchJson.soldKg).toBe(2900);
+    expect(batchJson.inTransitKg).toBe(0);
+    expect(batchJson.onWarehouseKg).toBe(2000);
 
     await app.close();
   });

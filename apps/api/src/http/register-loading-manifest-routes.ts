@@ -456,6 +456,7 @@ export function registerLoadingManifestRoutes(
             .from(batches)
             .where(eq(batches.id, line.batchId))
             .limit(1);
+          const totalLedger = await shipRepo.totalGramsForBatch(line.batchId);
           const plan = planLoadingManifestAssignTripShipment({
             lineGrams: toBigIntOrZero(line.grams),
             linePackageCount: toNullableBigInt(line.packageCount),
@@ -463,6 +464,7 @@ export function registerLoadingManifestRoutes(
             ledgerPackageCountForTripBatch: toBigIntOrZero(linePkgAgg?.totalPackageCount),
             onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
             inTransitGrams: br?.inTransitGrams ?? 0n,
+            shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
           });
           if (plan.kind === "none") {
             continue;
@@ -641,6 +643,7 @@ export function registerLoadingManifestRoutes(
               .from(batches)
               .where(eq(batches.id, batchId))
               .limit(1);
+            const totalLedger = await shipRepo.totalGramsForBatch(batchId);
             const plan = planLoadingManifestAssignTripShipment({
               lineGrams: toBigIntOrZero(line.grams),
               linePackageCount: toNullableBigInt(line.packageCount),
@@ -648,6 +651,7 @@ export function registerLoadingManifestRoutes(
               ledgerPackageCountForTripBatch: toBigIntOrZero(linePkgAgg?.totalPackageCount),
               onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
               inTransitGrams: br?.inTransitGrams ?? 0n,
+              shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
             });
             if (plan.kind === "none") {
               continue;

@@ -637,7 +637,12 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByLabel("Поставщик *")).toBeVisible();
     await expect(page.getByLabel("Дата *")).toBeVisible();
     await expect(page.getByRole("button", { name: "Создать накладную" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "=кг×цена" }).first()).toBeVisible();
+
+    const firstLine = page.locator(".birzha-nakl-lines-table tbody tr").first();
+    await firstLine.locator('[data-label="Кг"] input').fill("10");
+    await firstLine.locator('[data-label="₽/кг"] input').fill("40");
+    await expect(firstLine.locator('[data-label="Сумма, коп."] input')).toHaveValue("400,00");
+    await expect(page.getByRole("button", { name: "=кг×цена" })).toHaveCount(0);
 
     await page.goto("/purchase-nakladnaya");
     await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/);
@@ -976,6 +981,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("heading", { name: "Склады и остатки" })).toBeVisible();
     await expect(page.getByLabel("Название нового склада")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Добавить склад" })).toBeVisible();
+    await expect(page.getByText("Закупочные накладные на складе")).toBeVisible({ timeout: 15_000 });
   });
 
   test("админ: /a/warehouse-write-offs — без PostgreSQL журнал недоступен", async ({ page, request }) => {

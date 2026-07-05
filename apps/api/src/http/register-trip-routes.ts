@@ -54,6 +54,7 @@ export function registerTripRoutes(
     offset: z.coerce.number().int().min(0).optional(),
     order: z.enum(["tripNumber", "departedAtDesc"]).optional(),
     status: z.enum(["open", "closed"]).optional(),
+    assignedSellerUserId: z.string().min(1).optional(),
   });
 
   app.get("/trips", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
@@ -73,15 +74,16 @@ export function registerTripRoutes(
         order: d.order === "tripNumber" ? "tripNumberAsc" : "departedAtDesc",
         status: d.status,
       };
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (d.assignedSellerUserId) {
+        filter.assignedSellerUserId = d.assignedSellerUserId;
+      } else if (u && isGlobalSellerOnly(u.roles)) {
+        filter.assignedSellerUserId = u.sub;
+      }
       const [list, totalCount] = await Promise.all([trips.list(filter), trips.count(filter)]);
       const listMeta = { limit, offset, hasMore: offset + list.length < totalCount, totalCount };
 
-      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
-      let filteredList = list;
-      if (u && isGlobalSellerOnly(u.roles)) {
-        filteredList = list.filter((t) => tripVisibleToFieldSeller(t, u.sub));
-      }
-      const toJson = async (trip: (typeof filteredList)[number]) => {
+      const toJson = async (trip: (typeof list)[number]) => {
         if (trip.getStatus() === "closed") {
           return tripToJson(trip);
         }
@@ -100,7 +102,7 @@ export function registerTripRoutes(
         });
       };
 
-      const tripsPayload = await Promise.all(filteredList.map(toJson));
+      const tripsPayload = await Promise.all(list.map(toJson));
       return reply.send({ trips: tripsPayload, listMeta });
     } catch (error) {
       return sendMappedError(reply, error);

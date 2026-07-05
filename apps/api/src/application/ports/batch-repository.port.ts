@@ -14,6 +14,9 @@ export type BatchListFilter = {
 export interface BatchRepository {
   save(batch: Batch): Promise<void>;
   findById(id: string): Promise<Batch | null>;
+  /** Блокирует строку партии до конца транзакции (PostgreSQL `FOR UPDATE`). */
+  findByIdForUpdate(id: string): Promise<Batch | null>;
   list(filter?: BatchListFilter): Promise<Batch[]>;
+  count(filter?: Omit<BatchListFilter, "limit" | "offset" | "ids">): Promise<number>;
   deleteById(id: string): Promise<void>;
 }

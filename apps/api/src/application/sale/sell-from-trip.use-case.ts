@@ -16,13 +16,13 @@ import type { TripShortageRepository } from "../ports/trip-shortage-repository.p
 import type { WholesalerRepository } from "../ports/wholesaler-repository.port.js";
 import type { PurchaseLinePackageMetaPort } from "../ports/purchase-line-package-meta.port.js";
 import { NullPurchaseLinePackageMetaPort } from "../../infrastructure/persistence/null-purchase-line-package-meta.js";
-import { loadBatchOrThrow } from "../load-batch.js";
+import { loadBatchForUpdateOrThrow } from "../load-batch.js";
 import {
   effectiveShippedPackages,
   estimateTripBatchPackagesInTransit,
   tripSaleUsesPackageAccounting,
 } from "../trip/trip-package-estimate.js";
-import { kgToGrams } from "../units/kg-grams.js";
+import { kgToGrams } from "../units/mass.js";
 import { revenueKopecksFromGramsAndPricePerKg, rubPerKgToKopecksPerKg } from "../units/rub-kopecks.js";
 
 export type SellFromTripInput = {
@@ -52,8 +52,15 @@ export type SellFromTripInput = {
   packageCount?: number;
 };
 
+export type SellInTransactionContext = {
+  batches: BatchRepository;
+  sales: TripSaleRepository;
+  shipments: TripShipmentRepository;
+  shortages: TripShortageRepository;
+};
+
 export type SellFromTripTransactionRunner = (
-  fn: (batches: BatchRepository, sales: TripSaleRepository) => Promise<void>,
+  fn: (ctx: SellInTransactionContext) => Promise<void>,
 ) => Promise<void>;
 
 function resolveCashDebtCard(
@@ -151,11 +158,11 @@ export class SellFromTripUseCase {
     const salesAgg = await this.sales.aggregateByTripId(input.tripId);
     const soldPkgBefore =
       salesAgg.byBatch.find((l) => l.batchId === input.batchId)?.packageCount ?? 0n;
-    const available = shipped - soldBefore - shortageBefore;
+    const availablePreview = shipped - soldBefore - shortageBefore;
 
     const requested = kgToGrams(input.kg);
-    if (requested > available) {
-      throw new InsufficientStockForTripError(input.tripId, input.batchId, available, requested);
+    if (requested > availablePreview) {
+      throw new InsufficientStockForTripError(input.tripId, input.batchId, availablePreview, requested);
     }
 
     const shipmentAgg = await this.shipments.aggregateByTripId(input.tripId);
@@ -209,11 +216,19 @@ export class SellFromTripUseCase {
     const saleChannel: "retail" | "wholesale" = input.saleChannel === "wholesale" ? "wholesale" : "retail";
     const { clientLabel, counterpartyId, wholesaleBuyerId } = await this.resolveClientSnapshot(input, saleChannel);
 
-    const persist = async (batches: BatchRepository, saleRepo: TripSaleRepository) => {
-      const batch = await loadBatchOrThrow(batches, input.batchId);
+    const persist = async (ctx: SellInTransactionContext) => {
+      const shippedLocked = await ctx.shipments.totalGramsForTripAndBatch(input.tripId, input.batchId);
+      const soldLocked = await ctx.sales.totalGramsForTripAndBatch(input.tripId, input.batchId);
+      const shortageLocked = await ctx.shortages.totalGramsForTripAndBatch(input.tripId, input.batchId);
+      const available = shippedLocked - soldLocked - shortageLocked;
+      if (requested > available) {
+        throw new InsufficientStockForTripError(input.tripId, input.batchId, available, requested);
+      }
+
+      const batch = await loadBatchForUpdateOrThrow(ctx.batches, input.batchId);
       batch.sellFromTrip(input.kg, input.saleId);
-      await batches.save(batch);
-      await saleRepo.append({
+      await ctx.batches.save(batch);
+      await ctx.sales.append({
         id: saleLineId,
         tripId: input.tripId,
         batchId: input.batchId,
@@ -236,7 +251,12 @@ export class SellFromTripUseCase {
     if (this.runSellInTransaction) {
       await this.runSellInTransaction(persist);
     } else {
-      await persist(this.batches, this.sales);
+      await persist({
+        batches: this.batches,
+        sales: this.sales,
+        shipments: this.shipments,
+        shortages: this.shortages,
+      });
     }
   }
 }

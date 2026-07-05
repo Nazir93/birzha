@@ -190,7 +190,12 @@ export async function buildApp(options: {
     ? async (fn) => {
         await db.transaction(async (tx) => {
           const exec = tx as unknown as DbClient;
-          await fn(new DrizzleBatchRepository(exec), new DrizzleTripSaleRepository(exec));
+          await fn({
+            batches: new DrizzleBatchRepository(exec),
+            sales: new DrizzleTripSaleRepository(exec),
+            shipments: new DrizzleTripShipmentRepository(exec),
+            shortages: new DrizzleTripShortageRepository(exec),
+          });
         });
       }
     : undefined;

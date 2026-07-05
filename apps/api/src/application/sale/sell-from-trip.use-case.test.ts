@@ -307,4 +307,33 @@ describe("SellFromTripUseCase", () => {
       }),
     ).rejects.toThrow(InsufficientStockForTripError);
   });
+
+  it("вторая продажа отклоняется после исчерпания лимита рейса", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    const wholesalers = new InMemoryWholesalerRepository();
+    const sell = new SellFromTripUseCase(repo, trips, shipments, sales, shortages, counterparties, wholesalers);
+    await new CreateTripUseCase(trips).execute({ id: "t-seq", tripNumber: "Ф-SEQ" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-seq",
+      purchaseId: "p-seq",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-seq",
+      kg: 50,
+      tripId: "t-seq",
+    });
+    await sell.execute({ batchId: "b-seq", tripId: "t-seq", kg: 30, saleId: "s-a", pricePerKg: 1 });
+    await sell.execute({ batchId: "b-seq", tripId: "t-seq", kg: 20, saleId: "s-b", pricePerKg: 1 });
+    await expect(
+      sell.execute({ batchId: "b-seq", tripId: "t-seq", kg: 1, saleId: "s-c", pricePerKg: 1 }),
+    ).rejects.toThrow(InsufficientStockForTripError);
+  });
 });

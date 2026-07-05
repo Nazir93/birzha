@@ -1,5 +1,5 @@
 import { Batch, type BatchPersistenceState } from "@birzha/domain";
-import { asc, eq, gt, ilike, inArray, and, type SQL } from "drizzle-orm";
+import { asc, eq, gt, ilike, inArray, and, sql, type SQL } from "drizzle-orm";
 
 import type { BatchListFilter, BatchRepository } from "../../application/ports/batch-repository.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -49,6 +49,52 @@ export class DrizzleBatchRepository implements BatchRepository {
     return Batch.restoreFromPersistence(rowToPersistenceState(row));
   }
 
+  async findByIdForUpdate(id: string): Promise<Batch | null> {
+    const rows = await this.db
+      .select()
+      .from(batches)
+      .where(eq(batches.id, id))
+      .limit(1)
+      .for("update");
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return Batch.restoreFromPersistence(rowToPersistenceState(row));
+  }
+
+  private listConditions(filter?: Omit<BatchListFilter, "limit" | "offset" | "ids">): SQL[] {
+    const conditions: SQL[] = [];
+    if (filter?.search?.trim()) {
+      conditions.push(ilike(batches.id, `%${filter.search.trim()}%`));
+    }
+    if (filter?.warehouseId?.trim()) {
+      conditions.push(eq(batches.warehouseId, filter.warehouseId.trim()));
+    }
+    if (filter?.stockOnly) {
+      conditions.push(gt(batches.onWarehouseGrams, 0n));
+    }
+    return conditions;
+  }
+
+  private listWhere(filter?: Omit<BatchListFilter, "limit" | "offset" | "ids">): SQL | undefined {
+    const conditions = this.listConditions(filter);
+    if (conditions.length === 0) {
+      return undefined;
+    }
+    if (conditions.length === 1) {
+      return conditions[0];
+    }
+    return and(...conditions);
+  }
+
+  async count(filter?: Omit<BatchListFilter, "limit" | "offset" | "ids">): Promise<number> {
+    const where = this.listWhere(filter);
+    const base = this.db.select({ count: sql<number>`count(*)::int` }).from(batches);
+    const row = where ? await base.where(where) : await base;
+    return row[0]?.count ?? 0;
+  }
+
   async list(filter?: BatchListFilter): Promise<Batch[]> {
     if (!filter) {
       const rows = await this.db.select().from(batches).orderBy(asc(batches.id));
@@ -70,19 +116,9 @@ export class DrizzleBatchRepository implements BatchRepository {
 
     const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
     const offset = Math.max(filter.offset ?? 0, 0);
-    const conditions: SQL[] = [];
-    if (filter.search?.trim()) {
-      conditions.push(ilike(batches.id, `%${filter.search.trim()}%`));
-    }
-    if (filter.warehouseId?.trim()) {
-      conditions.push(eq(batches.warehouseId, filter.warehouseId.trim()));
-    }
-    if (filter.stockOnly) {
-      conditions.push(gt(batches.onWarehouseGrams, 0n));
-    }
+    const where = this.listWhere(filter);
     const base = this.db.select().from(batches);
-    const filtered =
-      conditions.length === 0 ? base : conditions.length === 1 ? base.where(conditions[0]) : base.where(and(...conditions));
+    const filtered = where ? base.where(where) : base;
     const rows = await filtered.orderBy(asc(batches.id)).limit(limit).offset(offset);
     return rows.map((row) => Batch.restoreFromPersistence(rowToPersistenceState(row)));
   }

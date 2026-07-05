@@ -63,6 +63,7 @@ export const tripsPickerQueryOptions = (
     search?: string;
     status?: TripListStatus;
     order?: TripListOrder;
+    assignedSellerUserId?: string;
   } = {},
 ) => {
   const limit = opts.limit ?? 100;
@@ -70,8 +71,18 @@ export const tripsPickerQueryOptions = (
   const search = opts.search?.trim() ?? "";
   const status = opts.status ?? "";
   const order = opts.order ?? "departedAtDesc";
+  const assignedSellerUserId = opts.assignedSellerUserId?.trim() ?? "";
   return queryOptions({
-    queryKey: [...queryRoots.trips, "picker", limit, offset, search, status, order] as const,
+    queryKey: [
+      ...queryRoots.trips,
+      "picker",
+      limit,
+      offset,
+      search,
+      status,
+      order,
+      assignedSellerUserId,
+    ] as const,
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("limit", String(limit));
@@ -84,6 +95,9 @@ export const tripsPickerQueryOptions = (
       }
       if (order === "tripNumber") {
         p.set("order", "tripNumber");
+      }
+      if (assignedSellerUserId) {
+        p.set("assignedSellerUserId", assignedSellerUserId);
       }
       return apiGetJson<TripsListResponse>(`/api/trips?${p}`);
     },
@@ -313,12 +327,22 @@ export const loadingManifestReservedBatchIdsQueryOptions = (warehouseId: string)
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
-export const warehouseWriteOffsLedgerQueryOptions = (opts: { warehouseId?: string; limit?: number }) =>
+export const warehouseWriteOffsLedgerQueryOptions = (opts: {
+  warehouseId?: string;
+  limit?: number;
+  offset?: number;
+}) =>
   queryOptions({
-    queryKey: [...queryRoots.warehouseWriteOffsLedger, opts.warehouseId ?? "", opts.limit ?? 300] as const,
+    queryKey: [
+      ...queryRoots.warehouseWriteOffsLedger,
+      opts.warehouseId ?? "",
+      opts.limit ?? 300,
+      opts.offset ?? 0,
+    ] as const,
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("limit", String(opts.limit ?? 300));
+      p.set("offset", String(opts.offset ?? 0));
       if (opts.warehouseId && opts.warehouseId.trim().length > 0) {
         p.set("warehouseId", opts.warehouseId.trim());
       }
@@ -326,6 +350,13 @@ export const warehouseWriteOffsLedgerQueryOptions = (opts: { warehouseId?: strin
     },
     staleTime: QUERY_STALE_LISTS_MS,
   });
+
+/** После мутаций остатков: партии, сводка складов, резерв в погрузке. */
+export function invalidateStockQueries(queryClient: { invalidateQueries: (opts: { queryKey: readonly unknown[] }) => void }): void {
+  queryClient.invalidateQueries({ queryKey: queryRoots.batches });
+  queryClient.invalidateQueries({ queryKey: queryRoots.stockBalances });
+  queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
+}
 
 export const shipmentReportQueryOptions = (tripId: string) =>
   queryOptions({

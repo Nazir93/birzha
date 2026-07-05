@@ -110,6 +110,117 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
   return Array.from(m.values()).sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
 }
 
+/** Свод по паре «закупочная накладная + калибр» — для списания с явным документом. */
+export type DocumentCaliberAggregateRow = {
+  rowKey: string;
+  documentId: string | null;
+  documentNumber: string;
+  documentDisplayLabel: string;
+  lineLabel: string;
+  totalKg: number;
+  totalPkg: number;
+  linesWithPkg: number;
+  partCount: number;
+  batches: BatchListItem[];
+};
+
+export function aggregateBatchesByDocumentCaliberLine(
+  batches: readonly BatchListItem[],
+): DocumentCaliberAggregateRow[] {
+  type Acc = {
+    rowKey: string;
+    documentId: string | null;
+    documentNumber: string;
+    lineLabel: string;
+    totalKg: number;
+    totalPkg: number;
+    linesWithPkg: number;
+    partCount: number;
+    batches: BatchListItem[];
+  };
+  const m = new Map<string, Acc>();
+  for (const b of batches) {
+    const lineLabel = formatNakladLineLabel(b);
+    const docId = b.nakladnaya?.documentId?.trim();
+    const docNum = b.nakladnaya?.documentNumber?.trim() ?? "";
+    const docKey = docId && docId.length > 0 ? docId : AGGREGATE_NO_PURCHASE_DOCUMENT_KEY;
+    const rowKey = `${docKey}\0${lineLabel}`;
+    if (!m.has(rowKey)) {
+      m.set(rowKey, {
+        rowKey,
+        documentId: docId && docId.length > 0 ? docId : null,
+        documentNumber: docNum,
+        lineLabel,
+        totalKg: 0,
+        totalPkg: 0,
+        linesWithPkg: 0,
+        partCount: 0,
+        batches: [],
+      });
+    }
+    const g = m.get(rowKey)!;
+    g.totalKg += b.onWarehouseKg;
+    g.partCount += 1;
+    g.batches.push(b);
+    const e = estimatedPackageCountOnShelf(b);
+    if (e != null) {
+      g.totalPkg += e;
+      g.linesWithPkg += 1;
+    }
+    if (docNum) {
+      g.documentNumber = docNum;
+    }
+  }
+  const out: DocumentCaliberAggregateRow[] = [];
+  for (const v of m.values()) {
+    const documentDisplayLabel =
+      v.documentId && v.documentNumber
+        ? `№ ${v.documentNumber}`
+        : v.documentId
+          ? `№ …${v.documentId.slice(-6)}`
+          : "Без накладной в данных";
+    out.push({
+      rowKey: v.rowKey,
+      documentId: v.documentId,
+      documentNumber: v.documentNumber,
+      documentDisplayLabel,
+      lineLabel: v.lineLabel,
+      totalKg: v.totalKg,
+      totalPkg: v.totalPkg,
+      linesWithPkg: v.linesWithPkg,
+      partCount: v.partCount,
+      batches: v.batches,
+    });
+  }
+  return out.sort((a, b) => {
+    const doc = a.documentDisplayLabel.localeCompare(b.documentDisplayLabel, "ru");
+    if (doc !== 0) {
+      return doc;
+    }
+    return compareProductGradeLineLabels(a.lineLabel, b.lineLabel);
+  });
+}
+
+/** Распределить кг списания по партиям (FIFO по порядку в массиве). */
+export function buildWriteOffItemsFromBatches(
+  batches: readonly BatchListItem[],
+  totalKg: number,
+): { batchId: string; kg: number }[] {
+  let remaining = totalKg;
+  const items: { batchId: string; kg: number }[] = [];
+  for (const batch of batches) {
+    if (remaining <= 0) {
+      break;
+    }
+    const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
+    if (kgFromBatch > 0) {
+      items.push({ batchId: batch.id, kg: kgFromBatch });
+      remaining -= kgFromBatch;
+    }
+  }
+  return items;
+}
+
 /** Ключ строки без id закупочной накладной в данных (все такие партии в одной строке). */
 export const AGGREGATE_NO_PURCHASE_DOCUMENT_KEY = "__no_purchase_document__";
 

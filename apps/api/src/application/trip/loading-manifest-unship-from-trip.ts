@@ -1,7 +1,7 @@
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import { loadBatchOrThrow } from "../load-batch.js";
-import { gramsToKg } from "../../infrastructure/persistence/batch-mass.js";
+import { gramsToKg } from "../units/mass.js";
 import { planLoadingManifestDetachTripReverse } from "./plan-loading-manifest-detach-trip-reverse.js";
 
 export type ManifestBatchGrams = {

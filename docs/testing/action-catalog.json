@@ -55,7 +55,6 @@
           "component": "apps/web/src/components/PurchaseNakladnayaSection.tsx",
           "actions": [
             { "id": "create-purchase-document", "kind": "button", "label": "Создать накладную", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "batchCreate" },
-            { "id": "calc-line-total", "kind": "button", "label": "=кг×цена", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "batchCreate" },
             { "id": "open-document-card", "kind": "link", "label": "№ накладной", "roleAccess": ["manager", "purchaser", "warehouse", "logistics", "receiver"], "apiGuard": "dataRead" }
           ]
         },

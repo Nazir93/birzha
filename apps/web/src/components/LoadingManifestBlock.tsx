@@ -5,7 +5,9 @@ import type { BatchListItem } from "../api/types.js";
 import type { LoadingManifestDetail } from "../api/types.js";
 import {
   aggregateBatchesByCaliberLine,
+  aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
+  buildWriteOffItemsFromBatches,
   filterBatchesForLoadingManifest,
   formatLoadingManifestCardHeader,
   sumLoadingManifestTotals,
@@ -45,8 +47,8 @@ type Props = {
   writeOff?: LoadingManifestWriteOffProps | null;
 };
 
-function writeOffKeyCaliber(lineLabel: string): string {
-  return `wo-cal:${lineLabel}`;
+function writeOffKeyDocumentCaliber(rowKey: string): string {
+  return `wo-dc:${rowKey}`;
 }
 
 function writeOffKeyDocument(rowKey: string): string {
@@ -116,6 +118,10 @@ export function LoadingManifestBlock({
 
   const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
   const caliberRows = useMemo(() => aggregateBatchesByCaliberLine(includedBatches), [includedBatches]);
+  const documentCaliberRows = useMemo(
+    () => aggregateBatchesByDocumentCaliberLine(includedBatches),
+    [includedBatches],
+  );
   const documentRows = useMemo(() => aggregateBatchesByPurchaseDocument(includedBatches), [includedBatches]);
 
   const uniqueDocuments = useMemo(() => {
@@ -221,8 +227,8 @@ export function LoadingManifestBlock({
             <div style={{ marginBottom: "0.85rem" }} className="no-print">
               <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Списание со склада</h4>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-                Укажите калибр (или накладную) и кг — система спишет массу с партий автоматически, сверх остатка
-                списать нельзя.
+                По калибру: строка «накладная + калибр» — списание только с выбранной накладной. По накладной:
+                видны все калибры документа; «Списать всё» — весь остаток по накладной.
               </p>
               <div
                 style={{
@@ -242,7 +248,7 @@ export function LoadingManifestBlock({
                     checked={writeOffGroupMode === "caliber"}
                     onChange={() => setWriteOffGroupMode("caliber")}
                   />
-                  калибрам
+                  калибр + накладная
                 </label>
                 <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <input
@@ -251,24 +257,47 @@ export function LoadingManifestBlock({
                     checked={writeOffGroupMode === "nakladnaya"}
                     onChange={() => setWriteOffGroupMode("nakladnaya")}
                   />
-                  накладным
+                  накладная целиком
                 </label>
               </div>
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
                 <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 560 }}>
                   <thead>
                     <tr>
-                      <th>{writeOffGroupMode === "caliber" ? "Калибр" : "Накладная"}</th>
+                      {writeOffGroupMode === "caliber" ? (
+                        <>
+                          <th>Накладная</th>
+                          <th>Калибр</th>
+                        </>
+                      ) : (
+                        <>
+                          <th>Накладная</th>
+                          <th>Калибры в документе</th>
+                        </>
+                      )}
                       <th className="birzha-data-table__num">Остаток, кг</th>
                       <th>Списать, кг</th>
                     </tr>
                   </thead>
                   <tbody>
                     {writeOffGroupMode === "caliber"
-                      ? caliberRows.map((row) => {
-                          const inputKey = writeOffKeyCaliber(row.lineLabel);
+                      ? documentCaliberRows.map((row) => {
+                          const inputKey = writeOffKeyDocumentCaliber(row.rowKey);
+                          const submitLabel = `${row.documentDisplayLabel} · ${row.lineLabel}`;
                           return (
-                            <tr key={`wo-cal-${row.lineLabel}`}>
+                            <tr key={`wo-dc-${row.rowKey}`}>
+                              <td>
+                                {row.documentId ? (
+                                  <Link
+                                    to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
+                                    style={{ fontWeight: 600 }}
+                                  >
+                                    {row.documentDisplayLabel}
+                                  </Link>
+                                ) : (
+                                  <strong>{row.documentDisplayLabel}</strong>
+                                )}
+                              </td>
                               <td>
                                 <strong>{row.lineLabel}</strong>
                                 <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
@@ -286,7 +315,7 @@ export function LoadingManifestBlock({
                                     placeholder="кг"
                                     value={writeOff.rejectInput[inputKey] ?? ""}
                                     onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать кг, ${row.lineLabel}`}
+                                    aria-label={`Списать кг, ${submitLabel}`}
                                     style={{ ...fieldStyle, width: "5rem" }}
                                   />
                                   <button
@@ -299,20 +328,9 @@ export function LoadingManifestBlock({
                                       if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
                                         return;
                                       }
-                                      let remaining = kg;
-                                      const items: { batchId: string; kg: number }[] = [];
-                                      for (const batch of row.batches) {
-                                        if (remaining <= 0) {
-                                          break;
-                                        }
-                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
-                                        if (kgFromBatch > 0) {
-                                          items.push({ batchId: batch.id, kg: kgFromBatch });
-                                          remaining -= kgFromBatch;
-                                        }
-                                      }
+                                      const items = buildWriteOffItemsFromBatches(row.batches, kg);
                                       if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items, row.lineLabel);
+                                        writeOff.onSubmitWriteOff(inputKey, items, submitLabel);
                                       }
                                     }}
                                   >
@@ -325,6 +343,7 @@ export function LoadingManifestBlock({
                         })
                       : documentRows.map((row) => {
                           const inputKey = writeOffKeyDocument(row.rowKey);
+                          const caliberInDoc = aggregateBatchesByCaliberLine(row.batches);
                           return (
                             <tr key={`wo-doc-${row.rowKey}`}>
                               <td>
@@ -341,6 +360,19 @@ export function LoadingManifestBlock({
                                 <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 6 }}>
                                   {row.partCount} парт.
                                 </span>
+                              </td>
+                              <td>
+                                <ul
+                                  className="birzha-ui-sm birzha-text-muted"
+                                  style={{ margin: 0, paddingLeft: "1.1rem", lineHeight: 1.45 }}
+                                >
+                                  {caliberInDoc.map((cal) => (
+                                    <li key={cal.lineLabel}>
+                                      {cal.lineLabel} —{" "}
+                                      {cal.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+                                    </li>
+                                  ))}
+                                </ul>
                               </td>
                               <td className="birzha-data-table__num">
                                 {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
@@ -366,24 +398,26 @@ export function LoadingManifestBlock({
                                       if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
                                         return;
                                       }
-                                      let remaining = kg;
-                                      const items: { batchId: string; kg: number }[] = [];
-                                      for (const batch of row.batches) {
-                                        if (remaining <= 0) {
-                                          break;
-                                        }
-                                        const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
-                                        if (kgFromBatch > 0) {
-                                          items.push({ batchId: batch.id, kg: kgFromBatch });
-                                          remaining -= kgFromBatch;
-                                        }
-                                      }
+                                      const items = buildWriteOffItemsFromBatches(row.batches, kg);
                                       if (items.length > 0) {
                                         writeOff.onSubmitWriteOff(inputKey, items, row.displayLabel);
                                       }
                                     }}
                                   >
                                     Списать
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={btnClassInline}
+                                    disabled={writeOff.isPending || row.totalKg <= 0}
+                                    onClick={() => {
+                                      const items = buildWriteOffItemsFromBatches(row.batches, row.totalKg);
+                                      if (items.length > 0) {
+                                        writeOff.onSubmitWriteOff(inputKey, items, `${row.displayLabel} (всё)`);
+                                      }
+                                    }}
+                                  >
+                                    Списать всё
                                   </button>
                                 </div>
                               </td>
