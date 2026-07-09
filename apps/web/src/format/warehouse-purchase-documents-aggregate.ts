@@ -8,7 +8,26 @@ export type WarehouseDocumentStockRow = {
   onWarehousePackages: number;
   inTransitKg: number;
   soldKg: number;
+  writtenOffKg: number;
 };
+
+/** Кг, списанные с остатка на складе (брак при погрузке и т.п.). */
+export function batchWrittenOffKg(batch: BatchListItem): number {
+  const fromLedger = batch.qualityRejectWrittenOffKg;
+  if (fromLedger != null && fromLedger > 0) {
+    return fromLedger;
+  }
+  return batch.writtenOffKg ?? 0;
+}
+
+export function batchHasStockActivity(batch: BatchListItem): boolean {
+  return (
+    (batch.onWarehouseKg ?? 0) > 0 ||
+    (batch.inTransitKg ?? 0) > 0 ||
+    (batch.soldKg ?? 0) > 0 ||
+    batchWrittenOffKg(batch) > 0
+  );
+}
 
 /** Доля ящиков на складе по строке накладной (пропорция onWarehouse к totalKg). */
 export function estimateBatchWarehousePackages(batch: BatchListItem): number {
@@ -45,17 +64,23 @@ export function aggregateWarehouseDocumentsFromBatches(
       onWarehousePackages: 0,
       inTransitKg: 0,
       soldKg: 0,
+      writtenOffKg: 0,
     };
     prev.lineCount += 1;
     prev.onWarehouseKg += batch.onWarehouseKg ?? 0;
     prev.onWarehousePackages += estimateBatchWarehousePackages(batch);
     prev.inTransitKg += batch.inTransitKg ?? 0;
     prev.soldKg += batch.soldKg ?? 0;
+    prev.writtenOffKg += batchWrittenOffKg(batch);
     map.set(documentId, prev);
   }
 
   let rows = [...map.values()].filter(
-    (row) => row.onWarehouseKg > 0 || row.inTransitKg > 0 || row.soldKg > 0,
+    (row) =>
+      row.onWarehouseKg > 0 ||
+      row.inTransitKg > 0 ||
+      row.soldKg > 0 ||
+      row.writtenOffKg > 0,
   );
   rows.sort((a, b) => b.documentNumber.localeCompare(a.documentNumber, "ru"));
 

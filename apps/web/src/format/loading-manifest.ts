@@ -221,6 +221,85 @@ export function buildWriteOffItemsFromBatches(
   return items;
 }
 
+/** Кг списания по числу ящиков одной партии (пропорция к строке накладной). */
+export function kgFromWriteOffPackageCount(batch: BatchListItem, packageCount: number): number {
+  if (packageCount <= 0) {
+    return 0;
+  }
+  const linePk = batch.nakladnaya?.linePackageCount;
+  if (linePk == null || linePk <= 0 || batch.totalKg <= 0) {
+    return 0;
+  }
+  const kg = (packageCount / linePk) * batch.totalKg;
+  return Math.min(Math.max(0, kg), batch.onWarehouseKg);
+}
+
+/** Распределить списание по ящикам (FIFO), перевести в кг для API. */
+export function buildWriteOffItemsFromBatchesByPackages(
+  batches: readonly BatchListItem[],
+  totalPackages: number,
+): { batchId: string; kg: number }[] {
+  let remaining = Math.round(totalPackages);
+  const items: { batchId: string; kg: number }[] = [];
+  for (const batch of batches) {
+    if (remaining <= 0) {
+      break;
+    }
+    const maxPkg = estimatedPackageCountOnShelf(batch);
+    if (maxPkg == null || maxPkg <= 0) {
+      continue;
+    }
+    const pkgFromBatch = Math.min(remaining, maxPkg);
+    const kg = kgFromWriteOffPackageCount(batch, pkgFromBatch);
+    if (kg > 0) {
+      items.push({ batchId: batch.id, kg });
+      remaining -= pkgFromBatch;
+    }
+  }
+  return items;
+}
+
+export type WriteOffQuantityRow = {
+  totalKg: number;
+  totalPkg: number;
+  linesWithPkg: number;
+};
+
+/** Списание по вводу кг (приоритет) или ящиков. */
+export function buildWriteOffItemsFromInputs(
+  batches: readonly BatchListItem[],
+  row: WriteOffQuantityRow,
+  kgInput: string,
+  pkgInput: string,
+): { batchId: string; kg: number }[] | null {
+  const kgStr = kgInput.trim().replace(",", ".");
+  const pkgStr = pkgInput.trim().replace(",", ".");
+  const kg = kgStr.length > 0 ? parseFloat(kgStr) : Number.NaN;
+  const pkg = pkgStr.length > 0 ? parseFloat(pkgStr) : Number.NaN;
+
+  if (Number.isFinite(kg) && kg > 0) {
+    if (kg > row.totalKg) {
+      return null;
+    }
+    const items = buildWriteOffItemsFromBatches(batches, kg);
+    return items.length > 0 ? items : null;
+  }
+
+  if (Number.isFinite(pkg) && pkg > 0) {
+    if (row.totalPkg <= 0 || row.linesWithPkg <= 0) {
+      return null;
+    }
+    const roundedPkg = Math.round(pkg);
+    if (roundedPkg <= 0 || roundedPkg > row.totalPkg) {
+      return null;
+    }
+    const items = buildWriteOffItemsFromBatchesByPackages(batches, roundedPkg);
+    return items.length > 0 ? items : null;
+  }
+
+  return null;
+}
+
 /** Ключ строки без id закупочной накладной в данных (все такие партии в одной строке). */
 export const AGGREGATE_NO_PURCHASE_DOCUMENT_KEY = "__no_purchase_document__";
 

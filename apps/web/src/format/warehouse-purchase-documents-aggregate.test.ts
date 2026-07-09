@@ -4,6 +4,8 @@ import type { BatchListItem } from "../api/types.js";
 
 import {
   aggregateWarehouseDocumentsFromBatches,
+  batchHasStockActivity,
+  batchWrittenOffKg,
   estimateBatchWarehousePackages,
 } from "./warehouse-purchase-documents-aggregate.js";
 
@@ -120,5 +122,46 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.documentNumber).toBe("НФ-200");
+  });
+
+  it("учитывает списания с остатка даже без кг на складе", () => {
+    const rows = aggregateWarehouseDocumentsFromBatches([
+      batch({
+        id: "b1",
+        onWarehouseKg: 0,
+        writtenOffKg: 0,
+        qualityRejectWrittenOffKg: 12,
+        nakladnaya: {
+          documentId: "doc-a",
+          warehouseId: "wh-1",
+          productGradeCode: "N5",
+          productGroup: "Помидоры",
+          documentNumber: "НФ-100",
+        },
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.writtenOffKg).toBe(12);
+    expect(rows[0]?.onWarehouseKg).toBe(0);
+  });
+});
+
+describe("batchWrittenOffKg", () => {
+  it("предпочитает qualityRejectWrittenOffKg", () => {
+    expect(
+      batchWrittenOffKg(
+        batch({ id: "b1", writtenOffKg: 5, qualityRejectWrittenOffKg: 12 }),
+      ),
+    ).toBe(12);
+  });
+});
+
+describe("batchHasStockActivity", () => {
+  it("true при только списании", () => {
+    expect(
+      batchHasStockActivity(
+        batch({ id: "b1", onWarehouseKg: 0, qualityRejectWrittenOffKg: 3 }),
+      ),
+    ).toBe(true);
   });
 });

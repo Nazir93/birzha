@@ -8,6 +8,7 @@ import {
   aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
   buildWriteOffItemsFromBatches,
+  buildWriteOffItemsFromInputs,
   filterBatchesForLoadingManifest,
   formatLoadingManifestCardHeader,
   sumLoadingManifestTotals,
@@ -26,7 +27,9 @@ export type LoadingManifestWriteOffProps = {
   isError: boolean;
   errorMessage?: string | null;
   rejectInput: Record<string, string>;
+  rejectPkgInput: Record<string, string>;
   onRejectInputChange: (key: string, value: string) => void;
+  onRejectPkgInputChange: (key: string, value: string) => void;
   onSubmitWriteOff: (inputKey: string, items: { batchId: string; kg: number }[], label: string) => void;
   recentWriteOffs: RecentWriteOffRow[];
   undoingWriteOffId: string | null;
@@ -53,6 +56,28 @@ function writeOffKeyDocumentCaliber(rowKey: string): string {
 
 function writeOffKeyDocument(rowKey: string): string {
   return `wo-doc:${rowKey}`;
+}
+
+function formatWriteOffPkg(value: number): string {
+  return value.toLocaleString("ru-RU");
+}
+
+function submitWriteOffRow(
+  writeOff: LoadingManifestWriteOffProps,
+  inputKey: string,
+  row: { totalKg: number; totalPkg: number; linesWithPkg: number },
+  batches: BatchListItem[],
+  label: string,
+): void {
+  const items = buildWriteOffItemsFromInputs(
+    batches,
+    row,
+    writeOff.rejectInput[inputKey] ?? "",
+    writeOff.rejectPkgInput[inputKey] ?? "",
+  );
+  if (items && items.length > 0) {
+    writeOff.onSubmitWriteOff(inputKey, items, label);
+  }
 }
 
 /** Если строка ПН есть, а партия не попала в текущий список склада — показать кг из снимка ПН. */
@@ -123,6 +148,12 @@ export function LoadingManifestBlock({
     [includedBatches],
   );
   const documentRows = useMemo(() => aggregateBatchesByPurchaseDocument(includedBatches), [includedBatches]);
+  const writeOffShowsPackages = useMemo(
+    () =>
+      documentCaliberRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0) ||
+      documentRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0),
+    [documentCaliberRows, documentRows],
+  );
 
   const uniqueDocuments = useMemo(() => {
     const m = new Map<string, { id: string; number: string }>();
@@ -228,7 +259,8 @@ export function LoadingManifestBlock({
               <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Списание со склада</h4>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
                 По калибру: строка «накладная + калибр» — списание только с выбранной накладной. По накладной:
-                видны все калибры документа; «Списать всё» — весь остаток по накладной.
+                видны все калибры документа; «Списать всё» — весь остаток по накладной. Можно указать кг или ящики
+                (если в накладной задано число ящиков по строке).
               </p>
               <div
                 style={{
@@ -276,7 +308,10 @@ export function LoadingManifestBlock({
                         </>
                       )}
                       <th className="birzha-data-table__num">Остаток, кг</th>
+                      {writeOffShowsPackages ? <th className="birzha-data-table__num">Остаток, ящ.</th> : null}
                       <th>Списать, кг</th>
+                      {writeOffShowsPackages ? <th>Списать, ящ.</th> : null}
+                      <th />
                     </tr>
                   </thead>
                   <tbody>
@@ -307,36 +342,47 @@ export function LoadingManifestBlock({
                               <td className="birzha-data-table__num">
                                 {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                               </td>
+                              {writeOffShowsPackages ? (
+                                <td className="birzha-data-table__num">
+                                  {row.linesWithPkg > 0 && row.totalPkg > 0
+                                    ? formatWriteOffPkg(row.totalPkg)
+                                    : "—"}
+                                </td>
+                              ) : null}
                               <td>
-                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="кг"
+                                  value={writeOff.rejectInput[inputKey] ?? ""}
+                                  onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
+                                  aria-label={`Списать кг, ${submitLabel}`}
+                                  style={{ ...fieldStyle, width: "5rem" }}
+                                />
+                              </td>
+                              {writeOffShowsPackages ? (
+                                <td>
                                   <input
                                     type="text"
-                                    inputMode="decimal"
-                                    placeholder="кг"
-                                    value={writeOff.rejectInput[inputKey] ?? ""}
-                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать кг, ${submitLabel}`}
-                                    style={{ ...fieldStyle, width: "5rem" }}
+                                    inputMode="numeric"
+                                    placeholder="ящ."
+                                    value={writeOff.rejectPkgInput[inputKey] ?? ""}
+                                    onChange={(ev) => writeOff.onRejectPkgInputChange(inputKey, ev.target.value)}
+                                    aria-label={`Списать ящики, ${submitLabel}`}
+                                    style={{ ...fieldStyle, width: "4.5rem" }}
+                                    disabled={row.linesWithPkg <= 0 || row.totalPkg <= 0}
                                   />
-                                  <button
-                                    type="button"
-                                    className={btnClassSpaced}
-                                    disabled={writeOff.isPending}
-                                    onClick={() => {
-                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
-                                      const kg = parseFloat(s);
-                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
-                                        return;
-                                      }
-                                      const items = buildWriteOffItemsFromBatches(row.batches, kg);
-                                      if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items, submitLabel);
-                                      }
-                                    }}
-                                  >
-                                    Списать
-                                  </button>
-                                </div>
+                                </td>
+                              ) : null}
+                              <td>
+                                <button
+                                  type="button"
+                                  className={btnClassSpaced}
+                                  disabled={writeOff.isPending}
+                                  onClick={() => submitWriteOffRow(writeOff, inputKey, row, row.batches, submitLabel)}
+                                >
+                                  Списать
+                                </button>
                               </td>
                             </tr>
                           );
@@ -377,32 +423,45 @@ export function LoadingManifestBlock({
                               <td className="birzha-data-table__num">
                                 {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
                               </td>
+                              {writeOffShowsPackages ? (
+                                <td className="birzha-data-table__num">
+                                  {row.linesWithPkg > 0 && row.totalPkg > 0
+                                    ? formatWriteOffPkg(row.totalPkg)
+                                    : "—"}
+                                </td>
+                              ) : null}
                               <td>
-                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="кг"
+                                  value={writeOff.rejectInput[inputKey] ?? ""}
+                                  onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
+                                  aria-label={`Списать кг, ${row.displayLabel}`}
+                                  style={{ ...fieldStyle, width: "5rem" }}
+                                />
+                              </td>
+                              {writeOffShowsPackages ? (
+                                <td>
                                   <input
                                     type="text"
-                                    inputMode="decimal"
-                                    placeholder="кг"
-                                    value={writeOff.rejectInput[inputKey] ?? ""}
-                                    onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать кг, ${row.displayLabel}`}
-                                    style={{ ...fieldStyle, width: "5rem" }}
+                                    inputMode="numeric"
+                                    placeholder="ящ."
+                                    value={writeOff.rejectPkgInput[inputKey] ?? ""}
+                                    onChange={(ev) => writeOff.onRejectPkgInputChange(inputKey, ev.target.value)}
+                                    aria-label={`Списать ящики, ${row.displayLabel}`}
+                                    style={{ ...fieldStyle, width: "4.5rem" }}
+                                    disabled={row.linesWithPkg <= 0 || row.totalPkg <= 0}
                                   />
+                                </td>
+                              ) : null}
+                              <td>
+                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
                                   <button
                                     type="button"
                                     className={btnClassSpaced}
                                     disabled={writeOff.isPending}
-                                    onClick={() => {
-                                      const s = (writeOff.rejectInput[inputKey] ?? "").replace(",", ".");
-                                      const kg = parseFloat(s);
-                                      if (!Number.isFinite(kg) || kg <= 0 || kg > row.totalKg) {
-                                        return;
-                                      }
-                                      const items = buildWriteOffItemsFromBatches(row.batches, kg);
-                                      if (items.length > 0) {
-                                        writeOff.onSubmitWriteOff(inputKey, items, row.displayLabel);
-                                      }
-                                    }}
+                                    onClick={() => submitWriteOffRow(writeOff, inputKey, row, row.batches, row.displayLabel)}
                                   >
                                     Списать
                                   </button>

@@ -5,15 +5,19 @@ import { Link, useLocation } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
 import type { BatchListItem, CreateWarehouseResponse } from "../api/types.js";
+import { useAuth } from "../auth/auth-context.js";
 import {
   batchesForWarehouseQueryOptions,
   queryRoots,
   stockBalancesQueryOptions,
+  warehouseWriteOffsLedgerQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { adminRoutes, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import {
   aggregateWarehouseDocumentsFromBatches,
+  batchHasStockActivity,
+  batchWrittenOffKg,
   estimateBatchWarehousePackages,
 } from "../format/warehouse-purchase-documents-aggregate.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
@@ -24,6 +28,8 @@ import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js"
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
   const { pathname } = useLocation();
+  const { meta } = useAuth();
+  const writeOffApiEnabled = meta?.warehouseWriteOffApi === "enabled";
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [gradeSearch, setGradeSearch] = useState("");
   const [documentSearch, setDocumentSearch] = useState("");
@@ -42,6 +48,15 @@ export function AdminStockWarehousesPage() {
   const batchesQ = useQuery({
     ...batchesForWarehouseQueryOptions(selectedWhId, 500),
     enabled: selectedWhId.length > 0,
+    refetchOnMount: "always",
+  });
+  const warehouseBatches = useMemo(
+    () => (batchesQ.data?.batches ?? []).filter(batchHasStockActivity),
+    [batchesQ.data?.batches],
+  );
+  const writeOffsQ = useQuery({
+    ...warehouseWriteOffsLedgerQueryOptions({ warehouseId: selectedWhId, limit: 200 }),
+    enabled: writeOffApiEnabled && selectedWhId.length > 0,
     refetchOnMount: "always",
   });
 
@@ -126,9 +141,10 @@ export function AdminStockWarehousesPage() {
       onWarehousePackages: number;
       inTransitKg: number;
       soldKg: number;
+      writtenOffKg: number;
     };
     const map = new Map<string, Agg>();
-    for (const b of batchesQ.data?.batches ?? []) {
+    for (const b of warehouseBatches) {
       const gradeCode = (b.nakladnaya?.productGradeCode ?? "").trim() || "—";
       const productGroup = (b.nakladnaya?.productGroup ?? "").trim() || "—";
       const key = `${gradeCode}\0${productGroup}`;
@@ -139,15 +155,17 @@ export function AdminStockWarehousesPage() {
         onWarehousePackages: 0,
         inTransitKg: 0,
         soldKg: 0,
+        writtenOffKg: 0,
       };
       prev.onWarehouseKg += b.onWarehouseKg ?? 0;
       prev.onWarehousePackages += estimateWarehousePackages(b);
       prev.inTransitKg += b.inTransitKg ?? 0;
       prev.soldKg += b.soldKg ?? 0;
+      prev.writtenOffKg += batchWrittenOffKg(b);
       map.set(key, prev);
     }
     let rows = [...map.values()].filter(
-      (r) => r.onWarehouseKg > 0 || r.inTransitKg > 0 || r.soldKg > 0,
+      (r) => r.onWarehouseKg > 0 || r.inTransitKg > 0 || r.soldKg > 0 || r.writtenOffKg > 0,
     );
     if (q) {
       rows = rows.filter((r) => {
@@ -163,7 +181,7 @@ export function AdminStockWarehousesPage() {
       return compareProductGradeCodes(a.gradeCode, b.gradeCode);
     });
     return rows;
-  }, [batchesQ.data?.batches, selectedWhId, gradeSearch]);
+  }, [warehouseBatches, selectedWhId, gradeSearch]);
 
   const selectedWarehouseStats = useMemo(() => {
     const rows = gradeStockAggregates;
@@ -172,10 +190,12 @@ export function AdminStockWarehousesPage() {
     }
     const totalKg = rows.reduce((acc, row) => acc + row.onWarehouseKg, 0);
     const totalPackages = rows.reduce((acc, row) => acc + row.onWarehousePackages, 0);
+    const writtenOffKg = rows.reduce((acc, row) => acc + row.writtenOffKg, 0);
     return {
       calibersCount: rows.length,
       totalKg,
       totalPackages,
+      writtenOffKg,
     };
   }, [gradeStockAggregates]);
 
@@ -183,10 +203,13 @@ export function AdminStockWarehousesPage() {
     if (!selectedWhId) {
       return [];
     }
-    return aggregateWarehouseDocumentsFromBatches(batchesQ.data?.batches ?? [], {
+    return aggregateWarehouseDocumentsFromBatches(warehouseBatches, {
       search: documentSearch,
     });
-  }, [batchesQ.data?.batches, selectedWhId, documentSearch]);
+  }, [warehouseBatches, selectedWhId, documentSearch]);
+
+  const writeOffLines = writeOffsQ.data?.lines ?? [];
+  const writeOffSumKg = useMemo(() => writeOffLines.reduce((acc, row) => acc + row.kg, 0), [writeOffLines]);
 
   const selectedWarehouseName = useMemo(() => {
     if (!selectedWhId) {
@@ -215,8 +238,8 @@ export function AdminStockWarehousesPage() {
           Склады и остатки
         </h2>
         <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: 52 * 16 }}>
-          Справочник складов, добавление и удаление. Выберите склад — ниже закупочные накладные на этом складе и итоги по
-          калибру. Поиск — по номеру накладной или по калибру и виду товара.
+          Справочник складов, добавление и удаление. Выберите склад — ниже закупочные накладные, остатки по калибру и
+          списания при погрузке (брак с остатка). Поиск — по номеру накладной или по калибру и виду товара.
         </p>
       </header>
 
@@ -346,7 +369,7 @@ export function AdminStockWarehousesPage() {
                   />
                   {warehouseDocumentAggregates.length === 0 && !batchesQ.isPending ? (
                     <p className="birzha-text-muted birzha-ui-sm" role="status">
-                      На этом складе нет накладных с остатком по партиям.
+                      На этом складе нет накладных с остатком, погрузкой, продажами или списаниями по партиям.
                     </p>
                   ) : null}
                   {warehouseDocumentAggregates.length > 0 ? (
@@ -360,6 +383,7 @@ export function AdminStockWarehousesPage() {
                             <th style={thHeadDense}>На складе, ящ.</th>
                             <th style={thHeadDense}>Погружено, кг</th>
                             <th style={thHeadDense}>Продано, кг</th>
+                            <th style={thHeadDense}>Списано, кг</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -384,6 +408,11 @@ export function AdminStockWarehousesPage() {
                               <td style={thtdDense}>
                                 {row.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
                               </td>
+                              <td style={thtdDense}>
+                                {row.writtenOffKg > 0
+                                  ? row.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })
+                                  : "—"}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -400,6 +429,15 @@ export function AdminStockWarehousesPage() {
                     <strong>{selectedWarehouseStats.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг</strong>
                     <span className="birzha-text-muted"> · </span>
                     Ящики: <strong>{selectedWarehouseStats.totalPackages.toLocaleString("ru-RU")} ящ.</strong>
+                    {selectedWarehouseStats.writtenOffKg > 0 ? (
+                      <>
+                        <span className="birzha-text-muted"> · </span>
+                        Списано:{" "}
+                        <strong>
+                          {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
+                        </strong>
+                      </>
+                    ) : null}
                   </p>
                 ) : null}
                 <BirzhaDisclosure
@@ -424,7 +462,7 @@ export function AdminStockWarehousesPage() {
                 />
                 {gradeStockAggregates.length === 0 && !batchesQ.isPending ? (
                   <p className="birzha-text-muted birzha-ui-sm" role="status">
-                    На этом складе нет остатка по партиям.
+                    На этом складе нет остатка, погрузки, продаж или списаний по партиям.
                   </p>
                 ) : null}
                 {gradeStockAggregates.length > 0 ? (
@@ -438,6 +476,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>На складе, ящ.</th>
                           <th style={thHeadDense}>Погружено, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
+                          <th style={thHeadDense}>Списано, кг</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -453,6 +492,11 @@ export function AdminStockWarehousesPage() {
                             <td style={thtdDense}>{r.onWarehousePackages.toLocaleString("ru-RU")}</td>
                             <td style={thtdDense}>{r.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
                             <td style={thtdDense}>{r.soldKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}</td>
+                            <td style={thtdDense}>
+                              {r.writtenOffKg > 0
+                                ? r.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })
+                                : "—"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -460,6 +504,68 @@ export function AdminStockWarehousesPage() {
                   </div>
                 ) : null}
                 </BirzhaDisclosure>
+
+                {writeOffApiEnabled ? (
+                  <BirzhaDisclosure
+                    defaultOpen
+                    title={
+                      <span className="birzha-section-title-inline">
+                        Списания с остатка (погрузка)
+                        {selectedWarehouseName ? `: ${selectedWarehouseName}` : ""}
+                      </span>
+                    }
+                  >
+                    {writeOffsQ.isPending ? (
+                      <LoadingBlock label="Загрузка списаний…" minHeight={48} skeleton skeletonRows={3} />
+                    ) : writeOffsQ.isError ? (
+                      <ErrorAlert message="Не удалось загрузить журнал списаний." title="Списания" />
+                    ) : writeOffLines.length === 0 ? (
+                      <p className="birzha-text-muted birzha-ui-sm" role="status">
+                        Списаний с этого склада пока нет. Операция «Списать» — в разделе «Распределение» при погрузке.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
+                          Всего в списке:{" "}
+                          <strong>{writeOffSumKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</strong>
+                          <span className="birzha-text-muted"> · </span>
+                          {writeOffLines.length} опер.
+                        </p>
+                        <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                          <table style={{ ...tableStyle, minWidth: 560 }}>
+                            <thead>
+                              <tr>
+                                <th style={thHeadDense}>Когда</th>
+                                <th style={thHeadDense}>Накладная</th>
+                                <th style={thHeadDense}>Калибр</th>
+                                <th style={thHeadDense}>Списано, кг</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {writeOffLines.map((row) => (
+                                <tr key={row.id}>
+                                  <td style={thtdDense}>{new Date(row.createdAt).toLocaleString("ru-RU")}</td>
+                                  <td style={thtdDense}>
+                                    <Link
+                                      to={purchaseNakladnayaDocumentPathForPath(pathname, row.purchaseDocumentId)}
+                                      style={{ fontWeight: 600 }}
+                                    >
+                                      {row.documentNumber?.trim() || "—"}
+                                    </Link>
+                                  </td>
+                                  <td style={thtdDense}>{row.productGradeCode ?? "—"}</td>
+                                  <td style={thtdDense}>
+                                    {row.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </BirzhaDisclosure>
+                ) : null}
               </>
             )}
           </BirzhaDisclosure>

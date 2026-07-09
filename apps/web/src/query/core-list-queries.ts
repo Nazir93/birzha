@@ -169,7 +169,6 @@ export const batchesForWarehouseQueryOptions = (warehouseId: string, limit = 500
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("warehouseId", wh);
-      p.set("stockOnly", "1");
       p.set("limit", String(limit));
       p.set("offset", "0");
       return apiGetJson<BatchesListResponse>(`/api/batches?${p}`);
@@ -355,6 +354,7 @@ export const warehouseWriteOffsLedgerQueryOptions = (opts: {
 export function invalidateStockQueries(queryClient: { invalidateQueries: (opts: { queryKey: readonly unknown[] }) => void }): void {
   queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   queryClient.invalidateQueries({ queryKey: queryRoots.stockBalances });
+  queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
   queryClient.invalidateQueries({ queryKey: [...queryRoots.loadingManifest, "reserved-batch-ids"] });
 }
 

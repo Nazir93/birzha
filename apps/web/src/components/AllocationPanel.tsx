@@ -64,6 +64,7 @@ export function AllocationPanel() {
   const [savedManifestId, setSavedManifestId] = useState<string>("");
   const [createManifestWarning, setCreateManifestWarning] = useState<string | null>(null);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
+  const [rejectScrapPkgInput, setRejectScrapPkgInput] = useState<Record<string, string>>({});
   /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
   const [manifestListPage, setManifestListPage] = useState(0);
@@ -193,6 +194,11 @@ export function AllocationPanel() {
     onSuccess: (result, { inputKey }) => {
       setWriteOffUndoError(null);
       setRejectScrapInput((prev) => {
+        const next = { ...prev };
+        delete next[inputKey];
+        return next;
+      });
+      setRejectScrapPkgInput((prev) => {
         const next = { ...prev };
         delete next[inputKey];
         return next;
@@ -548,7 +554,9 @@ export function AllocationPanel() {
                     isError: writeOff.isError,
                     errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
                     rejectInput: rejectScrapInput,
+                    rejectPkgInput: rejectScrapPkgInput,
                     onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
+                    onRejectPkgInputChange: (key, value) => setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
                     onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
                     recentWriteOffs,
                     undoingWriteOffId,

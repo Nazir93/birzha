@@ -39,6 +39,7 @@ export function LoadingAppendPanel() {
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
   const [manifestListPage, setManifestListPage] = useState(0);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
+  const [rejectScrapPkgInput, setRejectScrapPkgInput] = useState<Record<string, string>>({});
   const [recentWriteOffs, setRecentWriteOffs] = useState<RecentWriteOffRow[]>([]);
   const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
   const [undoingWriteOffId, setUndoingWriteOffId] = useState<string | null>(null);
@@ -120,6 +121,11 @@ export function LoadingAppendPanel() {
     onSuccess: (result, { inputKey }) => {
       setWriteOffUndoError(null);
       setRejectScrapInput((prev) => {
+        const next = { ...prev };
+        delete next[inputKey];
+        return next;
+      });
+      setRejectScrapPkgInput((prev) => {
         const next = { ...prev };
         delete next[inputKey];
         return next;
@@ -388,7 +394,9 @@ export function LoadingAppendPanel() {
                         isError: writeOff.isError,
                         errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
                         rejectInput: rejectScrapInput,
+                        rejectPkgInput: rejectScrapPkgInput,
                         onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
+                        onRejectPkgInputChange: (key, value) => setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
                         onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
                         recentWriteOffs,
                         undoingWriteOffId,

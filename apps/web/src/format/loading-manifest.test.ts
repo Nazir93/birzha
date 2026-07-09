@@ -7,6 +7,8 @@ import {
   aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
   buildWriteOffItemsFromBatches,
+  buildWriteOffItemsFromBatchesByPackages,
+  buildWriteOffItemsFromInputs,
   aggregateLoadingManifestLinesByCaliber,
   estimatedPackageCountOnShelf,
   formatLoadingManifestCardHeader,
@@ -432,5 +434,58 @@ describe("buildWriteOffItemsFromBatches", () => {
       { batchId: "b1", kg: 6 },
       { batchId: "b2", kg: 2 },
     ]);
+  });
+});
+
+describe("buildWriteOffItemsFromBatchesByPackages", () => {
+  it("распределяет ящики по партиям и переводит в кг", () => {
+    const items = buildWriteOffItemsFromBatchesByPackages(
+      [
+        b({
+          id: "b1",
+          totalKg: 100,
+          onWarehouseKg: 50,
+          nakladnaya: { documentId: "d1", warehouseId: "w1", productGradeCode: "5", productGroup: null, documentNumber: "1", linePackageCount: 20 },
+        }),
+        b({
+          id: "b2",
+          totalKg: 100,
+          onWarehouseKg: 50,
+          nakladnaya: { documentId: "d1", warehouseId: "w1", productGradeCode: "6", productGroup: null, documentNumber: "1", linePackageCount: 20 },
+        }),
+      ],
+      15,
+    );
+    expect(items).toHaveLength(2);
+    expect(items[0]).toEqual({ batchId: "b1", kg: 50 });
+    expect(items[1]?.batchId).toBe("b2");
+    expect(items[1]?.kg).toBe(25);
+  });
+});
+
+describe("buildWriteOffItemsFromInputs", () => {
+  const batches = [
+    b({
+      id: "b1",
+      totalKg: 100,
+      onWarehouseKg: 40,
+      nakladnaya: { documentId: "d1", warehouseId: "w1", productGradeCode: "5", productGroup: null, documentNumber: "1", linePackageCount: 10 },
+    }),
+  ];
+  const row = { totalKg: 40, totalPkg: 4, linesWithPkg: 1 };
+
+  it("приоритет кг над ящиками", () => {
+    const items = buildWriteOffItemsFromInputs(batches, row, "10", "99");
+    expect(items).toEqual([{ batchId: "b1", kg: 10 }]);
+  });
+
+  it("списание по ящикам если кг не заданы", () => {
+    const items = buildWriteOffItemsFromInputs(batches, row, "", "2");
+    expect(items).toEqual([{ batchId: "b1", kg: 20 }]);
+  });
+
+  it("null при превышении остатка", () => {
+    expect(buildWriteOffItemsFromInputs(batches, row, "50", "")).toBeNull();
+    expect(buildWriteOffItemsFromInputs(batches, row, "", "10")).toBeNull();
   });
 });
