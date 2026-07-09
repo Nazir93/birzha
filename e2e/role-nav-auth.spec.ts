@@ -28,6 +28,10 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
 
   async function uiLogin(page: import("@playwright/test").Page, login: string): Promise<void> {
     await page.context().clearCookies();
+    await page.addInitScript(() => {
+      sessionStorage.clear();
+      localStorage.removeItem("birzha_api_token");
+    });
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible({ timeout: 30_000 });
     await page.locator("#login-user").fill(login);
