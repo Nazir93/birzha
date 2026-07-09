@@ -37,6 +37,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     await page.locator("#login-user").fill(login);
     await page.locator("#login-pass").fill(password);
     await page.getByRole("button", { name: "Войти" }).click();
+    await expect(page.getByRole("heading", { name: "Вход" })).not.toBeVisible({ timeout: 20_000 });
   }
 
   async function apiLogin(request: import("@playwright/test").APIRequestContext, login: string): Promise<string> {
