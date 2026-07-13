@@ -18,6 +18,7 @@ import {
 import type { CreatePurchaseDocumentBody, ReplacePurchaseDocumentLinesBody } from "@birzha/contracts";
 import { z, ZodError } from "zod";
 
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { zodErrorMessage } from "./zod-error-message.js";
 
@@ -325,11 +326,11 @@ export function lineTotalKopecksForNakladnayaSum(raw: string): number {
   return kopecksFromNakladnayaAmountFieldForSum(raw);
 }
 
-/** Внутренний номер накладной: поставщик + дата (до 64 символов, как в API). */
+/** Внутренний номер накладной: поставщик + дата ДД.ММ.ГГГГ (до 64 символов, как в API). */
 export function documentNumberFromSupplierName(supplierName: string, docDate: string): string {
   const sup = supplierName.trim();
-  const date = docDate.trim();
-  const suffix = date ? ` · ${date}` : "";
+  const dateDisplay = formatPurchaseDocDateRu(docDate.trim());
+  const suffix = dateDisplay && dateDisplay !== "—" ? ` · ${dateDisplay}` : "";
   const maxSupLen = Math.max(1, 64 - suffix.length);
   const head = sup.length > maxSupLen ? sup.slice(0, maxSupLen) : sup;
   return `${head}${suffix}`.slice(0, 64);

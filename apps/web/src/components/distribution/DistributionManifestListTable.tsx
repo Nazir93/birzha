@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 import type { LoadingManifestSummary } from "../../api/types.js";
 import { formatLoadingManifestTableNumberLabel } from "../../format/loading-manifest.js";
+import { formatPurchaseDocDateRu } from "../../format/purchase-doc-date.js";
 import { BirzhaPagination } from "../../ui/BirzhaPagination.js";
 
 function formatManifestPackages(value: number | null | undefined): string {
@@ -76,7 +77,7 @@ export function DistributionManifestListTable({
                 <tr key={m.id} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
                   <td className="birzha-data-table__emph">{numberLabel}</td>
                   <td>{tripLabel}</td>
-                  <td>{m.docDate}</td>
+                  <td>{formatPurchaseDocDateRu(m.docDate)}</td>
                   <td>{m.warehouseName}</td>
                   <td>{m.destinationName}</td>
                   <td className="birzha-data-table__num">

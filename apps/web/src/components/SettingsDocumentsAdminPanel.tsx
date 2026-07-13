@@ -24,6 +24,7 @@ import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/tri
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { SETTINGS_LIST_PAGE_SIZE } from "../format/list-page-sizes.js";
+import { BirzhaDateField, BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -113,7 +114,12 @@ function PurchaseDocRow({ doc, saving, deleting, onSave, onDelete }: PurchaseDoc
         />
       </td>
       <td style={thtdDense}>
-        <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} style={compactField} />
+        <BirzhaDateField
+          value={docDate}
+          onChange={setDocDate}
+          style={compactField}
+          aria-label={`Дата накладной ${doc.documentNumber}`}
+        />
       </td>
       <td style={thtdDense}>{doc.lineCount}</td>
       <td style={thtdDense}>
@@ -164,7 +170,12 @@ function LoadingManifestRow({ manifest, saving, deleting, onSave, onDelete }: Lo
         <input value={manifestNumber} onChange={(e) => setManifestNumber(e.target.value)} style={compactField} />
       </td>
       <td style={thtdDense}>
-        <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} style={compactField} />
+        <BirzhaDateField
+          value={docDate}
+          onChange={setDocDate}
+          style={compactField}
+          aria-label={`Дата погрузочной ${manifest.manifestNumber}`}
+        />
       </td>
       <td style={thtdDense}>{manifest.warehouseName}</td>
       <td style={thtdDense}>{manifest.destinationName}</td>
@@ -238,11 +249,13 @@ function TripRow({ trip, saving, deleting, onSave, onDelete }: TripRowProps) {
         />
       </td>
       <td style={thtdDense}>
-        <input
-          type="datetime-local"
+        <BirzhaDateTimeField
           value={departedLocal}
-          onChange={(e) => setDepartedLocal(e.target.value)}
+          onChange={setDepartedLocal}
           style={compactField}
+          allowClear
+          emptyLabel="— дата отправления —"
+          aria-label={`Отправление ${trip.tripNumber}`}
         />
       </td>
       <td style={thtdDense}>{formatTripListStatusLabel(trip)}</td>

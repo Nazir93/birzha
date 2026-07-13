@@ -36,7 +36,7 @@ describe("parseCreateBatchForm", () => {
 
 describe("documentNumberFromSupplierName", () => {
   it("добавляет дату к названию поставщика", () => {
-    expect(documentNumberFromSupplierName("Теплица №1", "2026-04-16")).toBe("Теплица №1 · 2026-04-16");
+    expect(documentNumberFromSupplierName("Теплица №1", "2026-04-16")).toBe("Теплица №1 · 16.04.2026");
   });
 });
 
@@ -58,7 +58,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
         },
       ],
     });
-    expect(body.documentNumber).toBe("Поставщик · 2026-04-16");
+    expect(body.documentNumber).toBe("Поставщик · 16.04.2026");
     expect(body.supplierName).toBe("Поставщик");
     expect(body.lines[0]?.lineTotalKopecks).toBe(50_000);
     expect(body.lines[0]?.packageCount).toBe(2);

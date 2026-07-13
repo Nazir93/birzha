@@ -346,7 +346,7 @@ describe("formatLoadingManifestCardHeader", () => {
       }),
     ).toEqual({
       title: "Москва",
-      meta: "2026-06-29 · Дербент, Каякент, Манас",
+      meta: "29.06.2026 · Дербент, Каякент, Манас",
     });
   });
 
@@ -360,7 +360,7 @@ describe("formatLoadingManifestCardHeader", () => {
       }),
     ).toEqual({
       title: "№ С айгид · Ф500ФФ",
-      meta: "2026-06-29 · Каякент",
+      meta: "29.06.2026 · Каякент",
     });
   });
 });
@@ -401,7 +401,7 @@ describe("resolveLoadingManifestNumberForSave", () => {
         destinationLabel: "Москва",
         docDate: "2026-05-19",
       }),
-    ).toBe("Москва · 2026-05-19");
+    ).toBe("Москва · 19.05.2026");
   });
 
   it("с рейсом → номер рейса и дата", () => {
@@ -411,7 +411,7 @@ describe("resolveLoadingManifestNumberForSave", () => {
         destinationLabel: "Москва",
         docDate: "2026-05-19",
       }),
-    ).toBe("Ф-2026-001 · Москва · 2026-05-19");
+    ).toBe("Ф-2026-001 · Москва · 19.05.2026");
   });
 
   it("добавляет суффикс при занятом номере", () => {
@@ -420,9 +420,9 @@ describe("resolveLoadingManifestNumberForSave", () => {
         tripNumber: "Ф-1",
         destinationLabel: "Москва",
         docDate: "2026-05-19",
-        takenNumbers: ["Ф-1 · Москва · 2026-05-19"],
+        takenNumbers: ["Ф-1 · Москва · 19.05.2026"],
       }),
-    ).toBe("Ф-1 · Москва · 2026-05-19 (2)");
+    ).toBe("Ф-1 · Москва · 19.05.2026 (2)");
   });
 });
 
@@ -437,6 +437,7 @@ describe("loadingManifestRoadCsvContent", () => {
       rows: [{ caliberLabel: "Помидоры · №5", totalKg: 10.5, totalPackages: 2 }],
     });
     expect(csv).toContain("Погрузочная накладная (на машину);Москва · № ПН-1");
+    expect(csv).toContain("Дата;13.05.2026");
     expect(csv).toContain("Рейс;Р-01");
     expect(csv).toContain("Итого");
   });

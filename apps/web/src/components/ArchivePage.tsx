@@ -66,7 +66,7 @@ function formatTripDepartedRu(departedAt: string | null): string {
   if (Number.isNaN(d.getTime())) {
     return departedAt;
   }
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /** Отчёт по продажам прямо в архиве (сводка + журнал сделок). */

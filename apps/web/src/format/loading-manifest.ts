@@ -529,7 +529,7 @@ export function loadingManifestRoadCsvContent(p: LoadingManifestRoadCsvParams): 
       }),
     )}`,
   );
-  lines.push(`Дата;${escapeCsvField(p.docDate)}`);
+  lines.push(`Дата;${escapeCsvField(formatPurchaseDocDateRu(p.docDate))}`);
   lines.push(`Склад;${escapeCsvField(p.warehouseLabel)}`);
   lines.push(`Направление;${escapeCsvField(p.destinationName)}`);
   lines.push(`Рейс;${escapeCsvField(p.tripLabel)}`);
@@ -599,11 +599,12 @@ function normalizeManifestLabelPart(value: string): string {
 }
 
 function isoDocDateToDotDate(docDate: string): string | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(docDate.trim());
-  if (!m) {
+  const trimmed = docDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return null;
   }
-  return `${m[3]}.${m[2]}.${m[1]}`;
+  const formatted = formatPurchaseDocDateRu(trimmed);
+  return formatted === "—" ? null : formatted;
 }
 
 function shouldDropManifestTablePart(
@@ -703,7 +704,10 @@ export function formatLoadingManifestCardHeader(m: LoadingManifestCardHeaderFiel
 
   const metaParts: string[] = [];
   if (docDate && !titleIncludesFragment(title, docDate)) {
-    metaParts.push(docDate);
+    const displayDate = formatPurchaseDocDateRu(docDate);
+    if (displayDate !== "—" && !titleIncludesFragment(title, displayDate)) {
+      metaParts.push(displayDate);
+    }
   }
   const wh = m.warehouseLabel?.trim();
   if (wh) {
@@ -746,7 +750,8 @@ export function resolveLoadingManifestNumberForSave(params: {
 }): string {
   const { tripNumber, destinationLabel, docDate, takenNumbers = [] } = params;
   const taken = new Set(takenNumbers.map((x) => x.trim()).filter(Boolean));
-  const date = docDate.trim() || new Date().toISOString().slice(0, 10);
+  const dateIso = docDate.trim() || new Date().toISOString().slice(0, 10);
+  const date = formatPurchaseDocDateRu(dateIso);
   const destination = destinationLabel.trim() || "Направление";
   const trip = tripNumber?.trim();
   const base = trip
