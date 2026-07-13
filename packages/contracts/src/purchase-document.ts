@@ -11,6 +11,23 @@ export const purchaseDocumentLineInputSchema = z.object({
   lineTotalKopecks: z.number().int().nonnegative(),
 });
 
+/**
+ * PUT /purchase-documents/:id/lines — полная замена строк (Excel-правка до погрузки).
+ * `batchId` — сохранить существующую партию; без него — новая строка/партия.
+ */
+export const replacePurchaseDocumentLinesBodySchema = z.object({
+  lines: z
+    .array(
+      purchaseDocumentLineInputSchema.extend({
+        batchId: z.string().min(1).max(64).optional(),
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+
+export type ReplacePurchaseDocumentLinesBody = z.infer<typeof replacePurchaseDocumentLinesBodySchema>;
+
 /** POST /purchase-documents — тело как у бумажной накладной: шапка + строки. */
 export const createPurchaseDocumentBodySchema = z.object({
   /** Явный id документа (опционально, иначе UUID на сервере). */

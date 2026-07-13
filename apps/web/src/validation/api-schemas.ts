@@ -10,11 +10,12 @@ import {
   purchaseLineAmountKopecksFromDecimalStrings,
   receiveBodySchema,
   recordTripShortageBodySchema,
+  replacePurchaseDocumentLinesBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
   updateTripSaleBodySchema,
 } from "@birzha/contracts";
-import type { CreatePurchaseDocumentBody } from "@birzha/contracts";
+import type { CreatePurchaseDocumentBody, ReplacePurchaseDocumentLinesBody } from "@birzha/contracts";
 import { z, ZodError } from "zod";
 
 import { randomUuid } from "../lib/random-uuid.js";
@@ -39,11 +40,12 @@ export {
   purchaseDocumentLineInputSchema,
   receiveBodySchema,
   recordTripShortageBodySchema,
+  replacePurchaseDocumentLinesBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
   updateTripSaleBodySchema,
 };
-export type { CreatePurchaseDocumentBody };
+export type { CreatePurchaseDocumentBody, ReplacePurchaseDocumentLinesBody };
 
 const batchIdParam = z.string().min(1);
 
@@ -422,5 +424,66 @@ export function parseCreatePurchaseDocumentForm(input: {
       payload.buyerLabel = buy;
     }
     return createPurchaseDocumentBodySchema.parse(payload);
+  });
+}
+
+/** Парсинг строк для PUT /purchase-documents/:id/lines. */
+export function parseReplacePurchaseDocumentLinesForm(
+  lines: Array<{
+    batchId?: string;
+    productGradeId: string;
+    totalKg: string;
+    packageCount: string;
+    pricePerKg: string;
+    lineTotalKopecks: string;
+  }>,
+): ReplacePurchaseDocumentLinesBody {
+  return mapZod(() => {
+    const parsed = lines.map((row, idx) => {
+      const productGradeId = row.productGradeId.trim();
+      if (!productGradeId) {
+        throw new Error(`Строка ${idx + 1}: выберите калибр`);
+      }
+      const totalKg = nonnegativeDecimalStringToNumber(row.totalKg, 6);
+      const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
+      if (!Number.isFinite(totalKg) || totalKg <= 0) {
+        throw new Error(`Строка ${idx + 1}: укажите кг > 0`);
+      }
+      if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
+        throw new Error(`Строка ${idx + 1}: цена за кг — неотрицательная`);
+      }
+      const pkgRaw = row.packageCount.trim();
+      let packageCount: number | undefined;
+      if (pkgRaw !== "") {
+        const parsed = linePackageCountFromNakladnayaString(pkgRaw);
+        if (parsed == null) {
+          throw new Error(
+            `Строка ${idx + 1}: ящики — неотрицательное число, можно с запятой; в заявку — целое (округление)`,
+          );
+        }
+        packageCount = parsed;
+      }
+      const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());
+      if (lineK === null) {
+        throw new Error(
+          `Строка ${idx + 1}: укажите сумму: копейки или «руб,коп»`,
+        );
+      }
+      if (lineK < 0) {
+        throw new Error(`Строка ${idx + 1}: сумма — неотрицательная`);
+      }
+      const keep = row.batchId?.trim();
+      return purchaseDocumentLineInputSchema
+        .extend({ batchId: z.string().min(1).max(64).optional() })
+        .parse({
+          productGradeId,
+          totalKg,
+          pricePerKg,
+          lineTotalKopecks: lineK,
+          ...(packageCount !== undefined ? { packageCount } : {}),
+          ...(keep ? { batchId: keep } : {}),
+        });
+    });
+    return replacePurchaseDocumentLinesBodySchema.parse({ lines: parsed });
   });
 }

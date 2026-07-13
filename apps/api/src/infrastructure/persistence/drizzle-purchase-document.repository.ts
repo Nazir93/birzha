@@ -22,6 +22,17 @@ import { gramsToKg } from "../../application/units/mass.js";
 
 import { DrizzleBatchRepository } from "./drizzle-batch.repository.js";
 
+async function deleteBatchesAndTripRows(exec: DbClient, batchIds: string[]): Promise<void> {
+  if (batchIds.length === 0) {
+    return;
+  }
+  await exec.delete(tripBatchSales).where(inArray(tripBatchSales.batchId, batchIds));
+  await exec.delete(tripBatchShortages).where(inArray(tripBatchShortages.batchId, batchIds));
+  await exec.delete(tripBatchShipments).where(inArray(tripBatchShipments.batchId, batchIds));
+  await exec.delete(purchaseDocumentLines).where(inArray(purchaseDocumentLines.batchId, batchIds));
+  await exec.delete(batches).where(inArray(batches.id, batchIds));
+}
+
 export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentRepository {
   constructor(private readonly db: DbClient) {}
 
@@ -113,6 +124,44 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       }
       if (batchIds.length > 0) {
         await exec.delete(batches).where(inArray(batches.id, batchIds));
+      }
+    });
+  }
+
+  async replaceDocumentLines(documentId: string, lines: NewPurchaseDocumentLine[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const exec = tx as unknown as DbClient;
+      const batchRepo = new DrizzleBatchRepository(exec);
+      const id = documentId.trim();
+      const docs = await exec
+        .select({ id: purchaseDocuments.id })
+        .from(purchaseDocuments)
+        .where(eq(purchaseDocuments.id, id))
+        .limit(1);
+      if (docs.length === 0) {
+        throw new PurchaseDocumentNotFoundError(id);
+      }
+
+      const oldRows = await exec
+        .select({ batchId: purchaseDocumentLines.batchId })
+        .from(purchaseDocumentLines)
+        .where(eq(purchaseDocumentLines.documentId, id));
+      const oldBatchIds = [...new Set(oldRows.map((r) => r.batchId))];
+      await deleteBatchesAndTripRows(exec, oldBatchIds);
+
+      for (const line of lines) {
+        await batchRepo.save(line.batch);
+        await exec.insert(purchaseDocumentLines).values({
+          id: line.id,
+          documentId: id,
+          lineNo: line.lineNo,
+          productGradeId: line.productGradeId,
+          quantityGrams: line.quantityGrams,
+          packageCount: line.packageCount,
+          pricePerKg: line.pricePerKgNumeric,
+          lineTotalKopecks: line.lineTotalKopecks,
+          batchId: line.batch.getId(),
+        });
       }
     });
   }

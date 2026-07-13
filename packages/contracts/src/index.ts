@@ -13,8 +13,12 @@ export type { CreateWholesalerBody } from "./wholesaler.js";
 export {
   createPurchaseDocumentBodySchema,
   purchaseDocumentLineInputSchema,
+  replacePurchaseDocumentLinesBodySchema,
 } from "./purchase-document.js";
-export type { CreatePurchaseDocumentBody } from "./purchase-document.js";
+export type {
+  CreatePurchaseDocumentBody,
+  ReplacePurchaseDocumentLinesBody,
+} from "./purchase-document.js";
 export {
   nonnegativeDecimalStringToNumber,
   numberToDecimalStringForKopecks,

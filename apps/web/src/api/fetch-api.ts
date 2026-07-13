@@ -351,6 +351,23 @@ export async function patchPurchaseDocumentHeader(
   );
 }
 
+/** PUT /purchase-documents/:id/lines — полная замена строк (только admin). */
+export async function putPurchaseDocumentLines(
+  documentId: string,
+  body: unknown,
+  messageOn403: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/purchase-documents/${encodeURIComponent(documentId)}/lines`, {
+    method: "PUT",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(body),
+  });
+  if (res.status === 403) {
+    throw new Error(messageOn403);
+  }
+  await assertOkResponse(res, `/api/purchase-documents/${documentId}/lines`);
+}
+
 export async function patchLoadingManifestHeader(
   manifestId: string,
   body: { manifestNumber?: string; docDate?: string },

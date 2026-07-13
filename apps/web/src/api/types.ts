@@ -207,6 +207,9 @@ export type PurchaseDocumentDetail = {
   createdAt: string | null;
   createdByUserId: string | null;
   lines: PurchaseDocumentLineDetail[];
+  /** Можно править строки (нет партий в ПН / движений). Только UI+admin; PUT всё равно проверяет. */
+  linesEditable?: boolean;
+  linesEditLockReason?: "in_loading_manifest" | "batch_moved" | null;
 };
 
 export type PurchaseDocumentsListResponse = {

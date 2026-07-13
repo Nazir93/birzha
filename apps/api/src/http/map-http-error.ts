@@ -17,6 +17,7 @@ import {
   LoadingManifestNotFoundError,
   LoadingManifestNumberConflictError,
   LoadingManifestTripDetachForbiddenError,
+  PurchaseDocumentLinesLockedError,
   PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
   ResourceInUseError,
@@ -79,6 +80,14 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "purchase_document_not_found",
       documentId: error.documentId,
+    });
+  }
+  if (error instanceof PurchaseDocumentLinesLockedError) {
+    return reply.code(409).send({
+      error: "purchase_document_lines_locked",
+      documentId: error.documentId,
+      reason: error.reason,
+      message: error.message,
     });
   }
   if (error instanceof LoadingManifestNotFoundError) {

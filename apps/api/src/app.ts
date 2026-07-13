@@ -44,11 +44,16 @@ import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "./application/purchase/delete-purchase-document.use-case.js";
+import { ReplacePurchaseDocumentLinesUseCase } from "./application/purchase/replace-purchase-document-lines.use-case.js";
 import { UpdatePurchaseDocumentHeaderUseCase } from "./application/purchase/update-purchase-document-header.use-case.js";
 import { DeleteCounterpartyUseCase } from "./application/counterparty/delete-counterparty.use-case.js";
 import { DeleteWarehouseUseCase } from "./application/warehouse/delete-warehouse.use-case.js";
 import { DrizzleCounterpartyRepository } from "./infrastructure/persistence/drizzle-counterparty.repository.js";
 import { DrizzleProductGradeRepository } from "./infrastructure/persistence/drizzle-product-grade.repository.js";
+import {
+  DrizzlePurchaseDocumentLinesLockChecker,
+  emptyPurchaseDocumentLinesLockChecker,
+} from "./infrastructure/persistence/drizzle-purchase-document-lines-lock.js";
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
 import { DrizzleWholesalerRepository } from "./infrastructure/persistence/drizzle-wholesaler.repository.js";
 import { listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
@@ -305,6 +310,20 @@ export async function buildApp(options: {
     ? new UpdatePurchaseDocumentHeaderUseCase(purchaseDocumentRepository)
     : null;
 
+  const purchaseDocumentLinesLockChecker = db
+    ? new DrizzlePurchaseDocumentLinesLockChecker(db)
+    : emptyPurchaseDocumentLinesLockChecker;
+
+  const replacePurchaseDocumentLinesUseCase =
+    purchaseDocumentRepository && productGradeRepository && batchRepository
+      ? new ReplacePurchaseDocumentLinesUseCase(
+          purchaseDocumentRepository,
+          productGradeRepository,
+          batchRepository,
+          purchaseDocumentLinesLockChecker,
+        )
+      : null;
+
   const deleteWarehouseUseCase =
     warehouseRepository && purchaseDocumentRepository && batchRepository
       ? new DeleteWarehouseUseCase(warehouseRepository, purchaseDocumentRepository, batchRepository)
@@ -372,6 +391,7 @@ export async function buildApp(options: {
     createPurchaseDocumentUseCase &&
     deletePurchaseDocumentUseCase &&
     updatePurchaseDocumentHeaderUseCase &&
+    replacePurchaseDocumentLinesUseCase &&
     deleteWarehouseUseCase &&
     deleteProductGradeUseCase
   ) {
@@ -382,9 +402,12 @@ export async function buildApp(options: {
         warehouses: warehouseRepository,
         grades: productGradeRepository,
         purchaseDocuments: purchaseDocumentRepository,
+        batches: batchRepository,
+        linesLockChecker: purchaseDocumentLinesLockChecker,
         createPurchaseDocument: createPurchaseDocumentUseCase,
         deletePurchaseDocument: deletePurchaseDocumentUseCase,
         updatePurchaseDocumentHeader: updatePurchaseDocumentHeaderUseCase,
+        replacePurchaseDocumentLines: replacePurchaseDocumentLinesUseCase,
         deleteWarehouse: deleteWarehouseUseCase,
         deleteProductGrade: deleteProductGradeUseCase,
       },

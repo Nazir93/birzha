@@ -11,17 +11,24 @@ import {
   createProductGradeBodySchema,
   createPurchaseDocumentBodySchema,
   createWarehouseBodySchema,
+  replacePurchaseDocumentLinesBodySchema,
   updatePurchaseDocumentHeaderBodySchema,
 } from "@birzha/contracts";
 import { z } from "zod";
 
 import type { ProductGradeRepository } from "../application/ports/product-grade-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
+import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { WarehouseRepository } from "../application/ports/warehouse-repository.port.js";
 import type { DbClient } from "../db/client.js";
 import { CreatePurchaseDocumentUseCase } from "../application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "../application/purchase/delete-product-grade.use-case.js";
 import { DeletePurchaseDocumentUseCase } from "../application/purchase/delete-purchase-document.use-case.js";
+import {
+  evaluatePurchaseDocumentLinesEditability,
+  type PurchaseDocumentLinesLockChecker,
+  ReplacePurchaseDocumentLinesUseCase,
+} from "../application/purchase/replace-purchase-document-lines.use-case.js";
 import { UpdatePurchaseDocumentHeaderUseCase } from "../application/purchase/update-purchase-document-header.use-case.js";
 import { DeleteWarehouseUseCase } from "../application/warehouse/delete-warehouse.use-case.js";
 
@@ -58,9 +65,12 @@ export function registerPurchaseDocumentRoutes(
     warehouses: WarehouseRepository;
     grades: ProductGradeRepository;
     purchaseDocuments: PurchaseDocumentRepository;
+    batches: BatchRepository;
+    linesLockChecker: PurchaseDocumentLinesLockChecker;
     createPurchaseDocument: CreatePurchaseDocumentUseCase;
     deletePurchaseDocument: DeletePurchaseDocumentUseCase;
     updatePurchaseDocumentHeader: UpdatePurchaseDocumentHeaderUseCase;
+    replacePurchaseDocumentLines: ReplacePurchaseDocumentLinesUseCase;
     deleteWarehouse: DeleteWarehouseUseCase;
     deleteProductGrade: DeleteProductGradeUseCase;
   },
@@ -71,9 +81,12 @@ export function registerPurchaseDocumentRoutes(
     warehouses,
     grades,
     purchaseDocuments,
+    batches,
+    linesLockChecker,
     createPurchaseDocument,
     deletePurchaseDocument,
     updatePurchaseDocumentHeader,
+    replacePurchaseDocumentLines,
     deleteWarehouse,
     deleteProductGrade,
   } = deps;
@@ -212,7 +225,17 @@ export function registerPurchaseDocumentRoutes(
       if (user?.sub && !purchaseDocumentReadableByPurchaser(doc, user, user.sub)) {
         return reply.code(403).send({ error: "forbidden" });
       }
-      return reply.send(doc);
+      const editability = await evaluatePurchaseDocumentLinesEditability(
+        doc.id,
+        doc.lines.map((l) => l.batchId),
+        batches,
+        linesLockChecker,
+      );
+      return reply.send({
+        ...doc,
+        linesEditable: editability.editable,
+        linesEditLockReason: editability.editable ? null : editability.reason,
+      });
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -228,6 +251,21 @@ export function registerPurchaseDocumentRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  app.put(
+    "/purchase-documents/:documentId/lines",
+    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
+    async (req, reply) => {
+      try {
+        const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
+        const body = replacePurchaseDocumentLinesBodySchema.parse(req.body);
+        await replacePurchaseDocumentLines.execute(params.documentId, body);
+        return reply.code(204).send();
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 
   app.delete(
     "/purchase-documents/:documentId",

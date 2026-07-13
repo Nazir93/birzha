@@ -214,6 +214,24 @@ export class PurchaseDocumentNotFoundError extends Error {
   }
 }
 
+/** Правка строк запрещена: партия уже в погрузочной или есть движения. */
+export class PurchaseDocumentLinesLockedError extends Error {
+  readonly documentId: string;
+  readonly reason: "in_loading_manifest" | "batch_moved";
+
+  constructor(documentId: string, reason: "in_loading_manifest" | "batch_moved") {
+    const msg =
+      reason === "in_loading_manifest"
+        ? "Нельзя править накладную: партии уже в погрузочной. До погрузки правьте только документы без ПН."
+        : "Нельзя править накладную: по партиям уже есть погрузка, продажи или списания.";
+    super(msg);
+    this.name = "PurchaseDocumentLinesLockedError";
+    this.documentId = documentId;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class LoadingManifestNotFoundError extends Error {
   readonly manifestId: string;
 

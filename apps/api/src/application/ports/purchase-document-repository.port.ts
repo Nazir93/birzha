@@ -63,6 +63,11 @@ export interface PurchaseDocumentRepository {
   findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null>;
   /** Удаляет шапку, строки, партии, записи рейса по `batch_id`. */
   deleteById(documentId: string): Promise<void>;
+  /**
+   * Полная замена строк документа: удаляет старые партии/строки, пишет новые.
+   * Вызывающий use case обязан проверить блокировки (ПН / движения).
+   */
+  replaceDocumentLines(documentId: string, lines: NewPurchaseDocumentLine[]): Promise<void>;
   /** Шапка накладной: номер и/или дата. */
   updateHeader(
     documentId: string,

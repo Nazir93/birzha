@@ -63,6 +63,27 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
     this.linesByDoc.delete(documentId);
   }
 
+  async replaceDocumentLines(documentId: string, lines: NewPurchaseDocumentLine[]): Promise<void> {
+    const id = documentId.trim();
+    if (!this.headers.some((h) => h.id === id)) {
+      throw new PurchaseDocumentNotFoundError(id);
+    }
+    const oldLines = this.linesByDoc.get(id) ?? [];
+    const oldBatchIds = oldLines.map((l) => l.batch.getId());
+    if (oldBatchIds.length > 0) {
+      await this.tripSales.deleteByBatchIds(oldBatchIds);
+      await this.tripShortages.deleteByBatchIds(oldBatchIds);
+      await this.tripShipments.deleteByBatchIds(oldBatchIds);
+    }
+    for (const batchId of oldBatchIds) {
+      await this.batchRepo.deleteById(batchId);
+    }
+    for (const line of lines) {
+      await this.batchRepo.save(line.batch);
+    }
+    this.linesByDoc.set(id, lines);
+  }
+
   async updateHeader(
     documentId: string,
     patch: { documentNumber?: string; docDate?: Date },

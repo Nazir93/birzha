@@ -123,4 +123,75 @@ describe("Purchase document HTTP (накладная)", () => {
 
     await app.close();
   });
+
+  it("PUT /purchase-documents/:id/lines заменяет строки; GET отдаёт linesEditable", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const batches = new InMemoryBatchRepository();
+    const app = await buildApp({ env, db: null, batchRepository: batches });
+
+    await app.inject({
+      method: "POST",
+      url: "/purchase-documents",
+      payload: {
+        id: "nakl-put",
+        documentNumber: "НФ-PUT",
+        docDate: "2026-07-10",
+        warehouseId: "wh-manas",
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 10,
+            packageCount: 1,
+            pricePerKg: 50,
+            lineTotalKopecks: 50_000,
+          },
+        ],
+      },
+    });
+
+    const getBefore = await app.inject({ method: "GET", url: "/purchase-documents/nakl-put" });
+    expect(getBefore.statusCode).toBe(200);
+    const detailBefore = JSON.parse(getBefore.body) as {
+      linesEditable: boolean;
+      lines: { batchId: string }[];
+    };
+    expect(detailBefore.linesEditable).toBe(true);
+    const batchId = detailBefore.lines[0]!.batchId;
+
+    const putRes = await app.inject({
+      method: "PUT",
+      url: "/purchase-documents/nakl-put/lines",
+      payload: {
+        lines: [
+          {
+            batchId,
+            productGradeId: "pg-n5",
+            totalKg: 8,
+            packageCount: 2,
+            pricePerKg: 50,
+            lineTotalKopecks: 40_000,
+          },
+          {
+            productGradeId: "pg-n6",
+            totalKg: 5,
+            pricePerKg: 48,
+            lineTotalKopecks: 24_000,
+          },
+        ],
+      },
+    });
+    expect(putRes.statusCode).toBe(204);
+
+    const getAfter = await app.inject({ method: "GET", url: "/purchase-documents/nakl-put" });
+    const detailAfter = JSON.parse(getAfter.body) as {
+      lines: { totalKg: number; productGradeCode: string; batchId: string }[];
+    };
+    expect(detailAfter.lines).toHaveLength(2);
+    expect(detailAfter.lines[0]?.totalKg).toBe(8);
+    expect(detailAfter.lines[0]?.batchId).toBe(batchId);
+    expect(detailAfter.lines[1]?.productGradeCode).toBe("№6");
+
+    await app.close();
+  });
 });
