@@ -1,7 +1,8 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
+import { apiDeleteOr403, deleteLoadingManifestById, deleteTripById } from "../api/fetch-api.js";
 import type {
   LoadingManifestSummary,
   PurchaseDocumentSummary,
@@ -10,7 +11,9 @@ import type {
   WarehouseJson,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
+import { canCreateTrip, canManageInventoryCatalog } from "../auth/role-panels.js";
 import { isTripArchived } from "../format/archive.js";
+import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import {
   formatTripArchiveSalesRevenue,
   formatTripArchiveSalesSoldKg,
@@ -27,6 +30,7 @@ import {
   tripsPickerQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
+import { refreshArchiveLists } from "../query/domain-list-refresh.js";
 import {
   adminAwarePathForPath,
   adminRoutes,
@@ -39,6 +43,7 @@ import { ArchivedTripSalesReport } from "./ArchivedTripSalesReport.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { tableStyle, thHead, thtd, fieldStyle } from "../ui/styles.js";
 
@@ -171,28 +176,53 @@ function NakladnayaArchiveTable({
   pathname,
   warehouses,
   startIndex,
+  canDelete,
+  deletingId,
+  onDelete,
 }: {
   docs: readonly PurchaseDocumentSummary[];
   pathname: string;
   warehouses: readonly WarehouseJson[];
   startIndex: number;
+  canDelete: boolean;
+  deletingId: string | null;
+  onDelete: (doc: PurchaseDocumentSummary) => void;
 }) {
   const whById = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name || w.code])), [warehouses]);
+  const headers = canDelete
+    ? ["№", "Дата", "№ документа", "Склад", "", ""]
+    : ["№", "Дата", "№ документа", "Склад", ""];
   return (
     <ArchiveDataTable
       ariaLabel="Архив закупочных накладных"
-      headers={["№", "Дата", "№ документа", "Склад", ""]}
-      rows={docs.map((d, idx) => [
-        String(startIndex + idx),
-        formatPurchaseDocDateRu(d.docDate),
-        <Link key="doc" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 700 }}>
-          {d.documentNumber}
-        </Link>,
-        whById.get(d.warehouseId) ?? "—",
-        <Link key="open" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)}>
-          Открыть
-        </Link>,
-      ])}
+      headers={headers}
+      rows={docs.map((d, idx) => {
+        const cells: ReactNode[] = [
+          String(startIndex + idx),
+          formatPurchaseDocDateRu(d.docDate),
+          <Link key="doc" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 700 }}>
+            {d.documentNumber}
+          </Link>,
+          whById.get(d.warehouseId) ?? "—",
+          <Link key="open" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)}>
+            Открыть
+          </Link>,
+        ];
+        if (canDelete) {
+          cells.push(
+            <button
+              key="delete"
+              type="button"
+              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+              disabled={deletingId != null}
+              onClick={() => onDelete(d)}
+            >
+              {deletingId === d.id ? "…" : "Удалить"}
+            </button>,
+          );
+        }
+        return cells;
+      })}
     />
   );
 }
@@ -202,31 +232,56 @@ function ManifestArchiveTable({
   pathname,
   tripNumberById,
   startIndex,
+  canDelete,
+  deletingId,
+  onDelete,
 }: {
   manifests: readonly LoadingManifestSummary[];
   pathname: string;
   tripNumberById: Map<string, string>;
   startIndex: number;
+  canDelete: boolean;
+  deletingId: string | null;
+  onDelete: (manifest: LoadingManifestSummary) => void;
 }) {
+  const headers = canDelete
+    ? ["№", "Дата", "Накладная", "Склад", "Рейс", "", ""]
+    : ["№", "Дата", "Накладная", "Склад", "Рейс", ""];
   return (
     <ArchiveDataTable
       ariaLabel="Архив погрузочных накладных"
-      headers={["№", "Дата", "Накладная", "Склад", "Рейс", ""]}
-      rows={manifests.map((m, idx) => [
-        String(startIndex + idx),
-        formatPurchaseDocDateRu(m.docDate),
-        <Link key="n" to={manifestPathFor(pathname, m.id)} style={{ fontWeight: 700 }}>
-          {formatLoadingManifestDisplayName({
-            manifestNumber: m.manifestNumber,
-            destinationName: m.destinationName,
-          })}
-        </Link>,
-        `${m.warehouseName}`,
-        m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—",
-        <Link key="o" to={manifestPathFor(pathname, m.id)}>
-          Открыть
-        </Link>,
-      ])}
+      headers={headers}
+      rows={manifests.map((m, idx) => {
+        const cells: ReactNode[] = [
+          String(startIndex + idx),
+          formatPurchaseDocDateRu(m.docDate),
+          <Link key="n" to={manifestPathFor(pathname, m.id)} style={{ fontWeight: 700 }}>
+            {formatLoadingManifestDisplayName({
+              manifestNumber: m.manifestNumber,
+              destinationName: m.destinationName,
+            })}
+          </Link>,
+          `${m.warehouseName}`,
+          m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—",
+          <Link key="o" to={manifestPathFor(pathname, m.id)}>
+            Открыть
+          </Link>,
+        ];
+        if (canDelete) {
+          cells.push(
+            <button
+              key="delete"
+              type="button"
+              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+              disabled={deletingId != null}
+              onClick={() => onDelete(m)}
+            >
+              {deletingId === m.id ? "…" : "Удалить"}
+            </button>,
+          );
+        }
+        return cells;
+      })}
     />
   );
 }
@@ -237,21 +292,30 @@ function TripsArchiveTable({
   reportByTripId,
   reportLoadingTripIds,
   startIndex,
+  canDelete,
+  deletingId,
+  onDelete,
 }: {
   trips: readonly TripJson[];
   reportTo: (tripId: string) => string;
   reportByTripId: ReadonlyMap<string, ShipmentReportResponse>;
   reportLoadingTripIds: ReadonlySet<string>;
   startIndex: number;
+  canDelete: boolean;
+  deletingId: string | null;
+  onDelete: (trip: TripJson) => void;
 }) {
+  const headers = canDelete
+    ? ["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", "", ""]
+    : ["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""];
   return (
     <ArchiveDataTable
       ariaLabel="Архив рейсов"
-      headers={["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""]}
+      headers={headers}
       rows={trips.map((t, idx) => {
         const rep = reportByTripId.get(t.id);
         const loading = reportLoadingTripIds.has(t.id);
-        return [
+        const cells: ReactNode[] = [
           String(startIndex + idx),
           formatTripDepartedRu(t.departedAt),
           <Link key="n" to={reportTo(t.id)} style={{ fontWeight: 700 }}>
@@ -265,6 +329,20 @@ function TripsArchiveTable({
             Все продажи
           </Link>,
         ];
+        if (canDelete) {
+          cells.push(
+            <button
+              key="delete"
+              type="button"
+              className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+              disabled={deletingId != null}
+              onClick={() => onDelete(t)}
+            >
+              {deletingId === t.id ? "…" : "Удалить"}
+            </button>,
+          );
+        }
+        return cells;
       })}
     />
   );
@@ -275,14 +353,73 @@ export function ArchivePage() {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const { user, meta } = useAuth();
+  const queryClient = useQueryClient();
   const salesMode = pathname === prefix.sales || pathname.startsWith(`${prefix.sales}/`);
   const reportTripId = searchParams.get("trip")?.trim() ?? "";
+
+  const canDeletePurchase = !salesMode && user != null && canManageInventoryCatalog(user);
+  const canDeleteManifest = canDeletePurchase;
+  const canDeleteTrip = user != null && canCreateTrip(user);
 
   const [tripsPage, setTripsPage] = useState(0);
   const [nakladPage, setNakladPage] = useState(0);
   const [manifestPage, setManifestPage] = useState(0);
   const [nakladSearch, setNakladSearch] = useState("");
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [deletingPurchaseId, setDeletingPurchaseId] = useState<string | null>(null);
+  const [deletingManifestId, setDeletingManifestId] = useState<string | null>(null);
+  const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
   const nakladSearchDebounced = useDebouncedValue(nakladSearch.trim(), 280);
+
+  const invalidateArchive = useCallback(async () => {
+    await refreshArchiveLists(queryClient);
+  }, [queryClient]);
+
+  const deletePurchaseDocument = useMutation({
+    mutationFn: async (documentId: string) => {
+      setPageError(null);
+      setDeletingPurchaseId(documentId);
+      await apiDeleteOr403(
+        `/api/purchase-documents/${encodeURIComponent(documentId)}`,
+        "Недостаточно прав: удаление накладных — только admin.",
+      );
+    },
+    onSuccess: async () => {
+      await invalidateArchive();
+    },
+    onError: (e: unknown) => setPageError(humanizeErrorMessage(e)),
+    onSettled: () => setDeletingPurchaseId(null),
+  });
+
+  const deleteLoadingManifest = useMutation({
+    mutationFn: async (manifestId: string) => {
+      setPageError(null);
+      setDeletingManifestId(manifestId);
+      await deleteLoadingManifestById(
+        manifestId,
+        "Недостаточно прав: удаление погрузочных накладных — только admin.",
+        { fromArchive: true },
+      );
+    },
+    onSuccess: async () => {
+      await invalidateArchive();
+    },
+    onError: (e: unknown) => setPageError(humanizeErrorMessage(e)),
+    onSettled: () => setDeletingManifestId(null),
+  });
+
+  const deleteTrip = useMutation({
+    mutationFn: async (tripId: string) => {
+      setPageError(null);
+      setDeletingTripId(tripId);
+      await deleteTripById(tripId, "Недостаточно прав на удаление рейса.", { fromArchive: true });
+    },
+    onSuccess: async () => {
+      await invalidateArchive();
+    },
+    onError: (e: unknown) => setPageError(humanizeErrorMessage(e)),
+    onSettled: () => setDeletingTripId(null),
+  });
 
   useEffect(() => {
     setNakladPage(0);
@@ -432,6 +569,8 @@ export function ArchivePage() {
         Архив
       </h2>
 
+      {pageError ? <ErrorAlert message={pageError} title="Ошибка" /> : null}
+
       {loading && <LoadingBlock label="Загрузка архива…" minHeight={80} skeleton skeletonRows={5} />}
 
       {!loading && (
@@ -492,6 +631,17 @@ export function ArchivePage() {
               reportByTripId={reportByTripId}
               reportLoadingTripIds={reportLoadingTripIds}
               startIndex={tripsPage * PAGE_SIZE + 1}
+              canDelete={canDeleteTrip}
+              deletingId={deletingTripId}
+              onDelete={(trip) => {
+                if (
+                  window.confirm(
+                    `Удалить закрытый рейс «${trip.tripNumber}» из архива вместе с журналом отгрузок, продаж и погрузочных накладных? Действие необратимо.`,
+                  )
+                ) {
+                  void deleteTrip.mutate(trip.id);
+                }
+              }}
             />
           </PaginatedSection>
 
@@ -517,6 +667,17 @@ export function ArchivePage() {
                 pathname={pathname}
                 warehouses={warehousesQ.data?.warehouses ?? []}
                 startIndex={nakladPage * PAGE_SIZE + 1}
+                canDelete={canDeletePurchase}
+                deletingId={deletingPurchaseId}
+                onDelete={(doc) => {
+                  if (
+                    window.confirm(
+                      `Удалить накладную № ${doc.documentNumber} из архива и все связанные партии? Действие необратимо.`,
+                    )
+                  ) {
+                    void deletePurchaseDocument.mutate(doc.id);
+                  }
+                }}
               />
             </PaginatedSection>
           ) : null}
@@ -543,6 +704,17 @@ export function ArchivePage() {
                 pathname={pathname}
                 tripNumberById={tripNumberById}
                 startIndex={manifestPage * PAGE_SIZE + 1}
+                canDelete={canDeleteManifest}
+                deletingId={deletingManifestId}
+                onDelete={(manifest) => {
+                  if (
+                    window.confirm(
+                      `Удалить погрузочную накладную № ${manifest.manifestNumber} из архива? Журнал отгрузок в рейсе сохранится. Действие необратимо.`,
+                    )
+                  ) {
+                    void deleteLoadingManifest.mutate(manifest.id);
+                  }
+                }}
               />
             </PaginatedSection>
           ) : null}

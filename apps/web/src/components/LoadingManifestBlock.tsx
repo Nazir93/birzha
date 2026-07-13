@@ -256,11 +256,12 @@ export function LoadingManifestBlock({
         <div style={{ marginTop: "0.35rem" }}>
           {writeOff?.enabled ? (
             <div style={{ marginBottom: "0.85rem" }} className="no-print">
-              <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Списание со склада</h4>
+              <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Возврат на склад</h4>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-                По калибру: строка «накладная + калибр» — списание только с выбранной накладной. По накладной:
-                видны все калибры документа; «Списать всё» — весь остаток по накладной. Можно указать кг или ящики
-                (если в накладной задано число ящиков по строке).
+                По калибру: строка «накладная + калибр» — возврат только с выбранной накладной. По накладной:
+                видны все калибры документа; «Вернуть всё» — весь остаток по накладной. Можно указать кг или ящики
+                (если в накладной задано число ящиков по строке). Остаток на складе не уменьшается — товар доступен для
+                другого направления.
               </p>
               <div
                 style={{
@@ -272,7 +273,7 @@ export function LoadingManifestBlock({
                   fontSize: "0.86rem",
                 }}
               >
-                <span className="birzha-text-muted">Списать по:</span>
+                <span className="birzha-text-muted">Вернуть по:</span>
                 <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <input
                     type="radio"
@@ -309,8 +310,8 @@ export function LoadingManifestBlock({
                       )}
                       <th className="birzha-data-table__num">Остаток, кг</th>
                       {writeOffShowsPackages ? <th className="birzha-data-table__num">Остаток, ящ.</th> : null}
-                      <th>Списать, кг</th>
-                      {writeOffShowsPackages ? <th>Списать, ящ.</th> : null}
+                      <th>Вернуть, кг</th>
+                      {writeOffShowsPackages ? <th>Вернуть, ящ.</th> : null}
                       <th />
                     </tr>
                   </thead>
@@ -356,7 +357,7 @@ export function LoadingManifestBlock({
                                   placeholder="кг"
                                   value={writeOff.rejectInput[inputKey] ?? ""}
                                   onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                  aria-label={`Списать кг, ${submitLabel}`}
+                                  aria-label={`Вернуть на склад кг, ${submitLabel}`}
                                   style={{ ...fieldStyle, width: "5rem" }}
                                 />
                               </td>
@@ -368,7 +369,7 @@ export function LoadingManifestBlock({
                                     placeholder="ящ."
                                     value={writeOff.rejectPkgInput[inputKey] ?? ""}
                                     onChange={(ev) => writeOff.onRejectPkgInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать ящики, ${submitLabel}`}
+                                    aria-label={`Вернуть на склад ящики, ${submitLabel}`}
                                     style={{ ...fieldStyle, width: "4.5rem" }}
                                     disabled={row.linesWithPkg <= 0 || row.totalPkg <= 0}
                                   />
@@ -381,7 +382,7 @@ export function LoadingManifestBlock({
                                   disabled={writeOff.isPending}
                                   onClick={() => submitWriteOffRow(writeOff, inputKey, row, row.batches, submitLabel)}
                                 >
-                                  Списать
+                                  Вернуть на склад
                                 </button>
                               </td>
                             </tr>
@@ -437,7 +438,7 @@ export function LoadingManifestBlock({
                                   placeholder="кг"
                                   value={writeOff.rejectInput[inputKey] ?? ""}
                                   onChange={(ev) => writeOff.onRejectInputChange(inputKey, ev.target.value)}
-                                  aria-label={`Списать кг, ${row.displayLabel}`}
+                                  aria-label={`Вернуть на склад кг, ${row.displayLabel}`}
                                   style={{ ...fieldStyle, width: "5rem" }}
                                 />
                               </td>
@@ -449,7 +450,7 @@ export function LoadingManifestBlock({
                                     placeholder="ящ."
                                     value={writeOff.rejectPkgInput[inputKey] ?? ""}
                                     onChange={(ev) => writeOff.onRejectPkgInputChange(inputKey, ev.target.value)}
-                                    aria-label={`Списать ящики, ${row.displayLabel}`}
+                                    aria-label={`Вернуть на склад ящики, ${row.displayLabel}`}
                                     style={{ ...fieldStyle, width: "4.5rem" }}
                                     disabled={row.linesWithPkg <= 0 || row.totalPkg <= 0}
                                   />
@@ -463,7 +464,7 @@ export function LoadingManifestBlock({
                                     disabled={writeOff.isPending}
                                     onClick={() => submitWriteOffRow(writeOff, inputKey, row, row.batches, row.displayLabel)}
                                   >
-                                    Списать
+                                    Вернуть на склад
                                   </button>
                                   <button
                                     type="button"
@@ -476,7 +477,7 @@ export function LoadingManifestBlock({
                                       }
                                     }}
                                   >
-                                    Списать всё
+                                    Вернуть всё
                                   </button>
                                 </div>
                               </td>
@@ -487,10 +488,10 @@ export function LoadingManifestBlock({
                 </table>
               </div>
               {writeOff.isError && writeOff.errorMessage ? (
-                <ErrorAlert message={writeOff.errorMessage} title="Списание" />
+                <ErrorAlert message={writeOff.errorMessage} title="Возврат на склад" />
               ) : null}
               {writeOff.undoError ? (
-                <ErrorAlert message={writeOff.undoError} title="Возврат списания" />
+                <ErrorAlert message={writeOff.undoError} title="Отмена возврата" />
               ) : null}
               <WriteOffRecentList
                 rows={writeOff.recentWriteOffs}
@@ -505,7 +506,7 @@ export function LoadingManifestBlock({
             style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}
             id={stockTableLabelId}
           >
-            Остаток в отборе (после списания)
+            Остаток в отборе (после возврата на склад)
           </h4>
           <div
             className="no-print"
@@ -555,7 +556,7 @@ export function LoadingManifestBlock({
                     <th scope="col">Накладная</th>
                   )}
                   <th scope="col" className="birzha-data-table__num">
-                    На складе, кг
+                    Доступно, кг
                   </th>
                   <th scope="col" className="birzha-data-table__num">
                     Ящ. (оц.)

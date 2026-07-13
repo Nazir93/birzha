@@ -50,6 +50,7 @@ import { assertActiveShipDestination } from "./register-ship-destination-routes.
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 import { DrizzleBatchRepository } from "../infrastructure/persistence/drizzle-batch.repository.js";
+import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { DrizzleTripShipmentRepository } from "../infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import {
   listLoadingManifestsForHttp,
@@ -433,7 +434,8 @@ export function registerLoadingManifestRoutes(
 
         const batchRepo = new DrizzleBatchRepository(exec);
         const shipRepo = new DrizzleTripShipmentRepository(exec);
-        const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined);
+        const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(exec);
+        const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined, writeOffLedger);
 
         for (const line of lines) {
           const ledger = await shipRepo.totalGramsForTripAndBatch(body.tripId, line.batchId);
@@ -457,6 +459,7 @@ export function registerLoadingManifestRoutes(
             .where(eq(batches.id, line.batchId))
             .limit(1);
           const totalLedger = await shipRepo.totalGramsForBatch(line.batchId);
+          const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds([line.batchId]);
           const plan = planLoadingManifestAssignTripShipment({
             lineGrams: toBigIntOrZero(line.grams),
             linePackageCount: toNullableBigInt(line.packageCount),
@@ -465,6 +468,7 @@ export function registerLoadingManifestRoutes(
             onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
             inTransitGrams: br?.inTransitGrams ?? 0n,
             shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
+            warehouseReturnGrams: returnSums.get(line.batchId) ?? 0n,
           });
           if (plan.kind === "none") {
             continue;
@@ -614,7 +618,8 @@ export function registerLoadingManifestRoutes(
         if (assignedTripId && tripRead && affectedBatchIds.size > 0) {
           const batchRepo = new DrizzleBatchRepository(exec);
           const shipRepo = new DrizzleTripShipmentRepository(exec);
-          const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined);
+          const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(exec);
+          const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined, writeOffLedger);
 
           for (const batchId of affectedBatchIds) {
             const [line] = await exec
@@ -644,6 +649,7 @@ export function registerLoadingManifestRoutes(
               .where(eq(batches.id, batchId))
               .limit(1);
             const totalLedger = await shipRepo.totalGramsForBatch(batchId);
+            const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds([batchId]);
             const plan = planLoadingManifestAssignTripShipment({
               lineGrams: toBigIntOrZero(line.grams),
               linePackageCount: toNullableBigInt(line.packageCount),
@@ -652,6 +658,7 @@ export function registerLoadingManifestRoutes(
               onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
               inTransitGrams: br?.inTransitGrams ?? 0n,
               shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
+              warehouseReturnGrams: returnSums.get(batchId) ?? 0n,
             });
             if (plan.kind === "none") {
               continue;
@@ -689,7 +696,8 @@ export function registerLoadingManifestRoutes(
     async (req, reply) => {
       try {
         const { manifestId } = z.object({ manifestId: z.string().min(1) }).parse(req.params);
-        await deleteLoadingManifest.execute(manifestId);
+        const query = z.object({ fromArchive: z.enum(["1"]).optional() }).parse(req.query);
+        await deleteLoadingManifest.execute(manifestId, { fromArchive: query.fromArchive === "1" });
         return reply.code(204).send();
       } catch (error) {
         return sendMappedError(reply, error);

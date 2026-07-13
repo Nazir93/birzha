@@ -28,6 +28,10 @@ export class DrizzleTripShortageRepository implements TripShortageRepository {
     await this.db.delete(tripBatchShortages).where(inArray(tripBatchShortages.batchId, batchIds));
   }
 
+  async deleteAllForTripId(tripId: string): Promise<void> {
+    await this.db.delete(tripBatchShortages).where(eq(tripBatchShortages.tripId, tripId));
+  }
+
   async totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint> {
     const rows = await this.db
       .select()

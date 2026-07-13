@@ -52,6 +52,10 @@ export class DrizzleTripShipmentRepository implements TripShipmentRepository {
     await this.db.delete(tripBatchShipments).where(inArray(tripBatchShipments.batchId, batchIds));
   }
 
+  async deleteAllForTripId(tripId: string): Promise<void> {
+    await this.db.delete(tripBatchShipments).where(eq(tripBatchShipments.tripId, tripId));
+  }
+
   async reduceForTripAndBatch(
     tripId: string,
     batchId: string,

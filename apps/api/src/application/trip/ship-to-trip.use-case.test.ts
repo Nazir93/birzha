@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { InsufficientStockError } from "@birzha/domain";
+
 import { CreatePurchaseUseCase } from "../purchase/create-purchase.use-case.js";
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
+import { InMemoryBatchWarehouseWriteOffLedger } from "../testing/in-memory-batch-warehouse-write-off-ledger.js";
 import { InMemoryTripRepository } from "../testing/in-memory-trip.repository.js";
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
+import { RecordWarehouseWriteOffUseCase } from "../batch/record-warehouse-write-off.use-case.js";
 import { TripNotFoundError } from "../errors.js";
 import { CreateTripUseCase } from "./create-trip.use-case.js";
 import { ShipToTripUseCase } from "./ship-to-trip.use-case.js";
@@ -82,5 +86,41 @@ describe("ShipToTripUseCase", () => {
         tripId: "missing",
       }),
     ).rejects.toThrow(TripNotFoundError);
+  });
+
+  it("отказывает отгрузить кг, зафиксированные как возврат на склад", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    await new CreateTripUseCase(trips).execute({ id: "t-3", tripNumber: "Ф-03" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-3",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 10,
+      distribution: "on_hand",
+    });
+    await new RecordWarehouseWriteOffUseCase(repo, ledger).execute({
+      batchId: "b-3",
+      kg: 40,
+      reason: "quality_reject",
+    });
+
+    await expect(
+      new ShipToTripUseCase(repo, trips, shipments, undefined, ledger).execute({
+        batchId: "b-3",
+        kg: 70,
+        tripId: "t-3",
+      }),
+    ).rejects.toThrow(InsufficientStockError);
+
+    await new ShipToTripUseCase(repo, trips, shipments, undefined, ledger).execute({
+      batchId: "b-3",
+      kg: 60,
+      tripId: "t-3",
+    });
+    const agg = await shipments.aggregateByTripId("t-3");
+    expect(agg.totalGrams).toBe(60_000n);
   });
 });

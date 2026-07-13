@@ -113,7 +113,8 @@ describe("role-panels", () => {
     const order = operationsPanelOrder(userWithRoles("warehouse"));
     expect(order.indexOf("trips")).toBeGreaterThan(order.indexOf("nakladnaya"));
     expect(order.indexOf("distribution")).toBeGreaterThan(order.indexOf("trips"));
-    expect(order.indexOf("loadingAppend")).toBeGreaterThan(order.indexOf("distribution"));
+    expect(order.indexOf("warehouseReturns")).toBeGreaterThan(order.indexOf("distribution"));
+    expect(order.indexOf("loadingAppend")).toBeGreaterThan(order.indexOf("warehouseReturns"));
     expect(order.indexOf("loadingTrip")).toBeGreaterThan(order.indexOf("loadingAppend"));
   });
 

@@ -22,6 +22,7 @@ import {
   ResourceInUseError,
   SalePaymentSplitError,
   SeededResourceDeleteForbiddenError,
+  TripArchiveDeleteRequiresClosedError,
   TripClosedError,
   TripNotEmptyError,
   TripNotFoundError,
@@ -162,6 +163,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
   if (error instanceof TripNotEmptyError) {
     return reply.code(409).send({
       error: "trip_not_empty",
+      tripId: error.tripId,
+      message: error.message,
+    });
+  }
+  if (error instanceof TripArchiveDeleteRequiresClosedError) {
+    return reply.code(409).send({
+      error: "trip_archive_delete_requires_closed",
       tripId: error.tripId,
       message: error.message,
     });

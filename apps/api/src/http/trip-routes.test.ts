@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../application/testing/in-memory-batch.repository.js";
+import { InMemoryTripSaleRepository } from "../application/testing/in-memory-trip-sale.repository.js";
+import { InMemoryTripShipmentRepository } from "../application/testing/in-memory-trip-shipment.repository.js";
 import { InMemoryTripRepository } from "../application/testing/in-memory-trip.repository.js";
 import { buildApp } from "../app.js";
 import { loadEnv } from "../config.js";
@@ -320,6 +322,77 @@ describe("Trip HTTP", () => {
     expect(res.statusCode).toBe(409);
     const err = JSON.parse(res.body) as { error: string };
     expect(err.error).toBe("trip_not_empty");
+
+    await app.close();
+  });
+
+  it("DELETE /trips/:id?fromArchive=1 — удаляет закрытый рейс с движениями", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const batches = new InMemoryBatchRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: batches,
+      tripRepository: trips,
+      shipmentRepository: shipments,
+      saleRepository: sales,
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "t-arch-del", tripNumber: "Ф-ARCH" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches",
+      payload: {
+        id: "b-arch",
+        purchaseId: "p-arch",
+        totalKg: 100,
+        pricePerKg: 1,
+        distribution: "on_hand",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches/b-arch/ship-to-trip",
+      payload: { kg: 10, tripId: "t-arch-del" },
+    });
+    await app.inject({ method: "POST", url: "/trips/t-arch-del/close", payload: {} });
+
+    let res = await app.inject({ method: "DELETE", url: "/trips/t-arch-del?fromArchive=1" });
+    expect(res.statusCode).toBe(204);
+
+    res = await app.inject({ method: "GET", url: "/trips/t-arch-del" });
+    expect(res.statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it("DELETE /trips/:id?fromArchive=1 — открытый рейс даёт 409", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const trips = new InMemoryTripRepository();
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+      tripRepository: trips,
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "t-open-arch", tripNumber: "Ф-OPEN" },
+    });
+
+    const res = await app.inject({ method: "DELETE", url: "/trips/t-open-arch?fromArchive=1" });
+    expect(res.statusCode).toBe(409);
+    const body = JSON.parse(res.body) as { error: string };
+    expect(body.error).toBe("trip_archive_delete_requires_closed");
 
     await app.close();
   });

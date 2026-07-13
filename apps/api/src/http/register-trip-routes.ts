@@ -6,6 +6,7 @@ import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-sco
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { TripNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
+import type { TripArchiveManifestCleanupPort } from "../application/ports/trip-archive-manifest-cleanup.port.js";
 import type { TripListFilter, TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
@@ -39,11 +40,12 @@ export function registerTripRoutes(
   batches: BatchRepository,
   routeAuth: BusinessRouteAuth,
   listAssignableFieldSellers?: () => Promise<{ id: string; login: string }[]>,
+  manifestCleanup?: TripArchiveManifestCleanupPort,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const assignTripSeller = new AssignTripSellerUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
-  const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages);
+  const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages, manifestCleanup);
   const updateTripHeader = new UpdateTripHeaderUseCase(trips);
   const tripReport = new GetTripReportUseCase(trips, shipments, sales, shortages, batches);
   const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
@@ -201,7 +203,8 @@ export function registerTripRoutes(
   app.delete("/trips/:tripId", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
-      await deleteTrip.execute(tripId);
+      const query = z.object({ fromArchive: z.enum(["1"]).optional() }).parse(req.query);
+      await deleteTrip.execute(tripId, { fromArchive: query.fromArchive === "1" });
       return reply.code(204).send();
     } catch (error) {
       return sendMappedError(reply, error);

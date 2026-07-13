@@ -50,6 +50,10 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
     await this.db.delete(tripBatchSales).where(inArray(tripBatchSales.batchId, batchIds));
   }
 
+  async deleteAllForTripId(tripId: string): Promise<void> {
+    await this.db.delete(tripBatchSales).where(eq(tripBatchSales.tripId, tripId));
+  }
+
   async append(row: TripSaleAppend): Promise<void> {
     const uid = row.recordedByUserId?.trim();
     await this.db.insert(tripBatchSales).values({

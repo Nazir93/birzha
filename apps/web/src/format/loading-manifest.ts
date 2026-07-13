@@ -1,6 +1,7 @@
 import { compareProductGradeLineLabels } from "@birzha/contracts";
 
 import type { BatchListItem } from "../api/types.js";
+import { batchAvailableForLoadingKg, estimatedPackageCountForLoading } from "./batch-available-for-loading.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
 import { formatPurchaseDocDateRu } from "./purchase-doc-date.js";
@@ -38,7 +39,7 @@ export function filterBatchesForLoadingManifest(
   selectedDocumentIds: ReadonlySet<string>,
 ): BatchListItem[] {
   return batches.filter((b) => {
-    if (b.onWarehouseKg <= 0) {
+    if (batchAvailableForLoadingKg(b) <= 0) {
       return false;
     }
     if (documentOptionCount === 0) {
@@ -62,8 +63,9 @@ export function sumLoadingManifestTotals(included: readonly BatchListItem[]): {
   let pkg = 0;
   let linesWithPkg = 0;
   for (const b of included) {
-    kg += b.onWarehouseKg;
-    const e = estimatedPackageCountOnShelf(b);
+    const avail = batchAvailableForLoadingKg(b);
+    kg += avail;
+    const e = estimatedPackageCountForLoading(b);
     if (e != null) {
       pkg += e;
       linesWithPkg += 1;
@@ -98,10 +100,10 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
       m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0, batches: [] });
     }
     const g = m.get(lineLabel)!;
-    g.totalKg += b.onWarehouseKg;
+    g.totalKg += batchAvailableForLoadingKg(b);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountOnShelf(b);
+    const e = estimatedPackageCountForLoading(b);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;
@@ -159,10 +161,10 @@ export function aggregateBatchesByDocumentCaliberLine(
       });
     }
     const g = m.get(rowKey)!;
-    g.totalKg += b.onWarehouseKg;
+    g.totalKg += batchAvailableForLoadingKg(b);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountOnShelf(b);
+    const e = estimatedPackageCountForLoading(b);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;
@@ -212,7 +214,7 @@ export function buildWriteOffItemsFromBatches(
     if (remaining <= 0) {
       break;
     }
-    const kgFromBatch = Math.min(remaining, batch.onWarehouseKg);
+    const kgFromBatch = Math.min(remaining, batchAvailableForLoadingKg(batch));
     if (kgFromBatch > 0) {
       items.push({ batchId: batch.id, kg: kgFromBatch });
       remaining -= kgFromBatch;
@@ -231,7 +233,7 @@ export function kgFromWriteOffPackageCount(batch: BatchListItem, packageCount: n
     return 0;
   }
   const kg = (packageCount / linePk) * batch.totalKg;
-  return Math.min(Math.max(0, kg), batch.onWarehouseKg);
+  return Math.min(Math.max(0, kg), batchAvailableForLoadingKg(batch));
 }
 
 /** Распределить списание по ящикам (FIFO), перевести в кг для API. */
@@ -245,7 +247,7 @@ export function buildWriteOffItemsFromBatchesByPackages(
     if (remaining <= 0) {
       break;
     }
-    const maxPkg = estimatedPackageCountOnShelf(batch);
+    const maxPkg = estimatedPackageCountForLoading(batch);
     if (maxPkg == null || maxPkg <= 0) {
       continue;
     }
@@ -345,10 +347,10 @@ export function aggregateBatchesByPurchaseDocument(batches: readonly BatchListIt
       });
     }
     const g = m.get(rowKey)!;
-    g.totalKg += b.onWarehouseKg;
+    g.totalKg += batchAvailableForLoadingKg(b);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountOnShelf(b);
+    const e = estimatedPackageCountForLoading(b);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;

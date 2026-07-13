@@ -239,7 +239,7 @@ export function AdminStockWarehousesPage() {
         </h2>
         <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: 52 * 16 }}>
           Справочник складов, добавление и удаление. Выберите склад — ниже закупочные накладные, остатки по калибру и
-          списания при погрузке (брак с остатка). Поиск — по номеру накладной или по калибру и виду товара.
+          журнал возвратов на склад при погрузке. Поиск — по номеру накладной или по калибру и виду товара.
         </p>
       </header>
 
@@ -369,7 +369,7 @@ export function AdminStockWarehousesPage() {
                   />
                   {warehouseDocumentAggregates.length === 0 && !batchesQ.isPending ? (
                     <p className="birzha-text-muted birzha-ui-sm" role="status">
-                      На этом складе нет накладных с остатком, погрузкой, продажами или списаниями по партиям.
+                      На этом складе нет накладных с остатком, погрузкой, продажами или возвратами по партиям.
                     </p>
                   ) : null}
                   {warehouseDocumentAggregates.length > 0 ? (
@@ -383,7 +383,7 @@ export function AdminStockWarehousesPage() {
                             <th style={thHeadDense}>На складе, ящ.</th>
                             <th style={thHeadDense}>Погружено, кг</th>
                             <th style={thHeadDense}>Продано, кг</th>
-                            <th style={thHeadDense}>Списано, кг</th>
+                            <th style={thHeadDense}>Возвращено, кг</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -432,7 +432,7 @@ export function AdminStockWarehousesPage() {
                     {selectedWarehouseStats.writtenOffKg > 0 ? (
                       <>
                         <span className="birzha-text-muted"> · </span>
-                        Списано:{" "}
+                        Возвращено (журнал):{" "}
                         <strong>
                           {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
                         </strong>
@@ -462,7 +462,7 @@ export function AdminStockWarehousesPage() {
                 />
                 {gradeStockAggregates.length === 0 && !batchesQ.isPending ? (
                   <p className="birzha-text-muted birzha-ui-sm" role="status">
-                    На этом складе нет остатка, погрузки, продаж или списаний по партиям.
+                    На этом складе нет остатка, погрузки, продаж или возвратов по партиям.
                   </p>
                 ) : null}
                 {gradeStockAggregates.length > 0 ? (
@@ -476,7 +476,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>На складе, ящ.</th>
                           <th style={thHeadDense}>Погружено, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
-                          <th style={thHeadDense}>Списано, кг</th>
+                          <th style={thHeadDense}>Возвращено, кг</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -510,18 +510,18 @@ export function AdminStockWarehousesPage() {
                     defaultOpen
                     title={
                       <span className="birzha-section-title-inline">
-                        Списания с остатка (погрузка)
+                        Возвраты на склад (журнал)
                         {selectedWarehouseName ? `: ${selectedWarehouseName}` : ""}
                       </span>
                     }
                   >
                     {writeOffsQ.isPending ? (
-                      <LoadingBlock label="Загрузка списаний…" minHeight={48} skeleton skeletonRows={3} />
+                      <LoadingBlock label="Загрузка возвратов…" minHeight={48} skeleton skeletonRows={3} />
                     ) : writeOffsQ.isError ? (
-                      <ErrorAlert message="Не удалось загрузить журнал списаний." title="Списания" />
+                      <ErrorAlert message="Не удалось загрузить журнал возвратов." title="Возвраты" />
                     ) : writeOffLines.length === 0 ? (
                       <p className="birzha-text-muted birzha-ui-sm" role="status">
-                        Списаний с этого склада пока нет. Операция «Списать» — в разделе «Распределение» при погрузке.
+                        Возвратов с этого склада пока нет. Операция «Вернуть на склад» — в «Погрузка на машину» или разделе «Возврат на склад».
                       </p>
                     ) : (
                       <>
@@ -538,7 +538,7 @@ export function AdminStockWarehousesPage() {
                                 <th style={thHeadDense}>Когда</th>
                                 <th style={thHeadDense}>Накладная</th>
                                 <th style={thHeadDense}>Калибр</th>
-                                <th style={thHeadDense}>Списано, кг</th>
+                                <th style={thHeadDense}>Возвращено, кг</th>
                               </tr>
                             </thead>
                             <tbody>

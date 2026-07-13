@@ -195,7 +195,7 @@ export async function patchBatchAllocation(
 }
 
 /**
- * `POST /api/batches/:id/warehouse-write-off` — списание брака с остатка.
+ * `POST /api/batches/:id/warehouse-write-off` — возврат на склад (журнал, остаток не уменьшается).
  */
 export async function postBatchWarehouseWriteOffQualityReject(
   batchId: string,
@@ -231,7 +231,7 @@ export async function postBatchWarehouseWriteOffQualityReject(
 }
 
 /**
- * `DELETE /api/warehouse-write-offs/:id` — отмена последнего списания брака с остатка.
+ * `DELETE /api/warehouse-write-offs/:id` — отмена записи возврата на склад.
  */
 export async function deleteWarehouseWriteOffById(writeOffId: string): Promise<void> {
   const url = `/api/warehouse-write-offs/${encodeURIComponent(writeOffId)}`;
@@ -267,8 +267,13 @@ export async function closeTripById(tripId: string, messageOn403: string): Promi
 /**
  * `DELETE /api/trips/:id` — права и конфликт 409 (рейс с движениями).
  */
-export async function deleteTripById(tripId: string, messageOn403: string): Promise<void> {
-  const url = `/api/trips/${encodeURIComponent(tripId)}`;
+export async function deleteTripById(
+  tripId: string,
+  messageOn403: string,
+  options?: { fromArchive?: boolean },
+): Promise<void> {
+  const params = options?.fromArchive ? "?fromArchive=1" : "";
+  const url = `/api/trips/${encodeURIComponent(tripId)}${params}`;
   const res = await apiFetch(url, { method: "DELETE" });
   if (res.status === 403) {
     throw new Error(messageOn403);
@@ -291,8 +296,13 @@ export async function deleteTripById(tripId: string, messageOn403: string): Prom
 /**
  * `DELETE /api/loading-manifests/:id` — только admin; 409 если товар уже в рейсе.
  */
-export async function deleteLoadingManifestById(manifestId: string, messageOn403: string): Promise<void> {
-  const url = `/api/loading-manifests/${encodeURIComponent(manifestId)}`;
+export async function deleteLoadingManifestById(
+  manifestId: string,
+  messageOn403: string,
+  options?: { fromArchive?: boolean },
+): Promise<void> {
+  const params = options?.fromArchive ? "?fromArchive=1" : "";
+  const url = `/api/loading-manifests/${encodeURIComponent(manifestId)}${params}`;
   const res = await apiFetch(url, { method: "DELETE" });
   if (res.status === 403) {
     throw new Error(messageOn403);

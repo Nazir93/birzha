@@ -34,10 +34,12 @@ export type BatchJson = {
     destination: string | null;
   };
   /**
-   * Сумма кг, списанных как «брак с остатка» (журнал `quality_reject`), без прочих списаний в `writtenOffKg`.
+   * Сумма кг в журнале «возврат на склад» (`quality_reject`), без прочих списаний в `writtenOffKg`.
    * Только при PostgreSQL; иначе поле нет.
    */
   qualityRejectWrittenOffKg?: number;
+  /** Кг для отбора в погрузку: `onWarehouseKg` минус сумма возвратов в журнале. */
+  availableForLoadingKg?: number;
 };
 
 export function batchToJson(
@@ -47,18 +49,25 @@ export function batchToJson(
   extras?: { qualityRejectWrittenOffKg: number },
 ): BatchJson {
   const s = batch.toPersistenceState();
+  const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
+  const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
   return {
     id: s.id,
     purchaseId: s.purchaseId,
     totalKg: gramsToKg(s.totalGrams),
     pricePerKg: s.pricePerKg,
     pendingInboundKg: gramsToKg(s.pendingInboundGrams),
-    onWarehouseKg: gramsToKg(s.onWarehouseGrams),
+    onWarehouseKg,
     inTransitKg: gramsToKg(s.inTransitGrams),
     soldKg: gramsToKg(s.soldGrams),
     writtenOffKg: gramsToKg(s.writtenOffGrams),
     ...(nakladnaya ? { nakladnaya } : {}),
     ...(allocation ? { allocation } : {}),
-    ...(extras ? { qualityRejectWrittenOffKg: extras.qualityRejectWrittenOffKg } : {}),
+    ...(extras
+      ? {
+          qualityRejectWrittenOffKg,
+          availableForLoadingKg: Math.max(0, onWarehouseKg - qualityRejectWrittenOffKg),
+        }
+      : {}),
   };
 }

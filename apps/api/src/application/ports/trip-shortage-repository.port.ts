@@ -21,4 +21,6 @@ export interface TripShortageRepository {
   aggregateByTripId(tripId: string): Promise<TripShortageAggregate>;
   totalGramsForTripAndBatch(tripId: string, batchId: string): Promise<bigint>;
   deleteByBatchIds(batchIds: string[]): Promise<void>;
+  /** Удаление всех строк журнала по рейсу (очистка архива). */
+  deleteAllForTripId(tripId: string): Promise<void>;
 }

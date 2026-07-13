@@ -19,6 +19,7 @@ const SHARED_OPS_SEGMENTS = {
   loadingAppend: "loading-append",
   loadingTrip: "loading-trip",
   loadingManifests: "loading-manifests",
+  warehouseReturns: "warehouse-returns",
   operations: "operations",
   sellerDispatch: "seller-dispatch",
   assignSeller: "assign-seller",
@@ -34,6 +35,7 @@ function sharedOpsPaths(root: OpsCabinetPrefix) {
     trips: `${root}/${s.trips}`,
     purchaseNakladnaya: `${root}/${s.purchaseNakladnaya}`,
     distribution: `${root}/${s.distribution}`,
+    warehouseReturns: `${root}/${s.warehouseReturns}`,
     loadingAppend: `${root}/${s.loadingAppend}`,
     loadingTrip: `${root}/${s.loadingTrip}`,
     loadingManifests: `${root}/${s.loadingManifests}`,
@@ -67,8 +69,10 @@ export const adminRoutes = {
   inventory: `${prefix.admin}/inventory`,
   /** Склады: справочник + остатки по выбранному складу. */
   stockWarehouses: `${prefix.admin}/stock-warehouses`,
-  /** Журнал списаний брака с остатка (все накладные). */
+  /** Журнал возвратов на склад (legacy URL). */
   warehouseWriteOffsLedger: `${prefix.admin}/warehouse-write-offs`,
+  /** Журнал возвратов на склад при погрузке. */
+  warehouseReturns: `${prefix.admin}/warehouse-returns`,
   users: `${prefix.admin}/users`,
   archive: `${prefix.admin}/archive`,
 } as const;

@@ -1,14 +1,19 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { DbClient } from "../../db/client.js";
-import { batches, loadingManifestLines, loadingManifests, tripBatchShipments } from "../../db/schema.js";
+import { batches, loadingManifestLines, loadingManifests, tripBatchShipments, trips } from "../../db/schema.js";
 import { LoadingManifestNotEmptyError, LoadingManifestNotFoundError } from "../errors.js";
 import { loadingManifestDeletable, loadingManifestNotDeletableMessage } from "./loading-manifest-deletable.js";
+
+export type DeleteLoadingManifestOptions = {
+  /** Удаление из архива: документ и строки без отмены отгрузки в рейс. */
+  fromArchive?: boolean;
+};
 
 export class DeleteLoadingManifestUseCase {
   constructor(private readonly db: DbClient) {}
 
-  async execute(manifestId: string): Promise<void> {
+  async execute(manifestId: string, options?: DeleteLoadingManifestOptions): Promise<void> {
     const id = manifestId.trim();
 
     const [manifestRow] = await this.db
@@ -19,6 +24,25 @@ export class DeleteLoadingManifestUseCase {
 
     if (!manifestRow) {
       throw new LoadingManifestNotFoundError(id);
+    }
+
+    if (options?.fromArchive) {
+      const tripId = manifestRow.tripId?.trim() ?? "";
+      if (tripId.length > 0) {
+        const [tripRow] = await this.db
+          .select({ status: trips.status })
+          .from(trips)
+          .where(eq(trips.id, tripId))
+          .limit(1);
+        if (!tripRow || tripRow.status !== "closed") {
+          throw new LoadingManifestNotEmptyError(
+            id,
+            "Удаление из архива доступно только для погрузочных закрытого рейса.",
+          );
+        }
+      }
+      await this.db.delete(loadingManifests).where(eq(loadingManifests.id, id));
+      return;
     }
 
     const lineRows = await this.db

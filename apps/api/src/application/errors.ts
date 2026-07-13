@@ -58,6 +58,18 @@ export class TripSellerCrossWarehouseLoadingError extends Error {
   }
 }
 
+/** Удаление из архива разрешено только для закрытого рейса. */
+export class TripArchiveDeleteRequiresClosedError extends Error {
+  readonly tripId: string;
+
+  constructor(tripId: string) {
+    super(`Рейс ${tripId} нельзя удалить из архива: рейс ещё открыт.`);
+    this.name = "TripArchiveDeleteRequiresClosedError";
+    this.tripId = tripId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Удаление запрещено: по рейсу уже есть отгрузки, продажи или недостачи. */
 export class TripNotEmptyError extends Error {
   readonly tripId: string;

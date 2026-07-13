@@ -8,7 +8,7 @@ import { ReverseWarehouseWriteOffUseCase } from "./reverse-warehouse-write-off.u
 import { WarehouseWriteOffNotFoundError } from "../errors.js";
 
 describe("ReverseWarehouseWriteOffUseCase", () => {
-  it("возвращает кг на склад и удаляет запись журнала", async () => {
+  it("удаляет запись журнала без изменения остатка на складе", async () => {
     const batches = new InMemoryBatchRepository();
     const ledger = new InMemoryBatchWarehouseWriteOffLedger();
     const record = new RecordWarehouseWriteOffUseCase(batches, ledger);
@@ -37,10 +37,9 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
     await expect(reverse.execute("missing-id")).rejects.toThrow(WarehouseWriteOffNotFoundError);
   });
 
-  it("отказывает если в партии недостаточно списанного кг", async () => {
+  it("для legacy-записей возвращает списанные кг на склад", async () => {
     const batches = new InMemoryBatchRepository();
     const ledger = new InMemoryBatchWarehouseWriteOffLedger();
-    const record = new RecordWarehouseWriteOffUseCase(batches, ledger);
     const reverse = new ReverseWarehouseWriteOffUseCase(batches, ledger);
     const b = Batch.create({
       id: "b-w2",
@@ -49,9 +48,40 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
       pricePerKg: 1,
       distribution: "on_hand",
     });
+    b.writeOff(10, "legacy");
     await batches.save(b);
-    const { writeOffId } = await record.execute({ batchId: "b-w2", kg: 10, reason: "quality_reject" });
+    await ledger.append({
+      id: "legacy-row",
+      batchId: "b-w2",
+      grams: kgToGrams(10),
+      reason: "quality_reject",
+    });
+    await reverse.execute("legacy-row");
     const reloaded = await batches.findById("b-w2");
+    expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(100);
+    expect(gramsToKg(reloaded!.toPersistenceState().writtenOffGrams)).toBe(0);
+  });
+
+  it("отказывает если в партии недостаточно legacy-списанного кг", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    const reverse = new ReverseWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-w3",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    b.writeOff(10, "legacy");
+    await batches.save(b);
+    await ledger.append({
+      id: "legacy-row-2",
+      batchId: "b-w3",
+      grams: kgToGrams(10),
+      reason: "quality_reject",
+    });
+    const reloaded = await batches.findById("b-w3");
     const state = reloaded!.toPersistenceState();
     await batches.save(
       Batch.restoreFromPersistence({
@@ -60,6 +90,6 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
         onWarehouseGrams: state.onWarehouseGrams + kgToGrams(5),
       }),
     );
-    await expect(reverse.execute(writeOffId)).rejects.toThrow(InsufficientStockError);
+    await expect(reverse.execute("legacy-row-2")).rejects.toThrow(InsufficientStockError);
   });
 });

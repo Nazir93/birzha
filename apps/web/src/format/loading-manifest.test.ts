@@ -85,6 +85,20 @@ describe("filterBatchesForLoadingManifest", () => {
     const r = filterBatchesForLoadingManifest(batches, 1, new Set(["d1"]));
     expect(r).toHaveLength(1);
   });
+
+  it("скрывает партии, где весь остаток уже в журнале возвратов", () => {
+    const batches = [
+      b({
+        id: "a",
+        onWarehouseKg: 100,
+        totalKg: 100,
+        qualityRejectWrittenOffKg: 100,
+        nakladnaya: { documentId: "d1" } as BatchListItem["nakladnaya"],
+      }),
+    ];
+    const r = filterBatchesForLoadingManifest(batches, 0, new Set());
+    expect(r).toHaveLength(0);
+  });
 });
 
 describe("sumLoadingManifestTotals", () => {
@@ -103,6 +117,21 @@ describe("sumLoadingManifestTotals", () => {
     expect(t.batchCount).toBe(2);
     expect(t.linesWithPkg).toBe(1);
     expect(t.pkg).toBe(5);
+  });
+
+  it("вычитает кг из журнала возвратов", () => {
+    const batches = [
+      b({
+        id: "1",
+        totalKg: 100,
+        onWarehouseKg: 100,
+        qualityRejectWrittenOffKg: 40,
+        nakladnaya: { linePackageCount: 20 } as BatchListItem["nakladnaya"],
+      }),
+    ];
+    const t = sumLoadingManifestTotals(batches);
+    expect(t.kg).toBe(60);
+    expect(t.pkg).toBe(12);
   });
 });
 

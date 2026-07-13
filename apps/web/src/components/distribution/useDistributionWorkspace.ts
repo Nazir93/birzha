@@ -10,6 +10,7 @@ import {
   buildAllocationWarehouseOptions,
   type AllocationWarehouseOption,
 } from "../../format/allocation-warehouse-option.js";
+import { batchAvailableForLoadingKg } from "../../format/batch-available-for-loading.js";
 import { batchWarehouseId, isEligibleForLoadingAllocation } from "../../format/batch-warehouse.js";
 import {
   estimatedPackageCountOnShelf,
@@ -246,7 +247,7 @@ export function useDistributionWorkspace({
   }, [routeManifestId, routeDetail, closedIds]);
 
   const batchesOnWarehouse = useMemo(
-    () => batchesMerged.filter((b) => b.onWarehouseKg > 0),
+    () => batchesMerged.filter((b) => batchAvailableForLoadingKg(b) > 0),
     [batchesMerged],
   );
 

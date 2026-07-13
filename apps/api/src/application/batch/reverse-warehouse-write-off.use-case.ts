@@ -32,8 +32,11 @@ export class ReverseWarehouseWriteOffUseCase {
         throw new Error(`unsupported_write_off_kind:${row.reason}`);
       }
       const batch = await loadBatchOrThrow(batchRepo, row.batchId);
-      batch.reverseWarehouseWriteOff(gramsToKg(row.grams));
-      await batchRepo.save(batch);
+      const writtenOffGrams = batch.toPersistenceState().writtenOffGrams;
+      if (writtenOffGrams > 0n) {
+        batch.reverseWarehouseWriteOff(gramsToKg(row.grams));
+        await batchRepo.save(batch);
+      }
       const deleted = await l.deleteById(id);
       if (!deleted) {
         throw new WarehouseWriteOffNotFoundError(id);

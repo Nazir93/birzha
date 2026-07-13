@@ -86,4 +86,41 @@ describe("Purchase document HTTP (накладная)", () => {
     expect(body.error).toBe("purchase_line_total_mismatch");
     await app.close();
   });
+
+  it("DELETE /purchase-documents/:id удаляет документ и партии", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const batches = new InMemoryBatchRepository();
+    const app = await buildApp({ env, db: null, batchRepository: batches });
+
+    await app.inject({
+      method: "POST",
+      url: "/purchase-documents",
+      payload: {
+        id: "nakl-del",
+        documentNumber: "НФ-DEL",
+        docDate: "2026-04-01",
+        warehouseId: "wh-manas",
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            totalKg: 10,
+            pricePerKg: 50,
+            lineTotalKopecks: 50_000,
+          },
+        ],
+      },
+    });
+
+    let res = await app.inject({ method: "DELETE", url: "/purchase-documents/nakl-del" });
+    expect(res.statusCode).toBe(204);
+
+    res = await app.inject({ method: "GET", url: "/purchase-documents/nakl-del" });
+    expect(res.statusCode).toBe(404);
+
+    const list = await batches.list();
+    expect(list.some((b) => b.getPurchaseId() === "nakl-del")).toBe(false);
+
+    await app.close();
+  });
 });

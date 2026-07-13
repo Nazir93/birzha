@@ -114,4 +114,19 @@ describe("planLoadingManifestAssignTripShipment", () => {
       }),
     ).toEqual({ kind: "none" });
   });
+
+  it("учитывает возвраты на склад — отгрузка только с доступного остатка", () => {
+    expect(
+      planLoadingManifestAssignTripShipment({
+        lineGrams: 5000n,
+        linePackageCount: 100n,
+        ledgerGramsForTripBatch: 0n,
+        ledgerPackageCountForTripBatch: 0n,
+        onWarehouseGrams: 5000n,
+        inTransitGrams: 0n,
+        shipmentGramsOtherTrips: 0n,
+        warehouseReturnGrams: 2000n,
+      }),
+    ).toEqual({ kind: "ship_from_warehouse", grams: 3000n, packageCount: 60n });
+  });
 });

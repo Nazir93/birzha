@@ -29,6 +29,9 @@ const LoadingAppendPanel = lazy(() =>
 const LoadingTripPanel = lazy(() =>
   import("../components/LoadingTripPanel.js").then((m) => ({ default: m.LoadingTripPanel })),
 );
+const WarehouseReturnsPage = lazy(() =>
+  import("../components/WarehouseReturnsPage.js").then((m) => ({ default: m.WarehouseReturnsPage })),
+);
 const ArchivePage = lazy(() => import("../components/ArchivePage.js").then((m) => ({ default: m.ArchivePage })));
 const OperationsPanel = lazy(() =>
   import("../components/OperationsPanel.js").then((m) => ({ default: m.OperationsPanel })),
@@ -113,6 +116,16 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
           <RequirePanel panel="trips">
             <section className="birzha-card">
               <AdminTripsLogisticsPanel />
+            </section>
+          </RequirePanel>
+        }
+      />
+      <Route
+        path="warehouse-returns"
+        element={
+          <RequirePanel panel="warehouseReturns">
+            <section className="birzha-card">
+              <WarehouseReturnsPage />
             </section>
           </RequirePanel>
         }

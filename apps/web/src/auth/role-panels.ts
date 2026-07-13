@@ -15,6 +15,7 @@ export type PanelId =
   | "reports"
   | "nakladnaya"
   | "distribution"
+  | "warehouseReturns"
   | "loadingAppend"
   | "loadingTrip"
   | "trips"
@@ -31,6 +32,7 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   distribution: "Погрузка на машину",
+  warehouseReturns: "Возврат на склад",
   loadingAppend: "Догрузка",
   loadingTrip: "Смена рейса",
   trips: "Рейсы",
@@ -51,6 +53,7 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  warehouseReturns: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingAppend: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingTrip: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   trips: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
@@ -298,6 +301,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "trips",
     "distribution",
+    "warehouseReturns",
     "loadingAppend",
     "loadingTrip",
     "assignSeller",
@@ -327,6 +331,7 @@ export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
     "nakladnaya",
     "trips",
     "distribution",
+    "warehouseReturns",
     "loadingAppend",
     "loadingTrip",
     "assignSeller",
@@ -342,6 +347,7 @@ const SHARED_OPS_PANELS = [
   "nakladnaya",
   "trips",
   "distribution",
+  "warehouseReturns",
   "loadingAppend",
   "loadingTrip",
   "archive",
@@ -357,7 +363,10 @@ function isSharedOpsPanel(panel: PanelId): panel is SharedOpsPanel {
 }
 
 function sharedOpsSegmentForPanel(panel: SharedOpsPanel): SharedOpsSegment {
-  return panel === "nakladnaya" ? "purchaseNakladnaya" : panel;
+  if (panel === "nakladnaya") {
+    return "purchaseNakladnaya";
+  }
+  return panel;
 }
 
 export function hrefForPanelInCabinet(

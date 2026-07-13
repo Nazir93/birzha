@@ -11,7 +11,7 @@ export type WarehouseDocumentStockRow = {
   writtenOffKg: number;
 };
 
-/** Кг, списанные с остатка на складе (брак при погрузке и т.п.). */
+/** Кг, зафиксированные в журнале возврата на склад (масса onWarehouse не уменьшается). */
 export function batchWrittenOffKg(batch: BatchListItem): number {
   const fromLedger = batch.qualityRejectWrittenOffKg;
   if (fromLedger != null && fromLedger > 0) {

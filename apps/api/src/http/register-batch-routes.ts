@@ -17,6 +17,7 @@ import { z } from "zod";
 
 import { RecordWarehouseWriteOffUseCase } from "../application/batch/record-warehouse-write-off.use-case.js";
 import { ReverseWarehouseWriteOffUseCase } from "../application/batch/reverse-warehouse-write-off.use-case.js";
+import { estimateReturnPackageCount } from "../application/batch/warehouse-return-package-count.js";
 import {
   batchWarehouseWriteOffs,
   batches as batchesTable,
@@ -27,6 +28,7 @@ import {
 } from "../db/schema.js";
 import { gramsToKg } from "../application/units/mass.js";
 import { DrizzlePurchaseLinePackageMetaRepository } from "../infrastructure/persistence/drizzle-purchase-line-package-meta.js";
+import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { NullPurchaseLinePackageMetaPort } from "../infrastructure/persistence/null-purchase-line-package-meta.js";
 
 import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.use-case.js";
@@ -86,7 +88,8 @@ export function registerBatchRoutes(
 ): void {
   const createPurchase = new CreatePurchaseUseCase(batches);
   const receive = new ReceiveOnWarehouseUseCase(batches);
-  const ship = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction);
+  const warehouseReturnLedger = db ? new DrizzleBatchWarehouseWriteOffLedger(db) : null;
+  const ship = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction, warehouseReturnLedger);
   const purchaseLinePackages = db
     ? new DrizzlePurchaseLinePackageMetaRepository(db)
     : new NullPurchaseLinePackageMetaPort();
@@ -575,6 +578,8 @@ export function registerBatchRoutes(
             productGradeCode: productGrades.code,
             warehouseName: warehousesTable.name,
             warehouseCode: warehousesTable.code,
+            lineQuantityGrams: purchaseDocumentLines.quantityGrams,
+            linePackageCount: purchaseDocumentLines.packageCount,
           })
           .from(batchWarehouseWriteOffs)
           .innerJoin(batchesTable, eq(batchWarehouseWriteOffs.batchId, batchesTable.id))
@@ -609,6 +614,11 @@ export function registerBatchRoutes(
             id: r.id,
             batchId: r.batchId,
             kg: gramsToKg(r.grams),
+            packageCount: estimateReturnPackageCount({
+              returnGrams: r.grams,
+              lineQuantityGrams: r.lineQuantityGrams,
+              linePackageCount: r.linePackageCount,
+            }),
             createdAt: r.createdAt.toISOString(),
             purchaseDocumentId: r.purchaseDocumentId,
             documentNumber: r.documentNumber,

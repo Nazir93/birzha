@@ -17,9 +17,9 @@ export function WriteOffRecentList({ rows, undoingWriteOffId, onUndo }: Props) {
 
   return (
     <div className="birzha-writeoff-recent no-print" style={{ marginTop: "0.75rem" }}>
-      <h5 style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.4rem" }}>Списанные</h5>
+      <h5 style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.4rem" }}>Недавние возвраты</h5>
       <div className="birzha-table-scroll birzha-nakl-lines-card">
-        <table className="birzha-data-table birzha-data-table--compact" aria-label="Недавние списания">
+        <table className="birzha-data-table birzha-data-table--compact" aria-label="Недавние возвраты на склад">
           <thead>
             <tr>
               <th>Строка</th>
@@ -44,7 +44,7 @@ export function WriteOffRecentList({ rows, undoingWriteOffId, onUndo }: Props) {
                       disabled={busy}
                       onClick={() => onUndo(row.writeOffId)}
                     >
-                      {undoing ? "…" : "Вернуть"}
+                      {undoing ? "…" : "Отменить"}
                     </button>
                   </td>
                 </tr>

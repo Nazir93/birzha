@@ -732,7 +732,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
-    await expect(page.getByText("1. Списание и отбор партий")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("1. Возврат на склад и отбор партий")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("link", { name: new RegExp(docId) })).toBeVisible({ timeout: 15_000 });
 
@@ -984,13 +984,13 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByText("Закупочные накладные на складе")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("админ: /a/warehouse-write-offs — без PostgreSQL журнал недоступен", async ({ page, request }) => {
+  test("админ: /a/warehouse-returns — без PostgreSQL журнал недоступен", async ({ page, request }) => {
     const metaRes = await request.get("/api/meta");
     expect(metaRes.ok()).toBeTruthy();
     const meta = (await metaRes.json()) as { warehouseWriteOffApi?: string };
     expect(meta.warehouseWriteOffApi).toBe("disabled");
 
-    await page.goto("/a/warehouse-write-offs");
+    await page.goto("/a/warehouse-returns");
     await expect(page.getByRole("heading", { name: "Журнал недоступен" })).toBeVisible({ timeout: 15_000 });
   });
 

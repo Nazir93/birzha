@@ -104,4 +104,6 @@ export interface TripSaleRepository {
   /** Число строк с этим `counterpartyId` (блокировка удаления справочника). */
   countByCounterpartyId(counterpartyId: string): Promise<number>;
   deleteByBatchIds(batchIds: string[]): Promise<void>;
+  /** Удаление всех строк журнала по рейсу (очистка архива). */
+  deleteAllForTripId(tripId: string): Promise<void>;
 }

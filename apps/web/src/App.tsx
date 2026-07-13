@@ -30,10 +30,8 @@ const AdminUsersPanel = lazy(() =>
 const AdminStockWarehousesPage = lazy(() =>
   import("./components/AdminStockWarehousesPage.js").then((m) => ({ default: m.AdminStockWarehousesPage })),
 );
-const AdminWarehouseWriteOffsLedgerPage = lazy(() =>
-  import("./components/AdminWarehouseWriteOffsLedgerPage.js").then((m) => ({
-    default: m.AdminWarehouseWriteOffsLedgerPage,
-  })),
+const WarehouseReturnsPage = lazy(() =>
+  import("./components/WarehouseReturnsPage.js").then((m) => ({ default: m.WarehouseReturnsPage })),
 );
 const CounterpartiesPanel = lazy(() =>
   import("./components/CounterpartiesPanel.js").then((m) => ({ default: m.CounterpartiesPanel })),
@@ -126,10 +124,14 @@ export function App() {
             />
             <Route
               path="warehouse-write-offs"
+              element={<Navigate to={adminRoutes.warehouseReturns} replace />}
+            />
+            <Route
+              path="warehouse-returns"
               element={
-                <RequirePanel panel="inventory">
+                <RequirePanel panel="warehouseReturns">
                   <section className="birzha-card">
-                    <AdminWarehouseWriteOffsLedgerPage />
+                    <WarehouseReturnsPage />
                   </section>
                 </RequirePanel>
               }

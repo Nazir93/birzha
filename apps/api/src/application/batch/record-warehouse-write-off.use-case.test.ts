@@ -6,7 +6,7 @@ import { InMemoryBatchWarehouseWriteOffLedger } from "../testing/in-memory-batch
 import { RecordWarehouseWriteOffUseCase } from "./record-warehouse-write-off.use-case.js";
 
 describe("RecordWarehouseWriteOffUseCase", () => {
-  it("списывает кг с остатка и пишет в журнал (quality_reject)", async () => {
+  it("фиксирует возврат на склад в журнале без уменьшения onWarehouse", async () => {
     const batches = new InMemoryBatchRepository();
     const ledger = new InMemoryBatchWarehouseWriteOffLedger();
     const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
@@ -22,7 +22,8 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(writeOffId.length).toBeGreaterThan(0);
     const reloaded = await batches.findById("b-w1");
     expect(reloaded).not.toBeNull();
-    expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(185);
+    expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(200);
+    expect(gramsToKg(reloaded!.toPersistenceState().writtenOffGrams)).toBe(0);
     const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-w1"]);
     expect(sums.get("b-w1") ?? 0n).toBe(15_000n);
   });
@@ -41,6 +42,24 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     await batches.save(b);
     await expect(
       async () => await uc.execute({ batchId: "b-w2", kg: 100, reason: "quality_reject" }),
+    ).rejects.toThrow(InsufficientStockError);
+  });
+
+  it("отказывает если сумма возвратов превысит остаток на складе", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-w3",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await batches.save(b);
+    await uc.execute({ batchId: "b-w3", kg: 60, reason: "quality_reject" });
+    await expect(
+      async () => await uc.execute({ batchId: "b-w3", kg: 50, reason: "quality_reject" }),
     ).rejects.toThrow(InsufficientStockError);
   });
 });

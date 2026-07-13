@@ -39,6 +39,7 @@ import { DrizzleTripRepository } from "./infrastructure/persistence/drizzle-trip
 import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-trip-sale.repository.js";
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
+import { DrizzleTripArchiveManifestCleanup } from "./infrastructure/persistence/drizzle-trip-archive-manifest-cleanup.js";
 import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
@@ -181,7 +182,11 @@ export async function buildApp(options: {
     ? async (fn) => {
         await db.transaction(async (tx) => {
           const exec = tx as unknown as DbClient;
-          await fn(new DrizzleBatchRepository(exec), new DrizzleTripShipmentRepository(exec));
+          await fn(
+            new DrizzleBatchRepository(exec),
+            new DrizzleTripShipmentRepository(exec),
+            new DrizzleBatchWarehouseWriteOffLedger(exec),
+          );
         });
       }
     : undefined;
@@ -394,6 +399,7 @@ export async function buildApp(options: {
       batchRepository,
       routeAuth,
       options.listAssignableFieldSellers ?? (db ? () => listGlobalSellerUsers(db) : undefined),
+      db ? new DrizzleTripArchiveManifestCleanup(db) : undefined,
     );
     registerBatchRoutes(
       app,

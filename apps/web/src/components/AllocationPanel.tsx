@@ -65,7 +65,7 @@ export function AllocationPanel() {
   const [createManifestWarning, setCreateManifestWarning] = useState<string | null>(null);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
   const [rejectScrapPkgInput, setRejectScrapPkgInput] = useState<Record<string, string>>({});
-  /** Шаг 2 (город, дата, сохранение ПН) — только после списания и отбора. */
+  /** Шаг 2 (город, дата, сохранение ПН) — только после возврата на склад и отбора. */
   const [manifestFormOpen, setManifestFormOpen] = useState(false);
   const [manifestListPage, setManifestListPage] = useState(0);
   const [deleteManifestError, setDeleteManifestError] = useState<string | null>(null);
@@ -511,11 +511,11 @@ export function AllocationPanel() {
 
       {showWorkspace && selectedWarehouse && !viewingSaved ? (
         <>
-          <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">1. Списание и отбор партий</h4>
+          <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">1. Возврат на склад и отбор партий</h4>
           {meta?.warehouseWriteOffApi !== "enabled" ? (
-            <InfoAlert title="Списание недоступно">
-              Списание со склада работает при подключённой базе PostgreSQL. Пока можно только собрать погрузочную
-              накладную без списания.
+            <InfoAlert title="Возврат на склад недоступен">
+              Возврат на склад работает при подключённой базе PostgreSQL. Пока можно только собрать погрузочную
+              накладную без возврата.
             </InfoAlert>
           ) : null}
           {documentOptions.length === 0 && batchesInWh.length > 0 ? (

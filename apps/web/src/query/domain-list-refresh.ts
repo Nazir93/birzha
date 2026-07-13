@@ -23,3 +23,13 @@ export async function refreshDistributionLists(queryClient: QueryClient): Promis
     queryClient.refetchQueries({ queryKey: queryRoots.trips }),
   ]);
 }
+
+/** После удаления из архива — рейсы, закупочные и погрузочные накладные. */
+export async function refreshArchiveLists(queryClient: QueryClient): Promise<void> {
+  invalidateStockQueries(queryClient);
+  await Promise.all([
+    queryClient.refetchQueries({ queryKey: queryRoots.trips }),
+    queryClient.refetchQueries({ queryKey: queryRoots.purchaseDocuments }),
+    queryClient.refetchQueries({ queryKey: queryRoots.loadingManifest }),
+  ]);
+}
