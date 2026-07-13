@@ -17,6 +17,7 @@ import {
   formatManifestWarehouseNames,
   resolveLoadingManifestNumberForSave,
   filterBatchesForLoadingManifest,
+  formatPurchaseDocumentDisplayLabel,
   loadingManifestRoadCsvContent,
   sumLoadingManifestTotals,
   summarizeAllocationBreakdown,
@@ -61,6 +62,20 @@ describe("estimatedPackageCountOnShelf", () => {
   });
 });
 
+describe("formatPurchaseDocumentDisplayLabel", () => {
+  it("показывает номер даже без documentId", () => {
+    expect(formatPurchaseDocumentDisplayLabel(null, "дадай · 2026-07-13")).toBe("№ дадай · 2026-07-13");
+  });
+
+  it("fallback на хвост id", () => {
+    expect(formatPurchaseDocumentDisplayLabel("abcdef123456", "")).toBe("№ …123456");
+  });
+
+  it("без данных — явная подпись", () => {
+    expect(formatPurchaseDocumentDisplayLabel(null, null)).toBe("Без накладной в данных");
+  });
+});
+
 describe("filterBatchesForLoadingManifest", () => {
   it("при 0 вариантов накл. — все партии с остатком", () => {
     const batches = [
@@ -80,10 +95,19 @@ describe("filterBatchesForLoadingManifest", () => {
     expect(r.map((x) => x.id)).toEqual(["a"]);
   });
 
-  it("строка без documentId в данных — filter при count>0 ведёт себя согласно селектору (краевой кейс)", () => {
+  it("пустое выделение при наличии вариантов — ничего не включает", () => {
+    const batches = [
+      b({ id: "a", onWarehouseKg: 1, totalKg: 1, nakladnaya: { documentId: "d1" } as BatchListItem["nakladnaya"] }),
+      b({ id: "b", onWarehouseKg: 2, totalKg: 2, nakladnaya: { documentId: "d2" } as BatchListItem["nakladnaya"] }),
+    ];
+    const r = filterBatchesForLoadingManifest(batches, 2, new Set());
+    expect(r).toHaveLength(0);
+  });
+
+  it("строка без documentId при активном фильтре — не включается", () => {
     const batches = [b({ id: "x", onWarehouseKg: 1, totalKg: 1 })];
     const r = filterBatchesForLoadingManifest(batches, 1, new Set(["d1"]));
-    expect(r).toHaveLength(1);
+    expect(r).toHaveLength(0);
   });
 
   it("скрывает партии, где весь остаток уже в журнале возвратов", () => {

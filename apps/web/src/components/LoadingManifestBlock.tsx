@@ -11,6 +11,7 @@ import {
   buildWriteOffItemsFromInputs,
   filterBatchesForLoadingManifest,
   formatLoadingManifestCardHeader,
+  formatPurchaseDocumentDisplayLabel,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
@@ -86,6 +87,7 @@ function syntheticBatchFromManifestLine(
 ): BatchListItem {
   const pkgRaw = line.packageCount != null && line.packageCount !== "" ? Number(line.packageCount) : NaN;
   const linePk = Number.isFinite(pkgRaw) && pkgRaw > 0 ? pkgRaw : null;
+  const documentNumber = line.purchaseDocumentNumber?.trim() || null;
   return {
     id: line.batchId,
     purchaseId: "—",
@@ -97,11 +99,11 @@ function syntheticBatchFromManifestLine(
     soldKg: 0,
     writtenOffKg: 0,
     nakladnaya: {
-      documentId: null,
-      warehouseId: null,
+      documentId: line.purchaseDocumentId?.trim() || null,
+      warehouseId: line.warehouseId?.trim() || null,
       productGradeCode: line.productGradeCode,
       productGroup: line.productGroup,
-      documentNumber: line.purchaseDocumentNumber,
+      documentNumber,
       linePackageCount: linePk,
     },
   };
@@ -126,9 +128,7 @@ export function LoadingManifestBlock({
   const [writeOffGroupMode, setWriteOffGroupMode] = useState<"caliber" | "nakladnaya">("caliber");
 
   const includedBatchesFromSelection = useMemo(() => {
-    const docCount =
-      documentOptions.length > 0 && selectedDocIds.size === 0 ? 0 : documentOptions.length;
-    return filterBatchesForLoadingManifest(batchesInWh, docCount, selectedDocIds);
+    return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, selectedDocIds);
   }, [batchesInWh, documentOptions.length, selectedDocIds]);
   const includedBatches = useMemo(() => {
     if (!manifest) {
@@ -162,7 +162,10 @@ export function LoadingManifestBlock({
       if (!id) {
         continue;
       }
-      m.set(id, { id, number: b.nakladnaya?.documentNumber?.trim() || id });
+      m.set(id, {
+        id,
+        number: formatPurchaseDocumentDisplayLabel(id, b.nakladnaya?.documentNumber).replace(/^№\s*/, ""),
+      });
     }
     return [...m.values()].sort((a, b) => a.number.localeCompare(b.number, "ru"));
   }, [includedBatches]);

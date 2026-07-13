@@ -329,14 +329,11 @@ export function useDistributionWorkspace({
     if (documentOptions.length === 0) {
       return batchesInWh;
     }
-    if (loadNaklSelection.size === 0) {
-      return filterBatchesForLoadingManifest(batchesInWh, 0, new Set());
-    }
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
   }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
 
   const tableRowsTotalKg = useMemo(
-    () => tableRows.reduce((a, b) => a + b.onWarehouseKg, 0),
+    () => tableRows.reduce((a, b) => a + batchAvailableForLoadingKg(b), 0),
     [tableRows],
   );
 

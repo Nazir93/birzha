@@ -253,6 +253,7 @@ export function registerLoadingManifestRoutes(
           onWarehouseGrams: batches.onWarehouseGrams,
           inTransitGrams: batches.inTransitGrams,
           purchaseDocumentNumber: purchaseDocuments.documentNumber,
+          purchaseDocumentId: purchaseDocuments.id,
           productGradeCode: productGrades.code,
           productGroup: productGrades.productGroup,
         })
@@ -305,6 +306,7 @@ export function registerLoadingManifestRoutes(
               kg: Number(r.line.grams) / 1000,
               packageCount: r.line.packageCount?.toString() ?? null,
               purchaseDocumentNumber: r.purchaseDocumentNumber,
+              purchaseDocumentId: r.purchaseDocumentId,
               productGradeCode: r.productGradeCode,
               productGroup: r.productGroup,
               warehouseId: r.batchWarehouseId,
@@ -572,7 +574,15 @@ export function registerLoadingManifestRoutes(
           await assertTripAllowsWarehouseLoading(db, tripRead, { tripId: assignedTripId, warehouseId });
         }
       }
-      const noStock = selected.find((r) => r.onWarehouseGrams <= 0n);
+      const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
+      const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds(batchIds);
+      const withAvailable = selected.map((r) => {
+        const returned = returnSums.get(r.batchId) ?? 0n;
+        const availableGrams =
+          r.onWarehouseGrams > returned ? r.onWarehouseGrams - returned : 0n;
+        return { ...r, availableGrams };
+      });
+      const noStock = withAvailable.find((r) => r.availableGrams <= 0n);
       if (noStock) {
         return reply.code(400).send({ error: "batch_without_stock", batchId: noStock.batchId });
       }
@@ -588,9 +598,9 @@ export function registerLoadingManifestRoutes(
       await db.transaction(async (tx) => {
         const exec = tx as unknown as DbClient;
         const affectedBatchIds = new Set<string>();
-        for (const row of selected) {
+        for (const row of withAvailable) {
           const already = existingByBatch.get(row.batchId);
-          const targetGrams = row.onWarehouseGrams;
+          const targetGrams = row.availableGrams;
           const packageCount = packageCountForPart(row.totalGrams, targetGrams, row.linePackageCount);
           if (already) {
             if (targetGrams > already.grams) {

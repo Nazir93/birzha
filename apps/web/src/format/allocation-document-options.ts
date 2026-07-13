@@ -1,6 +1,7 @@
 import { compareProductGradeCodes } from "@birzha/contracts";
 
 import type { BatchListItem } from "../api/types.js";
+import { batchAvailableForLoadingKg } from "./batch-available-for-loading.js";
 
 const STOCK_EPS_KG = 1e-6;
 
@@ -10,11 +11,11 @@ export type AllocationDocumentOption = {
   checkboxLabel: string;
 };
 
-/** Закупочные накладные для чекбоксов отбора: только с documentId и остатком на складе. */
-export function documentOptionsForAllocation(batches: BatchListItem[]): AllocationDocumentOption[] {
+/** Закупочные накладные для чекбоксов отбора: только с documentId и доступным остатком. */
+export function documentOptionsForAllocation(batches: readonly BatchListItem[]): AllocationDocumentOption[] {
   const byDoc = new Map<string, { number: string; grades: Set<string> }>();
   for (const b of batches) {
-    if (b.onWarehouseKg <= STOCK_EPS_KG) {
+    if (batchAvailableForLoadingKg(b) <= STOCK_EPS_KG) {
       continue;
     }
     const d = b.nakladnaya?.documentId?.trim();

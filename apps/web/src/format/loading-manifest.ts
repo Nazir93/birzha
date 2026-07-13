@@ -6,6 +6,22 @@ import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
 import { formatPurchaseDocDateRu } from "./purchase-doc-date.js";
 
+/** Подпись закупочной накладной в таблицах погрузки / возврата. */
+export function formatPurchaseDocumentDisplayLabel(
+  documentId: string | null | undefined,
+  documentNumber: string | null | undefined,
+): string {
+  const num = documentNumber?.trim() ?? "";
+  if (num) {
+    return `№ ${num}`;
+  }
+  const id = documentId?.trim() ?? "";
+  if (id) {
+    return `№ …${id.slice(-6)}`;
+  }
+  return "Без накладной в данных";
+}
+
 /** Подпись складов в шапке ПН: один или «Манас, Каякент». */
 export function formatManifestWarehouseNames(names: readonly string[] | undefined, fallback: string): string {
   const unique = [...new Set((names ?? []).map((n) => n.trim()).filter(Boolean))].sort((a, b) =>
@@ -31,7 +47,8 @@ export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
 
 /**
  * Какие партии показывать в «листе на погрузку» при мультиселекте накладных.
- * @param documentOptionCount 0 — фильтр по накл. не задан (показать все строки); иначе только отмеченные documentId
+ * @param documentOptionCount 0 — нет вариантов накладных в UI (показать все с остатком);
+ *   иначе только отмеченные `documentId`. Пустой выбор при наличии вариантов → ничего.
  */
 export function filterBatchesForLoadingManifest(
   batches: readonly BatchListItem[],
@@ -45,9 +62,12 @@ export function filterBatchesForLoadingManifest(
     if (documentOptionCount === 0) {
       return true;
     }
-    const docId = b.nakladnaya?.documentId;
+    if (selectedDocumentIds.size === 0) {
+      return false;
+    }
+    const docId = b.nakladnaya?.documentId?.trim();
     if (!docId) {
-      return true;
+      return false;
     }
     return selectedDocumentIds.has(docId);
   });
@@ -175,12 +195,7 @@ export function aggregateBatchesByDocumentCaliberLine(
   }
   const out: DocumentCaliberAggregateRow[] = [];
   for (const v of m.values()) {
-    const documentDisplayLabel =
-      v.documentId && v.documentNumber
-        ? `№ ${v.documentNumber}`
-        : v.documentId
-          ? `№ …${v.documentId.slice(-6)}`
-          : "Без накладной в данных";
+    const documentDisplayLabel = formatPurchaseDocumentDisplayLabel(v.documentId, v.documentNumber);
     out.push({
       rowKey: v.rowKey,
       documentId: v.documentId,
@@ -361,12 +376,7 @@ export function aggregateBatchesByPurchaseDocument(batches: readonly BatchListIt
   }
   const out: PurchaseDocumentAggregateRow[] = [];
   for (const v of m.values()) {
-    const displayLabel =
-      v.documentId && v.documentNumber
-        ? `№ ${v.documentNumber}`
-        : v.documentId
-          ? `№ …${v.documentId.slice(-6)}`
-          : "Без накладной в данных";
+    const displayLabel = formatPurchaseDocumentDisplayLabel(v.documentId, v.documentNumber);
     out.push({
       rowKey: v.rowKey,
       documentId: v.documentId,

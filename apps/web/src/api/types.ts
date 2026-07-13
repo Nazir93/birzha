@@ -286,6 +286,8 @@ export type LoadingManifestDetail = {
     kg: number;
     packageCount: string | null;
     purchaseDocumentNumber: string | null;
+    /** Id закупочной накладной (если партия из строки документа). */
+    purchaseDocumentId?: string | null;
     productGradeCode: string | null;
     productGroup: string | null;
     warehouseId?: string | null;

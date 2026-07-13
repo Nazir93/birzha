@@ -385,7 +385,8 @@ export function LoadingAppendPanel() {
                 onClearNakl={onClearNakl}
                 batchesInWh={batchesInWh}
                 warehouseName={warehouseName(selectedWarehouse)}
-                manifest={routeDetail && routeDetail.id === routeManifestId ? routeDetail : null}
+                /* Отбор для догрузки — только склад; строки уже сохранённой ПН сюда не подмешиваем. */
+                manifest={null}
                 writeOff={
                   meta?.warehouseWriteOffApi === "enabled" && batchesInWh.length > 0
                     ? {
