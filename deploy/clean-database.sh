@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Очистка хозяйственных данных PostgreSQL (схема не трогается).
 # Удаляет: рейсы, накладные, партии, продажи, погрузочные накладные, контрагентов, оптовиков…
-# Сохраняет: users, user_roles, roles, ship_destinations.
-# Заново создаёт склады (Манас, Каякент) и калибры — как в apps/api/scripts/reset-test-data.ts
+# Сохраняет: users, user_roles, roles, ship_destinations, warehouses, product_grades.
 #
 # Запуск на VPS из /opt/birzha:
 #   BIRZHA_AUTO_BACKUP=1 bash deploy/clean-database.sh
@@ -67,5 +66,5 @@ if [[ "${SKIP_SYSTEMD_RESTART:-0}" != "1" ]]; then
   echo ">>> healthcheck ok"
 fi
 
-echo "Готово: хозяйственные данные очищены. Пользователи и направления отгрузки сохранены."
+echo "Готово: хозяйственные данные очищены. Пользователи, склады, калибры и направления отгрузки сохранены."
 echo "Опционально демо-данные: cd apps/api && pnpm db:seed-demo  (нужен BIRZHA_DEMO_SEED_PASSWORD)"

@@ -2,9 +2,8 @@
  * Очистка **данных** PostgreSQL для тестового стенда: схема не трогается.
  *
  * - Удаляет: рейсы, отгрузки/продажи/недостачи по рейсу, погрузочные накладные, закупочные накладные и партии,
- *   списания с склада, контрагентов, оптовиков, **склады и калибры** (как в демо).
- * - Не трогает: `users`, `user_roles`, `roles`, `ship_destinations` (направления отгрузки).
- * - Снова вставляет **склады и калибры** как в сиде ниже (Манас/Каякент, №5…).
+ *   списания/возвраты с склада, контрагентов, оптовиков.
+ * - Не трогает: `users`, `user_roles`, `roles`, `ship_destinations`, **`warehouses`**, **`product_grades`**.
  *
  *   cd apps/api
  *   pnpm db:reset-test-data
@@ -41,16 +40,8 @@ const TRUNCATE = `
     batches,
     purchase_documents,
     counterparties,
-    wholesalers,
-    warehouses,
-    product_grades
+    wholesalers
   RESTART IDENTITY CASCADE
-`;
-
-const SEED_WAREHOUSES = `
-  INSERT INTO warehouses (id, code, name) VALUES
-    ('wh-manas', 'MANAS', 'Манас'),
-    ('wh-kayakent', 'KAYAKENT', 'Каякент')
 `;
 
 const SEED_SHIP_DESTINATIONS = `
@@ -62,25 +53,14 @@ const SEED_SHIP_DESTINATIONS = `
   ON CONFLICT (code) DO NOTHING
 `;
 
-const SEED_GRADES = `
-  INSERT INTO product_grades (id, code, display_name, sort_order, is_active, product_group) VALUES
-    ('pg-n5', '№5', 'Калибр №5', 5, true, 'Помидоры'),
-    ('pg-n6', '№6', 'Калибр №6', 6, true, 'Помидоры'),
-    ('pg-n7', '№7', 'Калибр №7', 7, true, 'Помидоры'),
-    ('pg-n8', '№8', 'Калибр №8', 8, true, 'Помидоры'),
-    ('pg-nsp', 'НС+', 'НС+', 20, true, 'Помидоры'),
-    ('pg-nsm', 'НС-', 'НС-', 21, true, 'Помидоры'),
-    ('pg-om', 'Ом.', 'Ом.', 30, true, 'Помидоры')
-`;
-
 try {
   await sql.begin(async (q) => {
     await q.unsafe(TRUNCATE);
-    await q.unsafe(SEED_WAREHOUSES);
     await q.unsafe(SEED_SHIP_DESTINATIONS);
-    await q.unsafe(SEED_GRADES);
   });
-  console.log("OK: накладные, рейсы, продажи, партии и справочники склад/калибр сброшены; пользователи и направления отгрузки не тронуты.");
+  console.log(
+    "OK: накладные, рейсы, продажи, партии, контрагенты и оптовики очищены; пользователи, склады, калибры и направления отгрузки не тронуты.",
+  );
 } finally {
   await sql.end({ timeout: 5 });
 }
