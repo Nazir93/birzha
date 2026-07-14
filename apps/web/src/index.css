@@ -111,11 +111,19 @@ label,
   cursor: var(--birzha-cursor-red);
 }
 
-/* PWA с экрана «Домой»: дополнительно фиксируем текст (viewport — в index.html). */
 @media (display-mode: standalone), (display-mode: fullscreen) {
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+  }
+
+  /* PWA: контент не уезжает под системные вырезы / home indicator */
+  .birzha-cabinet-main {
+    padding-bottom: max(1.75rem, calc(env(safe-area-inset-bottom) + 1rem));
+  }
+
+  .birzha-pwa-toast {
+    max-width: min(calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)), 52rem);
   }
 }
 
@@ -165,9 +173,8 @@ label,
   margin: 0;
   flex: 1 1 auto;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .birzha-pwa-toast__btn {
@@ -1568,9 +1575,11 @@ a.birzha-kpi-tile--link:focus-visible {
 
 .birzha-table-scroll {
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior-x: contain;
 }
 
 .birzha-table-scroll::-webkit-scrollbar,
@@ -1629,6 +1638,20 @@ a.birzha-kpi-tile--link:focus-visible {
   background: var(--birzha-surface);
   box-shadow: var(--birzha-shadow-sm);
   overflow: hidden;
+}
+
+/**
+ * Карточка + горизонтальный скролл: `overflow: hidden` у `.birzha-nakl-lines-card`
+ * иначе перекрывает `overflow-x: auto` у `.birzha-table-scroll` — таблицы не листаются на телефоне/планшете.
+ */
+.birzha-table-scroll.birzha-nakl-lines-card {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior-x: contain;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .birzha-data-table {
@@ -1868,8 +1891,10 @@ a.birzha-kpi-tile--link:focus-visible {
 
 /* Закупочная накладная: строки товара — карточки на узком экране */
 @media (max-width: 48rem) {
-  .birzha-nakl-lines-card--form.birzha-table-scroll {
+  .birzha-nakl-lines-card--form.birzha-table-scroll,
+  .birzha-table-scroll.birzha-nakl-lines-card--form {
     overflow-x: visible;
+    overflow-y: visible;
     margin-left: 0;
     margin-right: 0;
     padding-left: 0;
@@ -4248,11 +4273,17 @@ main.app-shell--cabinet {
   overflow-x: hidden;
   overscroll-behavior-x: none;
   overscroll-behavior-y: contain;
+  /* pan-y у main; горизонтальный скролл таблиц — у `.birzha-table-scroll` (touch-action pan-x) */
   touch-action: pan-y pinch-zoom;
   scrollbar-gutter: stable;
   background: var(--birzha-cabinet-canvas-bg);
   padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) max(1.75rem, env(safe-area-inset-bottom))
     max(0.85rem, env(safe-area-inset-left));
+}
+
+.birzha-cabinet-main .birzha-table-scroll,
+.birzha-cabinet-main .birzha-table-scroll.birzha-nakl-lines-card {
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 @media (min-width: 48rem) {
@@ -6646,6 +6677,40 @@ html[data-birzha-theme="dark"] .birzha-section-filters {
     padding-left: 0.18rem;
     padding-right: 0.18rem;
   }
+
+  /* Телефон/планшет: не сжимать колонки — скролл влево-вправо */
+  .birzha-table-scroll > table:not(.birzha-nakl-lines-table) {
+    min-width: max-content;
+  }
+
+  .birzha-table-scroll > table.birzha-data-table--compact {
+    min-width: max(100%, 34rem);
+  }
+
+  /* iOS: без автозума при фокусе в полях внутри таблиц / возврата на склад */
+  .birzha-table-scroll input:not([type="checkbox"]):not([type="radio"]),
+  .birzha-table-scroll select,
+  .birzha-table-scroll textarea,
+  .birzha-nakl-line-field,
+  .birzha-clean-ops-field {
+    font-size: 16px;
+  }
+
+  .birzha-loading-manifest {
+    padding: 0.72rem 0.7rem;
+  }
+}
+
+/* Планшет / узкий desktop: широкие таблицы тоже со скроллом, не «ломают» вёрстку */
+@media (min-width: 48.0625rem) and (max-width: 64rem) {
+  .birzha-table-scroll > table:not(.birzha-nakl-lines-table) {
+    min-width: max-content;
+  }
+
+  .birzha-table-scroll.birzha-nakl-lines-card {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 @media (max-width: 36rem) {
@@ -6677,10 +6742,6 @@ html[data-birzha-theme="dark"] .birzha-section-filters {
   .birzha-home-action strong {
     margin-top: 0.12rem;
     font-size: 0.9rem;
-  }
-
-  .birzha-table-scroll > table:not(.birzha-nakl-lines-table) {
-    min-width: max-content;
   }
 
   .birzha-admin-user-create-row__submit {

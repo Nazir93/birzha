@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -14,6 +14,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { adminRoutes, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import { batchAvailableForLoadingKg } from "../format/batch-available-for-loading.js";
 import {
   aggregateWarehouseDocumentsFromBatches,
   batchHasStockActivity,
@@ -138,6 +139,7 @@ export function AdminStockWarehousesPage() {
       gradeCode: string;
       productGroup: string;
       onWarehouseKg: number;
+      availableForLoadingKg: number;
       onWarehousePackages: number;
       inTransitKg: number;
       soldKg: number;
@@ -152,12 +154,14 @@ export function AdminStockWarehousesPage() {
         gradeCode,
         productGroup,
         onWarehouseKg: 0,
+        availableForLoadingKg: 0,
         onWarehousePackages: 0,
         inTransitKg: 0,
         soldKg: 0,
         writtenOffKg: 0,
       };
       prev.onWarehouseKg += b.onWarehouseKg ?? 0;
+      prev.availableForLoadingKg += batchAvailableForLoadingKg(b);
       prev.onWarehousePackages += estimateWarehousePackages(b);
       prev.inTransitKg += b.inTransitKg ?? 0;
       prev.soldKg += b.soldKg ?? 0;
@@ -189,11 +193,13 @@ export function AdminStockWarehousesPage() {
       return null;
     }
     const totalKg = rows.reduce((acc, row) => acc + row.onWarehouseKg, 0);
+    const availableForLoadingKg = rows.reduce((acc, row) => acc + row.availableForLoadingKg, 0);
     const totalPackages = rows.reduce((acc, row) => acc + row.onWarehousePackages, 0);
     const writtenOffKg = rows.reduce((acc, row) => acc + row.writtenOffKg, 0);
     return {
       calibersCount: rows.length,
       totalKg,
+      availableForLoadingKg,
       totalPackages,
       writtenOffKg,
     };
@@ -425,14 +431,26 @@ export function AdminStockWarehousesPage() {
                   <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
                     Калибров: <strong>{selectedWarehouseStats.calibersCount}</strong>
                     <span className="birzha-text-muted"> · </span>
-                    На складе:{" "}
+                    На складе (физ.):{" "}
                     <strong>{selectedWarehouseStats.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг</strong>
+                    {selectedWarehouseStats.writtenOffKg > 0 ? (
+                      <>
+                        <span className="birzha-text-muted"> · </span>
+                        Доступно к погрузке:{" "}
+                        <strong>
+                          {selectedWarehouseStats.availableForLoadingKg.toLocaleString("ru-RU", {
+                            maximumFractionDigits: 3,
+                          })}{" "}
+                          кг
+                        </strong>
+                      </>
+                    ) : null}
                     <span className="birzha-text-muted"> · </span>
                     Ящики: <strong>{selectedWarehouseStats.totalPackages.toLocaleString("ru-RU")} ящ.</strong>
                     {selectedWarehouseStats.writtenOffKg > 0 ? (
                       <>
                         <span className="birzha-text-muted"> · </span>
-                        Возвращено (журнал):{" "}
+                        Возвращено (журнал, в физ. остатке):{" "}
                         <strong>
                           {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
                         </strong>

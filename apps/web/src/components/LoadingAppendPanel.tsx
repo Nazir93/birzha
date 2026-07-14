@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { apiPostJson, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canShipLoadingManifest } from "../auth/role-panels.js";
+import { canShipLoadingManifest, canRecordWarehouseReturn } from "../auth/role-panels.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
 import { formatAllocationWarehouseSelectLabel } from "../format/allocation-warehouse-option.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
@@ -30,6 +30,7 @@ export function LoadingAppendPanel() {
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const canShip = canShipLoadingManifest(user);
+  const canReturn = canRecordWarehouseReturn(user);
   const appendBase = adminAwarePathForPath(pathname, adminRoutes.loadingAppend, ops.loadingAppend);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
   const queryClient = useQueryClient();
@@ -388,7 +389,7 @@ export function LoadingAppendPanel() {
                 /* Отбор для догрузки — только склад; строки уже сохранённой ПН сюда не подмешиваем. */
                 manifest={null}
                 writeOff={
-                  meta?.warehouseWriteOffApi === "enabled" && batchesInWh.length > 0
+                  meta?.warehouseWriteOffApi === "enabled" && canReturn && batchesInWh.length > 0
                     ? {
                         enabled: true,
                         isPending: writeOff.isPending,

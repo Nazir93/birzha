@@ -1,14 +1,15 @@
 import type { BatchListItem } from "../api/types.js";
+import { batchAvailableForLoadingKg } from "./batch-available-for-loading.js";
 
 export type AllocationWarehouseOption = {
   id: string;
   /** Партии, доступные для нового отбора (не в активных ПН). */
   batchCount: number;
-  /** Кг, доступные для нового отбора. */
+  /** Кг, доступные для нового отбора (минус возвраты журнала). */
   totalKg: number;
   packageEstimate: number;
   linesWithBoxData: number;
-  /** Весь остаток на складе (включая зарезервированный в активных ПН). */
+  /** Весь физический остаток на складе (включая зарезервированный в активных ПН). */
   totalKgOnWarehouse: number;
   totalBatchCountOnWarehouse: number;
   totalPackageEstimateOnWarehouse: number;
@@ -19,8 +20,12 @@ export type AllocationWarehouseOption = {
 
 type WarehouseCatalogRow = { id: string; name: string };
 
-function sumOnWarehouseKg(batches: BatchListItem[]): number {
+function sumPhysicalOnWarehouseKg(batches: BatchListItem[]): number {
   return batches.reduce((a, b) => a + b.onWarehouseKg, 0);
+}
+
+function sumAvailableForLoadingKg(batches: BatchListItem[]): number {
+  return batches.reduce((a, b) => a + batchAvailableForLoadingKg(b), 0);
 }
 
 /** Сводка по складам для выпадающего списка «Погрузка на машину». */
@@ -44,15 +49,15 @@ export function buildAllocationWarehouseOptions(input: {
     out.push({
       id,
       batchCount: availableBs.length,
-      totalKg: sumOnWarehouseKg(availableBs),
+      totalKg: sumAvailableForLoadingKg(availableBs),
       packageEstimate: availablePkg.sum,
       linesWithBoxData: availablePkg.linesWithBoxData,
-      totalKgOnWarehouse: sumOnWarehouseKg(allBs),
+      totalKgOnWarehouse: sumPhysicalOnWarehouseKg(allBs),
       totalBatchCountOnWarehouse: allBs.length,
       totalPackageEstimateOnWarehouse: totalPkg.sum,
       totalLinesWithBoxDataOnWarehouse: totalPkg.linesWithBoxData,
       reservedBatchCount: reservedBs.length,
-      reservedKg: sumOnWarehouseKg(reservedBs),
+      reservedKg: sumPhysicalOnWarehouseKg(reservedBs),
     });
   };
 

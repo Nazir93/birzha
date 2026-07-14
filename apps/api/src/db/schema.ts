@@ -89,8 +89,10 @@ export const batches = pgTable("batches", {
 });
 
 /**
- * Списание массы с остатка на складе (домен `Batch#writeOff`), в т.ч. «брак, кг».
- * `reason` — код причины; `quality_reject` — дозаписывается с экрана «Распределение».
+ * Журнал «возврат на склад» / маркировка для другого направления.
+ * Не вызывает доменный `Batch#writeOff`: остаток onWarehouse не уменьшается;
+ * доступность к погрузке = onWarehouse − Σ журнала.
+ * `reason`: `quality_reject` — экран распределения / догрузки.
  */
 export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {
   id: text("id").primaryKey(),

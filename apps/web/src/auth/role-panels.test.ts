@@ -7,6 +7,7 @@ import {
   canCreateTrip,
   canShipLoadingManifest,
   canManageInventoryCatalog,
+  canRecordWarehouseReturn,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
   hrefForPanelInCabinet,
@@ -40,6 +41,14 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canAccessPanel(u, "users")).toBe(false);
     expect(canManageInventoryCatalog(u)).toBe(false);
+  });
+
+  it("возврат на склад — как batchCreate API, не как ship", () => {
+    expect(canRecordWarehouseReturn(userWithRoles("admin"))).toBe(true);
+    expect(canRecordWarehouseReturn(userWithRoles("purchaser"))).toBe(true);
+    expect(canRecordWarehouseReturn(userWithRoles("warehouse"))).toBe(true);
+    expect(canRecordWarehouseReturn(userWithRoles("logistics"))).toBe(false);
+    expect(canRecordWarehouseReturn(userWithRoles("receiver"))).toBe(false);
   });
 
   it("inventory и users ведут в подразделы настроек", () => {

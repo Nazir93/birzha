@@ -338,10 +338,6 @@ export function PurchaseNakladnayaDetailSection() {
 
       {showEditor ? (
         <>
-          <p className="birzha-nakl-lines-heading no-print">
-            Правка строк (как Excel) — сохраните изменения кнопкой ниже. После попадания партии в ПН правка
-            запрещена.
-          </p>
           {formError ? <ErrorAlert message={formError} /> : null}
           {savedMsg ? <p style={successText}>{savedMsg}</p> : null}
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card birzha-nakl-lines-card--form no-print">

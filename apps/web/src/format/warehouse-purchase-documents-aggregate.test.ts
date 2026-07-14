@@ -147,12 +147,13 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
 });
 
 describe("batchWrittenOffKg", () => {
-  it("предпочитает qualityRejectWrittenOffKg", () => {
+  it("берёт только журнал возврата, не shortage writtenOff", () => {
     expect(
       batchWrittenOffKg(
         batch({ id: "b1", writtenOffKg: 5, qualityRejectWrittenOffKg: 12 }),
       ),
     ).toBe(12);
+    expect(batchWrittenOffKg(batch({ id: "b2", writtenOffKg: 5 }))).toBe(0);
   });
 });
 

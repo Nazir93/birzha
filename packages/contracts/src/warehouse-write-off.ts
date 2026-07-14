@@ -2,10 +2,13 @@ import { z } from "zod";
 
 const kinds = z.literal("quality_reject");
 
-/** Списание с остатка на складе: частичный «брак» (кг). */
+/**
+ * Журнал «возврат на склад» (кг). Остаток партии onWarehouse не уменьшается;
+ * лимит: onWarehouse − уже в журнале. Блокирует отгрузку через availableForLoading.
+ */
 export const postWarehouseWriteOffBodySchema = z.object({
   kind: kinds,
-  /** Масса к списанию; `insufficient_stock`, если больше, чем остаток на складе по партии. */
+  /** Масса к учёту в журнале; ошибка, если больше доступного к возврату. */
   kg: z
     .number()
     .finite()

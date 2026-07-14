@@ -1,23 +1,35 @@
 import type { BatchListItem } from "../api/types.js";
+import { batchAvailableForLoadingKg, batchQualityRejectReturnKg } from "./batch-available-for-loading.js";
 
 export type WarehouseDocumentStockRow = {
   documentId: string;
   documentNumber: string;
   lineCount: number;
+  /** Физический остаток onWarehouse (возвраты журнала не вычитаются). */
   onWarehouseKg: number;
+  /** Доступно к погрузке: onWarehouse − журнал возвратов. */
+  availableForLoadingKg: number;
   onWarehousePackages: number;
   inTransitKg: number;
   soldKg: number;
+  /** Только журнал «возврат на склад». */
+  returnedKg: number;
+  /**
+   * @deprecated Используйте `returnedKg`. Оставлено для совместимости колонки «Возвращено».
+   */
   writtenOffKg: number;
 };
 
-/** Кг, зафиксированные в журнале возврата на склад (масса onWarehouse не уменьшается). */
+/** Кг в журнале возврата на склад (не доменный writtenOff от недостач). */
+export function batchReturnedKg(batch: BatchListItem): number {
+  return batchQualityRejectReturnKg(batch);
+}
+
+/**
+ * @deprecated предпочитайте `batchReturnedKg` — раньше путал journal и shortage writtenOff.
+ */
 export function batchWrittenOffKg(batch: BatchListItem): number {
-  const fromLedger = batch.qualityRejectWrittenOffKg;
-  if (fromLedger != null && fromLedger > 0) {
-    return fromLedger;
-  }
-  return batch.writtenOffKg ?? 0;
+  return batchReturnedKg(batch);
 }
 
 export function batchHasStockActivity(batch: BatchListItem): boolean {
@@ -25,7 +37,8 @@ export function batchHasStockActivity(batch: BatchListItem): boolean {
     (batch.onWarehouseKg ?? 0) > 0 ||
     (batch.inTransitKg ?? 0) > 0 ||
     (batch.soldKg ?? 0) > 0 ||
-    batchWrittenOffKg(batch) > 0
+    (batch.writtenOffKg ?? 0) > 0 ||
+    batchReturnedKg(batch) > 0
   );
 }
 
@@ -56,22 +69,27 @@ export function aggregateWarehouseDocumentsFromBatches(
       continue;
     }
     const documentNumber = (batch.nakladnaya?.documentNumber ?? "").trim() || documentId;
+    const returnedKg = batchReturnedKg(batch);
     const prev = map.get(documentId) ?? {
       documentId,
       documentNumber,
       lineCount: 0,
       onWarehouseKg: 0,
+      availableForLoadingKg: 0,
       onWarehousePackages: 0,
       inTransitKg: 0,
       soldKg: 0,
+      returnedKg: 0,
       writtenOffKg: 0,
     };
     prev.lineCount += 1;
     prev.onWarehouseKg += batch.onWarehouseKg ?? 0;
+    prev.availableForLoadingKg += batchAvailableForLoadingKg(batch);
     prev.onWarehousePackages += estimateBatchWarehousePackages(batch);
     prev.inTransitKg += batch.inTransitKg ?? 0;
     prev.soldKg += batch.soldKg ?? 0;
-    prev.writtenOffKg += batchWrittenOffKg(batch);
+    prev.returnedKg += returnedKg;
+    prev.writtenOffKg += returnedKg;
     map.set(documentId, prev);
   }
 
@@ -80,7 +98,7 @@ export function aggregateWarehouseDocumentsFromBatches(
       row.onWarehouseKg > 0 ||
       row.inTransitKg > 0 ||
       row.soldKg > 0 ||
-      row.writtenOffKg > 0,
+      row.returnedKg > 0,
   );
   rows.sort((a, b) => b.documentNumber.localeCompare(a.documentNumber, "ru"));
 

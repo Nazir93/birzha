@@ -1,11 +1,11 @@
-﻿import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { apiGetJson, apiPostJson, deleteLoadingManifestById, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canShipLoadingManifest } from "../auth/role-panels.js";
+import { canShipLoadingManifest, canRecordWarehouseReturn } from "../auth/role-panels.js";
 import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
 import { formatAllocationWarehouseSelectLabel } from "../format/allocation-warehouse-option.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
@@ -47,6 +47,7 @@ export function AllocationPanel() {
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const canShip = canShipLoadingManifest(user);
+  const canReturn = canRecordWarehouseReturn(user);
   const purchaseNakladnayaBasePath = purchaseNakladnayaBasePathForPath(pathname);
   const distributionBase = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
   const appendBase = adminAwarePathForPath(pathname, adminRoutes.loadingAppend, ops.loadingAppend);
@@ -547,7 +548,7 @@ export function AllocationPanel() {
             warehouseName={warehouseName(selectedWarehouse)}
             manifest={savedManifestQuery.data?.manifest ?? null}
             writeOff={
-              meta?.warehouseWriteOffApi === "enabled" && batchesInWh.length > 0
+              meta?.warehouseWriteOffApi === "enabled" && canReturn && batchesInWh.length > 0
                 ? {
                     enabled: true,
                     isPending: writeOff.isPending,
