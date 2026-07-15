@@ -450,7 +450,7 @@ export function PurchaseNakladnayaDetailSection() {
                         readOnly
                         tabIndex={-1}
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
-                        style={{ ...fieldStyle, background: "var(--color-surface-muted, #f3f4f6)" }}
+                        style={{ ...fieldStyle, background: "var(--birzha-surface-muted)" }}
                         title={NAKLADNAYA_NET_FROM_GROSS_HINT}
                         aria-label="Нетто, кг"
                       />
