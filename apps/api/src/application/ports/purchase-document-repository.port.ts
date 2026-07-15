@@ -16,7 +16,10 @@ export type NewPurchaseDocumentLine = {
   id: string;
   lineNo: number;
   productGradeId: string;
+  /** Нетто (остаток партии). */
   quantityGrams: bigint;
+  /** Брутто с весов. */
+  grossQuantityGrams: bigint;
   packageCount: bigint | null;
   /** numeric(18,6) как строка для Drizzle */
   pricePerKgNumeric: string;
@@ -38,7 +41,10 @@ export type PurchaseDocumentLineDetail = {
   productGradeId: string;
   productGradeCode: string;
   batchId: string;
+  /** Нетто, кг. */
   totalKg: number;
+  /** Брутто, кг. */
+  grossKg: number;
   packageCount: string | null;
   pricePerKg: number;
   lineTotalKopecks: string;

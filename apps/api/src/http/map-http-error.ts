@@ -1,6 +1,7 @@
 import {
   InsufficientStockError,
   InvalidKgError,
+  InvalidPackageTareError,
 } from "@birzha/domain";
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
@@ -247,6 +248,12 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
       error: "invalid_kg",
       field: error.field,
       value: error.value,
+    });
+  }
+  if (error instanceof InvalidPackageTareError) {
+    return reply.code(400).send({
+      error: "invalid_package_tare",
+      message: error.message,
     });
   }
   throw error;

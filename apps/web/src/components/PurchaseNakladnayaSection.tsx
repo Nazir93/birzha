@@ -12,6 +12,7 @@ import type {
 import { useAuth } from "../auth/auth-context.js";
 import {
   kopecksFromNakladnayaAmountField,
+  netKgFromGrossKg,
   nonnegativeDecimalStringToNumber,
 } from "@birzha/contracts";
 
@@ -23,7 +24,11 @@ import {
 import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
-import { nakladnayaLineSumFieldFromKgPrice } from "../format/purchase-nakladnaya-line-sum.js";
+import {
+  NAKLADNAYA_NET_FROM_GROSS_HINT,
+  nakladnayaLineSumFieldFromGrossKgPrice,
+  nakladnayaNetKgFieldFromGross,
+} from "../format/purchase-nakladnaya-line-sum.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
@@ -61,7 +66,8 @@ function todayIsoDate(): string {
 type LineDraft = {
   key: string;
   productGradeId: string;
-  totalKg: string;
+  /** Брутто, кг (с весов). */
+  grossKg: string;
   packageCount: string;
   pricePerKg: string;
   lineTotalKopecks: string;
@@ -71,7 +77,7 @@ function emptyLine(): LineDraft {
   return {
     key: randomUuid(),
     productGradeId: "",
-    totalKg: "",
+    grossKg: "",
     packageCount: "",
     pricePerKg: "",
     lineTotalKopecks: "",
@@ -169,8 +175,12 @@ export function PurchaseNakladnayaSection() {
           return l;
         }
         const next = { ...l, ...patch };
-        if ("totalKg" in patch || "pricePerKg" in patch) {
-          next.lineTotalKopecks = nakladnayaLineSumFieldFromKgPrice(next.totalKg, next.pricePerKg);
+        if ("grossKg" in patch || "packageCount" in patch || "pricePerKg" in patch) {
+          next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
+            next.grossKg,
+            next.packageCount,
+            next.pricePerKg,
+          );
         }
         return next;
       }),
@@ -239,27 +249,39 @@ export function PurchaseNakladnayaSection() {
   }, [extraCostKopecks]);
 
   const nakladnayaFormTotals = useMemo(() => {
-    let totalKg = 0;
+    let totalGrossKg = 0;
+    let totalNetKg = 0;
     let totalPackages = 0;
     let totalLineKopecks = 0;
     for (const line of lines) {
-      const kg = nonnegativeDecimalStringToNumber(line.totalKg, 6);
-      if (Number.isFinite(kg) && kg > 0) {
-        totalKg += kg;
+      const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
+      const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
+      if (Number.isFinite(gross) && gross > 0) {
+        totalGrossKg += gross;
+        try {
+          totalNetKg += netKgFromGrossKg(gross, pkgs);
+        } catch {
+          /* нетто ≤ 0 — в итог нетто не включаем */
+        }
       }
-      totalPackages += linePackageCountForNakladnayaSum(line.packageCount);
+      totalPackages += pkgs;
       totalLineKopecks += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
     }
     const totalAllKopecks = totalLineKopecks + extraCostKopecksForTotals;
-    return { totalKg, totalPackages, totalLineKopecks, totalAllKopecks };
+    return { totalGrossKg, totalNetKg, totalPackages, totalLineKopecks, totalAllKopecks };
   }, [lines, extraCostKopecksForTotals]);
 
-  const totalKgLabel = useMemo(
-    () =>
-      new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
-        Number.isFinite(nakladnayaFormTotals.totalKg) ? nakladnayaFormTotals.totalKg : 0,
-      ),
-    [nakladnayaFormTotals.totalKg],
+  const kgFmt = useMemo(
+    () => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }),
+    [],
+  );
+  const totalGrossKgLabel = useMemo(
+    () => kgFmt.format(Number.isFinite(nakladnayaFormTotals.totalGrossKg) ? nakladnayaFormTotals.totalGrossKg : 0),
+    [kgFmt, nakladnayaFormTotals.totalGrossKg],
+  );
+  const totalNetKgLabel = useMemo(
+    () => kgFmt.format(Number.isFinite(nakladnayaFormTotals.totalNetKg) ? nakladnayaFormTotals.totalNetKg : 0),
+    [kgFmt, nakladnayaFormTotals.totalNetKg],
   );
 
   const catalogLoadErrorText = useMemo(() => {
@@ -405,12 +427,15 @@ export function PurchaseNakladnayaSection() {
           <thead>
             <tr>
               <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
-              <th className="birzha-nakl-lines-table__num">Кг</th>
+              <th className="birzha-nakl-lines-table__num">Брутто, кг</th>
               <th className="birzha-nakl-lines-table__num">Ящики</th>
+              <th className="birzha-nakl-lines-table__num" title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+                Нетто, кг
+              </th>
               <th className="birzha-nakl-lines-table__num">₽/кг</th>
               <th
                 className="birzha-nakl-lines-table__num"
-                title="Сумма строки: считается автоматически (кг × ₽/кг); можно править вручную"
+                title="Сумма строки: считается автоматически (нетто × ₽/кг); можно править вручную"
               >
                 Сумма, коп.
               </th>
@@ -437,24 +462,37 @@ export function PurchaseNakladnayaSection() {
                     }))}
                   />
                 </td>
-                <td className="birzha-nakl-lines-table__num-cell" data-label="Кг">
+                <td className="birzha-nakl-lines-table__num-cell" data-label="Брутто, кг">
                   <input
-                    value={line.totalKg}
-                    onChange={(e) => updateLineWithAutoSum(line.key, { totalKg: e.target.value })}
+                    value={line.grossKg}
+                    onChange={(e) => updateLineWithAutoSum(line.key, { grossKg: e.target.value })}
                     className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                     style={fieldStyle}
                     inputMode="decimal"
+                    aria-label="Брутто, кг"
                   />
                 </td>
                 <td className="birzha-nakl-lines-table__num-cell" data-label="Ящики">
                   <input
                     value={line.packageCount}
-                    onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
+                    onChange={(e) => updateLineWithAutoSum(line.key, { packageCount: e.target.value })}
                     className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                     style={fieldStyle}
                     inputMode="decimal"
                     autoComplete="off"
                     title="Ящики, целое; можно 10,5 (округлит)"
+                    aria-label="Ящики"
+                  />
+                </td>
+                <td className="birzha-nakl-lines-table__num-cell" data-label="Нетто, кг">
+                  <input
+                    value={nakladnayaNetKgFieldFromGross(line.grossKg, line.packageCount)}
+                    readOnly
+                    tabIndex={-1}
+                    className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
+                    style={{ ...fieldStyle, background: "var(--color-surface-muted, #f3f4f6)" }}
+                    title={NAKLADNAYA_NET_FROM_GROSS_HINT}
+                    aria-label="Нетто, кг"
                   />
                 </td>
                 <td className="birzha-nakl-lines-table__num-cell" data-label="₽/кг">
@@ -474,7 +512,7 @@ export function PurchaseNakladnayaSection() {
                     style={fieldStyle}
                     inputMode="decimal"
                     autoComplete="off"
-                    title="Считается автоматически: кг × ₽/кг; можно править вручную"
+                    title="Считается автоматически: нетто × ₽/кг; можно править вручную"
                   />
                 </td>
                 <td className="birzha-nakl-lines-table__actions-cell" data-label="Действия">
@@ -505,9 +543,9 @@ export function PurchaseNakladnayaSection() {
               </th>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                title="Сумма кг по строкам, где кг &gt; 0"
+                title="Сумма брутто по строкам, где брутто &gt; 0"
               >
-                {totalKgLabel}{" "}
+                {totalGrossKgLabel}{" "}
                 <span className="birzha-text-muted birzha-text-muted--xs">
                   кг
                 </span>
@@ -521,6 +559,15 @@ export function PurchaseNakladnayaSection() {
                 )}{" "}
                 <span className="birzha-text-muted birzha-text-muted--xs">
                   ящ.
+                </span>
+              </td>
+              <td
+                className="birzha-nakl-lines-table__total-cell"
+                title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+              >
+                {totalNetKgLabel}{" "}
+                <span className="birzha-text-muted birzha-text-muted--xs">
+                  кг
                 </span>
               </td>
               <td

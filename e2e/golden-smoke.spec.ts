@@ -586,7 +586,7 @@ test.describe("золотой smoke (UI + API)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 20,
+            grossKg: 22,
             packageCount: 4,
             pricePerKg: 35,
             lineTotalKopecks: 70_000,
@@ -666,7 +666,7 @@ test.describe("золотой smoke (UI + API)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 12,
+            grossKg: 13.5,
             packageCount: 3,
             pricePerKg: 40,
             lineTotalKopecks: 48_000,
@@ -718,7 +718,7 @@ test.describe("золотой smoke (UI + API)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 20,
+            grossKg: 22,
             packageCount: 4,
             pricePerKg: 35,
             lineTotalKopecks: 70_000,

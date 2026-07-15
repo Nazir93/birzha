@@ -121,7 +121,7 @@ describe.skipIf(!pgUrl)("archive stress lists (PostgreSQL)", () => {
           lines: [
             {
               productGradeId: "pg-n5",
-              totalKg: 50,
+              grossKg: 55,
               packageCount: 10,
               pricePerKg: 40,
               lineTotalKopecks: lineKop(50, 40),

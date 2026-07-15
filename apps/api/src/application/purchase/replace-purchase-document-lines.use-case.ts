@@ -19,6 +19,7 @@ import type {
   NewPurchaseDocumentLine,
   PurchaseDocumentRepository,
 } from "../ports/purchase-document-repository.port.js";
+import { resolvePurchaseLineMass } from "./resolve-purchase-line-mass.js";
 
 function expectedLineKopecks(totalKg: number, pricePerKg: number): number {
   return purchaseLineAmountKopecksFromDecimalStrings(
@@ -117,14 +118,16 @@ export class ReplacePurchaseDocumentLinesUseCase {
       if (!grade) {
         throw new ProductGradeNotFoundError(row.productGradeId);
       }
-      const expected = expectedLineKopecks(row.totalKg, row.pricePerKg);
+
+      const mass = resolvePurchaseLineMass({
+        grossKg: row.grossKg,
+        packageCount: row.packageCount,
+      });
+      const expected = expectedLineKopecks(mass.netKg, row.pricePerKg);
       if (!lineTotalsMatch(expected, row.lineTotalKopecks)) {
         throw new PurchaseLineTotalMismatchError(i, expected, row.lineTotalKopecks);
       }
 
-      const grams = BigInt(Math.round(row.totalKg * 1000));
-      const pkg =
-        row.packageCount === undefined ? null : BigInt(Math.max(0, Math.floor(row.packageCount)));
       const pricePerKgNumeric = row.pricePerKg.toFixed(6);
       const lineTotalKopecks = BigInt(row.lineTotalKopecks);
 
@@ -140,7 +143,7 @@ export class ReplacePurchaseDocumentLinesUseCase {
         const batch = Batch.create({
           id: keepId,
           purchaseId: id,
-          totalKg: row.totalKg,
+          totalKg: mass.netKg,
           pricePerKg: row.pricePerKg,
           distribution: "on_hand",
           warehouseId: detail.warehouseId,
@@ -149,8 +152,9 @@ export class ReplacePurchaseDocumentLinesUseCase {
           id: randomUUID(),
           lineNo: i + 1,
           productGradeId: row.productGradeId,
-          quantityGrams: grams,
-          packageCount: pkg,
+          quantityGrams: mass.netGrams,
+          grossQuantityGrams: mass.grossGrams,
+          packageCount: mass.packageCount,
           pricePerKgNumeric,
           lineTotalKopecks,
           batch,
@@ -162,7 +166,7 @@ export class ReplacePurchaseDocumentLinesUseCase {
       const batch = Batch.create({
         id: batchId,
         purchaseId: id,
-        totalKg: row.totalKg,
+        totalKg: mass.netKg,
         pricePerKg: row.pricePerKg,
         distribution: "on_hand",
         warehouseId: detail.warehouseId,
@@ -171,8 +175,9 @@ export class ReplacePurchaseDocumentLinesUseCase {
         id: randomUUID(),
         lineNo: i + 1,
         productGradeId: row.productGradeId,
-        quantityGrams: grams,
-        packageCount: pkg,
+        quantityGrams: mass.netGrams,
+        grossQuantityGrams: mass.grossGrams,
+        packageCount: mass.packageCount,
         pricePerKgNumeric,
         lineTotalKopecks,
         batch,

@@ -15,6 +15,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "L",
         batchId: "b1",
         totalKg: 10,
+        grossKg: 11,
         packageCount: "2",
         pricePerKg: 50,
         lineTotalKopecks: "500000",
@@ -25,6 +26,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "L",
         batchId: "b2",
         totalKg: 5,
+        grossKg: 5.5,
         packageCount: "1",
         pricePerKg: 50,
         lineTotalKopecks: "250000",
@@ -45,6 +47,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "Ом.",
         batchId: "b1",
         totalKg: 1,
+        grossKg: 1,
         packageCount: null,
         pricePerKg: 1,
         lineTotalKopecks: "100",
@@ -55,6 +58,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "№5",
         batchId: "b2",
         totalKg: 1,
+        grossKg: 1,
         packageCount: null,
         pricePerKg: 1,
         lineTotalKopecks: "100",
@@ -65,6 +69,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "НС+",
         batchId: "b3",
         totalKg: 1,
+        grossKg: 1,
         packageCount: null,
         pricePerKg: 1,
         lineTotalKopecks: "100",
@@ -75,6 +80,7 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
         productGradeCode: "НС-",
         batchId: "b4",
         totalKg: 1,
+        grossKg: 1,
         packageCount: null,
         pricePerKg: 1,
         lineTotalKopecks: "100",
@@ -85,19 +91,19 @@ describe("totalsByGradeFromPurchaseDocumentLines", () => {
 });
 
 describe("totalsByGradeFromNakladnayaFormLines", () => {
-  it("группирует по productGradeId", () => {
+  it("группирует по productGradeId; кг — нетто", () => {
     const r = totalsByGradeFromNakladnayaFormLines(
       [
         {
           productGradeId: "x",
-          totalKg: "1",
+          grossKg: "1",
           packageCount: "",
           lineTotalKopecks: "100",
         },
         {
           productGradeId: "x",
-          totalKg: "2",
-          packageCount: "",
+          grossKg: "10",
+          packageCount: "2",
           lineTotalKopecks: "200",
         },
       ],
@@ -105,7 +111,8 @@ describe("totalsByGradeFromNakladnayaFormLines", () => {
     );
     expect(r).toHaveLength(1);
     expect(r[0]!.label).toBe("X-grade");
-    expect(r[0]!.totalKg).toBe(3);
+    // 1 + (10 − 0,5×2) = 10
+    expect(r[0]!.totalKg).toBe(10);
     expect(r[0]!.lineKopSum).toBe(300);
   });
 });

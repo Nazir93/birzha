@@ -35,8 +35,11 @@ describe("tripBatchRowsToCsv", () => {
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Рейс;Т-1");
     expect(csv).not.toContain("b-1");
+    expect(csv).toContain("Продано_нетто_г");
+    expect(csv).toContain("Продано_брутто_г");
     expect(csv).toContain("Продано_ящ");
-    expect(csv).toContain("1000;2;0;1");
+    // отгр.г;отгр.ящ;прод.нетто;прод.брутто (0+500×1);прод.ящ
+    expect(csv).toContain("1000;2;0;500;1");
   });
 
   it("добавляет колонку Товар_калибр при batchCaption", () => {

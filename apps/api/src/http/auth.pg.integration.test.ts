@@ -322,7 +322,7 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
         lines: [
           {
             productGradeId: createdGrade.productGrade.id,
-            totalKg: 10,
+            grossKg: 11,
             packageCount: 2,
             pricePerKg: 30,
             lineTotalKopecks: 30_000,
@@ -345,7 +345,7 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
         lines: [
           {
             productGradeId: createdGrade.productGrade.id,
-            totalKg: 5,
+            grossKg: 5.5,
             packageCount: 1,
             pricePerKg: 10,
             lineTotalKopecks: 5_000,

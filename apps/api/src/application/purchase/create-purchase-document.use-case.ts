@@ -19,6 +19,7 @@ import type {
   PurchaseDocumentRepository,
 } from "../ports/purchase-document-repository.port.js";
 import type { WarehouseRepository } from "../ports/warehouse-repository.port.js";
+import { resolvePurchaseLineMass } from "./resolve-purchase-line-mass.js";
 
 function expectedLineKopecks(totalKg: number, pricePerKg: number): number {
   return purchaseLineAmountKopecksFromDecimalStrings(
@@ -70,7 +71,12 @@ export class CreatePurchaseDocumentUseCase {
         throw new ProductGradeNotFoundError(row.productGradeId);
       }
 
-      const expected = expectedLineKopecks(row.totalKg, row.pricePerKg);
+      const mass = resolvePurchaseLineMass({
+        grossKg: row.grossKg,
+        packageCount: row.packageCount,
+      });
+
+      const expected = expectedLineKopecks(mass.netKg, row.pricePerKg);
       if (!lineTotalsMatch(expected, row.lineTotalKopecks)) {
         throw new PurchaseLineTotalMismatchError(i, expected, row.lineTotalKopecks);
       }
@@ -79,22 +85,19 @@ export class CreatePurchaseDocumentUseCase {
       const batch = Batch.create({
         id: batchId,
         purchaseId: documentId,
-        totalKg: row.totalKg,
+        totalKg: mass.netKg,
         pricePerKg: row.pricePerKg,
         distribution: "on_hand",
         warehouseId: body.warehouseId,
       });
 
-      const grams = BigInt(Math.round(row.totalKg * 1000));
-      const pkg =
-        row.packageCount === undefined ? null : BigInt(Math.max(0, Math.floor(row.packageCount)));
-
       lines.push({
         id: randomUUID(),
         lineNo: i + 1,
         productGradeId: row.productGradeId,
-        quantityGrams: grams,
-        packageCount: pkg,
+        quantityGrams: mass.netGrams,
+        grossQuantityGrams: mass.grossGrams,
+        packageCount: mass.packageCount,
         pricePerKgNumeric: row.pricePerKg.toFixed(6),
         lineTotalKopecks: BigInt(row.lineTotalKopecks),
         batch,

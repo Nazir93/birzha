@@ -129,7 +129,7 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 15,
+            grossKg: 16.5,
             packageCount: 3,
             pricePerKg: 30,
             lineTotalKopecks: 45_000,

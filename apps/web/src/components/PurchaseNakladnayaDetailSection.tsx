@@ -1,4 +1,9 @@
-import { compareProductGradeCodes, kopecksToNakladnayaRubleFieldString } from "@birzha/contracts";
+import {
+  compareProductGradeCodes,
+  kopecksToNakladnayaRubleFieldString,
+  netKgFromGrossKg,
+  nonnegativeDecimalStringToNumber,
+} from "@birzha/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -15,7 +20,12 @@ import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
-import { nakladnayaLineSumFieldFromKgPrice } from "../format/purchase-nakladnaya-line-sum.js";
+import {
+  NAKLADNAYA_NET_FROM_GROSS_HINT,
+  nakladnayaLineSumFieldFromGrossKgPrice,
+  nakladnayaNetKgFieldFromGross,
+  purchaseLineDisplayGrossKg,
+} from "../format/purchase-nakladnaya-line-sum.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { purchaseNakladnayaBasePathForPath } from "../routes.js";
@@ -34,7 +44,8 @@ type EditLineDraft = {
   key: string;
   batchId?: string;
   productGradeId: string;
-  totalKg: string;
+  /** Брутто, кг (с весов). */
+  grossKg: string;
   packageCount: string;
   pricePerKg: string;
   lineTotalKopecks: string;
@@ -42,11 +53,12 @@ type EditLineDraft = {
 
 function lineToDraft(line: PurchaseDocumentLineDetail): EditLineDraft {
   const kop = Number(line.lineTotalKopecks);
+  const gross = purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount);
   return {
     key: line.batchId || randomUuid(),
     batchId: line.batchId,
     productGradeId: line.productGradeId,
-    totalKg: String(line.totalKg).replace(".", ","),
+    grossKg: String(gross).replace(".", ","),
     packageCount: line.packageCount?.trim() ?? "",
     pricePerKg: String(line.pricePerKg).replace(".", ","),
     lineTotalKopecks: Number.isFinite(kop)
@@ -59,7 +71,7 @@ function emptyEditLine(): EditLineDraft {
   return {
     key: randomUuid(),
     productGradeId: "",
-    totalKg: "",
+    grossKg: "",
     packageCount: "",
     pricePerKg: "",
     lineTotalKopecks: "",
@@ -123,18 +135,42 @@ export function PurchaseNakladnayaDetailSection() {
     if (!d) {
       return null;
     }
-    let totalKg = 0;
+    let totalGrossKg = 0;
+    let totalNetKg = 0;
     let totalPackages = 0;
     let lineKopSum = 0;
     for (const line of d.lines) {
-      totalKg += line.totalKg;
+      totalGrossKg += purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount);
+      totalNetKg += line.totalKg;
       totalPackages += linePackageCountForNakladnayaSum(line.packageCount ?? "");
       lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
     }
     const extraKop = lineTotalKopecksForNakladnayaSum(d.extraCostKopecks);
     const allKop = lineKopSum + extraKop;
-    return { totalKg, totalPackages, lineKopSum, extraKop, allKop };
+    return { totalGrossKg, totalNetKg, totalPackages, lineKopSum, extraKop, allKop };
   }, [docQ.data]);
+
+  const editFormTotals = useMemo(() => {
+    let totalGrossKg = 0;
+    let totalNetKg = 0;
+    let totalPackages = 0;
+    let lineKopSum = 0;
+    for (const line of editLines) {
+      const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
+      const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
+      if (Number.isFinite(gross) && gross > 0) {
+        totalGrossKg += gross;
+        try {
+          totalNetKg += netKgFromGrossKg(gross, pkgs);
+        } catch {
+          /* нетто ≤ 0 — в итог нетто не включаем */
+        }
+      }
+      totalPackages += pkgs;
+      lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
+    }
+    return { totalGrossKg, totalNetKg, totalPackages, lineKopSum };
+  }, [editLines]);
 
   const displayLines = useMemo(() => {
     const lines = docQ.data?.lines;
@@ -216,8 +252,12 @@ export function PurchaseNakladnayaDetailSection() {
           return l;
         }
         const next = { ...l, ...patch };
-        if ("totalKg" in patch || "pricePerKg" in patch) {
-          next.lineTotalKopecks = nakladnayaLineSumFieldFromKgPrice(next.totalKg, next.pricePerKg);
+        if ("grossKg" in patch || "packageCount" in patch || "pricePerKg" in patch) {
+          next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
+            next.grossKg,
+            next.packageCount,
+            next.pricePerKg,
+          );
         }
         return next;
       }),
@@ -262,9 +302,12 @@ export function PurchaseNakladnayaDetailSection() {
   }
 
   const totals = documentTotals;
-  const totalKgLabel = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true }).format(
-    totals?.totalKg ?? 0,
-  );
+  const kgFmt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6, useGrouping: true });
+  const pkgFmt = new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 });
+  const totalGrossKgLabel = kgFmt.format(totals?.totalGrossKg ?? 0);
+  const totalNetKgLabel = kgFmt.format(totals?.totalNetKg ?? 0);
+  const editGrossKgLabel = kgFmt.format(editFormTotals.totalGrossKg);
+  const editNetKgLabel = kgFmt.format(editFormTotals.totalNetKg);
 
   return (
     <section
@@ -345,10 +388,18 @@ export function PurchaseNakladnayaDetailSection() {
               <thead>
                 <tr>
                   <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
-                  <th className="birzha-nakl-lines-table__num">Кг</th>
+                  <th className="birzha-nakl-lines-table__num">Брутто, кг</th>
                   <th className="birzha-nakl-lines-table__num">Ящики</th>
+                  <th className="birzha-nakl-lines-table__num" title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+                    Нетто, кг
+                  </th>
                   <th className="birzha-nakl-lines-table__num">₽/кг</th>
-                  <th className="birzha-nakl-lines-table__num">Сумма</th>
+                  <th
+                    className="birzha-nakl-lines-table__num"
+                    title="Считается автоматически: нетто × ₽/кг"
+                  >
+                    Сумма
+                  </th>
                   <th className="birzha-nakl-lines-table__actions" />
                 </tr>
               </thead>
@@ -372,23 +423,36 @@ export function PurchaseNakladnayaDetailSection() {
                         }))}
                       />
                     </td>
-                    <td className="birzha-nakl-lines-table__num-cell" data-label="Кг">
+                    <td className="birzha-nakl-lines-table__num-cell" data-label="Брутто, кг">
                       <input
-                        value={line.totalKg}
-                        onChange={(e) => updateLineWithAutoSum(line.key, { totalKg: e.target.value })}
+                        value={line.grossKg}
+                        onChange={(e) => updateLineWithAutoSum(line.key, { grossKg: e.target.value })}
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                         style={fieldStyle}
                         inputMode="decimal"
+                        aria-label="Брутто, кг"
                       />
                     </td>
                     <td className="birzha-nakl-lines-table__num-cell" data-label="Ящики">
                       <input
                         value={line.packageCount}
-                        onChange={(e) => updateLine(line.key, { packageCount: e.target.value })}
+                        onChange={(e) => updateLineWithAutoSum(line.key, { packageCount: e.target.value })}
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                         style={fieldStyle}
                         inputMode="decimal"
                         autoComplete="off"
+                        aria-label="Ящики"
+                      />
+                    </td>
+                    <td className="birzha-nakl-lines-table__num-cell" data-label="Нетто, кг">
+                      <input
+                        value={nakladnayaNetKgFieldFromGross(line.grossKg, line.packageCount)}
+                        readOnly
+                        tabIndex={-1}
+                        className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
+                        style={{ ...fieldStyle, background: "var(--color-surface-muted, #f3f4f6)" }}
+                        title={NAKLADNAYA_NET_FROM_GROSS_HINT}
+                        aria-label="Нетто, кг"
                       />
                     </td>
                     <td className="birzha-nakl-lines-table__num-cell" data-label="₽/кг">
@@ -407,6 +471,7 @@ export function PurchaseNakladnayaDetailSection() {
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                         style={fieldStyle}
                         inputMode="decimal"
+                        title="Считается автоматически: нетто × ₽/кг; можно править вручную"
                       />
                     </td>
                     <td className="birzha-nakl-lines-table__actions-cell">
@@ -424,6 +489,35 @@ export function PurchaseNakladnayaDetailSection() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" className="birzha-nakl-lines-table__total-label">
+                    Итого
+                  </th>
+                  <td className="birzha-nakl-lines-table__total-cell" title="Сумма брутто по строкам">
+                    {editGrossKgLabel}{" "}
+                    <span className="birzha-text-muted birzha-text-muted--xs">кг</span>
+                  </td>
+                  <td className="birzha-nakl-lines-table__total-cell">
+                    {pkgFmt.format(editFormTotals.totalPackages)}{" "}
+                    <span className="birzha-text-muted birzha-text-muted--xs">ящ.</span>
+                  </td>
+                  <td
+                    className="birzha-nakl-lines-table__total-cell"
+                    title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+                  >
+                    {editNetKgLabel}{" "}
+                    <span className="birzha-text-muted birzha-text-muted--xs">кг</span>
+                  </td>
+                  <td className="birzha-text-muted birzha-nakl-lines-table__total-cell birzha-nakl-lines-table__total-skip">
+                    —
+                  </td>
+                  <td className="birzha-nakl-lines-table__total-sum">
+                    {kopecksToRubLabel(editFormTotals.lineKopSum.toString())} ₽
+                  </td>
+                  <td className="birzha-text-subtle birzha-nakl-lines-table__total-actions birzha-nakl-lines-table__total-skip" />
+                </tr>
+              </tfoot>
             </table>
           </div>
           <div className="no-print" style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
@@ -470,8 +564,11 @@ export function PurchaseNakladnayaDetailSection() {
                 <tr>
                   <th style={thHeadDense}>№</th>
                   <th style={thHeadDense}>Калибр</th>
-                  <th style={thHeadDense}>Кг</th>
+                  <th style={thHeadDense}>Брутто, кг</th>
                   <th style={thHeadDense}>Ящики</th>
+                  <th style={thHeadDense} title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+                    Нетто, кг
+                  </th>
                   <th style={thHeadDense}>₽/кг</th>
                   <th style={thHeadDense}>Сумма, ₽</th>
                 </tr>
@@ -481,8 +578,11 @@ export function PurchaseNakladnayaDetailSection() {
                   <tr key={`${line.lineNo}-${line.batchId}`}>
                     <td style={thtdDense}>{line.lineNo}</td>
                     <td style={thtdDense}>{line.productGradeCode}</td>
-                    <td style={thtdDense}>{line.totalKg}</td>
+                    <td style={thtdDense}>
+                      {purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount)}
+                    </td>
                     <td style={thtdDense}>{line.packageCount ?? "—"}</td>
+                    <td style={thtdDense}>{line.totalKg}</td>
                     <td style={thtdDense}>{line.pricePerKg}</td>
                     <td style={thtdDense}>{kopecksToRubLabel(String(line.lineTotalKopecks))} ₽</td>
                   </tr>
@@ -494,15 +594,20 @@ export function PurchaseNakladnayaDetailSection() {
                     <th colSpan={2} scope="row" style={{ ...thtdDense, textAlign: "right" }}>
                       {totals.extraKop > 0 ? "Итого по строкам" : "Всего по документу"}
                     </th>
-                    <td style={{ ...thtdDense, fontWeight: 600 }} title="Сумма кг по строкам">
-                      {totalKgLabel}{" "}
+                    <td style={{ ...thtdDense, fontWeight: 600 }} title="Сумма брутто по строкам">
+                      {totalGrossKgLabel}{" "}
                       <span className="birzha-text-muted birzha-text-muted--sm">кг</span>
                     </td>
                     <td style={{ ...thtdDense, fontWeight: 600 }}>
-                      {new Intl.NumberFormat("ru-RU", { useGrouping: true, maximumFractionDigits: 0 }).format(
-                        totals.totalPackages,
-                      )}{" "}
+                      {pkgFmt.format(totals.totalPackages)}{" "}
                       <span className="birzha-text-muted birzha-text-muted--sm">ящ.</span>
+                    </td>
+                    <td
+                      style={{ ...thtdDense, fontWeight: 600 }}
+                      title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+                    >
+                      {totalNetKgLabel}{" "}
+                      <span className="birzha-text-muted birzha-text-muted--sm">кг</span>
                     </td>
                     <td className="birzha-text-muted" style={{ ...thtdDense }}>
                       —
@@ -519,7 +624,7 @@ export function PurchaseNakladnayaDetailSection() {
                   </tr>
                   {totals.extraKop > 0 && (
                     <tr className="birzha-table-subtotal-row">
-                      <th colSpan={5} scope="row" style={{ ...thtdDense, textAlign: "right" }}>
+                      <th colSpan={6} scope="row" style={{ ...thtdDense, textAlign: "right" }}>
                         Доп. расходы (см. шапку)
                       </th>
                       <td style={thtdDense}>{kopecksToRubLabel(totals.extraKop.toString())} ₽</td>
@@ -527,7 +632,7 @@ export function PurchaseNakladnayaDetailSection() {
                   )}
                   {totals.extraKop > 0 && (
                     <tr className="birzha-table-subtotal-row birzha-table-subtotal-row--emphasis">
-                      <th colSpan={5} scope="row" style={{ ...thtdDense, textAlign: "right" }}>
+                      <th colSpan={6} scope="row" style={{ ...thtdDense, textAlign: "right" }}>
                         Всего по документу
                       </th>
                       <td style={{ ...thtdDense, fontWeight: 700, fontSize: "0.95rem" }}>

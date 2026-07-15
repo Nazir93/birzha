@@ -105,7 +105,7 @@ async function seedClosedArchiveTrip(app: FastifyInstance, i: number): Promise<s
     lines: [
       {
         productGradeId: GRADE_ID,
-        totalKg: BATCH_KG,
+        grossKg: BATCH_KG + 10,
         packageCount: 20,
         pricePerKg: PRICE_PER_KG,
         lineTotalKopecks: lineKop(BATCH_KG, PRICE_PER_KG),

@@ -4,6 +4,7 @@ import {
   createTripBodySchema,
   kopecksFromNakladnayaAmountField,
   kopecksFromNakladnayaAmountFieldForSum,
+  netKgFromGrossKg,
   nonnegativeDecimalStringToNumber,
   numberToDecimalStringForKopecks,
   purchaseDocumentLineInputSchema,
@@ -344,7 +345,8 @@ export function parseCreatePurchaseDocumentForm(input: {
   extraCostKopecks: string;
   lines: Array<{
     productGradeId: string;
-    totalKg: string;
+    /** Брутто, кг (с весов). */
+    grossKg: string;
     packageCount: string;
     pricePerKg: string;
     lineTotalKopecks: string;
@@ -367,10 +369,10 @@ export function parseCreatePurchaseDocumentForm(input: {
       if (!productGradeId) {
         throw new Error(`Строка ${idx + 1}: выберите калибр`);
       }
-      const totalKg = nonnegativeDecimalStringToNumber(row.totalKg, 6);
+      const grossKg = nonnegativeDecimalStringToNumber(row.grossKg, 6);
       const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
-      if (!Number.isFinite(totalKg) || totalKg <= 0) {
-        throw new Error(`Строка ${idx + 1}: укажите массу, кг (положительное число, можно с дробной частью)`);
+      if (!Number.isFinite(grossKg) || grossKg <= 0) {
+        throw new Error(`Строка ${idx + 1}: укажите брутто, кг (положительное число, можно с дробной частью)`);
       }
       if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
         throw new Error(`Строка ${idx + 1}: укажите цену ₽/кг (неотрицательное число, до копеек в цене)`);
@@ -386,6 +388,13 @@ export function parseCreatePurchaseDocumentForm(input: {
         }
         packageCount = parsed;
       }
+      try {
+        netKgFromGrossKg(grossKg, packageCount ?? 0);
+      } catch {
+        throw new Error(
+          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус 0,5 кг × ящики). Уменьшите ящики или увеличьте брутто.`,
+        );
+      }
       const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());
       if (lineK === null) {
         throw new Error(
@@ -400,7 +409,7 @@ export function parseCreatePurchaseDocumentForm(input: {
       const lineTotalKopecks = lineK;
       return purchaseDocumentLineInputSchema.parse({
         productGradeId,
-        totalKg,
+        grossKg,
         pricePerKg,
         lineTotalKopecks,
         ...(packageCount !== undefined ? { packageCount } : {}),
@@ -433,7 +442,7 @@ export function parseReplacePurchaseDocumentLinesForm(
   lines: Array<{
     batchId?: string;
     productGradeId: string;
-    totalKg: string;
+    grossKg: string;
     packageCount: string;
     pricePerKg: string;
     lineTotalKopecks: string;
@@ -445,10 +454,10 @@ export function parseReplacePurchaseDocumentLinesForm(
       if (!productGradeId) {
         throw new Error(`Строка ${idx + 1}: выберите калибр`);
       }
-      const totalKg = nonnegativeDecimalStringToNumber(row.totalKg, 6);
+      const grossKg = nonnegativeDecimalStringToNumber(row.grossKg, 6);
       const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
-      if (!Number.isFinite(totalKg) || totalKg <= 0) {
-        throw new Error(`Строка ${idx + 1}: укажите кг > 0`);
+      if (!Number.isFinite(grossKg) || grossKg <= 0) {
+        throw new Error(`Строка ${idx + 1}: укажите брутто, кг > 0`);
       }
       if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
         throw new Error(`Строка ${idx + 1}: цена за кг — неотрицательная`);
@@ -456,13 +465,20 @@ export function parseReplacePurchaseDocumentLinesForm(
       const pkgRaw = row.packageCount.trim();
       let packageCount: number | undefined;
       if (pkgRaw !== "") {
-        const parsed = linePackageCountFromNakladnayaString(pkgRaw);
-        if (parsed == null) {
+        const p = linePackageCountFromNakladnayaString(pkgRaw);
+        if (p == null) {
           throw new Error(
             `Строка ${idx + 1}: ящики — неотрицательное число, можно с запятой; в заявку — целое (округление)`,
           );
         }
-        packageCount = parsed;
+        packageCount = p;
+      }
+      try {
+        netKgFromGrossKg(grossKg, packageCount ?? 0);
+      } catch {
+        throw new Error(
+          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус 0,5 кг × ящики). Уменьшите ящики или увеличьте брутто.`,
+        );
       }
       const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());
       if (lineK === null) {
@@ -478,7 +494,7 @@ export function parseReplacePurchaseDocumentLinesForm(
         .extend({ batchId: z.string().min(1).max(64).optional() })
         .parse({
           productGradeId,
-          totalKg,
+          grossKg,
           pricePerKg,
           lineTotalKopecks: lineK,
           ...(packageCount !== undefined ? { packageCount } : {}),

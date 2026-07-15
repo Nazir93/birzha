@@ -1,4 +1,9 @@
-import { compareProductGradeCodes, compareProductGradeLineLabels, nonnegativeDecimalStringToNumber } from "@birzha/contracts";
+import {
+  compareProductGradeCodes,
+  compareProductGradeLineLabels,
+  netKgFromGrossKg,
+  nonnegativeDecimalStringToNumber,
+} from "@birzha/contracts";
 
 import type { BatchListItem, PurchaseDocumentLineDetail } from "../api/types.js";
 import {
@@ -33,7 +38,8 @@ export function totalsByGradeFromPurchaseDocumentLines(
 
 export type NakladnayaFormLineDraft = {
   productGradeId: string;
-  totalKg: string;
+  /** Брутто, кг. */
+  grossKg: string;
   packageCount: string;
   lineTotalKopecks: string;
 };
@@ -41,6 +47,7 @@ export type NakladnayaFormLineDraft = {
 export type NakladnayaFormTotalsByGradeRow = {
   gradeKey: string;
   label: string;
+  /** Нетто, кг (брутто − 0,5×ящ.). */
   totalKg: number;
   totalPackages: number;
   lineKopSum: number;
@@ -57,11 +64,16 @@ export function totalsByGradeFromNakladnayaFormLines(
     const gradeKey = id || "__unselected__";
     const label = gradeLabelForId(id);
     const cur = map.get(gradeKey) ?? { label, totalKg: 0, totalPackages: 0, lineKopSum: 0 };
-    const kg = nonnegativeDecimalStringToNumber(line.totalKg, 6);
-    if (Number.isFinite(kg) && kg > 0) {
-      cur.totalKg += kg;
+    const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
+    const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
+    if (Number.isFinite(gross) && gross > 0) {
+      try {
+        cur.totalKg += netKgFromGrossKg(gross, pkgs);
+      } catch {
+        /* нетто ≤ 0 — не включаем */
+      }
     }
-    cur.totalPackages += linePackageCountForNakladnayaSum(line.packageCount);
+    cur.totalPackages += pkgs;
     cur.lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
     map.set(gradeKey, cur);
   }

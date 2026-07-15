@@ -115,6 +115,8 @@ export const purchaseDocumentLines = pgTable("purchase_document_lines", {
     .notNull()
     .references(() => productGrades.id),
   quantityGrams: bigint("quantity_grams", { mode: "bigint" }).notNull(),
+  /** Брутто (товар + тара); нетто в `quantity_grams`. */
+  grossQuantityGrams: bigint("gross_quantity_grams", { mode: "bigint" }),
   packageCount: bigint("package_count", { mode: "bigint" }),
   pricePerKg: numeric("price_per_kg", { precision: 18, scale: 6 }).notNull(),
   lineTotalKopecks: bigint("line_total_kopecks", { mode: "bigint" }).notNull(),

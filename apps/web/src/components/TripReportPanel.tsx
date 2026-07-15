@@ -6,6 +6,7 @@ import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
+import { saleGrossGramsFromNet } from "../format/seller-gross-net.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
 import {
   filterTripsAssignedToSellerForReports,
@@ -479,8 +480,19 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   </tr>
                 ) : null}
                 <tr>
-                  <td style={thtd}>Продажи</td>
+                  <td style={thtd}>Продажи, нетто</td>
                   <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Продажи, брутто</td>
+                  <td style={thtd}>
+                    {(() => {
+                      const net = BigInt(r.sales.totalGrams || "0");
+                      const pkgs = BigInt((r.sales.totalPackageCount ?? "0").trim() || "0");
+                      return gramsToKgLabel(saleGrossGramsFromNet(net, pkgs).toString());
+                    })()}{" "}
+                    кг
+                  </td>
                 </tr>
                 <tr>
                   <td style={thtd}>Продажи, ящики</td>
@@ -586,10 +598,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         Товар · калибр
                       </th>
                       <th scope="col" style={thHead}>
-                        Продано, кг
+                        Нетто, кг
                       </th>
                       <th scope="col" style={thHead}>
-                        Продано, ящ.
+                        Брутто, кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Ящ.
                       </th>
                       {!fieldSellerSalesReport ? (
                         <th scope="col" style={thHead}>
@@ -612,6 +627,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={row.lineLabel}>
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                        <td style={thtd}>
+                          {gramsToKgLabel(saleGrossGramsFromNet(row.grams, row.packages).toString())}
+                        </td>
                         <td style={thtd}>{packageCountLabel(row.packages)}</td>
                         {!fieldSellerSalesReport ? (
                           <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
@@ -649,8 +667,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <th scope="col" style={thHead}>
                         Клиент
                       </th>
-                      <th scope="col" style={thHead}>
-                        Прод., кг
+                      <th scope="col" style={thHead} title="Нетто (грамм продукта в продажах)">
+                        Прод., нетто кг
                       </th>
                       {!fieldSellerSalesReport ? (
                         <th scope="col" style={thHead}>
@@ -725,7 +743,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Отгр., ящ.
                     </th>
                     <th scope="col" style={thHead}>
-                      Прод., кг
+                      Прод., нетто кг
+                    </th>
+                    <th scope="col" style={thHead}>
+                      Прод., брутто кг
                     </th>
                     <th scope="col" style={thHead}>
                       Прод., ящ.
@@ -756,6 +777,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
                       <td style={thtd}>{packageCountLabel(row.shippedPackages)}</td>
                       <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
+                      <td style={thtd}>
+                        {gramsToKgLabel(saleGrossGramsFromNet(row.soldG, row.soldPackages).toString())}
+                      </td>
                       <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
                       <td style={thtd}>{gramsToKgLabel(row.shortageG.toString())}</td>
                       <td
@@ -784,6 +808,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shippedG.toString())}</td>
                     <td style={thtd}>{packageCountLabel(batchAgg.shippedPackages)}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
+                    <td style={thtd}>
+                      {gramsToKgLabel(saleGrossGramsFromNet(batchAgg.soldG, batchAgg.soldPackages).toString())}
+                    </td>
                     <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shortageG.toString())}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>

@@ -48,7 +48,7 @@ describe("ReplacePurchaseDocumentLinesUseCase", () => {
       lines: [
         {
           productGradeId: "pg-n5",
-          totalKg: 10,
+          grossKg: 11,
           packageCount: 2,
           pricePerKg: 50,
           lineTotalKopecks: 50_000,
@@ -74,7 +74,7 @@ describe("ReplacePurchaseDocumentLinesUseCase", () => {
         {
           batchId,
           productGradeId: "pg-n5",
-          totalKg: 12,
+          grossKg: 13.5,
           packageCount: 3,
           pricePerKg: 40,
           lineTotalKopecks: 48_000,
@@ -110,7 +110,7 @@ describe("ReplacePurchaseDocumentLinesUseCase", () => {
           {
             batchId,
             productGradeId: "pg-n5",
-            totalKg: 11,
+            grossKg: 11,
             pricePerKg: 50,
             lineTotalKopecks: 55_000,
           },

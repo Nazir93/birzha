@@ -34,7 +34,7 @@ const WH_DERBENT = "wh-derbent";
 
 type LineSeed = {
   productGradeId: string;
-  totalKg: number;
+  netKg: number;
   packageCount: number;
   pricePerKg: number;
 };
@@ -53,9 +53,9 @@ const TEMPLATES: TemplateSeed[] = [
     supplierOriginal: "Абдурахим",
     supplierAlt: "ИП Абдурахим",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 126, packageCount: 17, pricePerKg: 190 },
-      { productGradeId: "pg-n6", totalKg: 178, packageCount: 26, pricePerKg: 180 },
-      { productGradeId: "pg-n7", totalKg: 81, packageCount: 13, pricePerKg: 140 },
+      { productGradeId: "pg-n5", netKg: 126, packageCount: 17, pricePerKg: 190 },
+      { productGradeId: "pg-n6", netKg: 178, packageCount: 26, pricePerKg: 180 },
+      { productGradeId: "pg-n7", netKg: 81, packageCount: 13, pricePerKg: 140 },
     ],
   },
   {
@@ -63,9 +63,9 @@ const TEMPLATES: TemplateSeed[] = [
     supplierOriginal: "Ханифа",
     supplierAlt: "Теплица Ханифа",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 74, packageCount: 10, pricePerKg: 190 },
-      { productGradeId: "pg-n6", totalKg: 97, packageCount: 14, pricePerKg: 180 },
-      { productGradeId: "pg-n7", totalKg: 57, packageCount: 9, pricePerKg: 140 },
+      { productGradeId: "pg-n5", netKg: 74, packageCount: 10, pricePerKg: 190 },
+      { productGradeId: "pg-n6", netKg: 97, packageCount: 14, pricePerKg: 180 },
+      { productGradeId: "pg-n7", netKg: 57, packageCount: 9, pricePerKg: 140 },
     ],
   },
   {
@@ -73,9 +73,9 @@ const TEMPLATES: TemplateSeed[] = [
     supplierOriginal: "Марина",
     supplierAlt: "Огород Марина",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 65, packageCount: 9, pricePerKg: 190 },
-      { productGradeId: "pg-n6", totalKg: 295, packageCount: 44, pricePerKg: 180 },
-      { productGradeId: "pg-n7", totalKg: 242, packageCount: 40, pricePerKg: 140 },
+      { productGradeId: "pg-n5", netKg: 65, packageCount: 9, pricePerKg: 190 },
+      { productGradeId: "pg-n6", netKg: 295, packageCount: 44, pricePerKg: 180 },
+      { productGradeId: "pg-n7", netKg: 242, packageCount: 40, pricePerKg: 140 },
     ],
   },
   {
@@ -83,10 +83,10 @@ const TEMPLATES: TemplateSeed[] = [
     supplierOriginal: "Низали",
     supplierAlt: "Низали поставка",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 680, packageCount: 85, pricePerKg: 190 },
-      { productGradeId: "pg-n6", totalKg: 632, packageCount: 85, pricePerKg: 180 },
-      { productGradeId: "pg-n7", totalKg: 108, packageCount: 18, pricePerKg: 140 },
-      { productGradeId: "pg-nsm", totalKg: 34, packageCount: 5, pricePerKg: 130 },
+      { productGradeId: "pg-n5", netKg: 680, packageCount: 85, pricePerKg: 190 },
+      { productGradeId: "pg-n6", netKg: 632, packageCount: 85, pricePerKg: 180 },
+      { productGradeId: "pg-n7", netKg: 108, packageCount: 18, pricePerKg: 140 },
+      { productGradeId: "pg-nsm", netKg: 34, packageCount: 5, pricePerKg: 130 },
     ],
   },
   {
@@ -94,11 +94,11 @@ const TEMPLATES: TemplateSeed[] = [
     supplierOriginal: "Умар",
     supplierAlt: "Умар (накл. №12)",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 983, packageCount: 121, pricePerKg: 190 },
-      { productGradeId: "pg-n6", totalKg: 1130, packageCount: 163, pricePerKg: 180 },
-      { productGradeId: "pg-n7", totalKg: 188, packageCount: 30, pricePerKg: 140 },
-      { productGradeId: "pg-n8", totalKg: 26, packageCount: 5, pricePerKg: 80 },
-      { productGradeId: "pg-nsm", totalKg: 65, packageCount: 9, pricePerKg: 130 },
+      { productGradeId: "pg-n5", netKg: 983, packageCount: 121, pricePerKg: 190 },
+      { productGradeId: "pg-n6", netKg: 1130, packageCount: 163, pricePerKg: 180 },
+      { productGradeId: "pg-n7", netKg: 188, packageCount: 30, pricePerKg: 140 },
+      { productGradeId: "pg-n8", netKg: 26, packageCount: 5, pricePerKg: 80 },
+      { productGradeId: "pg-nsm", netKg: 65, packageCount: 9, pricePerKg: 130 },
     ],
   },
 ];
@@ -185,10 +185,10 @@ try {
         extraCostKopecks: 0,
         lines: tpl.lines.map((line) => ({
           productGradeId: line.productGradeId,
-          totalKg: line.totalKg,
+          grossKg: line.netKg + line.packageCount * 0.5,
           packageCount: line.packageCount,
           pricePerKg: line.pricePerKg,
-          lineTotalKopecks: lineKop(line.totalKg, line.pricePerKg),
+          lineTotalKopecks: lineKop(line.netKg, line.pricePerKg),
         })),
       });
 

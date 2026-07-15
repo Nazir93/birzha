@@ -12,6 +12,7 @@ import type { TripSaleRepository } from "../../application/ports/trip-sale-repos
 import type { TripShipmentRepository } from "../../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../../application/ports/trip-shortage-repository.port.js";
 import { gramsToKg } from "../../application/units/mass.js";
+import { grossGramsFromNet } from "@birzha/domain";
 
 export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepository {
   private readonly headers: PurchaseDocumentHeaderRow[] = [];
@@ -129,6 +130,7 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
         productGradeCode: grade?.code ?? line.productGradeId,
         batchId: line.batch.getId(),
         totalKg: gramsToKg(line.quantityGrams),
+        grossKg: gramsToKg(line.grossQuantityGrams ?? grossGramsFromNet(line.quantityGrams, line.packageCount)),
         packageCount: line.packageCount === null ? null : line.packageCount.toString(),
         pricePerKg: Number(line.pricePerKgNumeric),
         lineTotalKopecks: line.lineTotalKopecks.toString(),

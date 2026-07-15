@@ -190,7 +190,10 @@ export type PurchaseDocumentLineDetail = {
   productGradeId: string;
   productGradeCode: string;
   batchId: string;
+  /** Нетто, кг. */
   totalKg: number;
+  /** Брутто, кг. */
+  grossKg: number;
   packageCount: string | null;
   pricePerKg: number;
   lineTotalKopecks: string;

@@ -19,6 +19,7 @@ import {
   tripBatchShortages,
 } from "../../db/schema.js";
 import { gramsToKg } from "../../application/units/mass.js";
+import { grossGramsFromNet } from "@birzha/domain";
 
 import { DrizzleBatchRepository } from "./drizzle-batch.repository.js";
 
@@ -60,6 +61,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
           lineNo: line.lineNo,
           productGradeId: line.productGradeId,
           quantityGrams: line.quantityGrams,
+          grossQuantityGrams: line.grossQuantityGrams,
           packageCount: line.packageCount,
           pricePerKg: line.pricePerKgNumeric,
           lineTotalKopecks: line.lineTotalKopecks,
@@ -157,6 +159,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
           lineNo: line.lineNo,
           productGradeId: line.productGradeId,
           quantityGrams: line.quantityGrams,
+          grossQuantityGrams: line.grossQuantityGrams,
           packageCount: line.packageCount,
           pricePerKg: line.pricePerKgNumeric,
           lineTotalKopecks: line.lineTotalKopecks,
@@ -221,6 +224,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
         productGradeCode: gradeCode,
         batchId: line.batchId,
         totalKg: gramsToKg(line.quantityGrams),
+        grossKg: gramsToKg(line.grossQuantityGrams ?? grossGramsFromNet(line.quantityGrams, line.packageCount)),
         packageCount: line.packageCount === null ? null : line.packageCount.toString(),
         pricePerKg: Number(line.pricePerKg),
         lineTotalKopecks: line.lineTotalKopecks.toString(),

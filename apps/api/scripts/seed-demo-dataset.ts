@@ -53,7 +53,7 @@ const ROLE_SEED: { code: string; name: string }[] = [
 
 type DocLineSeed = {
   productGradeId: string;
-  totalKg: number;
+  netKg: number;
   pricePerKg: number;
   packageCount?: number;
 };
@@ -109,8 +109,8 @@ const DOCUMENTS: DocSeed[] = [
     supplierName: "ООО Поставщик Альфа",
     extraCostKopecks: 12_000,
     lines: [
-      { productGradeId: "pg-n5", totalKg: 2400, packageCount: 480, pricePerKg: 47 },
-      { productGradeId: "pg-n6", totalKg: 1600, pricePerKg: 45 },
+      { productGradeId: "pg-n5", netKg: 2400, packageCount: 480, pricePerKg: 47 },
+      { productGradeId: "pg-n6", netKg: 1600, pricePerKg: 45 },
     ],
   },
   {
@@ -120,8 +120,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_MANAS,
     supplierName: "ИП Север",
     lines: [
-      { productGradeId: "pg-n7", totalKg: 2000, packageCount: 400, pricePerKg: 51 },
-      { productGradeId: "pg-n8", totalKg: 1200, pricePerKg: 53 },
+      { productGradeId: "pg-n7", netKg: 2000, packageCount: 400, pricePerKg: 51 },
+      { productGradeId: "pg-n8", netKg: 1200, pricePerKg: 53 },
     ],
   },
   {
@@ -131,8 +131,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_MANAS,
     supplierName: "ООО Гамма",
     lines: [
-      { productGradeId: "pg-nsm", totalKg: 800, packageCount: 160, pricePerKg: 39 },
-      { productGradeId: "pg-nsp", totalKg: 600, pricePerKg: 41 },
+      { productGradeId: "pg-nsm", netKg: 800, packageCount: 160, pricePerKg: 39 },
+      { productGradeId: "pg-nsp", netKg: 600, pricePerKg: 41 },
     ],
   },
   {
@@ -142,8 +142,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_MANAS,
     supplierName: "ТД Юг",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 1800, packageCount: 360, pricePerKg: 48 },
-      { productGradeId: "pg-om", totalKg: 400, pricePerKg: 35 },
+      { productGradeId: "pg-n5", netKg: 1800, packageCount: 360, pricePerKg: 48 },
+      { productGradeId: "pg-om", netKg: 400, pricePerKg: 35 },
     ],
   },
   {
@@ -153,8 +153,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_MANAS,
     supplierName: "Агро-Манас",
     lines: [
-      { productGradeId: "pg-n6", totalKg: 2200, packageCount: 440, pricePerKg: 46 },
-      { productGradeId: "pg-n7", totalKg: 900, pricePerKg: 50 },
+      { productGradeId: "pg-n6", netKg: 2200, packageCount: 440, pricePerKg: 46 },
+      { productGradeId: "pg-n7", netKg: 900, pricePerKg: 50 },
     ],
   },
   {
@@ -164,8 +164,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_KAYAKENT,
     supplierName: "ИП Бета",
     lines: [
-      { productGradeId: "pg-n7", totalKg: 3500, packageCount: 700, pricePerKg: 52 },
-      { productGradeId: "pg-n8", totalKg: 1400, pricePerKg: 54 },
+      { productGradeId: "pg-n7", netKg: 3500, packageCount: 700, pricePerKg: 52 },
+      { productGradeId: "pg-n8", netKg: 1400, pricePerKg: 54 },
     ],
   },
   {
@@ -176,8 +176,8 @@ const DOCUMENTS: DocSeed[] = [
     supplierName: "ООО Каякент-Фуд",
     extraCostKopecks: 8_500,
     lines: [
-      { productGradeId: "pg-n5", totalKg: 2800, packageCount: 560, pricePerKg: 49 },
-      { productGradeId: "pg-n6", totalKg: 1100, pricePerKg: 47 },
+      { productGradeId: "pg-n5", netKg: 2800, packageCount: 560, pricePerKg: 49 },
+      { productGradeId: "pg-n6", netKg: 1100, pricePerKg: 47 },
     ],
   },
   {
@@ -187,8 +187,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_KAYAKENT,
     supplierName: "Хасавюрт Опт",
     lines: [
-      { productGradeId: "pg-nsm", totalKg: 950, packageCount: 190, pricePerKg: 40 },
-      { productGradeId: "pg-nsp", totalKg: 700, pricePerKg: 42 },
+      { productGradeId: "pg-nsm", netKg: 950, packageCount: 190, pricePerKg: 40 },
+      { productGradeId: "pg-nsp", netKg: 700, pricePerKg: 42 },
     ],
   },
   {
@@ -198,8 +198,8 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_KAYAKENT,
     supplierName: "ИП Восток",
     lines: [
-      { productGradeId: "pg-n8", totalKg: 2600, packageCount: 520, pricePerKg: 55 },
-      { productGradeId: "pg-om", totalKg: 500, pricePerKg: 36 },
+      { productGradeId: "pg-n8", netKg: 2600, packageCount: 520, pricePerKg: 55 },
+      { productGradeId: "pg-om", netKg: 500, pricePerKg: 36 },
     ],
   },
   {
@@ -209,9 +209,9 @@ const DOCUMENTS: DocSeed[] = [
     warehouseId: WH_KAYAKENT,
     supplierName: "Теплица-2",
     lines: [
-      { productGradeId: "pg-n5", totalKg: 1500, packageCount: 300, pricePerKg: 50 },
-      { productGradeId: "pg-n7", totalKg: 2000, packageCount: 400, pricePerKg: 53 },
-      { productGradeId: "pg-n6", totalKg: 800, pricePerKg: 48 },
+      { productGradeId: "pg-n5", netKg: 1500, packageCount: 300, pricePerKg: 50 },
+      { productGradeId: "pg-n7", netKg: 2000, packageCount: 400, pricePerKg: 53 },
+      { productGradeId: "pg-n6", netKg: 800, pricePerKg: 48 },
     ],
   },
 ];
@@ -449,10 +449,10 @@ try {
       extraCostKopecks: doc.extraCostKopecks,
       lines: doc.lines.map((line) => ({
         productGradeId: line.productGradeId,
-        totalKg: line.totalKg,
+        grossKg: line.netKg + (line.packageCount ?? 0) * 0.5,
         packageCount: line.packageCount,
         pricePerKg: line.pricePerKg,
-        lineTotalKopecks: lineKop(line.totalKg, line.pricePerKg),
+        lineTotalKopecks: lineKop(line.netKg, line.pricePerKg),
       })),
     });
     const detail = await injectJson<{ lines: DocLine[] }>(app, `get ${doc.id}`, "GET", `/purchase-documents/${doc.id}`);

@@ -17,8 +17,15 @@ export {
 } from "./purchase-document.js";
 export type {
   CreatePurchaseDocumentBody,
+  PurchaseDocumentLineInput,
   ReplacePurchaseDocumentLinesBody,
 } from "./purchase-document.js";
+export {
+  grossKgFromNetKg,
+  netKgFromGrossKg,
+  TARE_GRAMS_PER_PACKAGE,
+  TARE_KG_PER_PACKAGE,
+} from "./package-tare.js";
 export {
   nonnegativeDecimalStringToNumber,
   numberToDecimalStringForKopecks,

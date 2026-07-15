@@ -1,13 +1,18 @@
 import { z } from "zod";
 
-/** Строка закупочной накладной: одна строка → одна партия на складе. */
+/**
+ * Строка закупочной накладной: одна строка → одна партия на складе.
+ * `grossKg` — брутто с весов; нетто = брутто − 0,5 кг × ящики (считает сервер).
+ * `lineTotalKopecks` сверяется с нетто × цена.
+ */
 export const purchaseDocumentLineInputSchema = z.object({
   productGradeId: z.string().min(1).max(64),
-  totalKg: z.number().finite().positive(),
+  /** Брутто, кг (товар + тара ящиков). */
+  grossKg: z.number().finite().positive(),
   packageCount: z.number().int().nonnegative().optional(),
-  /** Закупочная цена за кг, руб (как в колонке «Цена» накладной). */
+  /** Закупочная цена за кг нетто, руб. */
   pricePerKg: z.number().finite().nonnegative(),
-  /** Сумма строки в копейках (контроль согласованности с кг × цена). */
+  /** Сумма строки в копейках (контроль согласованности с нетто × цена). */
   lineTotalKopecks: z.number().int().nonnegative(),
 });
 
@@ -43,3 +48,4 @@ export const createPurchaseDocumentBodySchema = z.object({
 });
 
 export type CreatePurchaseDocumentBody = z.infer<typeof createPurchaseDocumentBodySchema>;
+export type PurchaseDocumentLineInput = z.infer<typeof purchaseDocumentLineInputSchema>;

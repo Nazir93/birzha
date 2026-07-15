@@ -22,14 +22,14 @@ describe("Purchase document HTTP (накладная)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 10,
+            grossKg: 11,
             packageCount: 2,
             pricePerKg: 50,
             lineTotalKopecks: 50_000,
           },
           {
             productGradeId: "pg-n6",
-            totalKg: 5,
+            grossKg: 5,
             pricePerKg: 48,
             lineTotalKopecks: 24_000,
           },
@@ -45,6 +45,10 @@ describe("Purchase document HTTP (накладная)", () => {
     expect(list).toHaveLength(2);
     expect(list.every((b) => b.getPurchaseId() === "nakl-1")).toBe(true);
     expect(list.every((b) => b.getWarehouseId() === "wh-manas")).toBe(true);
+    // брутто 11 / 2 ящ → нетто 10 кг; брутто 5 без ящиков → 5 кг
+    const byGrade = new Map(list.map((b) => [b.toPersistenceState().totalGrams, true]));
+    expect(byGrade.has(10_000n)).toBe(true);
+    expect(byGrade.has(5_000n)).toBe(true);
 
     const listRes = await app.inject({ method: "GET", url: "/purchase-documents" });
     expect(listRes.statusCode).toBe(200);
@@ -53,8 +57,13 @@ describe("Purchase document HTTP (накладная)", () => {
 
     const getRes = await app.inject({ method: "GET", url: "/purchase-documents/nakl-1" });
     expect(getRes.statusCode).toBe(200);
-    const detail = JSON.parse(getRes.body) as { lines: { productGradeCode: string }[] };
-    expect(detail.lines[0]?.productGradeCode).toBe("№5");
+    const detail = JSON.parse(getRes.body) as {
+      lines: { productGradeCode: string; totalKg: number; grossKg: number; packageCount: string | null }[];
+    };
+    const n5 = detail.lines.find((l) => l.productGradeCode === "№5");
+    expect(n5?.grossKg).toBe(11);
+    expect(n5?.totalKg).toBe(10);
+    expect(n5?.packageCount).toBe("2");
 
     await app.close();
   });
@@ -73,7 +82,7 @@ describe("Purchase document HTTP (накладная)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 10,
+            grossKg: 10,
             pricePerKg: 50,
             lineTotalKopecks: 1,
           },
@@ -104,7 +113,7 @@ describe("Purchase document HTTP (накладная)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 10,
+            grossKg: 10,
             pricePerKg: 50,
             lineTotalKopecks: 50_000,
           },
@@ -141,7 +150,7 @@ describe("Purchase document HTTP (накладная)", () => {
         lines: [
           {
             productGradeId: "pg-n5",
-            totalKg: 10,
+            grossKg: 10.5,
             packageCount: 1,
             pricePerKg: 50,
             lineTotalKopecks: 50_000,
@@ -167,14 +176,14 @@ describe("Purchase document HTTP (накладная)", () => {
           {
             batchId,
             productGradeId: "pg-n5",
-            totalKg: 8,
+            grossKg: 9,
             packageCount: 2,
             pricePerKg: 50,
             lineTotalKopecks: 40_000,
           },
           {
             productGradeId: "pg-n6",
-            totalKg: 5,
+            grossKg: 5,
             pricePerKg: 48,
             lineTotalKopecks: 24_000,
           },

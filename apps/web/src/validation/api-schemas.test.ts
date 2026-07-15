@@ -41,7 +41,7 @@ describe("documentNumberFromSupplierName", () => {
 });
 
 describe("parseCreatePurchaseDocumentForm", () => {
-  it("собирает тело накладной", () => {
+  it("собирает тело накладной (сумма от нетто: брутто 10 − 0,5×2 = 9 → 45000 при 50 ₽/кг)", () => {
     const body = parseCreatePurchaseDocumentForm({
       docDate: "2026-04-16",
       warehouseId: "wh-manas",
@@ -51,16 +51,17 @@ describe("parseCreatePurchaseDocumentForm", () => {
       lines: [
         {
           productGradeId: "pg-n5",
-          totalKg: "10",
+          grossKg: "10",
           packageCount: "2",
           pricePerKg: "50",
-          lineTotalKopecks: "50000",
+          lineTotalKopecks: "45000",
         },
       ],
     });
     expect(body.documentNumber).toBe("Поставщик · 16.04.2026");
     expect(body.supplierName).toBe("Поставщик");
-    expect(body.lines[0]?.lineTotalKopecks).toBe(50_000);
+    expect(body.lines[0]?.grossKg).toBe(10);
+    expect(body.lines[0]?.lineTotalKopecks).toBe(45_000);
     expect(body.lines[0]?.packageCount).toBe(2);
   });
 
@@ -75,7 +76,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
         lines: [
           {
             productGradeId: "pg-1",
-            totalKg: "1",
+            grossKg: "1",
             packageCount: "",
             pricePerKg: "0",
             lineTotalKopecks: "0",
@@ -95,7 +96,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
       lines: [
         {
           productGradeId: "pg-1",
-          totalKg: "1",
+          grossKg: "10",
           packageCount: "2,4",
           pricePerKg: "0",
           lineTotalKopecks: "0",
@@ -103,6 +104,28 @@ describe("parseCreatePurchaseDocumentForm", () => {
       ],
     });
     expect(body.lines[0]?.packageCount).toBe(2);
+    expect(body.lines[0]?.grossKg).toBe(10);
+  });
+
+  it("отклоняет строку, где нетто ≤ 0", () => {
+    expect(() =>
+      parseCreatePurchaseDocumentForm({
+        docDate: "2026-04-16",
+        warehouseId: "wh-1",
+        supplierName: "Поставщик",
+        buyerLabel: "",
+        extraCostKopecks: "0",
+        lines: [
+          {
+            productGradeId: "pg-1",
+            grossKg: "1",
+            packageCount: "2",
+            pricePerKg: "50",
+            lineTotalKopecks: "0",
+          },
+        ],
+      }),
+    ).toThrow(/нетто/i);
   });
 
   it("сумма строки «руб,коп» в точные копейки без float", () => {
@@ -115,7 +138,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
       lines: [
         {
           productGradeId: "pg-1",
-          totalKg: "1",
+          grossKg: "1",
           packageCount: "0",
           pricePerKg: "0",
           lineTotalKopecks: "32232,77",

@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 
 export type SellerSaleFlashData = {
   kg: string;
+  /** Брутто, если продажа с ящиками. */
+  grossKg?: string | null;
   packages: string | null;
   sumRub: string;
   productLine: string;
@@ -59,7 +61,13 @@ export function SellerSaleSuccessOverlay({ data, onDismiss }: Props) {
         <p id="birzha-sold-overlay-desc" className="birzha-sold-overlay__lead">
           <strong>{data.productLine}</strong>
           <span className="birzha-sold-overlay__dot">·</span>
-          <span>{data.kg} кг</span>
+          <span>нетто {data.kg} кг</span>
+          {data.grossKg ? (
+            <>
+              <span className="birzha-sold-overlay__dot">·</span>
+              <span>брутто {data.grossKg} кг</span>
+            </>
+          ) : null}
           {data.packages ? (
             <>
               <span className="birzha-sold-overlay__dot">·</span>
