@@ -14,6 +14,7 @@ function bi(x: string | undefined): bigint {
 export type TripSalesByProductLineRow = {
   lineLabel: string;
   grams: bigint;
+  packages: bigint;
   revenue: bigint;
   cash: bigint;
   debt: bigint;
@@ -39,6 +40,7 @@ export function aggregateTripSalesByProductLine(
       row = {
         lineLabel: salesCaliberLineLabel(b, key),
         grams: 0n,
+        packages: 0n,
         revenue: 0n,
         cash: 0n,
         debt: 0n,
@@ -47,6 +49,7 @@ export function aggregateTripSalesByProductLine(
       m.set(key, row);
     }
     row.grams += g;
+    row.packages += bi(s.packageCount ?? "0");
     row.revenue += bi(s.revenueKopecks);
     row.cash += bi(s.cashKopecks);
     row.debt += bi(s.debtKopecks);

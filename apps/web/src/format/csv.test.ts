@@ -21,6 +21,7 @@ describe("tripBatchRowsToCsv", () => {
         batchId: "b-1",
         shippedG: 1000n,
         shippedPackages: 2n,
+        soldPackages: 1n,
         soldG: 0n,
         shortageG: 0n,
         netTransitG: 1000n,
@@ -34,7 +35,8 @@ describe("tripBatchRowsToCsv", () => {
     expect(csv.startsWith("\uFEFF")).toBe(true);
     expect(csv).toContain("Рейс;Т-1");
     expect(csv).not.toContain("b-1");
-    expect(csv).toContain("1000;2");
+    expect(csv).toContain("Продано_ящ");
+    expect(csv).toContain("1000;2;0;1");
   });
 
   it("добавляет колонку Товар_калибр при batchCaption", () => {
@@ -43,6 +45,7 @@ describe("tripBatchRowsToCsv", () => {
         batchId: "b-1",
         shippedG: 1000n,
         shippedPackages: 0n,
+        soldPackages: 0n,
         soldG: 0n,
         shortageG: 0n,
         netTransitG: 1000n,

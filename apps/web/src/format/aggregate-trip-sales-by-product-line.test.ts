@@ -68,6 +68,7 @@ describe("aggregateTripSalesByProductLine", () => {
           {
             batchId: "b1",
             grams: "2000",
+            packageCount: "4",
             revenueKopecks: "10000",
             cashKopecks: "10000",
             debtKopecks: "0",
@@ -76,6 +77,7 @@ describe("aggregateTripSalesByProductLine", () => {
           {
             batchId: "b2",
             grams: "1000",
+            packageCount: "2",
             revenueKopecks: "5000",
             cashKopecks: "0",
             debtKopecks: "5000",
@@ -92,6 +94,7 @@ describe("aggregateTripSalesByProductLine", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.lineLabel).toBe("Помидоры · 5");
     expect(rows[0]!.grams).toBe(3000n);
+    expect(rows[0]!.packages).toBe(6n);
     expect(rows[0]!.revenue).toBe(15000n);
     expect(rows[0]!.cash).toBe(10000n);
     expect(rows[0]!.debt).toBe(5000n);

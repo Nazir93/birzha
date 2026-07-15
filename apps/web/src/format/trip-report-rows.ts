@@ -175,6 +175,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   shippedG: bigint;
   shippedPackages: bigint;
   soldG: bigint;
+  soldPackages: bigint;
   shortageG: bigint;
   netTransitG: bigint;
   revenueK: bigint;
@@ -185,6 +186,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
   let shippedG = 0n;
   let shippedPackages = 0n;
   let soldG = 0n;
+  let soldPackages = 0n;
   let shortageG = 0n;
   let netTransitG = 0n;
   let revenueK = 0n;
@@ -195,6 +197,7 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
     shippedG += row.shippedG;
     shippedPackages += row.shippedPackages;
     soldG += row.soldG;
+    soldPackages += row.soldPackages;
     shortageG += row.shortageG;
     netTransitG += row.netTransitG;
     revenueK += row.revenueK;
@@ -202,7 +205,18 @@ export function aggregateTripBatchRows(rows: TripBatchTableRow[]): {
     debtK += row.debtK;
     cardTransferK += row.cardTransferK;
   }
-  return { shippedG, shippedPackages, soldG, shortageG, netTransitG, revenueK, cashK, debtK, cardTransferK };
+  return {
+    shippedG,
+    shippedPackages,
+    soldG,
+    soldPackages,
+    shortageG,
+    netTransitG,
+    revenueK,
+    cashK,
+    debtK,
+    cardTransferK,
+  };
 }
 
 export type BatchTotalsReconciliation = {

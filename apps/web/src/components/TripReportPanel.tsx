@@ -48,6 +48,16 @@ function sanitizeFilenamePart(s: string): string {
   return s.replace(/[/\\?%*:|"<>]/g, "-").slice(0, 80);
 }
 
+/** Ящики в отчёте: число или «—», если в продажах/отгрузке не указаны. */
+function packageCountLabel(raw: string | bigint | undefined): string {
+  try {
+    const n = typeof raw === "bigint" ? raw : BigInt((raw ?? "0").toString().trim() || "0");
+    return n > 0n ? n.toString() : "—";
+  } catch {
+    return "—";
+  }
+}
+
 export type TripReportViewContext = "default" | "accounting" | "sales";
 
 const headingByContext: Record<TripReportViewContext, string> = {
@@ -465,18 +475,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 {!fieldSellerSalesReport ? (
                   <tr>
                     <td style={thtd}>Отгрузка, ящики (по строкам отгрузки)</td>
-                    <td style={thtd}>
-                      {(() => {
-                        const raw = r.shipment.totalPackageCount?.trim() || "0";
-                        const n = BigInt(raw);
-                        return n > 0n ? raw : "—";
-                      })()}
-                    </td>
+                    <td style={thtd}>{packageCountLabel(r.shipment.totalPackageCount)}</td>
                   </tr>
                 ) : null}
                 <tr>
                   <td style={thtd}>Продажи</td>
                   <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>Продажи, ящики</td>
+                  <td style={thtd}>{packageCountLabel(r.sales.totalPackageCount)}</td>
                 </tr>
                 <tr>
                   <td style={thtd}>в т.ч. розница</td>
@@ -571,7 +579,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               <BirzhaEmptyState compact title="Продаж по строкам накладной нет" />
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="trip-report-by-product-line">
+                <table style={{ ...tableStyle, minWidth: 580 }} aria-labelledby="trip-report-by-product-line">
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>
@@ -579,6 +587,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </th>
                       <th scope="col" style={thHead}>
                         Продано, кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Продано, ящ.
                       </th>
                       {!fieldSellerSalesReport ? (
                         <th scope="col" style={thHead}>
@@ -601,6 +612,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={row.lineLabel}>
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                        <td style={thtd}>{packageCountLabel(row.packages)}</td>
                         {!fieldSellerSalesReport ? (
                           <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
                         ) : null}
@@ -716,6 +728,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Прод., кг
                     </th>
                     <th scope="col" style={thHead}>
+                      Прод., ящ.
+                    </th>
+                    <th scope="col" style={thHead}>
                       Недост., кг
                     </th>
                     <th scope="col" style={thHead}>
@@ -739,8 +754,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <div style={{ fontSize: "0.9rem", fontWeight: 600, lineHeight: 1.35 }}>{caption}</div>
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
-                      <td style={thtd}>{row.shippedPackages.toString()}</td>
+                      <td style={thtd}>{packageCountLabel(row.shippedPackages)}</td>
                       <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
+                      <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
                       <td style={thtd}>{gramsToKgLabel(row.shortageG.toString())}</td>
                       <td
                         className={row.netTransitG < 0n ? "birzha-text-danger" : undefined}
@@ -766,8 +782,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       Итого по партиям
                     </th>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shippedG.toString())}</td>
-                    <td style={thtd}>{batchAgg.shippedPackages.toString()}</td>
+                    <td style={thtd}>{packageCountLabel(batchAgg.shippedPackages)}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
+                    <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shortageG.toString())}</td>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>
                     <td style={thtd}>{kopecksToRubLabel(batchAgg.revenueK.toString())} ₽</td>
