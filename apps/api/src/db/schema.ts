@@ -91,7 +91,7 @@ export const batches = pgTable("batches", {
 /**
  * Журнал «возврат на склад» / маркировка для другого направления.
  * Не вызывает доменный `Batch#writeOff`: остаток onWarehouse не уменьшается;
- * доступность к погрузке = onWarehouse − Σ журнала.
+ * доступность к погрузке = onWarehouse (журнал не блокирует другую погрузку).
  * `reason`: `quality_reject` — экран распределения / догрузки.
  */
 export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {

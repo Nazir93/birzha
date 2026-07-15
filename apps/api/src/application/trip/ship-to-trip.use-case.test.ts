@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { InsufficientStockError } from "@birzha/domain";
-
 import { CreatePurchaseUseCase } from "../purchase/create-purchase.use-case.js";
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
 import { InMemoryBatchWarehouseWriteOffLedger } from "../testing/in-memory-batch-warehouse-write-off-ledger.js";
@@ -88,7 +86,7 @@ describe("ShipToTripUseCase", () => {
     ).rejects.toThrow(TripNotFoundError);
   });
 
-  it("отказывает отгрузить кг, зафиксированные как возврат на склад", async () => {
+  it("журнал возврата на склад не блокирует отгрузку в другой рейс", async () => {
     const repo = new InMemoryBatchRepository();
     const trips = new InMemoryTripRepository();
     const shipments = new InMemoryTripShipmentRepository();
@@ -107,20 +105,12 @@ describe("ShipToTripUseCase", () => {
       reason: "quality_reject",
     });
 
-    await expect(
-      new ShipToTripUseCase(repo, trips, shipments, undefined, ledger).execute({
-        batchId: "b-3",
-        kg: 70,
-        tripId: "t-3",
-      }),
-    ).rejects.toThrow(InsufficientStockError);
-
-    await new ShipToTripUseCase(repo, trips, shipments, undefined, ledger).execute({
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
       batchId: "b-3",
-      kg: 60,
+      kg: 70,
       tripId: "t-3",
     });
     const agg = await shipments.aggregateByTripId("t-3");
-    expect(agg.totalGrams).toBe(60_000n);
+    expect(agg.totalGrams).toBe(70_000n);
   });
 });

@@ -7,7 +7,7 @@ export type WarehouseDocumentStockRow = {
   lineCount: number;
   /** Физический остаток onWarehouse (возвраты журнала не вычитаются). */
   onWarehouseKg: number;
-  /** Доступно к погрузке: onWarehouse − журнал возвратов. */
+  /** Доступно к погрузке: физический остаток на складе (журнал возвратов не уменьшает). */
   availableForLoadingKg: number;
   onWarehousePackages: number;
   inTransitKg: number;

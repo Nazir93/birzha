@@ -47,7 +47,6 @@ import {
   warehouses,
 } from "../db/schema.js";
 import { availableGramsForLoadingManifestLine } from "../application/trip/loading-manifest-available-grams.js";
-import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { sumActiveLoadingManifestGramsByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
@@ -146,13 +145,10 @@ export function registerLoadingManifestRoutes(
       if (badWarehouse) {
         return reply.code(400).send({ error: "batch_not_in_warehouse", batchId: badWarehouse.batchId });
       }
-      const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
-      const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds(batchIds);
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
       const withAvailable = selected.map((r) => {
         const availableGrams = availableGramsForLoadingManifestLine({
           onWarehouseGrams: r.onWarehouseGrams,
-          qualityRejectReturnGrams: returnSums.get(r.batchId) ?? 0n,
           reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
         });
         return { ...r, availableGrams };
@@ -442,8 +438,7 @@ export function registerLoadingManifestRoutes(
 
         const batchRepo = new DrizzleBatchRepository(exec);
         const shipRepo = new DrizzleTripShipmentRepository(exec);
-        const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(exec);
-        const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined, writeOffLedger);
+        const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo);
 
         for (const line of lines) {
           const ledger = await shipRepo.totalGramsForTripAndBatch(body.tripId, line.batchId);
@@ -467,7 +462,6 @@ export function registerLoadingManifestRoutes(
             .where(eq(batches.id, line.batchId))
             .limit(1);
           const totalLedger = await shipRepo.totalGramsForBatch(line.batchId);
-          const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds([line.batchId]);
           const plan = planLoadingManifestAssignTripShipment({
             lineGrams: toBigIntOrZero(line.grams),
             linePackageCount: toNullableBigInt(line.packageCount),
@@ -476,7 +470,6 @@ export function registerLoadingManifestRoutes(
             onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
             inTransitGrams: br?.inTransitGrams ?? 0n,
             shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
-            warehouseReturnGrams: returnSums.get(line.batchId) ?? 0n,
           });
           if (plan.kind === "none") {
             continue;
@@ -580,15 +573,12 @@ export function registerLoadingManifestRoutes(
           await assertTripAllowsWarehouseLoading(db, tripRead, { tripId: assignedTripId, warehouseId });
         }
       }
-      const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
-      const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds(batchIds);
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds, {
         excludeManifestId: manifestId,
       });
       const withAvailable = selected.map((r) => {
         const availableGrams = availableGramsForLoadingManifestLine({
           onWarehouseGrams: r.onWarehouseGrams,
-          qualityRejectReturnGrams: returnSums.get(r.batchId) ?? 0n,
           reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
         });
         return { ...r, availableGrams };
@@ -639,8 +629,7 @@ export function registerLoadingManifestRoutes(
         if (assignedTripId && tripRead && affectedBatchIds.size > 0) {
           const batchRepo = new DrizzleBatchRepository(exec);
           const shipRepo = new DrizzleTripShipmentRepository(exec);
-          const writeOffLedger = new DrizzleBatchWarehouseWriteOffLedger(exec);
-          const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo, undefined, writeOffLedger);
+          const shipUse = new ShipToTripUseCase(batchRepo, tripRead, shipRepo);
 
           for (const batchId of affectedBatchIds) {
             const [line] = await exec
@@ -670,7 +659,6 @@ export function registerLoadingManifestRoutes(
               .where(eq(batches.id, batchId))
               .limit(1);
             const totalLedger = await shipRepo.totalGramsForBatch(batchId);
-            const returnSums = await writeOffLedger.totalQualityRejectGramsByBatchIds([batchId]);
             const plan = planLoadingManifestAssignTripShipment({
               lineGrams: toBigIntOrZero(line.grams),
               linePackageCount: toNullableBigInt(line.packageCount),
@@ -679,7 +667,6 @@ export function registerLoadingManifestRoutes(
               onWarehouseGrams: br?.onWarehouseGrams ?? 0n,
               inTransitGrams: br?.inTransitGrams ?? 0n,
               shipmentGramsOtherTrips: totalLedger > ledger ? totalLedger - ledger : 0n,
-              warehouseReturnGrams: returnSums.get(batchId) ?? 0n,
             });
             if (plan.kind === "none") {
               continue;

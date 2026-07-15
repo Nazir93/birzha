@@ -115,7 +115,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
     ).toEqual({ kind: "none" });
   });
 
-  it("учитывает возвраты на склад — отгрузка только с доступного остатка", () => {
+  it("журнал возвратов не уменьшает массу к отгрузке со склада", () => {
     expect(
       planLoadingManifestAssignTripShipment({
         lineGrams: 5000n,
@@ -125,8 +125,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         onWarehouseGrams: 5000n,
         inTransitGrams: 0n,
         shipmentGramsOtherTrips: 0n,
-        warehouseReturnGrams: 2000n,
       }),
-    ).toEqual({ kind: "ship_from_warehouse", grams: 3000n, packageCount: 60n });
+    ).toEqual({ kind: "ship_from_warehouse", grams: 5000n, packageCount: 100n });
   });
 });

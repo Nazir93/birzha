@@ -13,7 +13,7 @@ import { kgToGrams } from "../units/mass.js";
 
 export type RecordWarehouseWriteOffInput = {
   batchId: string;
-  /** Масса возврата на склад; фиксируется в журнале, остаток на складе не уменьшается. */
+  /** Масса возврата на склад; фиксируется в журнале, остаток и доступность к погрузке не уменьшаются. */
   kg: number;
   reason: BatchWarehouseWriteOffReason;
 };

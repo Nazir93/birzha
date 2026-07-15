@@ -31,16 +31,12 @@ export function planLoadingManifestAssignTripShipment(input: {
   inTransitGrams: bigint;
   /** Отгрузки по партии в журналах других рейсов (без текущего). */
   shipmentGramsOtherTrips: bigint;
-  /** Сумма возвратов на склад в журнале — недоступна к отгрузке без отмены возврата. */
-  warehouseReturnGrams?: bigint;
 }): LoadingManifestAssignTripShipPlan {
   const delta = input.lineGrams - input.ledgerGramsForTripBatch;
   if (delta <= 0n) {
     return { kind: "none" };
   }
-  const returned = input.warehouseReturnGrams ?? 0n;
-  const availableWh =
-    input.onWarehouseGrams > returned ? input.onWarehouseGrams - returned : 0n;
+  const availableWh = input.onWarehouseGrams > 0n ? input.onWarehouseGrams : 0n;
   const linePkg = input.linePackageCount ?? 0n;
   const pkgDelta = linePkg - input.ledgerPackageCountForTripBatch;
   const fromWh = delta < availableWh ? delta : availableWh;

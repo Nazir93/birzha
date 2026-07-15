@@ -28,7 +28,6 @@ import {
 } from "../db/schema.js";
 import { gramsToKg } from "../application/units/mass.js";
 import { DrizzlePurchaseLinePackageMetaRepository } from "../infrastructure/persistence/drizzle-purchase-line-package-meta.js";
-import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { NullPurchaseLinePackageMetaPort } from "../infrastructure/persistence/null-purchase-line-package-meta.js";
 
 import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.use-case.js";
@@ -88,8 +87,7 @@ export function registerBatchRoutes(
 ): void {
   const createPurchase = new CreatePurchaseUseCase(batches);
   const receive = new ReceiveOnWarehouseUseCase(batches);
-  const warehouseReturnLedger = db ? new DrizzleBatchWarehouseWriteOffLedger(db) : null;
-  const ship = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction, warehouseReturnLedger);
+  const ship = new ShipToTripUseCase(batches, trips, shipments, runShipInTransaction);
   const purchaseLinePackages = db
     ? new DrizzlePurchaseLinePackageMetaRepository(db)
     : new NullPurchaseLinePackageMetaPort();

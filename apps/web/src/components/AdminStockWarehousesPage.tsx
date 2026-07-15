@@ -431,29 +431,18 @@ export function AdminStockWarehousesPage() {
                   <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
                     Калибров: <strong>{selectedWarehouseStats.calibersCount}</strong>
                     <span className="birzha-text-muted"> · </span>
-                    На складе (физ.):{" "}
+                    На складе:{" "}
                     <strong>{selectedWarehouseStats.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг</strong>
-                    {selectedWarehouseStats.writtenOffKg > 0 ? (
-                      <>
-                        <span className="birzha-text-muted"> · </span>
-                        Доступно к погрузке:{" "}
-                        <strong>
-                          {selectedWarehouseStats.availableForLoadingKg.toLocaleString("ru-RU", {
-                            maximumFractionDigits: 3,
-                          })}{" "}
-                          кг
-                        </strong>
-                      </>
-                    ) : null}
                     <span className="birzha-text-muted"> · </span>
                     Ящики: <strong>{selectedWarehouseStats.totalPackages.toLocaleString("ru-RU")} ящ.</strong>
                     {selectedWarehouseStats.writtenOffKg > 0 ? (
                       <>
                         <span className="birzha-text-muted"> · </span>
-                        Возвращено (журнал, в физ. остатке):{" "}
+                        В журнале возвратов:{" "}
                         <strong>
                           {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
                         </strong>
+                        <span className="birzha-text-muted"> (можно грузить в другое направление)</span>
                       </>
                     ) : null}
                   </p>
