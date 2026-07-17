@@ -11,7 +11,14 @@ import {
   suggestNextTripNumber,
   tripListFullySold,
 } from "../format/trip-label.js";
-import { queryRoots, invalidateStockQueries, loadingManifestDetailQueryOptions, loadingManifestsPagedQueryOptions, tripsPickerQueryOptions } from "../query/core-list-queries.js";
+import {
+  queryRoots,
+  invalidateStockQueries,
+  loadingManifestDetailQueryOptions,
+  loadingManifestsPagedQueryOptions,
+  shipDestinationsFullListQueryOptions,
+  tripsPickerQueryOptions,
+} from "../query/core-list-queries.js";
 import { loadingManifestTripDetachLockMessage } from "../format/loading-manifest-trip-detach-lock.js";
 import type { LoadingManifestTripDetachLockCode } from "../format/loading-manifest-trip-detach-lock.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -20,9 +27,10 @@ import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnClassSpaced, dateFieldStyle, fieldStyle } from "../ui/styles.js";
+import { btnClassSpaced, dateFieldStyle, fieldStyle, selectFieldStyle } from "../ui/styles.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 
@@ -38,6 +46,7 @@ export function AdminTripsLogisticsPanel() {
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
   const [newTripNumber, setNewTripNumber] = useState("");
+  const [newTripDestinationCode, setNewTripDestinationCode] = useState("");
   const [newTripVehicle, setNewTripVehicle] = useState("");
   const [newTripDriver, setNewTripDriver] = useState("");
   const [newTripDeparted, setNewTripDeparted] = useState("");
@@ -66,9 +75,30 @@ export function AdminTripsLogisticsPanel() {
   });
 
   const tripsSuggestQ = useQuery({
-    ...tripsPickerQueryOptions({ limit: 200, offset: 0, status: "open", order: "tripNumber" }),
+    ...tripsPickerQueryOptions({ limit: 500, offset: 0, order: "tripNumber" }),
     enabled: tripsApiEnabled && canWriteTrips,
   });
+
+  const destinationsQ = useQuery({
+    ...shipDestinationsFullListQueryOptions(),
+    enabled: tripsApiEnabled,
+  });
+
+  const destinationOptions = useMemo(() => {
+    const list = destinationsQ.data?.shipDestinations ?? [];
+    return [
+      { value: "", label: "— выберите город —" },
+      ...list.map((d) => ({ value: d.code, label: d.displayName || d.code })),
+    ];
+  }, [destinationsQ.data?.shipDestinations]);
+
+  const destinationLabelByCode = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of destinationsQ.data?.shipDestinations ?? []) {
+      map.set(d.code, d.displayName || d.code);
+    }
+    return map;
+  }, [destinationsQ.data?.shipDestinations]);
 
   const openTrips = useMemo(() => tripsQ.data?.trips ?? [], [tripsQ.data?.trips]);
   const tripsTotalCount = tripsQ.data?.listMeta?.totalCount ?? openTrips.length;
@@ -128,24 +158,36 @@ export function AdminTripsLogisticsPanel() {
 
   const archivePath = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
 
-  const suggestedTripNumber = useMemo(
-    () => suggestNextTripNumber(tripsSuggestQ.data?.trips ?? openTrips),
-    [tripsSuggestQ.data?.trips, openTrips],
-  );
+  const tripsForSuggest = tripsSuggestQ.data?.trips ?? [];
+
+  const suggestedTripNumber = useMemo(() => {
+    if (!newTripDestinationCode.trim()) {
+      return "";
+    }
+    return suggestNextTripNumber(tripsForSuggest, newTripDestinationCode);
+  }, [tripsForSuggest, newTripDestinationCode]);
 
   useEffect(() => {
-    if (newTripNumber === "" && suggestedTripNumber) {
+    if (!newTripDestinationCode.trim()) {
+      setNewTripNumber("");
+      return;
+    }
+    if (suggestedTripNumber) {
       setNewTripNumber(suggestedTripNumber);
     }
-  }, [newTripNumber, suggestedTripNumber]);
+  }, [newTripDestinationCode, suggestedTripNumber]);
 
   const createTrip = useMutation({
     mutationFn: async () => {
       setTripError(null);
       const id = randomUuid();
+      const dest = newTripDestinationCode.trim();
       const num = newTripNumber.trim() || suggestedTripNumber;
       const dr = newTripDriver.trim();
       const vl = newTripVehicle.trim();
+      if (!dest) {
+        throw new Error("Укажите город рейса");
+      }
       if (!num) {
         throw new Error("Укажите № рейса");
       }
@@ -171,6 +213,7 @@ export function AdminTripsLogisticsPanel() {
           vehicleLabel: vl,
           driverName: dr,
           departedAt,
+          destinationCode: dest,
         },
         "Нет прав: создание рейса — роли admin, manager, logistics",
       );
@@ -180,6 +223,7 @@ export function AdminTripsLogisticsPanel() {
       setNewTripDriver("");
       setNewTripDeparted("");
       setNewTripNumber("");
+      setNewTripDestinationCode("");
       invalidateTrips();
     },
     onError: (e: Error) => {
@@ -277,14 +321,27 @@ export function AdminTripsLogisticsPanel() {
           <>
             <div className="birzha-clean-ops-meta-grid">
               <label className="birzha-form-label">
-                № рейса
+                Город *
+                <BirzhaSelect
+                  value={newTripDestinationCode}
+                  onChange={setNewTripDestinationCode}
+                  className="birzha-clean-ops-field"
+                  style={selectFieldStyle}
+                  placeholder="— выберите город —"
+                  options={destinationOptions}
+                  disabled={destinationsQ.isPending}
+                />
+              </label>
+              <label className="birzha-form-label">
+                № рейса (по городу)
                 <input
                   value={newTripNumber}
                   onChange={(e) => setNewTripNumber(e.target.value)}
                   style={fieldStyle}
-                  placeholder={suggestedTripNumber}
+                  placeholder={suggestedTripNumber || "сначала город"}
                   inputMode="numeric"
                   autoComplete="off"
+                  disabled={!newTripDestinationCode.trim()}
                 />
               </label>
               <label className="birzha-form-label">
@@ -342,6 +399,7 @@ export function AdminTripsLogisticsPanel() {
                 <thead>
                   <tr>
                     <th>№</th>
+                    <th>Город</th>
                     <th>Водитель</th>
                     <th>Машина</th>
                     <th>Отправление</th>
@@ -360,11 +418,17 @@ export function AdminTripsLogisticsPanel() {
                   ) : null}
                   {openTrips.map((t) => {
                     const linkedManifests = manifestsByTripId.get(t.id) ?? [];
+                    const cityCode = t.destinationCode?.trim() || linkedManifests[0]?.destinationCode?.trim() || "";
+                    const cityLabel =
+                      (cityCode && destinationLabelByCode.get(cityCode)) ||
+                      linkedManifests[0]?.destinationName ||
+                      "—";
                     return (
                     <tr key={t.id}>
                       <td>
                         <strong>{t.tripNumber}</strong>
                       </td>
+                      <td>{cityLabel}</td>
                       <td>{t.driverName ?? "—"}</td>
                       <td>{t.vehicleLabel ?? "—"}</td>
                       <td className="birzha-data-table__emph">{formatTripDepartedAtRu(t.departedAt)}</td>

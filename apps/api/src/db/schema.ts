@@ -138,6 +138,8 @@ export const trips = pgTable("trips", {
   departedAt: timestamp("departed_at", { withTimezone: true, mode: "date" }),
   /** Полевой продавец; null — продавцам не показывается. Список GET /trips для seller-only режется по этому полю. */
   assignedSellerUserId: text("assigned_seller_user_id").references(() => users.id, { onDelete: "set null" }),
+  /** Город/направление; нумерация рейса 01, 02… в рамках этого кода. */
+  destinationCode: text("destination_code").references(() => shipDestinations.code),
 });
 
 /** Погрузочная накладная: сохранённый отбор товара на машину по одному направлению/городу. */

@@ -155,6 +155,12 @@ export const createTripBodySchema = z.object({
     .max(200)
     .nullish()
     .transform((s) => (s == null || s.trim() === "" ? null : s.trim())),
+  /** Город/направление (`ship_destinations.code`); нумерация рейса в рамках города. */
+  destinationCode: z
+    .string()
+    .max(120)
+    .nullish()
+    .transform((s) => (s == null || s.trim() === "" ? null : s.trim())),
 });
 
 /** POST /trips/:tripId/assign-seller — отгрузить рейс под конкретного продавца. */

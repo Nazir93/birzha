@@ -61,10 +61,17 @@ export function formatTripStatusLabel(status: string): string {
   return status;
 }
 
-/** Следующий порядковый № рейса по уже существующим (01, 02, …). */
-export function suggestNextTripNumber(trips: readonly { tripNumber: string }[]): string {
+/** Следующий порядковый № рейса (01, 02, …). При `destinationCode` — только среди рейсов этого города. */
+export function suggestNextTripNumber(
+  trips: readonly { tripNumber: string; destinationCode?: string | null }[],
+  destinationCode?: string | null,
+): string {
+  const dest = destinationCode?.trim() || "";
+  const scoped = dest
+    ? trips.filter((t) => (t.destinationCode?.trim() || "") === dest)
+    : trips;
   let max = 0;
-  for (const t of trips) {
+  for (const t of scoped) {
     const m = /^(\d+)/.exec(t.tripNumber.trim());
     if (!m) {
       continue;

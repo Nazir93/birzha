@@ -320,6 +320,8 @@ export type TripJson = {
   departedAt: string | null;
   /** Полевой продавец; null — рейс ещё не показывается продавцам. */
   assignedSellerUserId: string | null;
+  /** Город/направление (`ship_destinations.code`); нумерация рейса в рамках города. */
+  destinationCode?: string | null;
   /**
    * Полный список `GET /trips` без query: остаток «в пути» по отчёту (граммы, строка).
    * У подборщика (`?search=` / `limit`) полей нет.

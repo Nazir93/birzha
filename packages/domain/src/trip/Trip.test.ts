@@ -62,6 +62,15 @@ describe("Trip", () => {
     expect(() => t.assignSeller(" ")).toThrow("assignedSellerUserId");
   });
 
+  it("хранит город/направление рейса", () => {
+    const t = Trip.create({
+      id: "t-dest",
+      tripNumber: "01",
+      destinationCode: "moscow",
+    });
+    expect(t.getDestinationCode()).toBe("moscow");
+  });
+
   it("updateHeader меняет номер, ТС и дату", () => {
     const t = Trip.create({ id: "t-8", tripNumber: "Ф-06", vehicleLabel: "А111" });
     const d = new Date("2026-05-01T08:00:00.000Z");

@@ -93,6 +93,17 @@ describe("trip-label", () => {
     expect(suggestNextTripNumber([{ tripNumber: "9" }])).toBe("10");
   });
 
+  it("suggestNextTripNumber — отдельно по городу", () => {
+    const trips = [
+      { tripNumber: "01", destinationCode: "moscow" },
+      { tripNumber: "02", destinationCode: "moscow" },
+      { tripNumber: "01", destinationCode: "rostov" },
+    ];
+    expect(suggestNextTripNumber(trips, "moscow")).toBe("03");
+    expect(suggestNextTripNumber(trips, "rostov")).toBe("02");
+    expect(suggestNextTripNumber(trips, "spb")).toBe("01");
+  });
+
   it("buildTripDisplayNumber собирает водитель · машина · дата", () => {
     expect(
       buildTripDisplayNumber({

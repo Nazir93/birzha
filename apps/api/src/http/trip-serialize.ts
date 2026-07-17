@@ -18,6 +18,7 @@ export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
     driverName: trip.getDriverName(),
     departedAt: departedAt ? departedAt.toISOString() : null,
     assignedSellerUserId: trip.getAssignedSellerUserId(),
+    destinationCode: trip.getDestinationCode(),
   };
   if (!listExtra) {
     return base;

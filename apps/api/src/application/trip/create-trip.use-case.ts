@@ -10,6 +10,7 @@ export type CreateTripInput = {
   /** ISO-строка или null (дата валидируется в `createTripBodySchema`). */
   departedAt?: string | null;
   assignedSellerUserId?: string | null;
+  destinationCode?: string | null;
 };
 
 export class CreateTripUseCase {
@@ -25,6 +26,7 @@ export class CreateTripUseCase {
         driverName: input.driverName,
         departedAt: iso == null || iso.trim() === "" ? null : new Date(iso),
         assignedSellerUserId: input.assignedSellerUserId ?? null,
+        destinationCode: input.destinationCode ?? null,
       }),
     );
   }

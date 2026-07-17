@@ -17,6 +17,8 @@ export class Trip {
     private driverName: string | null,
     private departedAt: Date | null,
     private assignedSellerUserId: string | null,
+    /** Город/направление рейса (`ship_destinations.code`); нумерация 1,2,3… в рамках города. */
+    private destinationCode: string | null,
   ) {}
 
   static create(config: {
@@ -26,6 +28,7 @@ export class Trip {
     driverName?: string | null;
     departedAt?: Date | null;
     assignedSellerUserId?: string | null;
+    destinationCode?: string | null;
   }): Trip {
     if (!config.id.trim()) {
       throw new Error("trip id не может быть пустым");
@@ -41,6 +44,7 @@ export class Trip {
       normText(config.driverName ?? null),
       config.departedAt == null || Number.isNaN(config.departedAt.getTime()) ? null : config.departedAt,
       normText(config.assignedSellerUserId ?? null),
+      normText(config.destinationCode ?? null),
     );
   }
 
@@ -73,6 +77,10 @@ export class Trip {
     return this.assignedSellerUserId;
   }
 
+  getDestinationCode(): string | null {
+    return this.destinationCode;
+  }
+
   assignSeller(userId: string): void {
     const normalized = normText(userId);
     if (!normalized) {
@@ -87,6 +95,7 @@ export class Trip {
     vehicleLabel?: string | null;
     driverName?: string | null;
     departedAt?: Date | null;
+    destinationCode?: string | null;
   }): void {
     if (input.tripNumber !== undefined) {
       const n = input.tripNumber.trim();
@@ -104,6 +113,9 @@ export class Trip {
     if (input.departedAt !== undefined) {
       this.departedAt =
         input.departedAt == null || Number.isNaN(input.departedAt.getTime()) ? null : input.departedAt;
+    }
+    if (input.destinationCode !== undefined) {
+      this.destinationCode = normText(input.destinationCode);
     }
   }
 
@@ -123,6 +135,7 @@ export class Trip {
     driverName?: string | null;
     departedAt?: Date | null;
     assignedSellerUserId?: string | null;
+    destinationCode?: string | null;
   }): Trip {
     return new Trip(
       config.id,
@@ -130,8 +143,11 @@ export class Trip {
       config.status,
       normText(config.vehicleLabel ?? null),
       normText(config.driverName ?? null),
-      config.departedAt == null || Number.isNaN(new Date(config.departedAt).getTime()) ? null : new Date(config.departedAt),
+      config.departedAt == null || Number.isNaN(new Date(config.departedAt).getTime())
+        ? null
+        : new Date(config.departedAt),
       normText(config.assignedSellerUserId ?? null),
+      normText(config.destinationCode ?? null),
     );
   }
 }
