@@ -25,6 +25,10 @@ import type { LoadingManifestTripDetachLockCode } from "../format/loading-manife
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
+import {
+  writePreferredLoadingDestinationCode,
+  writePreferredLoadingTripId,
+} from "../preferences/ops-preferred-loading-trip.js";
 import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -55,7 +59,7 @@ export function AdminTripsLogisticsPanel() {
   const [detachingManifestId, setDetachingManifestId] = useState<string | null>(null);
   const [tripsPage, setTripsPage] = useState(0);
 
-  const operationsPath = adminAwarePathForPath(pathname, adminRoutes.operations, ops.operations);
+  /** Погрузка / догрузка / смена рейса — не «Недостача по рейсу» (`operations`). */
   const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
 
   const invalidateTrips = useCallback(() => {
@@ -495,7 +499,18 @@ export function AdminTripsLogisticsPanel() {
                             Остаток погруженного 0
                           </span>
                         ) : null}
-                        <Link to={operationsPath} className="birzha-ui-sm" style={{ display: "block", marginTop: "0.2rem" }}>
+                        <Link
+                          to={distributionPath}
+                          className="birzha-ui-sm"
+                          style={{ display: "block", marginTop: "0.2rem" }}
+                          onClick={() => {
+                            writePreferredLoadingTripId(t.id);
+                            const dest = t.destinationCode?.trim();
+                            if (dest) {
+                              writePreferredLoadingDestinationCode(dest);
+                            }
+                          }}
+                        >
                           к операциям
                         </Link>
                       </td>
