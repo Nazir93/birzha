@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary } from "../api/types.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import {
   buildTripDisplayNumber,
   formatTripDepartedAtRu,
@@ -440,11 +441,13 @@ export function AdminTripsLogisticsPanel() {
                             {linkedManifests.map((m) => (
                               <li key={m.id} className="birzha-trip-manifest-list__item">
                                 <Link to={`${distributionPath}/${m.id}`} className="birzha-ui-sm">
-                                  <strong>{m.manifestNumber}</strong>
+                                  <strong>
+                                    {t.tripNumber} · {m.destinationName} · {formatPurchaseDocDateRu(m.docDate)}
+                                  </strong>
                                 </Link>
                                 <span className="birzha-text-muted birzha-ui-sm">
                                   {" "}
-                                  · {m.destinationName} · {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
+                                  · {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
                                 </span>
                                 {canDetachManifest ? (
                                   detachLockByManifestId.get(m.id)?.locked === false ? (
