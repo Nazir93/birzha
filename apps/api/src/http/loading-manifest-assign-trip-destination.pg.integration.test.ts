@@ -1,12 +1,8 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import {
   numberToDecimalStringForKopecks,
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
 import { eq, inArray, like } from "drizzle-orm";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../app.js";
@@ -103,11 +99,11 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
   let db: DbClient;
 
   beforeAll(async () => {
+    // Схема уже накатывается через `drizzle-kit push` на стенде; migrate на живой БД падает
+    // («relation already exists»), если миграции не велись отдельно от push.
     const created = createDb(pgUrl!);
     sql = created.sql;
     db = created.db;
-    const dir = path.dirname(fileURLToPath(import.meta.url));
-    await migrate(db, { migrationsFolder: path.join(dir, "../../drizzle") });
     await seedRefs(db);
     await cleanup(db);
   }, 60_000);
