@@ -1,9 +1,11 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { hasGlobalRole } from "../auth/global-roles.js";
+import { ASSIGN_UNASSIGNED_TRIPS_HASH } from "../format/admin-summary-alerts.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { filterTripsWithoutAssignedSeller } from "../format/seller-trip-metrics.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -31,7 +33,11 @@ type AdminUserRow = { id: string; login: string; isActive: boolean; roleCodes: s
 /** Закрепление свободного рейса за продавцом (раньше отдельная вкладка «Назначить продавца»). */
 export function SellerTripAssignBlock() {
   const { meta, user } = useAuth();
+  const { hash } = useLocation();
   const queryClient = useQueryClient();
+  const focusUnassigned = hash.replace(/^#/, "") === ASSIGN_UNASSIGNED_TRIPS_HASH;
+  const [assignOpen, setAssignOpen] = useState(true);
+
   const tripsQuery = useQuery(tripsFullListQueryOptions());
   const manifestsQuery = useQuery(
     loadingManifestsPagedQueryOptions({ limit: 500, offset: 0, scope: "active" }),
@@ -89,6 +95,17 @@ export function SellerTripAssignBlock() {
   const [assignTripId, setAssignTripId] = useState("");
   const [assignSellerUserId, setAssignSellerUserId] = useState("");
 
+  useEffect(() => {
+    if (!focusUnassigned) {
+      return;
+    }
+    setAssignOpen(true);
+    const el = document.getElementById(ASSIGN_UNASSIGNED_TRIPS_HASH);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [focusUnassigned]);
+
   const assignSellerToTrip = useMutation({
     mutationFn: async () => {
       const tripId = assignTripId.trim();
@@ -114,13 +131,54 @@ export function SellerTripAssignBlock() {
 
   return (
     <BirzhaDisclosure
+      id={ASSIGN_UNASSIGNED_TRIPS_HASH}
+      open={assignOpen}
+      onOpenChange={setAssignOpen}
       defaultOpen
       title={
         <h3 className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>
-          Закрепить рейс за продавцом
+          Рейсы без продавца
+          {!tripsQuery.isPending ? (
+            <span className="birzha-text-muted birzha-ui-sm" style={{ fontWeight: 500, marginLeft: "0.35rem" }}>
+              ({tripsAvailableForAssignment.length})
+            </span>
+          ) : null}
         </h3>
       }
     >
+      {tripsQuery.isPending ? (
+        <p style={{ margin: "0 0 0.75rem" }} role="status" aria-live="polite">
+          <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
+        </p>
+      ) : tripsAvailableForAssignment.length === 0 ? (
+        <BirzhaEmptyState
+          compact
+          title="Нет рейсов без продавца"
+          description="Все открытые рейсы уже закреплены, либо рейсов в работе нет."
+        />
+      ) : (
+        <ul className="birzha-trip-manifest-list" style={{ margin: "0 0 0.85rem" }} aria-label="Рейсы без продавца">
+          {tripsAvailableForAssignment.map((t) => {
+            const label = formatTripSelectLabel(t, {
+              linkedManifestNumbers: manifestNumbersByTripId.get(t.id),
+            });
+            const selected = assignTripId === t.id;
+            return (
+              <li key={t.id} className="birzha-trip-manifest-list__item">
+                <button
+                  type="button"
+                  className="birzha-clean-ops-text-btn"
+                  style={{ fontWeight: selected ? 700 : 500, textAlign: "left" }}
+                  onClick={() => setAssignTripId(t.id)}
+                >
+                  {label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       <label htmlFor="assign-block-seller" className="birzha-form-label birzha-form-label--block">
         Продавец *
       </label>
@@ -143,11 +201,6 @@ export function SellerTripAssignBlock() {
       <label htmlFor="assign-block-trip" className="birzha-form-label">
         Рейс *
       </label>
-      {tripsQuery.isPending ? (
-        <p style={{ margin: "0.15rem 0 0.35rem" }} role="status" aria-live="polite">
-          <LoadingIndicator size="sm" label="Загрузка списка рейсов…" />
-        </p>
-      ) : null}
       <BirzhaSelect
         id="assign-block-trip"
         value={assignTripId}
@@ -186,8 +239,8 @@ export function SellerTripAssignBlock() {
       ) : null}
 
       <InfoAlert title="Порядок работы">
-        Закрепите рейс за продавцом, когда готовы к отгрузке в поле. Догрузка товара в погрузочную накладную остаётся
-        доступной в любое время.
+        Выберите рейс из списка выше (или в поле), укажите продавца и закрепите. Догрузка в погрузочную накладную
+        остаётся доступной в любое время.
       </InfoAlert>
 
       <button

@@ -65,7 +65,10 @@ export function aggregateSellerShipmentReports(reports: readonly ShipmentReportR
 export function filterTripsWithoutAssignedSeller<T extends { assignedSellerUserId?: string | null }>(
   trips: readonly T[],
 ): T[] {
-  return trips.filter((t) => t.assignedSellerUserId == null || t.assignedSellerUserId === "");
+  return trips.filter((t) => {
+    const seller = t.assignedSellerUserId?.trim() ?? "";
+    return seller === "";
+  });
 }
 
 /**

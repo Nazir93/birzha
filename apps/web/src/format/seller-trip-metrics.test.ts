@@ -62,8 +62,9 @@ describe("filterTripsWithoutAssignedSeller", () => {
       { id: "2", assignedSellerUserId: null as string | null },
       { id: "3", assignedSellerUserId: "" },
       { id: "4", assignedSellerUserId: "u-1" },
+      { id: "5", assignedSellerUserId: "   " },
     ];
-    expect(filterTripsWithoutAssignedSeller(trips).map((t) => t.id)).toEqual(["1", "2", "3"]);
+    expect(filterTripsWithoutAssignedSeller(trips).map((t) => t.id)).toEqual(["1", "2", "3", "5"]);
   });
 });
 

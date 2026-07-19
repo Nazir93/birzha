@@ -5,6 +5,9 @@ export type AdminSummaryAlert = {
   href: string;
 };
 
+/** Якорь блока «Закрепить рейс за продавцом» на `/assign-seller`. */
+export const ASSIGN_UNASSIGNED_TRIPS_HASH = "assign-unassigned-trips";
+
 export function buildAdminSummaryAlerts(input: {
   loadingManifestsWithoutTrip: number;
   openTripsReadyToClose: number;
@@ -31,11 +34,15 @@ export function buildAdminSummaryAlerts(input: {
     });
   }
   if (input.unassignedOpenTripsCount > 0) {
+    const base = input.assignSellerRoute.trim();
+    const href = base.includes("#")
+      ? base
+      : `${base}#${ASSIGN_UNASSIGNED_TRIPS_HASH}`;
     alerts.push({
       id: "trips-without-seller",
       label: "Рейсы без продавца",
       count: input.unassignedOpenTripsCount,
-      href: input.assignSellerRoute,
+      href,
     });
   }
   return alerts;
