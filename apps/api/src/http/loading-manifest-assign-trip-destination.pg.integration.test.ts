@@ -150,17 +150,17 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
           ],
         },
       });
-      expect(createDoc.statusCode).toBe(201);
+      expect(createDoc.statusCode, createDoc.body).toBe(201);
 
       const detailRes = await app.inject({ method: "GET", url: `/purchase-documents/${docId}` });
-      expect(detailRes.statusCode).toBe(200);
+      expect(detailRes.statusCode, detailRes.body).toBe(200);
       const detail = JSON.parse(detailRes.body) as { lines: { batchId: string }[] };
       const batchId = detail.lines[0]?.batchId;
       expect(batchId).toBeTruthy();
 
       for (const trip of [
-        { id: tripMoscowId, tripNumber: `${PREFIX}01`, destinationCode: "moscow" },
-        { id: tripAstrakhanId, tripNumber: `${PREFIX}01`, destinationCode: "astrakhan" },
+        { id: tripMoscowId, tripNumber: `${PREFIX}MSK-01`, destinationCode: "moscow" },
+        { id: tripAstrakhanId, tripNumber: `${PREFIX}AST-01`, destinationCode: "astrakhan" },
       ]) {
         const tripRes = await app.inject({
           method: "POST",
@@ -173,7 +173,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
             departedAt: "2026-07-19T12:00:00.000Z",
           },
         });
-        expect(tripRes.statusCode).toBe(201);
+        expect(tripRes.statusCode, tripRes.body).toBe(201);
       }
 
       const createLm = await app.inject({
@@ -181,21 +181,21 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         url: "/loading-manifests",
         payload: {
           id: manifestId,
-          manifestNumber: `${PREFIX}01 · Москва · 19.07.2026`,
+          manifestNumber: `${PREFIX}ПН-msk-${Date.now()}`,
           docDate: "2026-07-19",
           warehouseId: "wh-manas",
           destinationCode: "moscow",
           batchIds: [batchId!],
         },
       });
-      expect(createLm.statusCode).toBe(201);
+      expect(createLm.statusCode, createLm.body).toBe(201);
 
       const assign = await app.inject({
         method: "POST",
         url: `/loading-manifests/${manifestId}/assign-trip`,
         payload: { tripId: tripAstrakhanId },
       });
-      expect(assign.statusCode).toBe(200);
+      expect(assign.statusCode, assign.body).toBe(200);
 
       const [manifest] = await db
         .select({
@@ -210,7 +210,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
       expect(manifest?.tripId).toBe(tripAstrakhanId);
       expect(manifest?.destinationCode).toBe("astrakhan");
       expect(manifest?.manifestNumber).toContain("Астрахань");
-      expect(manifest?.manifestNumber).toContain(`${PREFIX}01`);
+      expect(manifest?.manifestNumber).toContain(`${PREFIX}AST-01`);
 
       const [batch] = await db
         .select({ destination: schema.batches.destination })
@@ -224,7 +224,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         url: `/loading-manifests/${manifestId}/assign-trip`,
         payload: { tripId: tripMoscowId },
       });
-      expect(change.statusCode).toBe(200);
+      expect(change.statusCode, change.body).toBe(200);
 
       const [afterChange] = await db
         .select({
