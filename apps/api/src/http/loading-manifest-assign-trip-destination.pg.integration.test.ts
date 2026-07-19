@@ -21,6 +21,10 @@ function lineKop(kg: number, rubPerKg: number): number {
   );
 }
 
+/** Активные коды направлений на стенде (см. ship_destinations); legacy `moscow` часто is_active=false. */
+const DEST_MOSCOW = "001";
+const DEST_ASTRAKHAN = "002";
+
 async function seedRefs(db: DbClient): Promise<void> {
   await db
     .insert(schema.warehouses)
@@ -40,8 +44,8 @@ async function seedRefs(db: DbClient): Promise<void> {
   await db
     .insert(schema.shipDestinations)
     .values([
-      { code: "moscow", displayName: "Москва", sortOrder: 10, isActive: true },
-      { code: "astrakhan", displayName: "Астрахань", sortOrder: 30, isActive: true },
+      { code: DEST_MOSCOW, displayName: "Москва", sortOrder: 10, isActive: true },
+      { code: DEST_ASTRAKHAN, displayName: "Астрахань", sortOrder: 20, isActive: true },
     ])
     .onConflictDoNothing();
 }
@@ -159,8 +163,8 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
       expect(batchId).toBeTruthy();
 
       for (const trip of [
-        { id: tripMoscowId, tripNumber: `${PREFIX}MSK-01`, destinationCode: "moscow" },
-        { id: tripAstrakhanId, tripNumber: `${PREFIX}AST-01`, destinationCode: "astrakhan" },
+        { id: tripMoscowId, tripNumber: `${PREFIX}MSK-01`, destinationCode: DEST_MOSCOW },
+        { id: tripAstrakhanId, tripNumber: `${PREFIX}AST-01`, destinationCode: DEST_ASTRAKHAN },
       ]) {
         const tripRes = await app.inject({
           method: "POST",
@@ -184,7 +188,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
           manifestNumber: `${PREFIX}ПН-msk-${Date.now()}`,
           docDate: "2026-07-19",
           warehouseId: "wh-manas",
-          destinationCode: "moscow",
+          destinationCode: DEST_MOSCOW,
           batchIds: [batchId!],
         },
       });
@@ -208,7 +212,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         .limit(1);
 
       expect(manifest?.tripId).toBe(tripAstrakhanId);
-      expect(manifest?.destinationCode).toBe("astrakhan");
+      expect(manifest?.destinationCode).toBe(DEST_ASTRAKHAN);
       expect(manifest?.manifestNumber).toContain("Астрахань");
       expect(manifest?.manifestNumber).toContain(`${PREFIX}AST-01`);
 
@@ -217,7 +221,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         .from(schema.batches)
         .where(eq(schema.batches.id, batchId!))
         .limit(1);
-      expect(batch?.destination).toBe("astrakhan");
+      expect(batch?.destination).toBe(DEST_ASTRAKHAN);
 
       const change = await app.inject({
         method: "POST",
@@ -237,7 +241,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         .limit(1);
 
       expect(afterChange?.tripId).toBe(tripMoscowId);
-      expect(afterChange?.destinationCode).toBe("moscow");
+      expect(afterChange?.destinationCode).toBe(DEST_MOSCOW);
       expect(afterChange?.manifestNumber).toContain("Москва");
 
       const [batchAfter] = await db
@@ -245,7 +249,7 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
         .from(schema.batches)
         .where(eq(schema.batches.id, batchId!))
         .limit(1);
-      expect(batchAfter?.destination).toBe("moscow");
+      expect(batchAfter?.destination).toBe(DEST_MOSCOW);
     } finally {
       await app.close();
       await cleanup(db);
