@@ -25,6 +25,7 @@ import type { LoadingManifestTripDetachLockCode } from "../format/loading-manife
 import { useAuth } from "../auth/auth-context.js";
 import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
+import { tripListOperationsHref } from "../format/trip-list-operations-href.js";
 import {
   writePreferredLoadingDestinationCode,
   writePreferredLoadingTripId,
@@ -59,8 +60,8 @@ export function AdminTripsLogisticsPanel() {
   const [detachingManifestId, setDetachingManifestId] = useState<string | null>(null);
   const [tripsPage, setTripsPage] = useState(0);
 
-  /** Погрузка / догрузка / смена рейса — не «Недостача по рейсу» (`operations`). */
   const distributionPath = adminAwarePathForPath(pathname, adminRoutes.distribution, ops.distribution);
+  const operationsPath = tripListOperationsHref(pathname);
 
   const invalidateTrips = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.trips });
@@ -500,7 +501,7 @@ export function AdminTripsLogisticsPanel() {
                           </span>
                         ) : null}
                         <Link
-                          to={distributionPath}
+                          to={operationsPath}
                           className="birzha-ui-sm"
                           style={{ display: "block", marginTop: "0.2rem" }}
                           onClick={() => {

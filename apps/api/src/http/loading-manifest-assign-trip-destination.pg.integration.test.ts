@@ -1,0 +1,258 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  numberToDecimalStringForKopecks,
+  purchaseLineAmountKopecksFromDecimalStrings,
+} from "@birzha/contracts";
+import { eq, inArray, like } from "drizzle-orm";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { buildApp } from "../app.js";
+import { loadEnv } from "../config.js";
+import { createDb } from "../db/client.js";
+import type { DbClient } from "../db/client.js";
+import * as schema from "../db/schema.js";
+
+const pgUrl = process.env.TEST_DATABASE_URL;
+const PREFIX = "DEST-SYNC-IT-";
+
+function lineKop(kg: number, rubPerKg: number): number {
+  return purchaseLineAmountKopecksFromDecimalStrings(
+    numberToDecimalStringForKopecks(kg, 6),
+    numberToDecimalStringForKopecks(rubPerKg, 4),
+  );
+}
+
+async function seedRefs(db: DbClient): Promise<void> {
+  await db
+    .insert(schema.warehouses)
+    .values({ id: "wh-manas", code: "MANAS", name: "Манас" })
+    .onConflictDoNothing();
+  await db
+    .insert(schema.productGrades)
+    .values({
+      id: "pg-n5",
+      code: "№5",
+      displayName: "Калибр №5",
+      sortOrder: 5,
+      isActive: true,
+      productGroup: "Помидоры",
+    })
+    .onConflictDoNothing();
+  await db
+    .insert(schema.shipDestinations)
+    .values([
+      { code: "moscow", displayName: "Москва", sortOrder: 10, isActive: true },
+      { code: "astrakhan", displayName: "Астрахань", sortOrder: 30, isActive: true },
+    ])
+    .onConflictDoNothing();
+}
+
+async function cleanup(db: DbClient): Promise<void> {
+  const tripRows = await db
+    .select({ id: schema.trips.id })
+    .from(schema.trips)
+    .where(like(schema.trips.tripNumber, `${PREFIX}%`));
+  const tripIds = tripRows.map((t) => t.id);
+
+  const manifests = await db
+    .select({ id: schema.loadingManifests.id })
+    .from(schema.loadingManifests)
+    .where(like(schema.loadingManifests.manifestNumber, `${PREFIX}%`));
+  const manifestIds = manifests.map((m) => m.id);
+
+  if (tripIds.length > 0) {
+    await db.delete(schema.tripBatchShipments).where(inArray(schema.tripBatchShipments.tripId, tripIds));
+  }
+  if (manifestIds.length > 0) {
+    await db
+      .delete(schema.loadingManifestLines)
+      .where(inArray(schema.loadingManifestLines.manifestId, manifestIds));
+    await db.delete(schema.loadingManifests).where(inArray(schema.loadingManifests.id, manifestIds));
+  }
+  if (tripIds.length > 0) {
+    await db.delete(schema.trips).where(inArray(schema.trips.id, tripIds));
+  }
+
+  const docs = await db
+    .select({ id: schema.purchaseDocuments.id })
+    .from(schema.purchaseDocuments)
+    .where(like(schema.purchaseDocuments.documentNumber, `${PREFIX}%`));
+  const docIds = docs.map((d) => d.id);
+  if (docIds.length === 0) {
+    return;
+  }
+  const lines = await db
+    .select({ batchId: schema.purchaseDocumentLines.batchId })
+    .from(schema.purchaseDocumentLines)
+    .where(inArray(schema.purchaseDocumentLines.documentId, docIds));
+  const batchIds = lines.map((l) => l.batchId).filter((id): id is string => Boolean(id));
+  await db
+    .delete(schema.purchaseDocumentLines)
+    .where(inArray(schema.purchaseDocumentLines.documentId, docIds));
+  await db.delete(schema.purchaseDocuments).where(inArray(schema.purchaseDocuments.id, docIds));
+  if (batchIds.length > 0) {
+    await db.delete(schema.batches).where(inArray(schema.batches.id, batchIds));
+  }
+}
+
+describe.skipIf(!pgUrl)("POST assign-trip синхронизирует город ПН (PostgreSQL)", () => {
+  let sql: ReturnType<typeof createDb>["sql"];
+  let db: DbClient;
+
+  beforeAll(async () => {
+    const created = createDb(pgUrl!);
+    sql = created.sql;
+    db = created.db;
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    await migrate(db, { migrationsFolder: path.join(dir, "../../drizzle") });
+    await seedRefs(db);
+    await cleanup(db);
+  }, 60_000);
+
+  afterAll(async () => {
+    if (db) {
+      await cleanup(db);
+    }
+    await sql.end({ timeout: 10 });
+  });
+
+  it("привязка к рейсу другого города меняет destination ПН, номер и партию", async () => {
+    const env = loadEnv({
+      NODE_ENV: "test",
+      DATABASE_URL: pgUrl,
+      JWT_SECRET: "k".repeat(32),
+      REQUIRE_API_AUTH: "false",
+    });
+    const app = await buildApp({ env, db });
+
+    const docId = `${PREFIX}pd-1`;
+    const tripMoscowId = `${PREFIX}trip-msk`;
+    const tripAstrakhanId = `${PREFIX}trip-ast`;
+    const manifestId = `${PREFIX}lm-1`;
+
+    try {
+      const createDoc = await app.inject({
+        method: "POST",
+        url: "/purchase-documents",
+        payload: {
+          id: docId,
+          documentNumber: `${PREFIX}NKL-0001`,
+          docDate: "2026-07-19",
+          warehouseId: "wh-manas",
+          supplierName: "IT",
+          lines: [
+            {
+              productGradeId: "pg-n5",
+              grossKg: 55,
+              packageCount: 10,
+              pricePerKg: 40,
+              lineTotalKopecks: lineKop(50, 40),
+            },
+          ],
+        },
+      });
+      expect(createDoc.statusCode).toBe(201);
+
+      const detailRes = await app.inject({ method: "GET", url: `/purchase-documents/${docId}` });
+      expect(detailRes.statusCode).toBe(200);
+      const detail = JSON.parse(detailRes.body) as { lines: { batchId: string }[] };
+      const batchId = detail.lines[0]?.batchId;
+      expect(batchId).toBeTruthy();
+
+      for (const trip of [
+        { id: tripMoscowId, tripNumber: `${PREFIX}01`, destinationCode: "moscow" },
+        { id: tripAstrakhanId, tripNumber: `${PREFIX}01`, destinationCode: "astrakhan" },
+      ]) {
+        const tripRes = await app.inject({
+          method: "POST",
+          url: "/trips",
+          payload: {
+            id: trip.id,
+            tripNumber: trip.tripNumber,
+            destinationCode: trip.destinationCode,
+            vehicleLabel: "IT",
+            departedAt: "2026-07-19T12:00:00.000Z",
+          },
+        });
+        expect(tripRes.statusCode).toBe(201);
+      }
+
+      const createLm = await app.inject({
+        method: "POST",
+        url: "/loading-manifests",
+        payload: {
+          id: manifestId,
+          manifestNumber: `${PREFIX}01 · Москва · 19.07.2026`,
+          docDate: "2026-07-19",
+          warehouseId: "wh-manas",
+          destinationCode: "moscow",
+          batchIds: [batchId!],
+        },
+      });
+      expect(createLm.statusCode).toBe(201);
+
+      const assign = await app.inject({
+        method: "POST",
+        url: `/loading-manifests/${manifestId}/assign-trip`,
+        payload: { tripId: tripAstrakhanId },
+      });
+      expect(assign.statusCode).toBe(200);
+
+      const [manifest] = await db
+        .select({
+          tripId: schema.loadingManifests.tripId,
+          destinationCode: schema.loadingManifests.destinationCode,
+          manifestNumber: schema.loadingManifests.manifestNumber,
+        })
+        .from(schema.loadingManifests)
+        .where(eq(schema.loadingManifests.id, manifestId))
+        .limit(1);
+
+      expect(manifest?.tripId).toBe(tripAstrakhanId);
+      expect(manifest?.destinationCode).toBe("astrakhan");
+      expect(manifest?.manifestNumber).toContain("Астрахань");
+      expect(manifest?.manifestNumber).toContain(`${PREFIX}01`);
+
+      const [batch] = await db
+        .select({ destination: schema.batches.destination })
+        .from(schema.batches)
+        .where(eq(schema.batches.id, batchId!))
+        .limit(1);
+      expect(batch?.destination).toBe("astrakhan");
+
+      const change = await app.inject({
+        method: "POST",
+        url: `/loading-manifests/${manifestId}/assign-trip`,
+        payload: { tripId: tripMoscowId },
+      });
+      expect(change.statusCode).toBe(200);
+
+      const [afterChange] = await db
+        .select({
+          tripId: schema.loadingManifests.tripId,
+          destinationCode: schema.loadingManifests.destinationCode,
+          manifestNumber: schema.loadingManifests.manifestNumber,
+        })
+        .from(schema.loadingManifests)
+        .where(eq(schema.loadingManifests.id, manifestId))
+        .limit(1);
+
+      expect(afterChange?.tripId).toBe(tripMoscowId);
+      expect(afterChange?.destinationCode).toBe("moscow");
+      expect(afterChange?.manifestNumber).toContain("Москва");
+
+      const [batchAfter] = await db
+        .select({ destination: schema.batches.destination })
+        .from(schema.batches)
+        .where(eq(schema.batches.id, batchId!))
+        .limit(1);
+      expect(batchAfter?.destination).toBe("moscow");
+    } finally {
+      await app.close();
+      await cleanup(db);
+    }
+  }, 60_000);
+});
