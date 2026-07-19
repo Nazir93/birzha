@@ -16,4 +16,11 @@ describe("tripListOperationsHref", () => {
     expect(tripListOperationsHref("/o/trips")).not.toBe(ops.operations);
     expect(tripListOperationsHref("/a/trips")).not.toBe(adminRoutes.operations);
   });
+
+  it("с tripId добавляет query trip=", () => {
+    expect(tripListOperationsHref("/a/trips", "trip-rostov-1")).toBe(
+      `${adminRoutes.distribution}?trip=trip-rostov-1`,
+    );
+    expect(tripListOperationsHref("/o/trips", "  t1  ")).toBe(`${ops.distribution}?trip=t1`);
+  });
 });

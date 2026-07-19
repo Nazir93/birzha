@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiGetJson, apiPostJson, deleteLoadingManifestById, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import type { CreateLoadingManifestResponse, LoadingManifestSummary } from "../api/types.js";
@@ -8,6 +8,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { canShipLoadingManifest, canRecordWarehouseReturn } from "../auth/role-panels.js";
 import { formatLoadingManifestTableNumberLabel } from "../format/loading-manifest.js";
 import { formatAllocationWarehouseSelectLabel } from "../format/allocation-warehouse-option.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
 import { isLoadingManifestNotFoundError, humanizeErrorMessage } from "../format/user-facing-error.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
@@ -46,6 +47,8 @@ export function AllocationPanel() {
   const { manifestId: routeManifestId = "" } = useParams();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
+  const focusTripId = searchParams.get("trip")?.trim() ?? "";
   const { meta, user } = useAuth();
   const canShip = canShipLoadingManifest(user);
   const canReturn = canRecordWarehouseReturn(user);
@@ -56,7 +59,9 @@ export function AllocationPanel() {
   const archiveBase = adminAwarePathForPath(pathname, adminRoutes.archive, ops.archive);
   const tripsBase = adminAwarePathForPath(pathname, adminRoutes.trips, ops.trips);
   const queryClient = useQueryClient();
-  const [newManifestTripId, setNewManifestTripId] = useState(() => readPreferredLoadingTripId() ?? "");
+  const [newManifestTripId, setNewManifestTripId] = useState(
+    () => focusTripId || readPreferredLoadingTripId() || "",
+  );
   const [appendTargetManifestId, setAppendTargetManifestId] = useState<string | null>(null);
 
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
@@ -84,6 +89,7 @@ export function AllocationPanel() {
     appendTargetManifestId,
     loadNaklSelection,
     distributionBase,
+    filterTripId: focusTripId,
   });
 
   const {
@@ -130,6 +136,27 @@ export function AllocationPanel() {
   } = workspace;
 
   useEffect(() => {
+    if (!focusTripId) {
+      return;
+    }
+    setManifestListPage(0);
+    setNewManifestTripId(focusTripId);
+    writePreferredLoadingTripId(focusTripId);
+  }, [focusTripId]);
+
+  useEffect(() => {
+    if (!focusTripId || !tripsQuery.isSuccess) {
+      return;
+    }
+    const trip = openTripsForAssign.find((t) => t.id === focusTripId);
+    const tripDest = trip?.destinationCode?.trim() ?? "";
+    if (tripDest && destAllowed.includes(tripDest)) {
+      setManifestDestinationCode(tripDest);
+      writePreferredLoadingDestinationCode(tripDest);
+    }
+  }, [focusTripId, tripsQuery.isSuccess, openTripsForAssign, destAllowed]);
+
+  useEffect(() => {
     if (!tripsQuery.isSuccess || !newManifestTripId.trim()) {
       return;
     }
@@ -149,7 +176,10 @@ export function AllocationPanel() {
     onSuccess: async (_data, manifestId) => {
       await refreshDistributionLists(queryClient);
       if (manifestId === activeManifestId) {
-        void navigate(distributionBase);
+        const back = focusTripId
+          ? `${distributionBase}?${new URLSearchParams({ trip: focusTripId }).toString()}`
+          : distributionBase;
+        void navigate(back);
       }
     },
     onError: (e: unknown) => setDeleteManifestError(humanizeErrorMessage(e)),
@@ -328,9 +358,12 @@ export function AllocationPanel() {
     setLoadNaklSelection(new Set());
     setAppendTargetManifestId(null);
     if (routeManifestId.trim()) {
-      void navigate(distributionBase);
+      const back = focusTripId
+        ? `${distributionBase}?${new URLSearchParams({ trip: focusTripId }).toString()}`
+        : distributionBase;
+      void navigate(back);
     }
-  }, [distributionBase, navigate, routeManifestId]);
+  }, [distributionBase, focusTripId, navigate, routeManifestId]);
 
   useEffect(() => {
     setManifestFormOpen(false);
@@ -458,6 +491,17 @@ export function AllocationPanel() {
   const manifestDetailNotFound =
     viewingSaved && routeDetailQuery.isError && isLoadingManifestNotFoundError(routeDetailQuery.error);
 
+  const focusTrip = focusTripId
+    ? openTripsForAssign.find((t) => t.id === focusTripId) ?? null
+    : null;
+  const focusTripCity =
+    focusTrip?.destinationCode?.trim() && labelDest[focusTrip.destinationCode.trim()]
+      ? labelDest[focusTrip.destinationCode.trim()]
+      : focusTrip?.destinationCode?.trim() || "";
+  const distributionScopedHref = focusTripId
+    ? `${distributionBase}?${new URLSearchParams({ trip: focusTripId }).toString()}`
+    : distributionBase;
+
   return (
     <section className="birzha-panel birzha-clean-ops-page" aria-labelledby="distribution-heading" role="region" aria-label="Погрузка на машину">
       <BirzhaDisclosure
@@ -474,6 +518,22 @@ export function AllocationPanel() {
           </div>
         }
       >
+      {focusTripId ? (
+        <InfoAlert title="Операции по рейсу">
+          Показаны погрузочные и форма для рейса{" "}
+          <strong>{focusTrip ? formatTripSelectLabel(focusTrip) : focusTripId}</strong>
+          {focusTripCity ? (
+            <>
+              {" "}
+              · город <strong>{focusTripCity}</strong>
+            </>
+          ) : null}
+          .{" "}
+          <Link to={distributionBase} style={{ fontWeight: 600 }}>
+            Показать все погрузочные
+          </Link>
+        </InfoAlert>
+      ) : null}
       {warehousesQuery.isError ? (
         <WarningAlert title="Склады">Справочник складов не загрузился — подписи к складу могут быть неполны.</WarningAlert>
       ) : null}
@@ -498,7 +558,7 @@ export function AllocationPanel() {
                 writePreferredWarehouseId(v === "" ? null : v);
                 setRecentWriteOffs([]);
                 if (routeManifestId.trim()) {
-                  void navigate(distributionBase);
+                  void navigate(distributionScopedHref);
                 }
               }}
               style={selectFieldStyle}
@@ -646,8 +706,10 @@ export function AllocationPanel() {
 
       {!loading && distributionManifestListReady && !viewingSaved && allActiveManifestsSorted.length === 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }} role="status">
-          Сохранённых погрузочных накладных пока нет. После «Сохранить погрузочную накладную» строка появится в таблице
-          на этой странице. Накладные закрытых рейсов — в разделе <Link to={archiveBase}>«Архив»</Link>.
+          {focusTripId
+            ? "У этого рейса пока нет сохранённых погрузочных накладных. Выберите склад ниже и создайте погрузку — рейс и город уже подставлены."
+            : "Сохранённых погрузочных накладных пока нет. После «Сохранить погрузочную накладную» строка появится в таблице на этой странице."}{" "}
+          Накладные закрытых рейсов — в разделе <Link to={archiveBase}>«Архив»</Link>.
         </p>
       ) : null}
 

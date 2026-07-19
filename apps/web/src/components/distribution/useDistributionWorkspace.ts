@@ -84,6 +84,8 @@ export type UseDistributionWorkspaceParams = {
   distributionBase: string;
   /** Режим экрана: append — догрузка (склад всегда), trip — только привязка рейса. */
   workspaceMode?: "default" | "append" | "trip";
+  /** Фильтр списка ПН и контекст «к операциям» с конкретного рейса (`?trip=`). */
+  filterTripId?: string;
 };
 
 export function useDistributionWorkspace({
@@ -95,6 +97,7 @@ export function useDistributionWorkspace({
   loadNaklSelection,
   distributionBase,
   workspaceMode = "default",
+  filterTripId = "",
 }: UseDistributionWorkspaceParams) {
   const { meta } = useAuth();
   const queryClient = useQueryClient();
@@ -171,11 +174,13 @@ export function useDistributionWorkspace({
     enabled: Boolean(savedManifestId) && savedManifestId !== routeManifestId.trim(),
   });
 
+  const scopedTripId = filterTripId.trim();
   const manifestsListQuery = useQuery(
     loadingManifestsPagedQueryOptions({
       limit: WORK_LIST_PAGE_SIZE,
       offset: manifestListPage * WORK_LIST_PAGE_SIZE,
       scope: "active",
+      ...(scopedTripId ? { tripId: scopedTripId } : {}),
     }),
   );
 
