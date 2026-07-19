@@ -18,6 +18,7 @@ import type { TripRepository } from "../application/ports/trip-repository.port.j
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
+import { syncLoadingManifestDestinationFromTrip } from "../application/trip/sync-loading-manifest-destination-from-trip.js";
 import {
   loadingManifestTripAssignLock,
   loadingManifestTripAssignLockMessage,
@@ -385,26 +386,22 @@ export function registerLoadingManifestRoutes(
       }
 
       const [manifestRow] = await db
-        .select({
-          warehouseId: loadingManifests.warehouseId,
-          destinationCode: loadingManifests.destinationCode,
-        })
+        .select({ warehouseId: loadingManifests.warehouseId })
         .from(loadingManifests)
         .where(eq(loadingManifests.id, manifestId))
         .limit(1);
       if (!manifestRow) {
         return reply.code(404).send({ error: "loading_manifest_not_found" });
       }
-      if (tripRead) {
-        await assertTripAllowsWarehouseLoading(db, tripRead, {
-          tripId: body.tripId,
-          warehouseId: manifestRow.warehouseId,
-          manifestId,
-          manifestDestinationCode: manifestRow.destinationCode,
-        });
-      }
 
-      if (!tripRead) {
+      const assignedTrip = tripRead
+        ? await assertTripAllowsWarehouseLoading(db, tripRead, {
+            tripId: body.tripId,
+            warehouseId: manifestRow.warehouseId,
+          })
+        : null;
+
+      if (!tripRead || !assignedTrip) {
         await db
           .update(loadingManifests)
           .set({ tripId: body.tripId })
@@ -431,6 +428,12 @@ export function registerLoadingManifestRoutes(
           .update(loadingManifests)
           .set({ tripId: body.tripId })
           .where(eq(loadingManifests.id, manifestId));
+
+        await syncLoadingManifestDestinationFromTrip(exec, {
+          manifestId,
+          tripNumber: assignedTrip.getTripNumber(),
+          tripDestinationCode: assignedTrip.getDestinationCode(),
+        });
 
         const lines = await exec
           .select({

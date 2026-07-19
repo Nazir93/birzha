@@ -1,11 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canShipLoadingManifest } from "../auth/role-panels.js";
-import { filterTripsMatchingManifestDestination } from "../format/loading-manifest-trip-destination.js";
 import { isLoadingManifestNotFoundError } from "../format/user-facing-error.js";
 import { refreshDistributionLists } from "../query/domain-list-refresh.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
@@ -58,15 +57,6 @@ export function LoadingTripPanel() {
     setAssignTripId("");
   }, [routeManifestId]);
 
-  const tripsMatchingManifestCity = useMemo(
-    () =>
-      filterTripsMatchingManifestDestination(
-        openTripsForAssign,
-        openManifestSummary?.destinationCode ?? routeDetail?.destinationCode,
-      ),
-    [openTripsForAssign, openManifestSummary?.destinationCode, routeDetail?.destinationCode],
-  );
-
   const assignTrip = useMutation({
     mutationFn: async () => {
       const id = routeManifestId.trim();
@@ -109,7 +99,8 @@ export function LoadingTripPanel() {
         </div>
       </div>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }}>
-        Привязка, смена и открепление рейса для сохранённых погрузочных накладных. Можно сохранить ПН без рейса в{" "}
+        Привязка, смена и открепление рейса для сохранённых погрузочных накладных. При смене рейса город
+        накладной становится городом выбранного рейса. Можно сохранить ПН без рейса в{" "}
         <Link to={distributionBase}>«Погрузка на машину»</Link> и привязать здесь.
       </p>
 
@@ -176,7 +167,7 @@ export function LoadingTripPanel() {
           setAssignTripId={setAssignTripId}
           assignTrip={assignTrip}
           detachTrip={canShip ? detachTrip : undefined}
-          trips={tripsMatchingManifestCity}
+          trips={openTripsForAssign}
           canShipTrip={canShip}
           variant="trip"
         />
