@@ -17,6 +17,7 @@ import {
   LoadingManifestNotEmptyError,
   LoadingManifestNotFoundError,
   LoadingManifestNumberConflictError,
+  LoadingManifestTripDestinationMismatchError,
   LoadingManifestTripDetachForbiddenError,
   PurchaseDocumentLinesLockedError,
   PurchaseDocumentNotFoundError,
@@ -101,6 +102,16 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "loading_manifest_not_empty",
       manifestId: error.manifestId,
+      message: error.message,
+    });
+  }
+  if (error instanceof LoadingManifestTripDestinationMismatchError) {
+    return reply.code(400).send({
+      error: "loading_manifest_trip_destination_mismatch",
+      manifestId: error.manifestId,
+      tripId: error.tripId,
+      tripDestinationCode: error.tripDestinationCode,
+      manifestDestinationCode: error.manifestDestinationCode,
       message: error.message,
     });
   }

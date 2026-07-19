@@ -1,9 +1,9 @@
 ﻿import { Link } from "react-router-dom";
 
-import type { BatchListItem, LoadingManifestSummary } from "../../api/types.js";
+import type { BatchListItem, LoadingManifestSummary, TripJson } from "../../api/types.js";
 import { formatLoadingManifestDisplayName, resolveLoadingManifestNumberForSave } from "../../format/loading-manifest.js";
+import { tripLocksManifestDestination } from "../../format/loading-manifest-trip-destination.js";
 import { formatTripSelectLabel } from "../../format/trip-label.js";
-import type { TripJson } from "../../api/types.js";
 import { BirzhaDateField } from "../BirzhaCalendarFields.js";
 import { ErrorAlert, InfoAlert } from "../../ui/ErrorAlerts.js";
 import { btnClassSpaced, fieldStyle, selectFieldStyle } from "../../ui/styles.js";
@@ -63,6 +63,14 @@ export function DistributionCreateForm({
   tripsBase,
   onSave,
 }: Props) {
+  const tripId = newManifestTripId.trim();
+  const selectedTrip = openTripsForAssign.find((t) => t.id === tripId);
+  const destinationLockedByTrip = !appendMode && tripLocksManifestDestination(selectedTrip);
+  const effectiveDestinationCode =
+    destinationLockedByTrip && selectedTrip?.destinationCode?.trim()
+      ? selectedTrip.destinationCode.trim()
+      : manifestDestinationCode;
+
   const handleSave = () => {
     if (appendMode && appendTargetManifest) {
       onSave({
@@ -75,16 +83,14 @@ export function DistributionCreateForm({
       });
       return;
     }
-    const destLabel = labelDest[manifestDestinationCode] ?? manifestDestinationCode;
-    const tripId = newManifestTripId.trim();
-    const trip = openTripsForAssign.find((t) => t.id === tripId);
+    const destLabel = labelDest[effectiveDestinationCode] ?? effectiveDestinationCode;
     onSave({
       warehouseId: selectedWarehouse,
-      destinationCode: manifestDestinationCode,
+      destinationCode: effectiveDestinationCode,
       batchIds: tableRows.map((b) => b.id),
       docDate: manifestDate,
       manifestNumber: resolveLoadingManifestNumberForSave({
-        tripNumber: trip?.tripNumber,
+        tripNumber: selectedTrip?.tripNumber,
         destinationLabel: destLabel,
         docDate: manifestDate,
         takenNumbers: takenManifestNumbers,
@@ -146,10 +152,10 @@ export function DistributionCreateForm({
         <label className="birzha-form-label">
           Город / направление *
           <BirzhaSelect
-            value={manifestDestinationCode}
+            value={effectiveDestinationCode}
             onChange={onManifestDestinationCodeChange}
             style={selectFieldStyle}
-            disabled={appendMode}
+            disabled={appendMode || destinationLockedByTrip}
             options={destAllowed.map((d) => ({
               value: d,
               label: labelDest[d] ?? d,
@@ -169,6 +175,11 @@ export function DistributionCreateForm({
           </Link>
           , затем выберите его здесь или привяжите позже в разделе «Смена рейса».
         </p>
+      ) : destinationLockedByTrip ? (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+          Город взят из рейса — изменить нельзя. Чтобы указать другой город, выберите другой рейс или «без
+          рейса».
+        </p>
       ) : !appendMode ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
           Рейс можно не выбирать — сохраните накладную и привяжите рейс в разделе «Смена рейса».
@@ -181,7 +192,7 @@ export function DistributionCreateForm({
           disabled={
             createPending ||
             tableRows.length === 0 ||
-            (!appendMode && (!manifestDate || !manifestDestinationCode))
+            (!appendMode && (!manifestDate || !effectiveDestinationCode))
           }
           onClick={handleSave}
         >
@@ -205,7 +216,7 @@ export function DistributionCreateForm({
           <strong>
             {tableRows.reduce((a, b) => a + b.onWarehouseKg, 0).toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
           </strong>{" "}
-          кг · {labelDest[manifestDestinationCode] ?? manifestDestinationCode}
+          кг · {labelDest[effectiveDestinationCode] ?? effectiveDestinationCode}
         </p>
       ) : null}
     </div>

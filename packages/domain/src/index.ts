@@ -14,4 +14,4 @@ export {
   TARE_GRAMS_PER_PACKAGE,
 } from "./units/package-tare.js";
 export { Money, CurrencyMismatchError } from "./money/index.js";
-export { Trip, type TripStatus } from "./trip/index.js";
+export { Trip, tripDestinationMatchesManifest, type TripStatus } from "./trip/index.js";

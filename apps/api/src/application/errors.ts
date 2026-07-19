@@ -243,6 +243,31 @@ export class LoadingManifestNotFoundError extends Error {
   }
 }
 
+/** Город рейса не совпадает с городом погрузочной накладной. */
+export class LoadingManifestTripDestinationMismatchError extends Error {
+  readonly manifestId: string;
+  readonly tripId: string;
+  readonly tripDestinationCode: string;
+  readonly manifestDestinationCode: string;
+
+  constructor(input: {
+    manifestId: string;
+    tripId: string;
+    tripDestinationCode: string;
+    manifestDestinationCode: string;
+  }) {
+    super(
+      "Город рейса не совпадает с городом погрузочной накладной. Выберите рейс того же города или создайте накладную на город рейса.",
+    );
+    this.name = "LoadingManifestTripDestinationMismatchError";
+    this.manifestId = input.manifestId;
+    this.tripId = input.tripId;
+    this.tripDestinationCode = input.tripDestinationCode;
+    this.manifestDestinationCode = input.manifestDestinationCode;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Отвязка ПН от рейса запрещена (продажи, закрытый рейс и т.п.). */
 export class LoadingManifestTripDetachForbiddenError extends Error {
   readonly manifestId: string;

@@ -16,6 +16,7 @@ import {
   writePreferredLoadingDestinationCode,
   writePreferredLoadingTripId,
 } from "../preferences/ops-preferred-loading-trip.js";
+import { tripLocksManifestDestination } from "../format/loading-manifest-trip-destination.js";
 import { queryRoots } from "../query/core-list-queries.js";
 import { refreshDistributionLists } from "../query/domain-list-refresh.js";
 import {
@@ -400,6 +401,15 @@ export function AllocationPanel() {
   }, [destAllowed, tableRows]);
 
   useEffect(() => {
+    const trip = openTripsForAssign.find((t) => t.id === newManifestTripId.trim());
+    const tripDest = trip?.destinationCode?.trim() ?? "";
+    if (tripLocksManifestDestination(trip) && tripDest && destAllowed.includes(tripDest)) {
+      if (manifestDestinationCode !== tripDest) {
+        setManifestDestinationCode(tripDest);
+        writePreferredLoadingDestinationCode(tripDest);
+      }
+      return;
+    }
     const preferred = readPreferredLoadingDestinationCode();
     if (preferred && destAllowed.includes(preferred)) {
       if (manifestDestinationCode !== preferred) {
@@ -414,7 +424,13 @@ export function AllocationPanel() {
     if (!manifestDestinationCode || !destAllowed.includes(manifestDestinationCode)) {
       setManifestDestinationCode(fallback);
     }
-  }, [destAllowed, inferredDestinationCode, manifestDestinationCode]);
+  }, [
+    destAllowed,
+    inferredDestinationCode,
+    manifestDestinationCode,
+    newManifestTripId,
+    openTripsForAssign,
+  ]);
 
   const rowsFingerprint = useMemo(() => tableRows.map((b) => b.id).sort().join("|"), [tableRows]);
   useEffect(() => {
@@ -767,9 +783,19 @@ export function AllocationPanel() {
           onNewManifestTripIdChange={(v) => {
             setNewManifestTripId(v);
             writePreferredLoadingTripId(v.trim() || null);
+            const trip = openTripsForAssign.find((t) => t.id === v.trim());
+            const tripDest = trip?.destinationCode?.trim() ?? "";
+            if (tripDest && destAllowed.includes(tripDest)) {
+              setManifestDestinationCode(tripDest);
+              writePreferredLoadingDestinationCode(tripDest);
+            }
           }}
           manifestDestinationCode={manifestDestinationCode}
           onManifestDestinationCodeChange={(v) => {
+            const trip = openTripsForAssign.find((t) => t.id === newManifestTripId.trim());
+            if (tripLocksManifestDestination(trip)) {
+              return;
+            }
             setManifestDestinationCode(v);
             writePreferredLoadingDestinationCode(v || null);
           }}

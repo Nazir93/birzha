@@ -385,7 +385,10 @@ export function registerLoadingManifestRoutes(
       }
 
       const [manifestRow] = await db
-        .select({ warehouseId: loadingManifests.warehouseId })
+        .select({
+          warehouseId: loadingManifests.warehouseId,
+          destinationCode: loadingManifests.destinationCode,
+        })
         .from(loadingManifests)
         .where(eq(loadingManifests.id, manifestId))
         .limit(1);
@@ -396,6 +399,8 @@ export function registerLoadingManifestRoutes(
         await assertTripAllowsWarehouseLoading(db, tripRead, {
           tripId: body.tripId,
           warehouseId: manifestRow.warehouseId,
+          manifestId,
+          manifestDestinationCode: manifestRow.destinationCode,
         });
       }
 

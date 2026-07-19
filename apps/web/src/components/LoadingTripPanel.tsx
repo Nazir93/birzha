@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canShipLoadingManifest } from "../auth/role-panels.js";
+import { filterTripsMatchingManifestDestination } from "../format/loading-manifest-trip-destination.js";
 import { isLoadingManifestNotFoundError } from "../format/user-facing-error.js";
 import { refreshDistributionLists } from "../query/domain-list-refresh.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
@@ -56,6 +57,15 @@ export function LoadingTripPanel() {
   useEffect(() => {
     setAssignTripId("");
   }, [routeManifestId]);
+
+  const tripsMatchingManifestCity = useMemo(
+    () =>
+      filterTripsMatchingManifestDestination(
+        openTripsForAssign,
+        openManifestSummary?.destinationCode ?? routeDetail?.destinationCode,
+      ),
+    [openTripsForAssign, openManifestSummary?.destinationCode, routeDetail?.destinationCode],
+  );
 
   const assignTrip = useMutation({
     mutationFn: async () => {
@@ -166,7 +176,7 @@ export function LoadingTripPanel() {
           setAssignTripId={setAssignTripId}
           assignTrip={assignTrip}
           detachTrip={canShip ? detachTrip : undefined}
-          trips={openTripsForAssign}
+          trips={tripsMatchingManifestCity}
           canShipTrip={canShip}
           variant="trip"
         />
