@@ -1,10 +1,11 @@
 import { createShipDestinationBodySchema } from "@birzha/contracts";
 import type { FastifyInstance } from "fastify";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { ResourceInUseError } from "../application/errors.js";
 import type { DbClient } from "../db/client.js";
-import { shipDestinations as shipDest } from "../db/schema.js";
+import { loadingManifests, shipDestinations as shipDest, trips } from "../db/schema.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
@@ -58,15 +59,37 @@ export function registerShipDestinationRoutes(
     async (req, reply) => {
       try {
         const params = z.object({ code: z.string().min(1).max(64) }).parse(req.params);
-        const [existing] = await db
-          .select()
-          .from(shipDest)
-          .where(eq(shipDest.code, params.code))
-          .limit(1);
+        const code = params.code.trim();
+        const [existing] = await db.select().from(shipDest).where(eq(shipDest.code, code)).limit(1);
         if (!existing) {
           return reply.code(404).send({ error: "ship_destination_not_found" });
         }
-        await db.update(shipDest).set({ isActive: false }).where(eq(shipDest.code, params.code));
+
+        const [tripUse] = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(trips)
+          .where(eq(trips.destinationCode, code));
+        const [manifestUse] = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(loadingManifests)
+          .where(eq(loadingManifests.destinationCode, code));
+        const tripCount = Number(tripUse?.n ?? 0);
+        const manifestCount = Number(manifestUse?.n ?? 0);
+        if (tripCount > 0 || manifestCount > 0) {
+          const parts: string[] = [];
+          if (tripCount > 0) {
+            parts.push(`рейсов: ${tripCount}`);
+          }
+          if (manifestCount > 0) {
+            parts.push(`погрузочных: ${manifestCount}`);
+          }
+          throw new ResourceInUseError(
+            "ship_destination",
+            `Город «${existing.displayName}» (${code}) нельзя удалить — используется (${parts.join(", ")}). Сначала смените город у этих документов или оставьте код в справочнике.`,
+          );
+        }
+
+        await db.delete(shipDest).where(eq(shipDest.code, code));
         return reply.code(204).send();
       } catch (error) {
         return sendMappedError(reply, error);

@@ -305,7 +305,7 @@ export class LoadingManifestNumberConflictError extends Error {
  */
 export class ResourceInUseError extends Error {
   constructor(
-    public readonly code: "warehouse" | "product_grade" | "counterparty",
+    public readonly code: "warehouse" | "product_grade" | "counterparty" | "ship_destination",
     message: string,
   ) {
     super(message);

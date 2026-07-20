@@ -169,27 +169,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     },
   });
 
-  const reactivateShipDest = useMutation({
-    mutationFn: async (row: { code: string; displayName: string; sortOrder: number }) => {
-      setDestFormError(null);
-      await apiPostJsonOr403(
-        "/api/ship-destinations",
-        {
-          code: row.code,
-          displayName: row.displayName,
-          sortOrder: row.sortOrder,
-        },
-        "Нет прав: только admin/manager",
-      );
-    },
-    onSuccess: () => {
-      invalidate();
-    },
-    onError: (e: Error) => {
-      setDestFormError(e.message);
-    },
-  });
-
   const createWholesaler = useMutation({
     mutationFn: async () => {
       setWholesalerFormError(null);
@@ -389,10 +368,8 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
             }
           >
           <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
-            «Снять» скрывает город из списков (код остаётся в справочнике). «Вернуть» снова показывает его.
-            Рабочие города — <code>001</code>, <code>002</code>… Старые коды{" "}
-            <code>moscow</code>, <code>discount</code>, <code>writeoff</code> — не для рейсов; держите снятыми.
-            «Уценка» и «Списание» в поле «Город» рейса не показываются.
+            Удаление убирает город из справочника. Если код уже стоит у рейса или погрузочной — удалить нельзя.
+            Нужен город снова — добавьте новым кодом (например <code>006</code>).
           </p>
           {destFormError ? <ErrorAlert message={destFormError} title="Направление" /> : null}
           {shipDestQ.isError ? <ErrorAlert error={shipDestQ.error} title="Направления" /> : null}
@@ -442,7 +419,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                     <th style={thHeadDense}>Код</th>
                     <th style={thHeadDense}>Название</th>
                     <th style={thHeadDense}>Порядок</th>
-                    <th style={thHeadDense}>Активн.</th>
                     <th style={thHeadDense} />
                   </tr>
                 </thead>
@@ -467,41 +443,23 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                           )}
                         </td>
                         <td style={thtdDense}>{r.sortOrder}</td>
-                        <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
                         <td style={thtdDense}>
-                          {r.isActive ? (
-                            <button
-                              type="button"
-                              className="birzha-btn birzha-btn--inline"
-                              disabled={deleteShipDest.isPending || reactivateShipDest.isPending}
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Снять «${r.displayName}» (${r.code}) из списков рейсов и погрузки?`,
-                                  )
-                                ) {
-                                  void deleteShipDest.mutate(r.code);
-                                }
-                              }}
-                            >
-                              Снять
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="birzha-btn birzha-btn--inline"
-                              disabled={deleteShipDest.isPending || reactivateShipDest.isPending}
-                              onClick={() => {
-                                void reactivateShipDest.mutate({
-                                  code: r.code,
-                                  displayName: r.displayName,
-                                  sortOrder: r.sortOrder,
-                                });
-                              }}
-                            >
-                              Вернуть
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                            disabled={deleteShipDest.isPending}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Удалить «${r.displayName}» (${r.code}) из справочника?`,
+                                )
+                              ) {
+                                void deleteShipDest.mutate(r.code);
+                              }
+                            }}
+                          >
+                            Удалить
+                          </button>
                         </td>
                       </tr>
                     ))}
