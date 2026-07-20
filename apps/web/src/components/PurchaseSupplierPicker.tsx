@@ -84,6 +84,7 @@ export function PurchaseSupplierPicker({
       <label className="birzha-form-label">
         Тепличник *
         <BirzhaSelect
+          aria-label="Тепличник *"
           value={supplierId}
           onChange={(v) => {
             onSupplierIdChange(v);

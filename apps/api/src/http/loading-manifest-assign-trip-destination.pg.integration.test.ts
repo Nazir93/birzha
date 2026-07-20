@@ -3,6 +3,9 @@ import {
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
 import { eq, inArray, like } from "drizzle-orm";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../app.js";
@@ -13,6 +16,7 @@ import * as schema from "../db/schema.js";
 
 const pgUrl = process.env.TEST_DATABASE_URL;
 const PREFIX = "DEST-SYNC-IT-";
+const dir = path.dirname(fileURLToPath(import.meta.url));
 
 function lineKop(kg: number, rubPerKg: number): number {
   return purchaseLineAmountKopecksFromDecimalStrings(
@@ -103,11 +107,10 @@ describe.skipIf(!pgUrl)("POST assign-trip синхронизирует горо�
   let db: DbClient;
 
   beforeAll(async () => {
-    // Схема уже накатывается через `drizzle-kit push` на стенде; migrate на живой БД падает
-    // («relation already exists»), если миграции не велись отдельно от push.
     const created = createDb(pgUrl!);
     sql = created.sql;
     db = created.db;
+    await migrate(db, { migrationsFolder: path.join(dir, "../../drizzle") });
     await seedRefs(db);
     await cleanup(db);
   }, 60_000);

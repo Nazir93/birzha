@@ -183,6 +183,34 @@
       "when": 1777800000000,
       "tag": "0025_trip_sale_recorded_at",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777900000000,
+      "tag": "0026_product_grade_ns_sort_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1778000000000,
+      "tag": "0027_suppliers",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1778100000000,
+      "tag": "0028_trip_destination_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1778200000000,
+      "tag": "0029_purchase_line_gross",
+      "breakpoints": true
     }
   ]
 }

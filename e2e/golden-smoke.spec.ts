@@ -634,12 +634,13 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("region", { name: "Закупка товара" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Закупка товара" })).toBeVisible();
 
-    await expect(page.getByLabel("Поставщик *")).toBeVisible();
+    await expect(page.getByLabel("Тепличник *")).toBeVisible();
+    await expect(page.getByLabel("Новый тепличник")).toBeVisible();
     await expect(page.getByLabel("Дата *")).toBeVisible();
     await expect(page.getByRole("button", { name: "Создать накладную" })).toBeVisible();
 
     const firstLine = page.locator(".birzha-nakl-lines-table tbody tr").first();
-    await firstLine.locator('[data-label="Кг"] input').fill("10");
+    await firstLine.getByLabel("Брутто, кг").fill("10");
     await firstLine.locator('[data-label="₽/кг"] input').fill("40");
     await expect(firstLine.locator('[data-label="Сумма, коп."] input')).toHaveValue("400,00");
     await expect(page.getByRole("button", { name: "=кг×цена" })).toHaveCount(0);
@@ -734,7 +735,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
     await expect(page.getByText("1. Возврат на склад и отбор партий")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("link", { name: new RegExp(docId) })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(`a[href="/o/purchase-nakladnaya/${docId}"]`)).toBeVisible({
+      timeout: 15_000,
+    });
 
     await expect(
       page.getByText("Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста"),
@@ -801,7 +804,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await caliberOption.click();
     await expect(page.getByRole("region", { name: "Количество и цена" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByLabel("Сколько килограмм в этой сделке *")).toBeVisible();
-    await expect(page.getByLabel("Цена за 1 кг, руб *")).toBeVisible();
+    await expect(page.getByLabel("Цена за 1 кг нетто, руб *")).toBeVisible();
   });
 
   test("продавец: /s/reports — отчёт по рейсу", async ({ page }) => {
