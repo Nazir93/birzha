@@ -17,6 +17,7 @@ import {
   LoadingManifestNotEmptyError,
   LoadingManifestNotFoundError,
   LoadingManifestNumberConflictError,
+  LoadingManifestReturnAdjustForbiddenError,
   LoadingManifestTripDetachForbiddenError,
   PurchaseDocumentLinesLockedError,
   PurchaseDocumentNotFoundError,
@@ -108,6 +109,14 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "loading_manifest_trip_detach_forbidden",
       manifestId: error.manifestId,
+      code: error.code,
+      message: error.message,
+    });
+  }
+  if (error instanceof LoadingManifestReturnAdjustForbiddenError) {
+    return reply.code(409).send({
+      error: "loading_manifest_return_adjust_forbidden",
+      batchId: error.batchId,
       code: error.code,
       message: error.message,
     });

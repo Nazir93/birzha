@@ -22,7 +22,7 @@ export type BatchListItem = {
     /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
     linePackageCount?: number | null;
   };
-  /** Кг в журнале «возврат на склад» — справка; доступность к погрузке не уменьшает. */
+  /** Кг в журнале «возврат на склад»; уменьшают доступность к погрузке. */
   qualityRejectWrittenOffKg?: number;
   /** Кг для отбора в погрузку: onWarehouse минус сумма возвратов в журнале. */
   availableForLoadingKg?: number;

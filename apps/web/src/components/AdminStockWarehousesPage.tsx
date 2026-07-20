@@ -442,7 +442,7 @@ export function AdminStockWarehousesPage() {
                         <strong>
                           {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
                         </strong>
-                        <span className="birzha-text-muted"> (можно грузить в другое направление)</span>
+                        <span className="birzha-text-muted"> (недоступны к погрузке)</span>
                       </>
                     ) : null}
                   </p>

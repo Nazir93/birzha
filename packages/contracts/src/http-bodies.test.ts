@@ -260,6 +260,7 @@ describe("createTripBodySchema", () => {
       driverName: null,
       departedAt: null,
       assignedSellerUserId: null,
+      destinationCode: null,
     });
   });
 

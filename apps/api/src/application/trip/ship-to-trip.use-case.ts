@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 
+import { InsufficientStockError } from "@birzha/domain";
+
 import { TripClosedError, TripNotFoundError } from "../errors.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
+import type { BatchWarehouseWriteOffLedger } from "../ports/batch-warehouse-write-off-ledger.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import { loadBatchForUpdateOrThrow } from "../load-batch.js";
@@ -26,6 +29,7 @@ export class ShipToTripUseCase {
     private readonly trips: TripRepository,
     private readonly shipments: TripShipmentRepository,
     private readonly runShipInTransaction?: ShipToTripTransactionRunner,
+    private readonly writeOffLedger?: BatchWarehouseWriteOffLedger,
   ) {}
 
   async execute(input: ShipToTripInput): Promise<void> {
@@ -44,6 +48,17 @@ export class ShipToTripUseCase {
 
     const persist = async (batchRepo: BatchRepository, shipRepo: TripShipmentRepository) => {
       const batch = await loadBatchForUpdateOrThrow(batchRepo, input.batchId);
+      if (this.writeOffLedger) {
+        const onWarehouseGrams = batch.toPersistenceState().onWarehouseGrams;
+        const returned =
+          (await this.writeOffLedger.totalQualityRejectGramsByBatchIds([input.batchId])).get(
+            input.batchId,
+          ) ?? 0n;
+        const availableGrams = onWarehouseGrams > returned ? onWarehouseGrams - returned : 0n;
+        if (grams > availableGrams) {
+          throw new InsufficientStockError("warehouse", availableGrams, grams);
+        }
+      }
       batch.shipToTrip(input.kg, input.tripId);
       await batchRepo.save(batch);
       await shipRepo.append({

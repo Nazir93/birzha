@@ -195,7 +195,8 @@ export async function patchBatchAllocation(
 }
 
 /**
- * `POST /api/batches/:id/warehouse-write-off` — возврат на склад (журнал, остаток не уменьшается).
+ * `POST /api/batches/:id/warehouse-write-off` — возврат на склад (журнал; onWarehouse не меняется,
+ * доступность к погрузке и строки активных ПН уменьшаются).
  */
 export async function postBatchWarehouseWriteOffQualityReject(
   batchId: string,

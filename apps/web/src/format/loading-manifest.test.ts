@@ -110,7 +110,7 @@ describe("filterBatchesForLoadingManifest", () => {
     expect(r).toHaveLength(0);
   });
 
-  it("не скрывает партии с журналом возвратов — они доступны другому направлению", () => {
+  it("скрывает партии с полным возвратом в журнале — доступность к погрузке 0", () => {
     const batches = [
       b({
         id: "a",
@@ -121,7 +121,7 @@ describe("filterBatchesForLoadingManifest", () => {
       }),
     ];
     const r = filterBatchesForLoadingManifest(batches, 0, new Set());
-    expect(r).toHaveLength(1);
+    expect(r).toHaveLength(0);
   });
 });
 
@@ -143,7 +143,7 @@ describe("sumLoadingManifestTotals", () => {
     expect(t.pkg).toBe(5);
   });
 
-  it("не вычитает кг из журнала возвратов", () => {
+  it("вычитает кг из журнала возвратов", () => {
     const batches = [
       b({
         id: "1",
@@ -154,8 +154,8 @@ describe("sumLoadingManifestTotals", () => {
       }),
     ];
     const t = sumLoadingManifestTotals(batches);
-    expect(t.kg).toBe(100);
-    expect(t.pkg).toBe(20);
+    expect(t.kg).toBe(60);
+    expect(t.pkg).toBe(12);
   });
 });
 

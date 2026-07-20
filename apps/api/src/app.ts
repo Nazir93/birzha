@@ -18,6 +18,7 @@ import { InMemoryTripShortageRepository } from "./application/testing/in-memory-
 import { RecordWarehouseWriteOffUseCase } from "./application/batch/record-warehouse-write-off.use-case.js";
 import type { RecordWarehouseWriteOffTransactionRunner } from "./application/batch/record-warehouse-write-off.use-case.js";
 import { ReverseWarehouseWriteOffUseCase } from "./application/batch/reverse-warehouse-write-off.use-case.js";
+import { reduceActiveLoadingManifestLinesForBatchReturn } from "./application/trip/reduce-active-loading-manifest-lines-for-return.js";
 import type { RecordTripShortageTransactionRunner } from "./application/trip/record-trip-shortage.use-case.js";
 import type { ShipToTripTransactionRunner } from "./application/trip/ship-to-trip.use-case.js";
 import type { AppEnv } from "./config.js";
@@ -219,7 +220,13 @@ export async function buildApp(options: {
     ? async (fn) => {
         await db.transaction(async (tx) => {
           const exec = tx as unknown as DbClient;
-          await fn(new DrizzleBatchRepository(exec), new DrizzleBatchWarehouseWriteOffLedger(exec));
+          await fn(new DrizzleBatchRepository(exec), new DrizzleBatchWarehouseWriteOffLedger(exec), {
+            reduceActiveLoadingManifestLines: (batchId, grams) =>
+              reduceActiveLoadingManifestLinesForBatchReturn(exec, {
+                batchId,
+                returnGrams: grams,
+              }),
+          });
         });
       }
     : undefined;

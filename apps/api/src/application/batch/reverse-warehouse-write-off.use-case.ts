@@ -26,7 +26,11 @@ export class ReverseWarehouseWriteOffUseCase {
       throw new WarehouseWriteOffNotFoundError(id);
     }
 
-    const persist = async (_batchRepo: BatchRepository, l: BatchWarehouseWriteOffLedger) => {
+    const persist = async (
+      _batchRepo: BatchRepository,
+      l: BatchWarehouseWriteOffLedger,
+      _sideEffects?: unknown,
+    ) => {
       const row = await l.findById(id);
       if (!row) {
         throw new WarehouseWriteOffNotFoundError(id);

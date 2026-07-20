@@ -66,8 +66,7 @@ export function batchToJson(
     ...(extras
       ? {
           qualityRejectWrittenOffKg,
-          /** Журнал возврата не блокирует погрузку на другое направление. */
-          availableForLoadingKg: Math.max(0, onWarehouseKg),
+          availableForLoadingKg: Math.max(0, onWarehouseKg - qualityRejectWrittenOffKg),
         }
       : {}),
   };

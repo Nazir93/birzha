@@ -22,12 +22,12 @@ function batch(p: Partial<BatchListItem> & Pick<BatchListItem, "id">): BatchList
 }
 
 describe("batchAvailableForLoadingKg", () => {
-  it("равен физическому остатку даже при журнале возвратов", () => {
+  it("вычитает журнал возвратов из остатка на складе", () => {
     expect(
       batchAvailableForLoadingKg(
         batch({ id: "b1", onWarehouseKg: 100, qualityRejectWrittenOffKg: 30 }),
       ),
-    ).toBe(100);
+    ).toBe(70);
   });
 
   it("предпочитает availableForLoadingKg с API", () => {
@@ -47,11 +47,16 @@ describe("batchAvailableForLoadingKg", () => {
     expect(
       batchAvailableForLoadingKg(batch({ id: "b1", onWarehouseKg: -5 })),
     ).toBe(0);
+    expect(
+      batchAvailableForLoadingKg(
+        batch({ id: "b1", onWarehouseKg: 50, qualityRejectWrittenOffKg: 80 }),
+      ),
+    ).toBe(0);
   });
 });
 
 describe("estimatedPackageCountForLoading", () => {
-  it("пропорция по доступным кг (без вычета журнала возвратов)", () => {
+  it("пропорция по доступным кг после вычета журнала возвратов", () => {
     expect(
       estimatedPackageCountForLoading(
         batch({
@@ -62,7 +67,7 @@ describe("estimatedPackageCountForLoading", () => {
           nakladnaya: { linePackageCount: 20 } as BatchListItem["nakladnaya"],
         }),
       ),
-    ).toBe(20);
+    ).toBe(10);
   });
 });
 

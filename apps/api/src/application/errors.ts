@@ -257,6 +257,20 @@ export class LoadingManifestTripDetachForbiddenError extends Error {
   }
 }
 
+/** Возврат на склад нельзя согласовать с активной ПН (продажи/недостача по рейсу). */
+export class LoadingManifestReturnAdjustForbiddenError extends Error {
+  readonly batchId: string;
+  readonly code: string;
+
+  constructor(batchId: string, code: string, message: string) {
+    super(message);
+    this.name = "LoadingManifestReturnAdjustForbiddenError";
+    this.batchId = batchId;
+    this.code = code;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Удаление запрещено: по накладной уже есть отгрузка в рейс. */
 export class LoadingManifestNotEmptyError extends Error {
   readonly manifestId: string;

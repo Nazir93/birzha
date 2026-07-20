@@ -13,16 +13,31 @@ import { kgToGrams } from "../units/mass.js";
 
 export type RecordWarehouseWriteOffInput = {
   batchId: string;
-  /** Масса возврата на склад; фиксируется в журнале, остаток и доступность к погрузке не уменьшаются. */
+  /**
+   * Масса возврата на склад: фиксируется в журнале (onWarehouse не уменьшается),
+   * уменьшает доступность к погрузке и строки активных ПН.
+   */
   kg: number;
   reason: BatchWarehouseWriteOffReason;
 };
 
+export type RecordWarehouseWriteOffSideEffects = {
+  reduceActiveLoadingManifestLines(batchId: string, grams: bigint): Promise<void>;
+};
+
 export type RecordWarehouseWriteOffTransactionRunner = (
-  fn: (batches: BatchRepository, ledger: BatchWarehouseWriteOffLedger) => Promise<void>,
+  fn: (
+    batches: BatchRepository,
+    ledger: BatchWarehouseWriteOffLedger,
+    sideEffects: RecordWarehouseWriteOffSideEffects,
+  ) => Promise<void>,
 ) => Promise<void>;
 
 const REASON: BatchWarehouseWriteOffReason = "quality_reject";
+
+const NOOP_SIDE_EFFECTS: RecordWarehouseWriteOffSideEffects = {
+  reduceActiveLoadingManifestLines: async () => {},
+};
 
 export type RecordWarehouseWriteOffResult = {
   writeOffId: string;
@@ -49,7 +64,11 @@ export class RecordWarehouseWriteOffUseCase {
 
     const id = randomUUID();
     const row: BatchWarehouseWriteOffAppend = { id, batchId: input.batchId, grams, reason: REASON };
-    const persist = async (batches: BatchRepository, l: BatchWarehouseWriteOffLedger) => {
+    const persist = async (
+      batches: BatchRepository,
+      l: BatchWarehouseWriteOffLedger,
+      sideEffects: RecordWarehouseWriteOffSideEffects = NOOP_SIDE_EFFECTS,
+    ) => {
       const batch = await loadBatchForUpdateOrThrow(batches, input.batchId);
       const onWarehouseGrams = batch.toPersistenceState().onWarehouseGrams;
       const ledgerSums = await l.totalQualityRejectGramsByBatchIds([input.batchId]);
@@ -59,12 +78,13 @@ export class RecordWarehouseWriteOffUseCase {
         throw new InsufficientStockError("warehouse", availableGrams, grams);
       }
       await l.append(row);
+      await sideEffects.reduceActiveLoadingManifestLines(input.batchId, grams);
     };
 
     if (this.runInTransaction) {
       await this.runInTransaction(persist);
     } else {
-      await persist(this.batches, this.ledger);
+      await persist(this.batches, this.ledger, NOOP_SIDE_EFFECTS);
     }
     return { writeOffId: id };
   }
