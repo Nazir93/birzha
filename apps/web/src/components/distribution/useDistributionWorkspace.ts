@@ -116,8 +116,13 @@ export function useDistributionWorkspace({
       }
       return { destAllowed: sorted.map((r) => r.code), labelDest: m };
     }
-    const fallback: Record<string, string> = { ...labelsDestination };
-    return { destAllowed: [...BATCH_DESTINATIONS], labelDest: fallback };
+    // Без справочника БД — только географические fallback, не уценка/списание.
+    const fallbackCodes = ["moscow", "regions"] as const;
+    const fallback: Record<string, string> = {
+      moscow: labelsDestination.moscow,
+      regions: labelsDestination.regions,
+    };
+    return { destAllowed: [...fallbackCodes], labelDest: fallback };
   }, [shipDestQ.data]);
 
   const warehousesQuery = useQuery(warehousesFullListQueryOptions());

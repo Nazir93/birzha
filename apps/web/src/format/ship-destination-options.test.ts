@@ -16,12 +16,14 @@ function dest(p: Partial<ShipDestinationJson> & Pick<ShipDestinationJson, "code"
 }
 
 describe("activeShipDestinationsForSelect", () => {
-  it("оставляет только активные и сортирует", () => {
+  it("оставляет только активные города и сортирует", () => {
     const rows = activeShipDestinationsForSelect([
       dest({ code: "moscow", displayName: "Москва", sortOrder: 10, isActive: false }),
       dest({ code: "002", displayName: "Астрахань", sortOrder: 2, isActive: true }),
       dest({ code: "001", displayName: "Москва", sortOrder: 1, isActive: true }),
       dest({ code: "regions", displayName: "Регионы", sortOrder: 20, isActive: false }),
+      dest({ code: "discount", displayName: "Уценка / распродажа", sortOrder: 30, isActive: true }),
+      dest({ code: "writeoff", displayName: "Списание", sortOrder: 40, isActive: true }),
     ]);
     expect(rows.map((r) => r.code)).toEqual(["001", "002"]);
   });

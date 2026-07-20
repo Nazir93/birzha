@@ -390,8 +390,9 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           >
           <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
             «Снять» скрывает город из списков (код остаётся в справочнике). «Вернуть» снова показывает его.
-            Старые коды вроде <code>moscow</code> лучше держать снятыми, рабочие — <code>001</code>,{" "}
-            <code>002</code>…
+            Рабочие города — <code>001</code>, <code>002</code>… Старые коды{" "}
+            <code>moscow</code>, <code>discount</code>, <code>writeoff</code> — не для рейсов; держите снятыми.
+            «Уценка» и «Списание» в поле «Город» рейса не показываются.
           </p>
           {destFormError ? <ErrorAlert message={destFormError} title="Направление" /> : null}
           {shipDestQ.isError ? <ErrorAlert error={shipDestQ.error} title="Направления" /> : null}
@@ -457,7 +458,14 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                         <td style={thtdDense}>
                           <code style={{ fontSize: "0.82rem" }}>{r.code}</code>
                         </td>
-                        <td style={thtdDense}>{r.displayName}</td>
+                        <td style={thtdDense}>
+                          {r.displayName}
+                          {(r.code === "discount" || r.code === "writeoff") && (
+                            <span className="birzha-text-muted" style={{ display: "block", fontSize: "0.78rem" }}>
+                              не город — канал склада
+                            </span>
+                          )}
+                        </td>
                         <td style={thtdDense}>{r.sortOrder}</td>
                         <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
                         <td style={thtdDense}>
