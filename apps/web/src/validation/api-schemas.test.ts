@@ -83,7 +83,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
           },
         ],
       }),
-    ).toThrow(/поставщик/i);
+    ).toThrow(/тепличник/i);
   });
 
   it("ящики с запятой округляются до целого", () => {

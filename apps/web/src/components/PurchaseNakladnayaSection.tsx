@@ -32,6 +32,7 @@ import {
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { PurchaseSupplierPicker } from "./PurchaseSupplierPicker.js";
 import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferences/ops-preferred-warehouse.js";
 import {
   productGradesFullListQueryOptions,
@@ -107,6 +108,7 @@ export function PurchaseNakladnayaSection() {
 
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [buyerLabel, setBuyerLabel] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
@@ -117,6 +119,8 @@ export function PurchaseNakladnayaSection() {
     await refreshPurchaseAndBatchLists(queryClient);
   }, [queryClient]);
 
+  const suppliersCatalogEnabled = meta?.suppliersCatalogApi === "enabled";
+
   const submit = useMutation({
     mutationFn: async () => {
       setFormError(null);
@@ -125,6 +129,7 @@ export function PurchaseNakladnayaSection() {
         docDate,
         warehouseId,
         supplierName,
+        supplierId,
         buyerLabel,
         extraCostKopecks,
         lines,
@@ -136,6 +141,7 @@ export function PurchaseNakladnayaSection() {
       setFormError(null);
       setDocDate(todayIsoDate());
       setWarehouseId("");
+      setSupplierId("");
       setSupplierName("");
       setBuyerLabel("");
       setExtraCostKopecks("0");
@@ -362,16 +368,13 @@ export function PurchaseNakladnayaSection() {
         <LoadingBlock label="Загрузка справочников складов и калибров…" minHeight={56} skeleton skeletonRows={3} />
       )}
       <div className="birzha-clean-ops-meta-grid">
-        <label className="birzha-form-label">
-          Поставщик *
-          <input
-            value={supplierName}
-            onChange={(e) => setSupplierName(e.target.value)}
-            style={fieldStyle}
-            placeholder="Теплица / отправитель"
-            autoComplete="organization"
-          />
-        </label>
+        <PurchaseSupplierPicker
+          supplierId={supplierId}
+          onSupplierIdChange={setSupplierId}
+          supplierName={supplierName}
+          onSupplierNameChange={setSupplierName}
+          enabled={suppliersCatalogEnabled}
+        />
         <label className="birzha-form-label" htmlFor="nakl-doc-date">
           Дата *
           <BirzhaDateField

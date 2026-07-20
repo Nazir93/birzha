@@ -136,6 +136,17 @@ export class WholesalerNotFoundError extends Error {
   }
 }
 
+export class SupplierNotFoundError extends Error {
+  readonly supplierId: string;
+
+  constructor(supplierId: string) {
+    super(`Тепличник не найден или снят: ${supplierId}`);
+    this.name = "SupplierNotFoundError";
+    this.supplierId = supplierId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class WarehouseNotFoundError extends Error {
   readonly warehouseId: string;
 

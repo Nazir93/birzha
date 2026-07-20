@@ -41,6 +41,8 @@ export const createPurchaseDocumentBodySchema = z.object({
   /** Дата документа YYYY-MM-DD */
   docDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   supplierName: z.string().max(300).optional(),
+  /** Id тепличника из справочника; если задан — имя берётся из справочника. */
+  supplierId: z.string().min(1).max(64).optional(),
   buyerLabel: z.string().max(300).optional(),
   warehouseId: z.string().min(1).max(64),
   extraCostKopecks: z.number().int().nonnegative().optional().default(0),

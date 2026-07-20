@@ -341,6 +341,7 @@ export function parseCreatePurchaseDocumentForm(input: {
   docDate: string;
   warehouseId: string;
   supplierName: string;
+  supplierId?: string;
   buyerLabel: string;
   extraCostKopecks: string;
   lines: Array<{
@@ -418,7 +419,7 @@ export function parseCreatePurchaseDocumentForm(input: {
 
     const sup = input.supplierName.trim();
     if (!sup) {
-      throw new Error("Укажите поставщика");
+      throw new Error("Укажите тепличника (выберите из списка или создайте нового)");
     }
 
     const payload: Record<string, unknown> = {
@@ -429,6 +430,10 @@ export function parseCreatePurchaseDocumentForm(input: {
       lines,
       supplierName: sup,
     };
+    const sid = input.supplierId?.trim();
+    if (sid) {
+      payload.supplierId = sid;
+    }
     const buy = input.buyerLabel.trim();
     if (buy) {
       payload.buyerLabel = buy;

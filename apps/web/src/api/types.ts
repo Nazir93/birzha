@@ -204,6 +204,7 @@ export type PurchaseDocumentDetail = {
   documentNumber: string;
   docDate: string;
   supplierName: string | null;
+  supplierId?: string | null;
   buyerLabel: string | null;
   warehouseId: string;
   extraCostKopecks: string;
@@ -370,6 +371,18 @@ export type WholesalerJson = {
 
 export type WholesalersListResponse = {
   wholesalers: WholesalerJson[];
+};
+
+/** Тепличник / поставщик закупки (`GET /suppliers`). */
+export type SupplierJson = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+export type SuppliersListResponse = {
+  suppliers: SupplierJson[];
 };
 
 /** Строка журнала продажи с рейса (для правок продавцом). */

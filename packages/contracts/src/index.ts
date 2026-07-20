@@ -10,6 +10,8 @@ export type {
 } from "./admin-dashboard-summary.js";
 export { createWholesalerBodySchema } from "./wholesaler.js";
 export type { CreateWholesalerBody } from "./wholesaler.js";
+export { createSupplierBodySchema } from "./supplier.js";
+export type { CreateSupplierBody } from "./supplier.js";
 export {
   createPurchaseDocumentBodySchema,
   purchaseDocumentLineInputSchema,

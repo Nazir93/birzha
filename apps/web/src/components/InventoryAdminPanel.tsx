@@ -11,6 +11,7 @@ import {
   productGradesFullListQueryOptions,
   queryRoots,
   shipDestinationsFullListQueryOptions,
+  suppliersFullListQueryOptions,
   warehousesFullListQueryOptions,
   wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
@@ -23,14 +24,14 @@ import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
 /**
- * Справочники админки: склады, калибры, направления логистики и оптовики.
+ * Справочники админки: склады, калибры, направления логистики, тепличники и оптовики.
  */
 type InventoryAdminPanelProps = {
   /** Внутри раздела «Настройки» — без отдельного заголовка страницы. */
   embedded?: boolean;
 };
 
-type CatalogSection = "warehouses" | "grades" | "logistics" | "wholesalers";
+type CatalogSection = "warehouses" | "grades" | "logistics" | "suppliers" | "wholesalers";
 
 function sectionTabClassName(active: boolean): string {
   return `birzha-settings-tabs__tab${active ? " birzha-settings-tabs__tab--active" : ""}`;
@@ -44,6 +45,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const enabled = meta?.purchaseDocumentsApi === "enabled";
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
   const wholesalersEnabled = meta?.wholesalersCatalogApi === "enabled";
+  const suppliersEnabled = meta?.suppliersCatalogApi === "enabled";
   const [activeSection, setActiveSection] = useState<CatalogSection>("warehouses");
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [warehouseFormError, setWarehouseFormError] = useState<string | null>(null);
@@ -59,12 +61,21 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const [wholesalerFormError, setWholesalerFormError] = useState<string | null>(null);
   const [newWholesalerName, setNewWholesalerName] = useState("");
   const [newWholesalerOrder, setNewWholesalerOrder] = useState("");
+  const [supplierFormError, setSupplierFormError] = useState<string | null>(null);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierOrder, setNewSupplierOrder] = useState("");
 
   const sectionFromUrl = searchParams.get("section");
 
   useEffect(() => {
     const v = (sectionFromUrl ?? "").trim();
-    if (v === "warehouses" || v === "grades" || v === "logistics" || v === "wholesalers") {
+    if (
+      v === "warehouses" ||
+      v === "grades" ||
+      v === "logistics" ||
+      v === "wholesalers" ||
+      v === "suppliers"
+    ) {
       setActiveSection(v);
     }
   }, [sectionFromUrl]);
@@ -100,8 +111,12 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     }
     if (activeSection === "wholesalers" && !wholesalersEnabled) {
       setActiveSection("warehouses");
+      return;
     }
-  }, [activeSection, shipDestEnabled, wholesalersEnabled]);
+    if (activeSection === "suppliers" && !suppliersEnabled) {
+      setActiveSection("warehouses");
+    }
+  }, [activeSection, shipDestEnabled, wholesalersEnabled, suppliersEnabled]);
 
   const invalidate = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.warehouses });
@@ -109,6 +124,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     void queryClient.invalidateQueries({ queryKey: queryRoots.purchaseDocuments });
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipDestinations });
     void queryClient.invalidateQueries({ queryKey: queryRoots.wholesalers });
+    void queryClient.invalidateQueries({ queryKey: queryRoots.suppliers });
     void queryClient.invalidateQueries({ queryKey: queryRoots.batches });
   }, [queryClient]);
 
@@ -121,6 +137,10 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
   const wholesalersQ = useQuery({
     ...wholesalersFullListQueryOptions(),
     enabled: enabled && wholesalersEnabled,
+  });
+  const suppliersQ = useQuery({
+    ...suppliersFullListQueryOptions(),
+    enabled: enabled && suppliersEnabled,
   });
 
   const createShipDest = useMutation({
@@ -210,6 +230,50 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     },
     onError: (e: Error) => {
       setWholesalerFormError(e.message);
+    },
+  });
+
+  const createSupplier = useMutation({
+    mutationFn: async () => {
+      setSupplierFormError(null);
+      const name = newSupplierName.trim();
+      if (!name) {
+        throw new Error("Введите название тепличника");
+      }
+      const body: { name: string; sortOrder?: number } = { name };
+      const so = newSupplierOrder.trim();
+      if (so) {
+        const n = Number.parseInt(so, 10);
+        if (!Number.isInteger(n) || n < 0 || n > 9999) {
+          throw new Error("Порядок — целое 0…9999 или пусто");
+        }
+        body.sortOrder = n;
+      }
+      await apiPostJsonOr403("/api/suppliers", body, "Нет прав: только admin/manager");
+    },
+    onSuccess: () => {
+      setNewSupplierName("");
+      setNewSupplierOrder("");
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setSupplierFormError(e.message);
+    },
+  });
+
+  const deleteSupplier = useMutation({
+    mutationFn: async (id: string) => {
+      setSupplierFormError(null);
+      await apiDeleteOr403(
+        `/api/suppliers/${encodeURIComponent(id)}`,
+        "Нет прав: только admin/manager",
+      );
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setSupplierFormError(e.message);
     },
   });
 
@@ -343,6 +407,15 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
             Логистика
           </button>
         ) : null}
+        {suppliersEnabled ? (
+          <button
+            type="button"
+            className={sectionTabClassName(activeSection === "suppliers")}
+            onClick={() => setActiveSection("suppliers")}
+          >
+            Тепличники
+          </button>
+        ) : null}
         {wholesalersEnabled ? (
           <button
             type="button"
@@ -467,6 +540,102 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
               </table>
             </div>
           )}
+          </BirzhaDisclosure>
+        </>
+      )}
+
+      {suppliersEnabled && activeSection === "suppliers" && (
+        <>
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <span className="birzha-disclosure__title-stack">
+                <span className="birzha-section-heading__eyebrow">Закупка</span>
+                <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>
+                  Тепличники (поставщики для накладной)
+                </span>
+              </span>
+            }
+          >
+            {supplierFormError ? <ErrorAlert message={supplierFormError} title="Тепличник" /> : null}
+            {suppliersQ.isError ? <ErrorAlert error={suppliersQ.error} title="Тепличники" /> : null}
+            {suppliersQ.isPending && (
+              <LoadingBlock label="Справочник тепличников…" minHeight={48} skeleton skeletonRows={3} />
+            )}
+            <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem" }}>
+              «Удалить» снимает с выбора в новой накладной; старые ЗН сохраняют имя в шапке.
+            </p>
+            <div className="birzha-inventory-inline-tools">
+              <input
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+                style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
+                placeholder="Название тепличника"
+                autoComplete="off"
+                aria-label="Название тепличника"
+              />
+              <input
+                value={newSupplierOrder}
+                onChange={(e) => setNewSupplierOrder(e.target.value)}
+                style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
+                placeholder="Порядок"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-label="Порядок сортировки тепличника"
+              />
+              <button
+                type="button"
+                className="birzha-btn birzha-btn--spaced birzha-inventory-inline-tools__submit"
+                disabled={createSupplier.isPending}
+                onClick={() => void createSupplier.mutate()}
+              >
+                {createSupplier.isPending ? "…" : "Добавить"}
+              </button>
+            </div>
+            {suppliersQ.isSuccess && (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "0.75rem" }}>
+                <table style={{ ...tableStyle, minWidth: 520 }}>
+                  <thead>
+                    <tr>
+                      <th style={thHeadDense}>Название</th>
+                      <th style={thHeadDense}>Порядок</th>
+                      <th style={thHeadDense}>Активн.</th>
+                      <th style={thHeadDense} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(suppliersQ.data.suppliers ?? [])
+                      .slice()
+                      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ru"))
+                      .map((r) => (
+                        <tr key={r.id}>
+                          <td style={thtdDense}>{r.name}</td>
+                          <td style={thtdDense}>{r.sortOrder}</td>
+                          <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
+                          <td style={thtdDense}>
+                            {r.isActive ? (
+                              <button
+                                type="button"
+                                className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                                disabled={deleteSupplier.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Снять тепличника «${r.name}» с выбора?`)) {
+                                    void deleteSupplier.mutate(r.id);
+                                  }
+                                }}
+                              >
+                                Удалить
+                              </button>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </BirzhaDisclosure>
         </>
       )}

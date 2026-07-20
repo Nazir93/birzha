@@ -38,6 +38,7 @@ import {
   WarehouseNotFoundError,
   WarehouseWriteOffNotFoundError,
   WholesalerNotFoundError,
+  SupplierNotFoundError,
 } from "../application/errors.js";
 
 export function sendMappedError(reply: FastifyReply, error: unknown): FastifyReply {
@@ -76,6 +77,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "wholesaler_not_found",
       wholesalerId: error.wholesalerId,
+    });
+  }
+  if (error instanceof SupplierNotFoundError) {
+    return reply.code(404).send({
+      error: "supplier_not_found",
+      supplierId: error.supplierId,
+      message: error.message,
     });
   }
   if (error instanceof PurchaseDocumentNotFoundError) {

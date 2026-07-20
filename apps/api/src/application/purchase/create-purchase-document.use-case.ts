@@ -10,6 +10,7 @@ import {
 import {
   ProductGradeNotFoundError,
   PurchaseLineTotalMismatchError,
+  SupplierNotFoundError,
   WarehouseNotFoundError,
 } from "../errors.js";
 import type { ProductGradeRepository } from "../ports/product-grade-repository.port.js";
@@ -18,6 +19,7 @@ import type {
   PurchaseDocumentHeaderRow,
   PurchaseDocumentRepository,
 } from "../ports/purchase-document-repository.port.js";
+import type { SupplierRepository } from "../ports/supplier-repository.port.js";
 import type { WarehouseRepository } from "../ports/warehouse-repository.port.js";
 import { resolvePurchaseLineMass } from "./resolve-purchase-line-mass.js";
 
@@ -37,6 +39,7 @@ export class CreatePurchaseDocumentUseCase {
     private readonly warehouses: WarehouseRepository,
     private readonly grades: ProductGradeRepository,
     private readonly purchaseDocuments: PurchaseDocumentRepository,
+    private readonly suppliers: SupplierRepository | null = null,
   ) {}
 
   async execute(
@@ -50,12 +53,26 @@ export class CreatePurchaseDocumentUseCase {
       throw new WarehouseNotFoundError(body.warehouseId);
     }
 
+    let supplierId: string | null = body.supplierId?.trim() || null;
+    let supplierName = body.supplierName?.trim() || null;
+    if (supplierId) {
+      if (!this.suppliers) {
+        throw new SupplierNotFoundError(supplierId);
+      }
+      const supplier = await this.suppliers.findActiveById(supplierId);
+      if (!supplier) {
+        throw new SupplierNotFoundError(supplierId);
+      }
+      supplierName = supplier.name;
+    }
+
     const createdBy = ctx?.createdByUserId?.trim();
     const header: PurchaseDocumentHeaderRow = {
       id: documentId,
       documentNumber: body.documentNumber.trim(),
       docDate: parseIsoDateOnly(body.docDate),
-      supplierName: body.supplierName?.trim() || null,
+      supplierName,
+      supplierId,
       buyerLabel: body.buyerLabel?.trim() || null,
       warehouseId: body.warehouseId,
       extraCostKopecks: BigInt(body.extraCostKopecks ?? 0),

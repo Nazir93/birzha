@@ -5,6 +5,7 @@ export type PurchaseDocumentHeaderRow = {
   documentNumber: string;
   docDate: Date;
   supplierName: string | null;
+  supplierId?: string | null;
   buyerLabel: string | null;
   warehouseId: string;
   extraCostKopecks: bigint;
@@ -55,6 +56,7 @@ export type PurchaseDocumentDetail = {
   documentNumber: string;
   docDate: string;
   supplierName: string | null;
+  supplierId: string | null;
   buyerLabel: string | null;
   warehouseId: string;
   extraCostKopecks: string;

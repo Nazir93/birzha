@@ -20,6 +20,17 @@ export const productGrades = pgTable("product_grades", {
 });
 
 /**
+ * Тепличники / поставщики закупки (справочник из админки; на ЗН выбирается или создаётся новый).
+ */
+export const suppliers = pgTable("suppliers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+});
+
+/**
  * Закупочная накладная (шапка). Строки — `purchase_document_lines`; на каждую строку создаётся партия.
  */
 export const purchaseDocuments = pgTable("purchase_documents", {
@@ -27,6 +38,8 @@ export const purchaseDocuments = pgTable("purchase_documents", {
   documentNumber: text("document_number").notNull(),
   docDate: date("doc_date", { mode: "date" }).notNull(),
   supplierName: text("supplier_name"),
+  /** Ссылка на справочник тепличников; `supplier_name` — снимок названия на момент создания. */
+  supplierId: text("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
   buyerLabel: text("buyer_label"),
   warehouseId: text("warehouse_id")
     .notNull()

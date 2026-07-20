@@ -10,6 +10,7 @@ import type { TripShipmentRepository } from "./application/ports/trip-shipment-r
 import type { TripShortageRepository } from "./application/ports/trip-shortage-repository.port.js";
 import type { CounterpartyRepository } from "./application/ports/counterparty-repository.port.js";
 import type { WholesalerRepository } from "./application/ports/wholesaler-repository.port.js";
+import type { SupplierRepository } from "./application/ports/supplier-repository.port.js";
 import type { SellFromTripTransactionRunner } from "./application/sale/sell-from-trip.use-case.js";
 import { InMemoryTripRepository } from "./application/testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "./application/testing/in-memory-trip-sale.repository.js";
@@ -27,6 +28,7 @@ import { registerAdminUserRoutes } from "./http/register-admin-user-routes.js";
 import { registerAuthRoutes } from "./http/register-auth-routes.js";
 import { registerBatchRoutes } from "./http/register-batch-routes.js";
 import { registerWholesalerRoutes } from "./http/register-wholesaler-routes.js";
+import { registerSupplierRoutes } from "./http/register-supplier-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes.js";
@@ -57,9 +59,11 @@ import {
 } from "./infrastructure/persistence/drizzle-purchase-document-lines-lock.js";
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
 import { DrizzleWholesalerRepository } from "./infrastructure/persistence/drizzle-wholesaler.repository.js";
+import { DrizzleSupplierRepository } from "./infrastructure/persistence/drizzle-supplier.repository.js";
 import { listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
 import { InMemoryCounterpartyRepository } from "./infrastructure/persistence/in-memory-counterparty.repository.js";
 import { InMemoryWholesalerRepository } from "./infrastructure/persistence/in-memory-wholesaler.repository.js";
+import { InMemorySupplierRepository } from "./infrastructure/persistence/in-memory-supplier.repository.js";
 import { InMemoryPurchaseDocumentRepository } from "./infrastructure/persistence/in-memory-purchase-document.repository.js";
 import { StaticProductGradeRepository } from "./infrastructure/persistence/static-product-grade.repository.js";
 import { StaticWarehouseRepository } from "./infrastructure/persistence/static-warehouse.repository.js";
@@ -184,6 +188,13 @@ export async function buildApp(options: {
     wholesalerRepository = new InMemoryWholesalerRepository();
   }
 
+  let supplierRepository: SupplierRepository | null = null;
+  if (db) {
+    supplierRepository = new DrizzleSupplierRepository(db);
+  } else if (wholesalerRepository) {
+    supplierRepository = new InMemorySupplierRepository();
+  }
+
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
     ? async (fn) => {
         await db.transaction(async (tx) => {
@@ -302,7 +313,12 @@ export async function buildApp(options: {
 
   const createPurchaseDocumentUseCase =
     warehouseRepository && productGradeRepository && purchaseDocumentRepository
-      ? new CreatePurchaseDocumentUseCase(warehouseRepository, productGradeRepository, purchaseDocumentRepository)
+      ? new CreatePurchaseDocumentUseCase(
+          warehouseRepository,
+          productGradeRepository,
+          purchaseDocumentRepository,
+          supplierRepository,
+        )
       : null;
 
   const deletePurchaseDocumentUseCase = purchaseDocumentRepository
@@ -356,6 +372,7 @@ export async function buildApp(options: {
     tripShortageLedger: shortageRepository ? "enabled" : "disabled",
     counterpartyCatalogApi: counterpartyRepository ? "enabled" : "disabled",
     wholesalersCatalogApi: wholesalerRepository ? "enabled" : "disabled",
+    suppliersCatalogApi: supplierRepository ? "enabled" : "disabled",
     authApi: db && env.JWT_SECRET ? "enabled" : "disabled",
     requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
     adminUsersApi:
@@ -449,6 +466,9 @@ export async function buildApp(options: {
       registerShipDestinationRoutes(app, db, routeAuth);
       registerLoadingManifestRoutes(app, db, routeAuth, tripRepository ?? undefined);
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
+      if (supplierRepository) {
+        registerSupplierRoutes(app, supplierRepository, routeAuth);
+      }
       registerAdminSummaryRoutes(app, db, routeAuth);
     }
   }

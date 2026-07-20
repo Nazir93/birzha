@@ -20,6 +20,7 @@ import type {
   WarehouseWriteOffsRecentResponse,
   WarehousesListResponse,
   WholesalersListResponse,
+  SuppliersListResponse,
 } from "../api/types.js";
 import {
   QUERY_STALE_LISTS_MS,
@@ -37,6 +38,7 @@ export const queryRoots = {
   purchaseDocuments: ["purchase-documents"] as const,
   counterparties: ["counterparties"] as const,
   wholesalers: ["wholesalers"] as const,
+  suppliers: ["suppliers"] as const,
   shipDestinations: ["ship-destinations"] as const,
   loadingManifest: ["loading-manifest"] as const,
   adminDashboard: ["admin-dashboard-summary"] as const,
@@ -257,6 +259,13 @@ export const wholesalersFullListQueryOptions = () =>
   queryOptions({
     queryKey: queryRoots.wholesalers,
     queryFn: () => apiGetJson<WholesalersListResponse>("/api/wholesalers"),
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+export const suppliersFullListQueryOptions = () =>
+  queryOptions({
+    queryKey: queryRoots.suppliers,
+    queryFn: () => apiGetJson<SuppliersListResponse>("/api/suppliers"),
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
