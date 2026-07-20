@@ -21,6 +21,8 @@ import { computeTripTransitDigest } from "../application/trip/trip-transit-diges
 
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
+import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
+import type { DbClient } from "../db/client.js";
 import {
   ledgerAggregateToJson,
   saleLedgerAggregateToJson,
@@ -41,6 +43,7 @@ export function registerTripRoutes(
   routeAuth: BusinessRouteAuth,
   listAssignableFieldSellers?: () => Promise<{ id: string; login: string }[]>,
   manifestCleanup?: TripArchiveManifestCleanupPort,
+  db: DbClient | null = null,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const assignTripSeller = new AssignTripSellerUseCase(trips);
@@ -167,6 +170,16 @@ export function registerTripRoutes(
   app.post("/trips", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
     try {
       const body = createTripBodySchema.parse(req.body);
+      const dest = body.destinationCode?.trim();
+      if (dest && db) {
+        const ok = await assertActiveShipDestination(db, dest);
+        if (!ok) {
+          return reply.code(400).send({
+            error: "invalid_ship_destination",
+            message: "Город не найден или снят в справочнике. Верните его в настройках или выберите другой.",
+          });
+        }
+      }
       await createTrip.execute(body);
       return reply.code(201).send({ ok: true });
     } catch (error) {

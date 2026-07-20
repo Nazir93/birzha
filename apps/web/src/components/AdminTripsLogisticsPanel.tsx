@@ -27,6 +27,10 @@ import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { tripListOperationsHref } from "../format/trip-list-operations-href.js";
 import {
+  activeShipDestinationsForSelect,
+  shipDestinationLabelByCode,
+} from "../format/ship-destination-options.js";
+import {
   writePreferredLoadingDestinationCode,
   writePreferredLoadingTripId,
 } from "../preferences/ops-preferred-loading-trip.js";
@@ -90,20 +94,17 @@ export function AdminTripsLogisticsPanel() {
   });
 
   const destinationOptions = useMemo(() => {
-    const list = destinationsQ.data?.shipDestinations ?? [];
+    const list = activeShipDestinationsForSelect(destinationsQ.data?.shipDestinations ?? []);
     return [
       { value: "", label: "— выберите город —" },
       ...list.map((d) => ({ value: d.code, label: d.displayName || d.code })),
     ];
   }, [destinationsQ.data?.shipDestinations]);
 
-  const destinationLabelByCode = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of destinationsQ.data?.shipDestinations ?? []) {
-      map.set(d.code, d.displayName || d.code);
-    }
-    return map;
-  }, [destinationsQ.data?.shipDestinations]);
+  const destinationLabelByCode = useMemo(
+    () => shipDestinationLabelByCode(destinationsQ.data?.shipDestinations ?? []),
+    [destinationsQ.data?.shipDestinations],
+  );
 
   const openTrips = useMemo(() => tripsQ.data?.trips ?? [], [tripsQ.data?.trips]);
   const tripsTotalCount = tripsQ.data?.listMeta?.totalCount ?? openTrips.length;

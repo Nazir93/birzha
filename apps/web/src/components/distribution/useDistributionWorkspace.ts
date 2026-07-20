@@ -12,6 +12,7 @@ import {
 } from "../../format/allocation-warehouse-option.js";
 import { batchAvailableForLoadingKg } from "../../format/batch-available-for-loading.js";
 import { batchWarehouseId, isEligibleForLoadingAllocation } from "../../format/batch-warehouse.js";
+import { activeShipDestinationsForSelect } from "../../format/ship-destination-options.js";
 import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
@@ -107,9 +108,8 @@ export function useDistributionWorkspace({
     enabled: meta?.shipDestinationsApi === "enabled",
   });
   const { destAllowed, labelDest } = useMemo((): { destAllowed: readonly string[]; labelDest: Record<string, string> } => {
-    const act = (shipDestQ.data?.shipDestinations ?? []).filter((r) => r.isActive);
-    if (act.length > 0) {
-      const sorted = act.slice().sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"));
+    const sorted = activeShipDestinationsForSelect(shipDestQ.data?.shipDestinations ?? []);
+    if (sorted.length > 0) {
       const m: Record<string, string> = {};
       for (const r of sorted) {
         m[r.code] = r.displayName;

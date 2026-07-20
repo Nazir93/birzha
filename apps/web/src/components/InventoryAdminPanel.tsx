@@ -169,6 +169,27 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     },
   });
 
+  const reactivateShipDest = useMutation({
+    mutationFn: async (row: { code: string; displayName: string; sortOrder: number }) => {
+      setDestFormError(null);
+      await apiPostJsonOr403(
+        "/api/ship-destinations",
+        {
+          code: row.code,
+          displayName: row.displayName,
+          sortOrder: row.sortOrder,
+        },
+        "Нет прав: только admin/manager",
+      );
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (e: Error) => {
+      setDestFormError(e.message);
+    },
+  });
+
   const createWholesaler = useMutation({
     mutationFn: async () => {
       setWholesalerFormError(null);
@@ -362,11 +383,16 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
               <span className="birzha-disclosure__title-stack">
                 <span className="birzha-section-heading__eyebrow">Логистика</span>
                 <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>
-                  Направления / куда везти (для «Распределения»)
+                  Города / направления (рейсы и погрузка)
                 </span>
               </span>
             }
           >
+          <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
+            «Снять» скрывает город из списков (код остаётся в справочнике). «Вернуть» снова показывает его.
+            Старые коды вроде <code>moscow</code> лучше держать снятыми, рабочие — <code>001</code>,{" "}
+            <code>002</code>…
+          </p>
           {destFormError ? <ErrorAlert message={destFormError} title="Направление" /> : null}
           {shipDestQ.isError ? <ErrorAlert error={shipDestQ.error} title="Направления" /> : null}
           {shipDestQ.isPending && (
@@ -439,9 +465,13 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                             <button
                               type="button"
                               className="birzha-btn birzha-btn--inline"
-                              disabled={deleteShipDest.isPending}
+                              disabled={deleteShipDest.isPending || reactivateShipDest.isPending}
                               onClick={() => {
-                                if (window.confirm(`Снять направление «${r.displayName}» (код ${r.code})?`)) {
+                                if (
+                                  window.confirm(
+                                    `Снять «${r.displayName}» (${r.code}) из списков рейсов и погрузки?`,
+                                  )
+                                ) {
                                   void deleteShipDest.mutate(r.code);
                                 }
                               }}
@@ -449,7 +479,20 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                               Снять
                             </button>
                           ) : (
-                            "—"
+                            <button
+                              type="button"
+                              className="birzha-btn birzha-btn--inline"
+                              disabled={deleteShipDest.isPending || reactivateShipDest.isPending}
+                              onClick={() => {
+                                void reactivateShipDest.mutate({
+                                  code: r.code,
+                                  displayName: r.displayName,
+                                  sortOrder: r.sortOrder,
+                                });
+                              }}
+                            >
+                              Вернуть
+                            </button>
                           )}
                         </td>
                       </tr>

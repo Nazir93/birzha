@@ -426,6 +426,7 @@ export async function buildApp(options: {
       routeAuth,
       options.listAssignableFieldSellers ?? (db ? () => listGlobalSellerUsers(db) : undefined),
       db ? new DrizzleTripArchiveManifestCleanup(db) : undefined,
+      db,
     );
     registerBatchRoutes(
       app,
