@@ -104,4 +104,19 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
     }
     return m;
   }
+
+  async clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    await this.db
+      .update(batchWarehouseWriteOffs)
+      .set({ blocksLoading: false })
+      .where(
+        and(
+          inArray(batchWarehouseWriteOffs.batchId, batchIds),
+          eq(batchWarehouseWriteOffs.blocksLoading, true),
+        ),
+      );
+  }
 }

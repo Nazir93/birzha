@@ -47,7 +47,11 @@ import {
   trips,
   warehouses,
 } from "../db/schema.js";
-import { availableGramsForLoadingManifestLine } from "../application/trip/loading-manifest-available-grams.js";
+import {
+  availableGramsForLoadingManifestLine,
+  physicalFreeGramsForLoadingManifestLine,
+  shouldReleaseLoadingBlocksForManifest,
+} from "../application/trip/loading-manifest-available-grams.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { sumActiveLoadingManifestGramsByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
@@ -104,6 +108,48 @@ function packageCountForPart(totalGrams: bigint, partGrams: bigint, linePackageC
   return (partGrams * linePackageCount + totalGrams / 2n) / totalGrams;
 }
 
+async function resolveAvailableGramsForManifestBatches(
+  ledger: DrizzleBatchWarehouseWriteOffLedger,
+  selected: readonly {
+    batchId: string;
+    onWarehouseGrams: bigint;
+  }[],
+  reservedSums: Map<string, bigint>,
+): Promise<Map<string, bigint>> {
+  const batchIds = selected.map((r) => r.batchId);
+  let blockingSums = await ledger.totalBlockingLoadingGramsByBatchIds(batchIds);
+  const draft = selected.map((r) => {
+    const reserved = reservedSums.get(r.batchId) ?? 0n;
+    const physicalFreeGrams = physicalFreeGramsForLoadingManifestLine({
+      onWarehouseGrams: r.onWarehouseGrams,
+      reservedOnOtherManifestsGrams: reserved,
+    });
+    const availableGrams = availableGramsForLoadingManifestLine({
+      onWarehouseGrams: r.onWarehouseGrams,
+      reservedOnOtherManifestsGrams: reserved,
+      blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
+    });
+    return { batchId: r.batchId, physicalFreeGrams, availableGrams };
+  });
+  if (shouldReleaseLoadingBlocksForManifest(draft)) {
+    await ledger.clearBlocksLoadingByBatchIds(batchIds);
+    blockingSums = new Map();
+  }
+  const out = new Map<string, bigint>();
+  for (const r of selected) {
+    const reserved = reservedSums.get(r.batchId) ?? 0n;
+    out.set(
+      r.batchId,
+      availableGramsForLoadingManifestLine({
+        onWarehouseGrams: r.onWarehouseGrams,
+        reservedOnOtherManifestsGrams: reserved,
+        blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
+      }),
+    );
+  }
+  return out;
+}
+
 export function registerLoadingManifestRoutes(
   app: FastifyInstance,
   db: DbClient,
@@ -149,18 +195,15 @@ export function registerLoadingManifestRoutes(
       }
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
       const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
-      const blockingSums = await ledger.totalBlockingLoadingGramsByBatchIds(batchIds);
-      const withAvailable = selected.map((r) => {
-        const availableGrams = availableGramsForLoadingManifestLine({
-          onWarehouseGrams: r.onWarehouseGrams,
-          reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
-          blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
-        });
-        return { ...r, availableGrams };
-      });
-      const noStock = withAvailable.find((r) => r.availableGrams <= 0n);
-      if (noStock) {
-        return reply.code(400).send({ error: "batch_without_stock", batchId: noStock.batchId });
+      const availableByBatch = await resolveAvailableGramsForManifestBatches(ledger, selected, reservedSums);
+      const withAvailable = selected.map((r) => ({
+        ...r,
+        availableGrams: availableByBatch.get(r.batchId) ?? 0n,
+      }));
+      const withStock = withAvailable.filter((r) => r.availableGrams > 0n);
+      if (withStock.length === 0) {
+        const first = withAvailable[0];
+        return reply.code(400).send({ error: "batch_without_stock", batchId: first?.batchId });
       }
 
       await db.transaction(async (tx) => {
@@ -173,8 +216,8 @@ export function registerLoadingManifestRoutes(
           destinationCode: body.destinationCode,
           createdByUserId: user?.sub ?? null,
         });
-        for (let i = 0; i < withAvailable.length; i++) {
-          const row = withAvailable[i]!;
+        for (let i = 0; i < withStock.length; i++) {
+          const row = withStock[i]!;
           await exec.insert(loadingManifestLines).values({
             manifestId: id,
             batchId: row.batchId,
@@ -186,6 +229,7 @@ export function registerLoadingManifestRoutes(
             await exec.update(batches).set({ destination: body.destinationCode }).where(eq(batches.id, row.batchId));
           }
         }
+        await new DrizzleBatchWarehouseWriteOffLedger(exec).clearBlocksLoadingByBatchIds(batchIds);
       });
 
       return reply.code(201).send({ manifestId: id });
@@ -589,18 +633,19 @@ export function registerLoadingManifestRoutes(
         excludeManifestId: manifestId,
       });
       const blockingLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
-      const blockingSums = await blockingLedger.totalBlockingLoadingGramsByBatchIds(batchIds);
-      const withAvailable = selected.map((r) => {
-        const availableGrams = availableGramsForLoadingManifestLine({
-          onWarehouseGrams: r.onWarehouseGrams,
-          reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
-          blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
-        });
-        return { ...r, availableGrams };
-      });
-      const noStock = withAvailable.find((r) => r.availableGrams <= 0n);
-      if (noStock) {
-        return reply.code(400).send({ error: "batch_without_stock", batchId: noStock.batchId });
+      const availableByBatch = await resolveAvailableGramsForManifestBatches(
+        blockingLedger,
+        selected,
+        reservedSums,
+      );
+      const withAvailable = selected.map((r) => ({
+        ...r,
+        availableGrams: availableByBatch.get(r.batchId) ?? 0n,
+      }));
+      const withStock = withAvailable.filter((r) => r.availableGrams > 0n);
+      if (withStock.length === 0) {
+        const first = withAvailable[0];
+        return reply.code(400).send({ error: "batch_without_stock", batchId: first?.batchId });
       }
 
       const existingRows = await db
@@ -614,7 +659,7 @@ export function registerLoadingManifestRoutes(
       await db.transaction(async (tx) => {
         const exec = tx as unknown as DbClient;
         const affectedBatchIds = new Set<string>();
-        for (const row of withAvailable) {
+        for (const row of withStock) {
           const already = existingByBatch.get(row.batchId);
           const targetGrams = row.availableGrams;
           const packageCount = packageCountForPart(row.totalGrams, targetGrams, row.linePackageCount);
@@ -640,6 +685,8 @@ export function registerLoadingManifestRoutes(
             await exec.update(batches).set({ destination: manifest.destinationCode }).where(eq(batches.id, row.batchId));
           }
         }
+
+        await new DrizzleBatchWarehouseWriteOffLedger(exec).clearBlocksLoadingByBatchIds(batchIds);
 
         if (assignedTripId && tripRead && affectedBatchIds.size > 0) {
           const batchRepo = new DrizzleBatchRepository(exec);

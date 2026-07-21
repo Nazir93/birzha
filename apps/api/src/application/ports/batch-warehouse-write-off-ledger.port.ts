@@ -20,6 +20,8 @@ export interface BatchWarehouseWriteOffLedger {
   deleteById(id: string): Promise<boolean>;
   /** Все записи quality_reject (лимит повторного возврата / история). */
   totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
-  /** Только записи с blocks_loading — вычитаются из доступного к погрузке. */
+  /** Только записи с blocks_loading — вычитаются из строк ПН при создании. */
   totalBlockingLoadingGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
+  /** После создания ПН: снять блокировку, чтобы возвращённое снова можно было грузить. */
+  clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
 }

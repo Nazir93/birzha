@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { availableGramsForLoadingManifestLine } from "./loading-manifest-available-grams.js";
+import {
+  availableGramsForLoadingManifestLine,
+  shouldReleaseLoadingBlocksForManifest,
+} from "./loading-manifest-available-grams.js";
 
 describe("availableGramsForLoadingManifestLine", () => {
   it("вычитает резерв других ПН", () => {
@@ -41,5 +44,22 @@ describe("availableGramsForLoadingManifestLine", () => {
         qualityRejectReturnedGrams: 1_220_000n,
       }),
     ).toBe(1_220_000n);
+  });
+});
+
+describe("shouldReleaseLoadingBlocksForManifest", () => {
+  it("снимает блокировку если всё закрыто журналом, а склад не пуст", () => {
+    expect(
+      shouldReleaseLoadingBlocksForManifest([{ physicalFreeGrams: 10_000n, availableGrams: 0n }]),
+    ).toBe(true);
+  });
+
+  it("не снимает если есть доступные кг", () => {
+    expect(
+      shouldReleaseLoadingBlocksForManifest([
+        { physicalFreeGrams: 10_000n, availableGrams: 6_000n },
+        { physicalFreeGrams: 5_000n, availableGrams: 0n },
+      ]),
+    ).toBe(false);
   });
 });

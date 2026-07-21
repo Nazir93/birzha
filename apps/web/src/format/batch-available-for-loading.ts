@@ -6,9 +6,8 @@ export function batchQualityRejectReturnKg(batch: BatchListItem): number {
 }
 
 /**
- * Кг, доступные для отбора в погрузку: физический остаток на складе минус возврат из отбора.
- * Возврат с рейса на склад (API availableForLoadingKg) доступность не уменьшает.
- * При наличии поля с API — используем его; иначе `onWarehouseKg`.
+ * Кг для отбора в погрузку: физический остаток на складе.
+ * Возврат из отбора при создании ПН учитывается на сервере один раз; в списке партии не прячутся.
  */
 export function batchAvailableForLoadingKg(batch: BatchListItem): number {
   if (batch.availableForLoadingKg != null && Number.isFinite(batch.availableForLoadingKg)) {

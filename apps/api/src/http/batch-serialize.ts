@@ -39,8 +39,8 @@ export type BatchJson = {
    */
   qualityRejectWrittenOffKg?: number;
   /**
-   * Кг для отбора в погрузку: склад минус возврат из отбора (blocks_loading).
-   * Возврат с рейса на склад доступность не уменьшает.
+   * Кг для отбора в погрузку: физический остаток на складе.
+   * Возврат из отбора при создании ПН вычитается один раз (blocks_loading), список партий не прячет.
    */
   availableForLoadingKg?: number;
 };
@@ -54,7 +54,6 @@ export function batchToJson(
   const s = batch.toPersistenceState();
   const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
   const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
-  const blockingReturnKg = extras?.blockingReturnKg ?? 0;
   return {
     id: s.id,
     purchaseId: s.purchaseId,
@@ -70,7 +69,8 @@ export function batchToJson(
     ...(extras
       ? {
           qualityRejectWrittenOffKg,
-          availableForLoadingKg: Math.max(0, onWarehouseKg - blockingReturnKg),
+          // Список «Погрузка» показывает склад; блокировка только при расчёте строк ПН.
+          availableForLoadingKg: onWarehouseKg,
         }
       : {}),
   };

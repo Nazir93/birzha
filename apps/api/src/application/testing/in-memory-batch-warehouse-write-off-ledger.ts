@@ -57,4 +57,13 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
     }
     return m;
   }
+
+  async clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
+    const set = new Set(batchIds);
+    for (const r of this.rows) {
+      if (set.has(r.batchId) && r.blocksLoading) {
+        r.blocksLoading = false;
+      }
+    }
+  }
 }
