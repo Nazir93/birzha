@@ -11,18 +11,18 @@ import {
 } from "./batch-available-for-loading.js";
 
 describe("batchKgInSelectionRemainder", () => {
-  it("после возврата из черновика остаток в отборе уменьшается, склад к погрузке — нет", () => {
+  it("после возврата из отбора: API уменьшает к погрузке, остаток в отборе = склад − журнал", () => {
     const b = batch({
       id: "b1",
       onWarehouseKg: 100,
-      availableForLoadingKg: 100,
+      availableForLoadingKg: 60,
       qualityRejectWrittenOffKg: 40,
     });
-    expect(batchAvailableForLoadingKg(b)).toBe(100);
+    expect(batchAvailableForLoadingKg(b)).toBe(60);
     expect(batchKgInSelectionRemainder(b)).toBe(60);
   });
 
-  it("полный возврат из рейса: на складе есть кг, в отборе 0", () => {
+  it("полный возврат из рейса: на складе есть кг (к погрузке), в отборе 0", () => {
     const b = batch({
       id: "b1",
       onWarehouseKg: 15950,

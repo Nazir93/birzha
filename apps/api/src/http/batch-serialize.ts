@@ -38,7 +38,10 @@ export type BatchJson = {
    * Только при PostgreSQL; иначе поле нет.
    */
   qualityRejectWrittenOffKg?: number;
-  /** Кг для отбора в погрузку: физический остаток на складе (журнал возвратов не блокирует). */
+  /**
+   * Кг для отбора в погрузку: склад минус возврат из отбора (blocks_loading).
+   * Возврат с рейса на склад доступность не уменьшает.
+   */
   availableForLoadingKg?: number;
 };
 
@@ -46,11 +49,12 @@ export function batchToJson(
   batch: Batch,
   nakladnaya?: BatchJson["nakladnaya"],
   allocation?: BatchJson["allocation"],
-  extras?: { qualityRejectWrittenOffKg: number },
+  extras?: { qualityRejectWrittenOffKg: number; blockingReturnKg?: number },
 ): BatchJson {
   const s = batch.toPersistenceState();
   const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
   const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
+  const blockingReturnKg = extras?.blockingReturnKg ?? 0;
   return {
     id: s.id,
     purchaseId: s.purchaseId,
@@ -66,8 +70,7 @@ export function batchToJson(
     ...(extras
       ? {
           qualityRejectWrittenOffKg,
-          /** Журнал возврата не блокирует погрузку на другое направление. */
-          availableForLoadingKg: Math.max(0, onWarehouseKg),
+          availableForLoadingKg: Math.max(0, onWarehouseKg - blockingReturnKg),
         }
       : {}),
   };

@@ -6,8 +6,8 @@ export function batchQualityRejectReturnKg(batch: BatchListItem): number {
 }
 
 /**
- * Кг, доступные для отбора в погрузку: физический остаток на складе.
- * Журнал возвратов не уменьшает доступность — товар можно грузить в другое направление.
+ * Кг, доступные для отбора в погрузку: физический остаток на складе минус возврат из отбора.
+ * Возврат с рейса на склад (API availableForLoadingKg) доступность не уменьшает.
  * При наличии поля с API — используем его; иначе `onWarehouseKg`.
  */
 export function batchAvailableForLoadingKg(batch: BatchListItem): number {
@@ -18,12 +18,11 @@ export function batchAvailableForLoadingKg(batch: BatchListItem): number {
 }
 
 /**
- * Остаток в черновом отборе (ещё нет сохранённой ПН): склад к погрузке минус уже возвращённое в журнал.
- * Не путать с `batchAvailableForLoadingKg` — после возврата товар снова доступен к другому рейсу,
- * но из текущего отбора он уже снят.
+ * Остаток в черновом отборе (ещё нет сохранённой ПН): физический склад минус журнал возврата.
+ * Не через `availableForLoadingKg` — иначе при blocks_loading журнал вычлось бы дважды.
  */
 export function batchKgInSelectionRemainder(batch: BatchListItem): number {
-  return Math.max(0, batchAvailableForLoadingKg(batch) - batchQualityRejectReturnKg(batch));
+  return Math.max(0, batch.onWarehouseKg - batchQualityRejectReturnKg(batch));
 }
 
 /**

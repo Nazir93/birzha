@@ -13,6 +13,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       batchId: row.batchId,
       grams: row.grams,
       reason: row.reason,
+      blocksLoading: row.blocksLoading,
     });
   }
 
@@ -23,6 +24,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
         batchId: batchWarehouseWriteOffs.batchId,
         grams: batchWarehouseWriteOffs.grams,
         reason: batchWarehouseWriteOffs.reason,
+        blocksLoading: batchWarehouseWriteOffs.blocksLoading,
       })
       .from(batchWarehouseWriteOffs)
       .where(eq(batchWarehouseWriteOffs.id, id))
@@ -35,6 +37,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       batchId: row.batchId,
       grams: row.grams,
       reason: row.reason as BatchWarehouseWriteOffAppend["reason"],
+      blocksLoading: row.blocksLoading,
     };
   }
 
@@ -73,6 +76,27 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
         and(
           inArray(batchWarehouseWriteOffs.batchId, batchIds),
           eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+        ),
+      );
+    for (const r of rows) {
+      m.set(r.batchId, (m.get(r.batchId) ?? 0n) + r.grams);
+    }
+    return m;
+  }
+
+  async totalBlockingLoadingGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>> {
+    const m = new Map<string, bigint>();
+    if (batchIds.length === 0) {
+      return m;
+    }
+    const rows = await this.db
+      .select({ batchId: batchWarehouseWriteOffs.batchId, grams: batchWarehouseWriteOffs.grams })
+      .from(batchWarehouseWriteOffs)
+      .where(
+        and(
+          inArray(batchWarehouseWriteOffs.batchId, batchIds),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+          eq(batchWarehouseWriteOffs.blocksLoading, true),
         ),
       );
     for (const r of rows) {

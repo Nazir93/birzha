@@ -105,6 +105,12 @@ export class RecordWarehouseWriteOffUseCase {
       await sideEffects.reduceActiveLoadingManifestLines(input.batchId, grams);
 
       const after = (await loadBatchForUpdateOrThrow(batches, input.batchId)).toPersistenceState();
+      const restoredPhysically =
+        after.onWarehouseGrams > before.onWarehouseGrams ||
+        after.inTransitGrams < before.inTransitGrams;
+      /** Из отбора без снятия с рейса — блокирует новую ПН; с рейса на склад — можно грузить снова. */
+      const blocksLoading = !restoredPhysically;
+
       const sumsAfter = await l.totalQualityRejectGramsByBatchIds([input.batchId]);
       const alreadyAfter = sumsAfter.get(input.batchId) ?? 0n;
       const roomForJournal = after.onWarehouseGrams - alreadyAfter;
@@ -115,6 +121,7 @@ export class RecordWarehouseWriteOffUseCase {
           batchId: input.batchId,
           grams: toAppend,
           reason: REASON,
+          blocksLoading,
         };
         await l.append(row);
         return;

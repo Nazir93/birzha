@@ -5,6 +5,11 @@ export type BatchWarehouseWriteOffAppend = {
   batchId: string;
   grams: bigint;
   reason: BatchWarehouseWriteOffReason;
+  /**
+   * true — возврат из отбора: кг не должны попасть в новую ПН.
+   * false — возврат с рейса на склад: можно снова грузить.
+   */
+  blocksLoading: boolean;
 };
 
 export interface BatchWarehouseWriteOffLedger {
@@ -13,5 +18,8 @@ export interface BatchWarehouseWriteOffLedger {
   /** Последняя запись журнала возврата по партии (для идемпотентного ответа). */
   findLatestQualityRejectIdByBatchId(batchId: string): Promise<string | null>;
   deleteById(id: string): Promise<boolean>;
+  /** Все записи quality_reject (лимит повторного возврата / история). */
   totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
+  /** Только записи с blocks_loading — вычитаются из доступного к погрузке. */
+  totalBlockingLoadingGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
 }

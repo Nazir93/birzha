@@ -103,7 +103,8 @@ export const batches = pgTable("batches", {
 
 /**
  * Журнал «возврат на склад»: снимает кг с отбора/активных ПН, onWarehouse не уменьшается.
- * Погрузка в другой рейс остаётся доступной (= onWarehouse).
+ * `blocks_loading`: true — возврат из чернового отбора (эти кг нельзя снова класть в новую ПН);
+ * false — возврат с рейса/ПН с физическим возвратом на склад (можно грузить в другой рейс).
  * `reason`: `quality_reject` — экран распределения / догрузки.
  */
 export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {
@@ -113,6 +114,9 @@ export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {
     .references(() => batches.id, { onDelete: "cascade" }),
   grams: bigint("grams", { mode: "bigint" }).notNull(),
   reason: text("reason").notNull().default("quality_reject"),
+  /** Блокирует доступность к новой погрузке (возврат из отбора без снятия с рейса). */
+  /** true — не грузить снова в ПН (возврат из отбора / старые записи). false — возврат с рейса. */
+  blocksLoading: boolean("blocks_loading").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 

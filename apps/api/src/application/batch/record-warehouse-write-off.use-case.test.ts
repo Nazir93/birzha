@@ -61,6 +61,8 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(gramsToKg(reloaded!.toPersistenceState().writtenOffGrams)).toBe(0);
     const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-w1"]);
     expect(sums.get("b-w1") ?? 0n).toBe(15_000n);
+    const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-w1"]);
+    expect(blocking.get("b-w1") ?? 0n).toBe(15_000n);
   });
 
   it("отказывает при слишком большой массе (остаток)", async () => {
@@ -137,6 +139,8 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(gramsToKg(reloaded!.toPersistenceState().inTransitGrams)).toBe(0);
     const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-transit"]);
     expect(sums.get("b-transit") ?? 0n).toBe(100_000n);
+    const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-transit"]);
+    expect(blocking.get("b-transit") ?? 0n).toBe(0n);
   });
 
   it("при полном журнале и массе в рейсе — ремонт без второй записи в журнал", async () => {
@@ -147,6 +151,7 @@ describe("RecordWarehouseWriteOffUseCase", () => {
       batchId: "b-repair",
       grams: 100_000n,
       reason: "quality_reject",
+      blocksLoading: false,
     });
     const uc = new RecordWarehouseWriteOffUseCase(batches, ledger, async (fn) => {
       await fn(batches, ledger, {

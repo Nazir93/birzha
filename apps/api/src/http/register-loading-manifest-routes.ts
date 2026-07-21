@@ -48,6 +48,7 @@ import {
   warehouses,
 } from "../db/schema.js";
 import { availableGramsForLoadingManifestLine } from "../application/trip/loading-manifest-available-grams.js";
+import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { sumActiveLoadingManifestGramsByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
@@ -147,10 +148,13 @@ export function registerLoadingManifestRoutes(
         return reply.code(400).send({ error: "batch_not_in_warehouse", batchId: badWarehouse.batchId });
       }
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
+      const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
+      const blockingSums = await ledger.totalBlockingLoadingGramsByBatchIds(batchIds);
       const withAvailable = selected.map((r) => {
         const availableGrams = availableGramsForLoadingManifestLine({
           onWarehouseGrams: r.onWarehouseGrams,
           reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
+          blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
         });
         return { ...r, availableGrams };
       });
@@ -584,10 +588,13 @@ export function registerLoadingManifestRoutes(
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds, {
         excludeManifestId: manifestId,
       });
+      const blockingLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
+      const blockingSums = await blockingLedger.totalBlockingLoadingGramsByBatchIds(batchIds);
       const withAvailable = selected.map((r) => {
         const availableGrams = availableGramsForLoadingManifestLine({
           onWarehouseGrams: r.onWarehouseGrams,
           reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
+          blockingReturnGrams: blockingSums.get(r.batchId) ?? 0n,
         });
         return { ...r, availableGrams };
       });

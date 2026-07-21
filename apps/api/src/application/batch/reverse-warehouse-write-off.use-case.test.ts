@@ -56,6 +56,7 @@ describe("ReverseWarehouseWriteOffUseCase", () => {
       batchId: "b-w2",
       grams: kgToGrams(5),
       reason: "quality_reject",
+      blocksLoading: true,
     });
     await reverse.execute("journal-row");
     const reloaded = await batches.findById("b-w2");

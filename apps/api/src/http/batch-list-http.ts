@@ -66,10 +66,12 @@ export async function listBatchesForHttp(
   }
 
   let rejectByBatch = new Map<string, bigint>();
+  let blockingByBatch = new Map<string, bigint>();
   if (db) {
     const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
     const ids0 = list.map((b) => b.getId());
     rejectByBatch = await ledger.totalQualityRejectGramsByBatchIds(ids0);
+    blockingByBatch = await ledger.totalBlockingLoadingGramsByBatchIds(ids0);
   }
 
   if (!db) {
@@ -129,11 +131,12 @@ export async function listBatchesForHttp(
     const m = meta.get(id);
     const a = alloc.get(id);
     const rg = rejectByBatch.get(id) ?? 0n;
+    const bg = blockingByBatch.get(id) ?? 0n;
     return batchToJson(
       b,
       mergeNakladnyaForList(m, b),
       a ? { qualityTier: a.qualityTier, destination: a.destination } : undefined,
-      { qualityRejectWrittenOffKg: gramsToKg(rg) },
+      { qualityRejectWrittenOffKg: gramsToKg(rg), blockingReturnKg: gramsToKg(bg) },
     );
   });
 }
