@@ -15,7 +15,7 @@ export type RecordWarehouseWriteOffInput = {
   batchId: string;
   /**
    * Масса возврата на склад: фиксируется в журнале (onWarehouse не уменьшается),
-   * снимает кг с активных ПН; погрузка в другой рейс остаётся доступной.
+   * снимает кг с активных ПН и при необходимости возвращает отгрузку с открытого рейса.
    */
   kg: number;
   reason: BatchWarehouseWriteOffReason;
@@ -43,6 +43,26 @@ export type RecordWarehouseWriteOffResult = {
   writeOffId: string;
 };
 
+/**
+ * Сколько кг ещё можно оформить как возврат: склад + в рейсе минус уже в журнале;
+ * если журнал уже полный, но масса ещё в рейсе — разрешаем ремонт (снять с ПН/рейса).
+ */
+export function maxWarehouseReturnGrams(input: {
+  onWarehouseGrams: bigint;
+  inTransitGrams: bigint;
+  alreadyReturnedGrams: bigint;
+}): bigint {
+  const physical = input.onWarehouseGrams + input.inTransitGrams;
+  const leftover = physical - input.alreadyReturnedGrams;
+  if (leftover > 0n) {
+    return leftover;
+  }
+  if (input.inTransitGrams > 0n) {
+    return input.inTransitGrams;
+  }
+  return 0n;
+}
+
 export class RecordWarehouseWriteOffUseCase {
   constructor(
     private readonly batches: BatchRepository,
@@ -62,23 +82,50 @@ export class RecordWarehouseWriteOffUseCase {
       throw new InvalidKgError("kg", input.kg);
     }
 
-    const id = randomUUID();
-    const row: BatchWarehouseWriteOffAppend = { id, batchId: input.batchId, grams, reason: REASON };
+    let writeOffId: string = randomUUID();
     const persist = async (
       batches: BatchRepository,
       l: BatchWarehouseWriteOffLedger,
       sideEffects: RecordWarehouseWriteOffSideEffects = NOOP_SIDE_EFFECTS,
     ) => {
       const batch = await loadBatchForUpdateOrThrow(batches, input.batchId);
-      const onWarehouseGrams = batch.toPersistenceState().onWarehouseGrams;
+      const before = batch.toPersistenceState();
       const ledgerSums = await l.totalQualityRejectGramsByBatchIds([input.batchId]);
       const alreadyReturnedGrams = ledgerSums.get(input.batchId) ?? 0n;
-      const availableGrams = onWarehouseGrams - alreadyReturnedGrams;
+      const availableGrams = maxWarehouseReturnGrams({
+        onWarehouseGrams: before.onWarehouseGrams,
+        inTransitGrams: before.inTransitGrams,
+        alreadyReturnedGrams,
+      });
       if (grams > availableGrams) {
         throw new InsufficientStockError("warehouse", availableGrams, grams);
       }
-      await l.append(row);
+
+      // Сначала снимаем с ПН / рейса — иначе при inTransit лимит «только склад» ломает возврат.
       await sideEffects.reduceActiveLoadingManifestLines(input.batchId, grams);
+
+      const after = (await loadBatchForUpdateOrThrow(batches, input.batchId)).toPersistenceState();
+      const sumsAfter = await l.totalQualityRejectGramsByBatchIds([input.batchId]);
+      const alreadyAfter = sumsAfter.get(input.batchId) ?? 0n;
+      const roomForJournal = after.onWarehouseGrams - alreadyAfter;
+      if (roomForJournal > 0n) {
+        const toAppend = grams < roomForJournal ? grams : roomForJournal;
+        const row: BatchWarehouseWriteOffAppend = {
+          id: writeOffId,
+          batchId: input.batchId,
+          grams: toAppend,
+          reason: REASON,
+        };
+        await l.append(row);
+        return;
+      }
+
+      const existingId = await l.findLatestQualityRejectIdByBatchId(input.batchId);
+      if (existingId) {
+        writeOffId = existingId;
+        return;
+      }
+      throw new InsufficientStockError("warehouse", 0n, grams);
     };
 
     if (this.runInTransaction) {
@@ -86,6 +133,6 @@ export class RecordWarehouseWriteOffUseCase {
     } else {
       await persist(this.batches, this.ledger, NOOP_SIDE_EFFECTS);
     }
-    return { writeOffId: id };
+    return { writeOffId };
   }
 }

@@ -17,15 +17,55 @@ export function batchAvailableForLoadingKg(batch: BatchListItem): number {
   return Math.max(0, batch.onWarehouseKg);
 }
 
-/** Ящики, доступные к отбору: пропорция availableKg к totalKg × ящиков по строке накладной. */
-export function estimatedPackageCountForLoading(b: BatchListItem): number | null {
-  const avail = batchAvailableForLoadingKg(b);
+/**
+ * Остаток в черновом отборе (ещё нет сохранённой ПН): склад к погрузке минус уже возвращённое в журнал.
+ * Не путать с `batchAvailableForLoadingKg` — после возврата товар снова доступен к другому рейсу,
+ * но из текущего отбора он уже снят.
+ */
+export function batchKgInSelectionRemainder(batch: BatchListItem): number {
+  return Math.max(0, batchAvailableForLoadingKg(batch) - batchQualityRejectReturnKg(batch));
+}
+
+/**
+ * Кг, которые ещё можно оформить как «вернуть на склад»:
+ * склад + в рейсе минус журнал; если журнал уже полный, но масса в рейсе — ремонт (снять с ПН).
+ */
+export function batchReturnableToWarehouseKg(batch: BatchListItem): number {
+  const onWh = Math.max(0, batch.onWarehouseKg);
+  const inTransit = Math.max(0, batch.inTransitKg);
+  const already = Math.max(0, batchQualityRejectReturnKg(batch));
+  const leftover = onWh + inTransit - already;
+  if (leftover > 0) {
+    return leftover;
+  }
+  if (inTransit > 0) {
+    return inTransit;
+  }
+  return 0;
+}
+
+function estimatedPackagesForKg(b: BatchListItem, availKg: number): number | null {
   const linePk = b.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0) {
     return null;
   }
-  if (b.totalKg <= 0 || avail <= 0) {
+  if (b.totalKg <= 0 || availKg <= 0) {
     return null;
   }
-  return Math.max(0, Math.round((avail / b.totalKg) * linePk));
+  return Math.max(0, Math.round((availKg / b.totalKg) * linePk));
+}
+
+/** Ящики, доступные к отбору: пропорция availableKg к totalKg × ящиков по строке накладной. */
+export function estimatedPackageCountForLoading(b: BatchListItem): number | null {
+  return estimatedPackagesForKg(b, batchAvailableForLoadingKg(b));
+}
+
+/** Ящики в остатке отбора (черновик): по selection remainder. */
+export function estimatedPackageCountInSelectionRemainder(b: BatchListItem): number | null {
+  return estimatedPackagesForKg(b, batchKgInSelectionRemainder(b));
+}
+
+/** Ящики, доступные к возврату на склад (та же пропорция, но по returnable кг). */
+export function estimatedPackageCountForWarehouseReturn(b: BatchListItem): number | null {
+  return estimatedPackagesForKg(b, batchReturnableToWarehouseKg(b));
 }

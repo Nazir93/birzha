@@ -6,6 +6,8 @@ import {
   aggregateBatchesByCaliberLine,
   aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
+  batchSnapshotForManifestLineRemainder,
+  batchSnapshotForManifestLineWriteOff,
   buildWriteOffItemsFromBatches,
   buildWriteOffItemsFromBatchesByPackages,
   buildWriteOffItemsFromInputs,
@@ -22,6 +24,7 @@ import {
   sumLoadingManifestTotals,
   summarizeAllocationBreakdown,
 } from "./loading-manifest.js";
+import { batchAvailableForLoadingKg } from "./batch-available-for-loading.js";
 
 function b(p: Partial<BatchListItem> & Pick<BatchListItem, "id" | "onWarehouseKg" | "totalKg">): BatchListItem {
   return {
@@ -542,5 +545,63 @@ describe("buildWriteOffItemsFromInputs", () => {
   it("null при превышении остатка", () => {
     expect(buildWriteOffItemsFromInputs(batches, row, "50", "")).toBeNull();
     expect(buildWriteOffItemsFromInputs(batches, row, "", "10")).toBeNull();
+  });
+});
+
+describe("batchSnapshotForManifestLineRemainder / WriteOff", () => {
+  it("остаток в отборе берёт кг строки ПН, а не склад партии", () => {
+    const live = b({
+      id: "b1",
+      totalKg: 15950,
+      onWarehouseKg: 15950,
+      availableForLoadingKg: 15950,
+      qualityRejectWrittenOffKg: 15950,
+      nakladnaya: {
+        documentId: "d1",
+        warehouseId: "w1",
+        productGradeCode: "6",
+        productGroup: "Помидоры",
+        documentNumber: "назим 8",
+        linePackageCount: 2100,
+      },
+    });
+    const snap = batchSnapshotForManifestLineRemainder(
+      {
+        batchId: "b1",
+        kg: 100,
+        packageCount: "20",
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "назим 8",
+        productGradeCode: "6",
+        productGroup: "Помидоры",
+      },
+      live,
+    );
+    expect(sumLoadingManifestTotals([snap], "selection_remainder").kg).toBe(100);
+    expect(batchAvailableForLoadingKg(live)).toBe(15950);
+  });
+
+  it("возврат ограничен кг строки ПН", () => {
+    const live = b({
+      id: "b1",
+      totalKg: 200,
+      onWarehouseKg: 0,
+      inTransitKg: 200,
+      availableForLoadingKg: 0,
+    });
+    const snap = batchSnapshotForManifestLineWriteOff(
+      {
+        batchId: "b1",
+        kg: 50,
+        packageCount: "5",
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "1",
+        productGradeCode: "5",
+        productGroup: null,
+      },
+      live,
+    );
+    expect(buildWriteOffItemsFromBatches([snap], 50)).toEqual([{ batchId: "b1", kg: 50 }]);
+    expect(buildWriteOffItemsFromBatches([snap], 80)).toEqual([{ batchId: "b1", kg: 50 }]);
   });
 });

@@ -48,6 +48,10 @@ export function humanizeErrorMessage(error: unknown): string {
   }
 
   const withoutUrl = stripUrlPrefix(raw);
+  const codeKey = withoutUrl.trim();
+  if (ERROR_CODE_RU[codeKey]) {
+    return ERROR_CODE_RU[codeKey];
+  }
   const fromJson = tryParseApiJson(withoutUrl);
   if (fromJson) {
     return fromJson;

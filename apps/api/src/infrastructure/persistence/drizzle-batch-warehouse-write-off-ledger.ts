@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import type { BatchWarehouseWriteOffLedger, BatchWarehouseWriteOffAppend } from "../../application/ports/batch-warehouse-write-off-ledger.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -36,6 +36,21 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       grams: row.grams,
       reason: row.reason as BatchWarehouseWriteOffAppend["reason"],
     };
+  }
+
+  async findLatestQualityRejectIdByBatchId(batchId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ id: batchWarehouseWriteOffs.id })
+      .from(batchWarehouseWriteOffs)
+      .where(
+        and(
+          eq(batchWarehouseWriteOffs.batchId, batchId),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+        ),
+      )
+      .orderBy(desc(batchWarehouseWriteOffs.createdAt))
+      .limit(1);
+    return row?.id ?? null;
   }
 
   async deleteById(id: string): Promise<boolean> {

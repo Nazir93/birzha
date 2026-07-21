@@ -551,7 +551,10 @@ export function registerBatchRoutes(
         const where = and(...conditions);
 
         const countRow = await db
-          .select({ count: sql<number>`count(*)::int` })
+          .select({
+            count: sql<number>`count(*)::int`,
+            sumGrams: sql<string>`coalesce(sum(${batchWarehouseWriteOffs.grams}), 0)::text`,
+          })
           .from(batchWarehouseWriteOffs)
           .innerJoin(batchesTable, eq(batchWarehouseWriteOffs.batchId, batchesTable.id))
           .innerJoin(
@@ -564,6 +567,7 @@ export function registerBatchRoutes(
           )
           .where(where);
         const totalCount = countRow[0]?.count ?? 0;
+        const totalKgAll = gramsToKg(BigInt(countRow[0]?.sumGrams ?? "0"));
 
         const rows = await db
           .select({
@@ -608,6 +612,7 @@ export function registerBatchRoutes(
             totalCount,
           },
           totalKg: rows.reduce((a, r) => a + gramsToKg(r.grams), 0),
+          totalKgAll,
           lines: rows.map((r) => ({
             id: r.id,
             batchId: r.batchId,

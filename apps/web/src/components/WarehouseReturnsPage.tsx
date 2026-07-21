@@ -43,6 +43,7 @@ export function WarehouseReturnsPage() {
     () => lines.reduce((a, r) => a + (r.packageCount ?? 0), 0),
     [lines],
   );
+  const totalKgAll = ledgerQ.data?.totalKgAll ?? ledgerQ.data?.totalKg ?? sumShown;
 
   if (meta?.warehouseWriteOffApi !== "enabled") {
     return (
@@ -105,17 +106,32 @@ export function WarehouseReturnsPage() {
       {lines.length > 0 && (
         <>
           <p style={{ margin: "0 0 0.45rem", fontSize: "0.9rem" }} role="status">
-            <strong>На странице:</strong> {sumShown.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
-            {packagesShown > 0 ? (
+            <strong>Всего по фильтру:</strong>{" "}
+            {totalKgAll.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+            <span className="birzha-text-muted"> · {totalCount.toLocaleString("ru-RU")} записей</span>
+            {pageCount > 1 ? (
               <>
-                {" "}
-                · ≈ {packagesShown.toLocaleString("ru-RU")} ящ.
+                <span className="birzha-text-muted"> · </span>
+                <strong>На странице:</strong>{" "}
+                {sumShown.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+                {packagesShown > 0 ? (
+                  <>
+                    {" "}
+                    · ≈ {packagesShown.toLocaleString("ru-RU")} ящ.
+                  </>
+                ) : null}
+                <span className="birzha-text-muted">
+                  {" "}
+                  · {lines.length} из {totalCount}
+                </span>
+              </>
+            ) : packagesShown > 0 ? (
+              <>
+                <span className="birzha-text-muted"> · </span>
+                ≈ {packagesShown.toLocaleString("ru-RU")} ящ. (оценка по строкам накладной)
               </>
             ) : null}
-            <span className="birzha-text-muted"> · </span>
-            {lines.length} из {totalCount} записей
-          </p>
-          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+          </p>          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
             <table style={{ ...tableStyle, minWidth: 820 }} aria-label="Журнал возвратов на склад">
               <thead>
                 <tr>

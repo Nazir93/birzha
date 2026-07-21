@@ -624,12 +624,14 @@ export function AllocationPanel() {
             warehouseName={warehouseName(selectedWarehouse)}
             manifest={savedManifestQuery.data?.manifest ?? null}
             writeOff={
-              meta?.warehouseWriteOffApi === "enabled" && canReturn && batchesInWh.length > 0
+              meta?.warehouseWriteOffApi === "enabled" &&
+              canReturn &&
+              (batchesInWh.length > 0 || (savedManifestQuery.data?.manifest?.lines.length ?? 0) > 0)
                 ? {
                     enabled: true,
                     isPending: writeOff.isPending,
                     isError: writeOff.isError,
-                    errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
+                    errorMessage: writeOff.isError ? humanizeErrorMessage(writeOff.error) : null,
                     rejectInput: rejectScrapInput,
                     rejectPkgInput: rejectScrapPkgInput,
                     onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),

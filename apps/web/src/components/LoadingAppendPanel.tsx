@@ -394,7 +394,7 @@ export function LoadingAppendPanel() {
                         enabled: true,
                         isPending: writeOff.isPending,
                         isError: writeOff.isError,
-                        errorMessage: writeOff.isError ? (writeOff.error as Error).message : null,
+                        errorMessage: writeOff.isError ? humanizeErrorMessage(writeOff.error) : null,
                         rejectInput: rejectScrapInput,
                         rejectPkgInput: rejectScrapPkgInput,
                         onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),

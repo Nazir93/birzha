@@ -7,6 +7,8 @@ import {
   aggregateBatchesByCaliberLine,
   aggregateBatchesByDocumentCaliberLine,
   aggregateBatchesByPurchaseDocument,
+  batchSnapshotForManifestLineRemainder,
+  batchSnapshotForManifestLineWriteOff,
   buildWriteOffItemsFromBatches,
   buildWriteOffItemsFromInputs,
   filterBatchesForLoadingManifest,
@@ -81,34 +83,6 @@ function submitWriteOffRow(
   }
 }
 
-/** Если строка ПН есть, а партия не попала в текущий список склада — показать кг из снимка ПН. */
-function syntheticBatchFromManifestLine(
-  line: LoadingManifestDetail["lines"][number],
-): BatchListItem {
-  const pkgRaw = line.packageCount != null && line.packageCount !== "" ? Number(line.packageCount) : NaN;
-  const linePk = Number.isFinite(pkgRaw) && pkgRaw > 0 ? pkgRaw : null;
-  const documentNumber = line.purchaseDocumentNumber?.trim() || null;
-  return {
-    id: line.batchId,
-    purchaseId: "—",
-    totalKg: line.kg,
-    pricePerKg: 0,
-    pendingInboundKg: 0,
-    onWarehouseKg: line.kg,
-    inTransitKg: 0,
-    soldKg: 0,
-    writtenOffKg: 0,
-    nakladnaya: {
-      documentId: line.purchaseDocumentId?.trim() || null,
-      warehouseId: line.warehouseId?.trim() || null,
-      productGradeCode: line.productGradeCode,
-      productGroup: line.productGroup,
-      documentNumber,
-      linePackageCount: linePk,
-    },
-  };
-}
-
 /**
  * Свод на погрузку: мультинакл., таблица остатка по калибру или по накладной (с итого), списание брака тем же переключателем.
  */
@@ -130,34 +104,55 @@ export function LoadingManifestBlock({
   const includedBatchesFromSelection = useMemo(() => {
     return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, selectedDocIds);
   }, [batchesInWh, documentOptions.length, selectedDocIds]);
-  const includedBatches = useMemo(() => {
+
+  /** Партии для «остатка в отборе»: строки ПН или черновик (склад − журнал возврата). */
+  const selectionRemainderBatches = useMemo(() => {
     if (!manifest) {
       return includedBatchesFromSelection;
     }
     const byId = new Map(batchesInWh.map((b) => [b.id, b]));
-    return manifest.lines.map((line) => {
-      const b = byId.get(line.batchId);
-      return b ?? syntheticBatchFromManifestLine(line);
-    });
+    return manifest.lines.map((line) => batchSnapshotForManifestLineRemainder(line, byId.get(line.batchId)));
   }, [batchesInWh, includedBatchesFromSelection, manifest]);
 
-  const totals = useMemo(() => sumLoadingManifestTotals(includedBatches), [includedBatches]);
-  const caliberRows = useMemo(() => aggregateBatchesByCaliberLine(includedBatches), [includedBatches]);
-  const documentCaliberRows = useMemo(
-    () => aggregateBatchesByDocumentCaliberLine(includedBatches),
-    [includedBatches],
+  /** Партии для возврата: returnable с потолком по строке ПН. */
+  const writeOffBatches = useMemo(() => {
+    if (!manifest) {
+      return includedBatchesFromSelection;
+    }
+    const byId = new Map(batchesInWh.map((b) => [b.id, b]));
+    return manifest.lines.map((line) => batchSnapshotForManifestLineWriteOff(line, byId.get(line.batchId)));
+  }, [batchesInWh, includedBatchesFromSelection, manifest]);
+
+  const totals = useMemo(
+    () => sumLoadingManifestTotals(selectionRemainderBatches, "selection_remainder"),
+    [selectionRemainderBatches],
   );
-  const documentRows = useMemo(() => aggregateBatchesByPurchaseDocument(includedBatches), [includedBatches]);
+  const caliberRows = useMemo(
+    () => aggregateBatchesByCaliberLine(selectionRemainderBatches, "selection_remainder"),
+    [selectionRemainderBatches],
+  );
+  const documentRows = useMemo(
+    () => aggregateBatchesByPurchaseDocument(selectionRemainderBatches, "selection_remainder"),
+    [selectionRemainderBatches],
+  );
+  const writeOffDocumentCaliberRows = useMemo(
+    () => aggregateBatchesByDocumentCaliberLine(writeOffBatches, "warehouse_return"),
+    [writeOffBatches],
+  );
+  const writeOffDocumentRows = useMemo(
+    () => aggregateBatchesByPurchaseDocument(writeOffBatches, "warehouse_return"),
+    [writeOffBatches],
+  );
   const writeOffShowsPackages = useMemo(
     () =>
-      documentCaliberRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0) ||
-      documentRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0),
-    [documentCaliberRows, documentRows],
+      writeOffDocumentCaliberRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0) ||
+      writeOffDocumentRows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0),
+    [writeOffDocumentCaliberRows, writeOffDocumentRows],
   );
 
   const uniqueDocuments = useMemo(() => {
     const m = new Map<string, { id: string; number: string }>();
-    for (const b of includedBatches) {
+    for (const b of selectionRemainderBatches) {
       const id = b.nakladnaya?.documentId;
       if (!id) {
         continue;
@@ -168,7 +163,7 @@ export function LoadingManifestBlock({
       });
     }
     return [...m.values()].sort((a, b) => a.number.localeCompare(b.number, "ru"));
-  }, [includedBatches]);
+  }, [selectionRemainderBatches]);
 
   const stockTableLabelId = "loading-manifest-stock-table";
   const modeToggleId = "loading-manifest-mode";
@@ -243,7 +238,7 @@ export function LoadingManifestBlock({
         ) : null}
       </p>
 
-      {includedBatches.length === 0 && (
+      {selectionRemainderBatches.length === 0 && writeOffBatches.every((b) => b.onWarehouseKg <= 0) && (
         <BirzhaEmptyState
           compact
           title="Нет строк в отборе"
@@ -255,7 +250,7 @@ export function LoadingManifestBlock({
         />
       )}
 
-      {includedBatches.length > 0 && (
+      {(selectionRemainderBatches.length > 0 || writeOffBatches.some((b) => b.onWarehouseKg > 0)) && (
         <div style={{ marginTop: "0.35rem" }}>
           {writeOff?.enabled ? (
             <div style={{ marginBottom: "0.85rem" }} className="no-print">
@@ -320,7 +315,7 @@ export function LoadingManifestBlock({
                   </thead>
                   <tbody>
                     {writeOffGroupMode === "caliber"
-                      ? documentCaliberRows.map((row) => {
+                      ? writeOffDocumentCaliberRows.map((row) => {
                           const inputKey = writeOffKeyDocumentCaliber(row.rowKey);
                           const submitLabel = `${row.documentDisplayLabel} · ${row.lineLabel}`;
                           return (
@@ -391,7 +386,7 @@ export function LoadingManifestBlock({
                             </tr>
                           );
                         })
-                      : documentRows.map((row) => {
+                      : writeOffDocumentRows.map((row) => {
                           const inputKey = writeOffKeyDocument(row.rowKey);
                           const caliberInDoc = aggregateBatchesByCaliberLine(row.batches);
                           return (
@@ -511,6 +506,11 @@ export function LoadingManifestBlock({
           >
             Остаток в отборе (после возврата на склад)
           </h4>
+          <p className="birzha-text-muted birzha-ui-sm no-print" style={{ margin: "0 0 0.45rem", maxWidth: "40rem" }}>
+            {manifest
+              ? "Сколько ещё числится в этой погрузочной накладной. Вернутый товар снова на складе и его можно погрузить в другой рейс."
+              : "Сколько ещё в текущем отборе. Вернутый товар снова на складе — для другого рейса смотрите свободный остаток при новой погрузке."}
+          </p>
           <div
             className="no-print"
             id={modeToggleId}
@@ -559,7 +559,7 @@ export function LoadingManifestBlock({
                     <th scope="col">Накладная</th>
                   )}
                   <th scope="col" className="birzha-data-table__num">
-                    Доступно, кг
+                    В отборе, кг
                   </th>
                   <th scope="col" className="birzha-data-table__num">
                     Ящ. (оц.)

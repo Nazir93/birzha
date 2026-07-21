@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import type { LoadingManifestDetail, LoadingManifestSummary } from "../../api/types.js";
+import type { LoadingManifestDetail, LoadingManifestSummary, TripJson } from "../../api/types.js";
 import {
   aggregateLoadingManifestLinesByCaliber,
   formatLoadingManifestCardHeader,
@@ -71,7 +71,7 @@ export function LoadingManifestAccordion({
     isError: boolean;
     error: unknown;
   };
-  trips: { id: string; tripNumber: string; status: string }[];
+  trips: TripJson[];
   canAppendLoad?: boolean;
   onAppendLoad?: () => void;
   /** Привязка, смена и открепление рейса — роли ship (admin, manager, warehouse, logistics). */
@@ -115,7 +115,19 @@ export function LoadingManifestAccordion({
     );
     return names.size > 1;
   }, [detail]);
-  const roadTripLabel = detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : "";
+  const tripById = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
+  const formatTripLabel = (tripId: string | null | undefined): string => {
+    const id = tripId?.trim() ?? "";
+    if (!id) {
+      return "—";
+    }
+    const trip = tripById.get(id);
+    if (trip) {
+      return formatTripSelectLabel(trip);
+    }
+    return tripNumberById.get(id) ?? id;
+  };
+  const roadTripLabel = detail?.tripId ? formatTripLabel(detail.tripId) : "";
   const tripAssignLock = detail ? loadingManifestTripAssignLockFromDetail(detail) : { locked: false as const };
   const [partyLinesOpen, setPartyLinesOpen] = useState(false);
   useEffect(() => {
@@ -123,7 +135,7 @@ export function LoadingManifestAccordion({
       setPartyLinesOpen(false);
     }
   }, [detail?.tripId, detail?.id]);
-  const tripLabel = m.tripId ? (tripNumberById.get(m.tripId) ?? m.tripId) : "—";
+  const tripLabel = m.tripId ? formatTripLabel(m.tripId) : "—";
   const isOpen = manifestId === m.id;
   const detailPath = `${manifestBasePath}/${encodeURIComponent(m.id)}`;
   const linkedTripId = detail?.tripId?.trim() ?? "";
@@ -134,15 +146,7 @@ export function LoadingManifestAccordion({
   const tripSelectOptions = useMemo(() => {
     const base = trips.map((t) => ({
       value: t.id,
-      label: formatTripSelectLabel({
-        id: t.id,
-        tripNumber: t.tripNumber,
-        status: t.status,
-        vehicleLabel: null,
-        driverName: null,
-        departedAt: null,
-        assignedSellerUserId: null,
-      }),
+      label: formatTripSelectLabel(t),
     }));
     if (!linkedTripId) {
       return [{ value: "", label: "— выбрать рейс —" }, ...base];
@@ -156,7 +160,7 @@ export function LoadingManifestAccordion({
     manifestNumber: detail?.manifestNumber ?? m.manifestNumber,
     destinationName: detail?.destinationName ?? m.destinationName,
     docDate: detail?.docDate ?? m.docDate,
-    tripLabel: detail?.tripId ? (tripNumberById.get(detail.tripId) ?? detail.tripId) : tripLabel !== "—" ? tripLabel : "",
+    tripLabel: detail?.tripId ? formatTripLabel(detail.tripId) : tripLabel !== "—" ? tripLabel : "",
     warehouseLabel,
   });
 
@@ -169,14 +173,18 @@ export function LoadingManifestAccordion({
       <summary className="birzha-disclosure__summary">
         {variant === "trip" ? "Смена рейса" : "Привязка к рейсу"}
         <span className="birzha-disclosure__hint">
-          {detail.tripId ? `рейс: ${tripNumberById.get(detail.tripId) ?? "—"}` : "не назначен"}
+          {detail.tripId ? `рейс: ${formatTripLabel(detail.tripId)}` : "не назначен"}
         </span>
       </summary>
       <div className="birzha-disclosure__body">
         {canChangeTrip ? (
           <>
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              Привязано к рейсу: <strong>{tripNumberById.get(linkedTripId) ?? linkedTripId}</strong>
+              Сейчас привязано: <strong>{formatTripLabel(linkedTripId)}</strong>
+            </p>
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
+              Выберите другой открытый рейс ниже и нажмите «Сменить рейс». Город накладной станет городом нового рейса.
+              Масса с текущего рейса вернётся на склад и отгрузится в выбранный.
             </p>
             <div className="no-print birzha-clean-ops-row-actions">
               <BirzhaSelect
@@ -200,10 +208,10 @@ export function LoadingManifestAccordion({
                 className="birzha-clean-ops-row-action"
                 disabled={detachTrip!.isPending}
                 onClick={() => {
-                  const tripLabel = tripNumberById.get(linkedTripId) ?? "рейс";
+                  const label = formatTripLabel(linkedTripId);
                   if (
                     window.confirm(
-                      `Отвязать накладную от ${tripLabel}? Масса вернётся на склад, если по рейсу ещё не было продаж.`,
+                      `Отвязать накладную от рейса «${label}»? Масса вернётся на склад, если по рейсу ещё не было продаж.`,
                     )
                   ) {
                     detachTrip!.mutate(manifestId);
@@ -213,13 +221,18 @@ export function LoadingManifestAccordion({
                 {detachTrip!.isPending ? "Отвязка…" : "Открепить от рейса"}
               </button>
             </div>
+            {changeTripTargetReady ? (
+              <p className="birzha-ui-sm" style={{ margin: "0.45rem 0 0" }} role="status">
+                Новый рейс: <strong>{formatTripLabel(assignTripId)}</strong>
+              </p>
+            ) : null}
             {assignTrip.isError ? <ErrorAlert error={assignTrip.error} title="Смена рейса" /> : null}
             {detachTrip?.isError ? <ErrorAlert error={detachTrip.error} title="Отвязка от рейса" /> : null}
           </>
         ) : tripAssignLock.locked && detail.tripId ? (
           <>
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }} role="status">
-              Привязано к рейсу: <strong>{tripNumberById.get(detail.tripId) ?? detail.tripId}</strong>
+              Сейчас привязано: <strong>{formatTripLabel(detail.tripId)}</strong>
             </p>
             {detail.tripDetachLockedReason ? (
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">

@@ -10,6 +10,8 @@ export type BatchWarehouseWriteOffAppend = {
 export interface BatchWarehouseWriteOffLedger {
   append(row: BatchWarehouseWriteOffAppend): Promise<void>;
   findById(id: string): Promise<BatchWarehouseWriteOffAppend | null>;
+  /** Последняя запись журнала возврата по партии (для идемпотентного ответа). */
+  findLatestQualityRejectIdByBatchId(batchId: string): Promise<string | null>;
   deleteById(id: string): Promise<boolean>;
   totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
 }

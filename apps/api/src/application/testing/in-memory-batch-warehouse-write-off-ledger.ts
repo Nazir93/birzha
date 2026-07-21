@@ -15,6 +15,16 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
     return row ? { ...row } : null;
   }
 
+  async findLatestQualityRejectIdByBatchId(batchId: string): Promise<string | null> {
+    for (let i = this.rows.length - 1; i >= 0; i -= 1) {
+      const row = this.rows[i];
+      if (row && row.batchId === batchId && row.reason === "quality_reject") {
+        return row.id;
+      }
+    }
+    return null;
+  }
+
   async deleteById(id: string): Promise<boolean> {
     const idx = this.rows.findIndex((r) => r.id === id);
     if (idx < 0) {

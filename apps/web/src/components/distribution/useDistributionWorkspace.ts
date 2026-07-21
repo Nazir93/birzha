@@ -18,6 +18,7 @@ import {
   filterBatchesForLoadingManifest,
 } from "../../format/loading-manifest.js";
 import { sortLoadingManifestsByCreatedAtDesc } from "../../format/loading-manifest-list.js";
+import { formatTripSelectLabel } from "../../format/trip-label.js";
 import { humanizeErrorMessage } from "../../format/user-facing-error.js";
 import {
   WORK_LIST_PAGE_SIZE,
@@ -215,7 +216,7 @@ export function useDistributionWorkspace({
   const tripNumberById = useMemo(() => {
     const m = new Map<string, string>();
     for (const t of tripsQuery.data?.trips ?? []) {
-      m.set(t.id, t.tripNumber);
+      m.set(t.id, formatTripSelectLabel(t));
     }
     return m;
   }, [tripsQuery.data?.trips]);

@@ -52,6 +52,8 @@ export type WarehouseWriteOffsRecentResponse = {
     totalCount: number;
   };
   totalKg: number;
+  /** Сумма кг по всему фильтру (не только текущая страница). */
+  totalKgAll?: number;
   lines: {
     id: string;
     batchId: string;

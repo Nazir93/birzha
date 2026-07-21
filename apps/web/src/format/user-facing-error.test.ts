@@ -18,6 +18,10 @@ describe("humanizeErrorMessage", () => {
   it("сеть", () => {
     expect(humanizeErrorMessage(new Error("Failed to fetch"))).toMatch(/связи с сервером/i);
   });
+
+  it("переводит сырой код batch_not_found", () => {
+    expect(humanizeErrorMessage(new Error("batch_not_found"))).toBe("Партия не найдена.");
+  });
 });
 
 describe("isLoadingManifestNotFoundError", () => {

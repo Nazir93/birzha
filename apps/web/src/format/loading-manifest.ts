@@ -1,7 +1,14 @@
 import { compareProductGradeLineLabels } from "@birzha/contracts";
 
 import type { BatchListItem } from "../api/types.js";
-import { batchAvailableForLoadingKg, estimatedPackageCountForLoading } from "./batch-available-for-loading.js";
+import {
+  batchAvailableForLoadingKg,
+  batchKgInSelectionRemainder,
+  batchReturnableToWarehouseKg,
+  estimatedPackageCountForLoading,
+  estimatedPackageCountForWarehouseReturn,
+  estimatedPackageCountInSelectionRemainder,
+} from "./batch-available-for-loading.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
 import { formatPurchaseDocDateRu } from "./purchase-doc-date.js";
@@ -73,7 +80,136 @@ export function filterBatchesForLoadingManifest(
   });
 }
 
-export function sumLoadingManifestTotals(included: readonly BatchListItem[]): {
+/** Как считать кг/ящ. в сводах погрузки: свободный склад / возврат / остаток в отборе. */
+export type BatchAggregateQuantityMode = "loading" | "warehouse_return" | "selection_remainder";
+
+function batchKgForAggregateMode(b: BatchListItem, mode: BatchAggregateQuantityMode): number {
+  if (mode === "warehouse_return") {
+    return batchReturnableToWarehouseKg(b);
+  }
+  if (mode === "selection_remainder") {
+    return batchKgInSelectionRemainder(b);
+  }
+  return batchAvailableForLoadingKg(b);
+}
+
+function batchPkgForAggregateMode(b: BatchListItem, mode: BatchAggregateQuantityMode): number | null {
+  if (mode === "warehouse_return") {
+    return estimatedPackageCountForWarehouseReturn(b);
+  }
+  if (mode === "selection_remainder") {
+    return estimatedPackageCountInSelectionRemainder(b);
+  }
+  return estimatedPackageCountForLoading(b);
+}
+
+export type LoadingManifestLineStockSnapshot = {
+  batchId: string;
+  kg: number;
+  packageCount: string | null;
+  purchaseDocumentId?: string | null;
+  purchaseDocumentNumber: string | null;
+  productGradeCode: string | null;
+  productGroup: string | null;
+  warehouseId?: string | null;
+};
+
+function parseLinePackageCount(raw: string | null | undefined): number | null {
+  if (raw == null || String(raw).trim() === "") {
+    return null;
+  }
+  const n = Number(String(raw).replace(",", ".").trim());
+  if (!Number.isFinite(n) || n <= 0) {
+    return null;
+  }
+  return n;
+}
+
+function nakladnayaFromManifestLine(
+  line: LoadingManifestLineStockSnapshot,
+  live: BatchListItem | undefined,
+  linePk: number | null,
+): BatchListItem["nakladnaya"] {
+  return {
+    documentId: line.purchaseDocumentId?.trim() || live?.nakladnaya?.documentId || null,
+    warehouseId: line.warehouseId?.trim() || live?.nakladnaya?.warehouseId || null,
+    productGradeCode: line.productGradeCode ?? live?.nakladnaya?.productGradeCode ?? null,
+    productGroup: line.productGroup ?? live?.nakladnaya?.productGroup ?? null,
+    documentNumber: line.purchaseDocumentNumber?.trim() || live?.nakladnaya?.documentNumber || null,
+    linePackageCount: linePk ?? live?.nakladnaya?.linePackageCount ?? null,
+  };
+}
+
+/**
+ * Снимок строки ПН для «остатка в отборе»: кг = строка накладной (после возврата уменьшается на API).
+ */
+export function batchSnapshotForManifestLineRemainder(
+  line: LoadingManifestLineStockSnapshot,
+  live: BatchListItem | undefined,
+): BatchListItem {
+  const linePk = parseLinePackageCount(line.packageCount);
+  const lineKg = Math.max(0, line.kg);
+  return {
+    id: line.batchId,
+    purchaseId: live?.purchaseId ?? "—",
+    totalKg: live?.totalKg && live.totalKg > 0 ? live.totalKg : lineKg,
+    pricePerKg: live?.pricePerKg ?? 0,
+    pendingInboundKg: 0,
+    onWarehouseKg: lineKg,
+    inTransitKg: 0,
+    soldKg: 0,
+    writtenOffKg: 0,
+    availableForLoadingKg: lineKg,
+    qualityRejectWrittenOffKg: 0,
+    nakladnaya: nakladnayaFromManifestLine(line, live, linePk),
+  };
+}
+
+/**
+ * Снимок строки ПН для возврата: returnable по живой партии, но не больше кг в строке ПН.
+ */
+export function batchSnapshotForManifestLineWriteOff(
+  line: LoadingManifestLineStockSnapshot,
+  live: BatchListItem | undefined,
+): BatchListItem {
+  const linePk = parseLinePackageCount(line.packageCount);
+  const lineKg = Math.max(0, line.kg);
+  const base: BatchListItem = live
+    ? { ...live, nakladnaya: nakladnayaFromManifestLine(line, live, linePk ?? live.nakladnaya?.linePackageCount ?? null) }
+    : {
+        id: line.batchId,
+        purchaseId: "—",
+        totalKg: lineKg,
+        pricePerKg: 0,
+        pendingInboundKg: 0,
+        onWarehouseKg: 0,
+        inTransitKg: lineKg,
+        soldKg: 0,
+        writtenOffKg: 0,
+        availableForLoadingKg: 0,
+        qualityRejectWrittenOffKg: 0,
+        nakladnaya: nakladnayaFromManifestLine(line, undefined, linePk),
+      };
+  const returnable = batchReturnableToWarehouseKg(base);
+  const capped = Math.min(returnable, lineKg);
+  return {
+    ...base,
+    onWarehouseKg: capped,
+    inTransitKg: 0,
+    availableForLoadingKg: capped,
+    qualityRejectWrittenOffKg: 0,
+    totalKg: lineKg > 0 ? lineKg : base.totalKg,
+    nakladnaya: {
+      ...base.nakladnaya!,
+      linePackageCount: linePk ?? base.nakladnaya?.linePackageCount ?? null,
+    },
+  };
+}
+
+export function sumLoadingManifestTotals(
+  included: readonly BatchListItem[],
+  quantityMode: BatchAggregateQuantityMode = "loading",
+): {
   kg: number;
   pkg: number;
   linesWithPkg: number;
@@ -83,9 +219,9 @@ export function sumLoadingManifestTotals(included: readonly BatchListItem[]): {
   let pkg = 0;
   let linesWithPkg = 0;
   for (const b of included) {
-    const avail = batchAvailableForLoadingKg(b);
+    const avail = batchKgForAggregateMode(b, quantityMode);
     kg += avail;
-    const e = estimatedPackageCountForLoading(b);
+    const e = batchPkgForAggregateMode(b, quantityMode);
     if (e != null) {
       pkg += e;
       linesWithPkg += 1;
@@ -95,7 +231,10 @@ export function sumLoadingManifestTotals(included: readonly BatchListItem[]): {
 }
 
 /** Суммы по калибру/товарной строке (как в подписи партии), для свода «сколько веса и ящ. по каждому калибру». */
-export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[]): {
+export function aggregateBatchesByCaliberLine(
+  batches: readonly BatchListItem[],
+  quantityMode: BatchAggregateQuantityMode = "loading",
+): {
   lineLabel: string;
   totalKg: number;
   totalPkg: number;
@@ -120,10 +259,10 @@ export function aggregateBatchesByCaliberLine(batches: readonly BatchListItem[])
       m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0, batches: [] });
     }
     const g = m.get(lineLabel)!;
-    g.totalKg += batchAvailableForLoadingKg(b);
+    g.totalKg += batchKgForAggregateMode(b, quantityMode);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountForLoading(b);
+    const e = batchPkgForAggregateMode(b, quantityMode);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;
@@ -148,6 +287,7 @@ export type DocumentCaliberAggregateRow = {
 
 export function aggregateBatchesByDocumentCaliberLine(
   batches: readonly BatchListItem[],
+  quantityMode: BatchAggregateQuantityMode = "loading",
 ): DocumentCaliberAggregateRow[] {
   type Acc = {
     rowKey: string;
@@ -181,10 +321,10 @@ export function aggregateBatchesByDocumentCaliberLine(
       });
     }
     const g = m.get(rowKey)!;
-    g.totalKg += batchAvailableForLoadingKg(b);
+    g.totalKg += batchKgForAggregateMode(b, quantityMode);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountForLoading(b);
+    const e = batchPkgForAggregateMode(b, quantityMode);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;
@@ -229,7 +369,7 @@ export function buildWriteOffItemsFromBatches(
     if (remaining <= 0) {
       break;
     }
-    const kgFromBatch = Math.min(remaining, batchAvailableForLoadingKg(batch));
+    const kgFromBatch = Math.min(remaining, batchReturnableToWarehouseKg(batch));
     if (kgFromBatch > 0) {
       items.push({ batchId: batch.id, kg: kgFromBatch });
       remaining -= kgFromBatch;
@@ -248,7 +388,7 @@ export function kgFromWriteOffPackageCount(batch: BatchListItem, packageCount: n
     return 0;
   }
   const kg = (packageCount / linePk) * batch.totalKg;
-  return Math.min(Math.max(0, kg), batchAvailableForLoadingKg(batch));
+  return Math.min(Math.max(0, kg), batchReturnableToWarehouseKg(batch));
 }
 
 /** Распределить списание по ящикам (FIFO), перевести в кг для API. */
@@ -262,7 +402,7 @@ export function buildWriteOffItemsFromBatchesByPackages(
     if (remaining <= 0) {
       break;
     }
-    const maxPkg = estimatedPackageCountForLoading(batch);
+    const maxPkg = estimatedPackageCountForWarehouseReturn(batch);
     if (maxPkg == null || maxPkg <= 0) {
       continue;
     }
@@ -333,7 +473,10 @@ export type PurchaseDocumentAggregateRow = {
   batches: BatchListItem[];
 };
 
-export function aggregateBatchesByPurchaseDocument(batches: readonly BatchListItem[]): PurchaseDocumentAggregateRow[] {
+export function aggregateBatchesByPurchaseDocument(
+  batches: readonly BatchListItem[],
+  quantityMode: BatchAggregateQuantityMode = "loading",
+): PurchaseDocumentAggregateRow[] {
   type Acc = {
     rowKey: string;
     documentId: string | null;
@@ -362,10 +505,10 @@ export function aggregateBatchesByPurchaseDocument(batches: readonly BatchListIt
       });
     }
     const g = m.get(rowKey)!;
-    g.totalKg += batchAvailableForLoadingKg(b);
+    g.totalKg += batchKgForAggregateMode(b, quantityMode);
     g.partCount += 1;
     g.batches.push(b);
-    const e = estimatedPackageCountForLoading(b);
+    const e = batchPkgForAggregateMode(b, quantityMode);
     if (e != null) {
       g.totalPkg += e;
       g.linesWithPkg += 1;
