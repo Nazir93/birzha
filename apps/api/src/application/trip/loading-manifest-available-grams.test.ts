@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import { availableGramsForLoadingManifestLine } from "./loading-manifest-available-grams.js";
 
 describe("availableGramsForLoadingManifestLine", () => {
-  it("вычитает резерв других ПН и журнал возвратов", () => {
+  it("вычитает только резерв других ПН; журнал возвратов не блокирует", () => {
     expect(
       availableGramsForLoadingManifestLine({
         onWarehouseGrams: 10_000n,
         reservedOnOtherManifestsGrams: 3_000n,
         qualityRejectReturnedGrams: 2_000n,
       }),
-    ).toBe(5_000n);
+    ).toBe(7_000n);
   });
 
   it("не уходит в минус", () => {
@@ -23,13 +23,13 @@ describe("availableGramsForLoadingManifestLine", () => {
     ).toBe(0n);
   });
 
-  it("полный возврат обнуляет доступность без резерва ПН", () => {
+  it("полный возврат в журнале не обнуляет доступность без резерва ПН", () => {
     expect(
       availableGramsForLoadingManifestLine({
         onWarehouseGrams: 1_220_000n,
         reservedOnOtherManifestsGrams: 0n,
         qualityRejectReturnedGrams: 1_220_000n,
       }),
-    ).toBe(0n);
+    ).toBe(1_220_000n);
   });
 });

@@ -6,14 +6,15 @@ export function batchQualityRejectReturnKg(batch: BatchListItem): number {
 }
 
 /**
- * Кг, доступные для отбора в погрузку: onWarehouse минус журнал возвратов.
- * При наличии поля с API — используем его.
+ * Кг, доступные для отбора в погрузку: физический остаток на складе.
+ * Журнал возвратов не уменьшает доступность — товар можно грузить в другое направление.
+ * При наличии поля с API — используем его; иначе `onWarehouseKg`.
  */
 export function batchAvailableForLoadingKg(batch: BatchListItem): number {
   if (batch.availableForLoadingKg != null && Number.isFinite(batch.availableForLoadingKg)) {
     return Math.max(0, batch.availableForLoadingKg);
   }
-  return Math.max(0, batch.onWarehouseKg - batchQualityRejectReturnKg(batch));
+  return Math.max(0, batch.onWarehouseKg);
 }
 
 /** Ящики, доступные к отбору: пропорция availableKg к totalKg × ящиков по строке накладной. */

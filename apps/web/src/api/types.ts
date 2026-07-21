@@ -22,9 +22,9 @@ export type BatchListItem = {
     /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
     linePackageCount?: number | null;
   };
-  /** Кг в журнале «возврат на склад»; уменьшают доступность к погрузке. */
+  /** Кг в журнале «возврат на склад» (история; погрузку не блокирует). */
   qualityRejectWrittenOffKg?: number;
-  /** Кг для отбора в погрузку: onWarehouse минус сумма возвратов в журнале. */
+  /** Кг для отбора в погрузку (= физический остаток на складе). */
   availableForLoadingKg?: number;
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
   allocation?: {

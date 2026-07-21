@@ -4,8 +4,8 @@ const kinds = z.literal("quality_reject");
 
 /**
  * Журнал «возврат на склад» (кг). Остаток партии onWarehouse не уменьшается;
- * лимит записи: onWarehouse − уже в журнале. Доступность к погрузке =
- * onWarehouse − сумма журнала; при записи уменьшаются строки активных ПН.
+ * лимит записи: onWarehouse − уже в журнале. При записи уменьшаются строки активных ПН;
+ * доступность к погрузке остаётся равной onWarehouse (можно грузить в другой рейс).
  */
 export const postWarehouseWriteOffBodySchema = z.object({
   kind: kinds,

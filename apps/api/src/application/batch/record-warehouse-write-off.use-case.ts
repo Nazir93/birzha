@@ -15,7 +15,7 @@ export type RecordWarehouseWriteOffInput = {
   batchId: string;
   /**
    * Масса возврата на склад: фиксируется в журнале (onWarehouse не уменьшается),
-   * уменьшает доступность к погрузке и строки активных ПН.
+   * снимает кг с активных ПН; погрузка в другой рейс остаётся доступной.
    */
   kg: number;
   reason: BatchWarehouseWriteOffReason;

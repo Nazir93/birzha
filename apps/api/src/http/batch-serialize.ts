@@ -38,7 +38,7 @@ export type BatchJson = {
    * Только при PostgreSQL; иначе поле нет.
    */
   qualityRejectWrittenOffKg?: number;
-  /** Кг для отбора в погрузку: `onWarehouseKg` минус сумма возвратов в журнале. */
+  /** Кг для отбора в погрузку: физический остаток на складе (журнал возвратов не блокирует). */
   availableForLoadingKg?: number;
 };
 
@@ -66,7 +66,8 @@ export function batchToJson(
     ...(extras
       ? {
           qualityRejectWrittenOffKg,
-          availableForLoadingKg: Math.max(0, onWarehouseKg - qualityRejectWrittenOffKg),
+          /** Журнал возврата не блокирует погрузку на другое направление. */
+          availableForLoadingKg: Math.max(0, onWarehouseKg),
         }
       : {}),
   };

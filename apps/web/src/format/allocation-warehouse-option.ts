@@ -5,7 +5,7 @@ export type AllocationWarehouseOption = {
   id: string;
   /** Партии, доступные для нового отбора (не в активных ПН). */
   batchCount: number;
-  /** Кг, доступные для нового отбора (минус возвраты журнала). */
+  /** Кг, доступные для нового отбора (минус резерв в активных ПН). */
   totalKg: number;
   packageEstimate: number;
   linesWithBoxData: number;
