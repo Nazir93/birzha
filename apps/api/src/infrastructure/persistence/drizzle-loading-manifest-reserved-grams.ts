@@ -1,18 +1,14 @@
-import { and, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
 
 import type { DbClient } from "../../db/client.js";
-import { loadingManifestLines, loadingManifests, trips } from "../../db/schema.js";
+import { loadingManifestLines, loadingManifests } from "../../db/schema.js";
 
-/** ПН «в работе»: без рейса, рейс не закрыт или trip row отсутствует. */
-function activeManifestScopeWhere(): SQL {
-  return or(
-    sql`${loadingManifests.tripId} IS NULL`,
-    sql`${trips.status} IS NULL`,
-    sql`${trips.status} <> 'closed'`,
-  )!;
-}
-
-/** Сумма граммов партии в активных ПН (опционально без текущего документа). */
+/**
+ * Резерв под новую ПН/догрузку: только строки черновых ПН (ещё без рейса).
+ * После привязки к рейсу товар уже уходит в inTransit / снимается с onWarehouse —
+ * такие строки больше не вычитаем из остатка на складе (иначе «хвост» на складе
+ * нельзя догрузить в другой рейс).
+ */
 export async function sumActiveLoadingManifestGramsByBatchIds(
   db: DbClient,
   batchIds: readonly string[],
@@ -23,7 +19,7 @@ export async function sumActiveLoadingManifestGramsByBatchIds(
   if (ids.length === 0) {
     return out;
   }
-  const clauses: SQL[] = [inArray(loadingManifestLines.batchId, ids), activeManifestScopeWhere()];
+  const clauses: SQL[] = [inArray(loadingManifestLines.batchId, ids), isNull(loadingManifests.tripId)];
   const exclude = opts?.excludeManifestId?.trim();
   if (exclude) {
     clauses.push(ne(loadingManifests.id, exclude));
@@ -35,7 +31,6 @@ export async function sumActiveLoadingManifestGramsByBatchIds(
     })
     .from(loadingManifestLines)
     .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
-    .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
     .where(and(...clauses))
     .groupBy(loadingManifestLines.batchId);
 

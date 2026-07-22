@@ -8,7 +8,7 @@ import {
   loadingManifestReservedBatchIdsQuerySchema,
   updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -61,7 +61,6 @@ import { DrizzleBatchRepository } from "../infrastructure/persistence/drizzle-ba
 import { DrizzleTripShipmentRepository } from "../infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import {
   listLoadingManifestsForHttp,
-  loadingManifestActiveScopeWhere,
   loadingManifestsListQuerySchema,
 } from "./loading-manifest-list-http.js";
 
@@ -262,12 +261,12 @@ export function registerLoadingManifestRoutes(
   app.get("/loading-manifests/reserved-batch-ids", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const q = loadingManifestReservedBatchIdsQuerySchema.parse(req.query);
+      /** Только черновые ПН (без рейса): после отгрузки остаток на складе снова доступен к догрузке. */
       const rows = await db
         .select({ batchId: loadingManifestLines.batchId })
         .from(loadingManifestLines)
         .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
-        .leftJoin(trips, eq(loadingManifests.tripId, trips.id))
-        .where(and(eq(loadingManifests.warehouseId, q.warehouseId), loadingManifestActiveScopeWhere()))
+        .where(and(eq(loadingManifests.warehouseId, q.warehouseId), isNull(loadingManifests.tripId)))
         .groupBy(loadingManifestLines.batchId);
       return reply.send({ batchIds: rows.map((r) => r.batchId) });
     } catch (error) {
