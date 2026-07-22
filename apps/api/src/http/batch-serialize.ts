@@ -43,6 +43,11 @@ export type BatchJson = {
    * Возврат из отбора при создании ПН вычитается один раз (blocks_loading), список партий не прячет.
    */
   availableForLoadingKg?: number;
+  /**
+   * Активная блокировка из отбора (blocks_loading) — для UI «остаток в отборе».
+   * Не путать с qualityRejectWrittenOffKg (вся история журнала).
+   */
+  blockingReturnKg?: number;
 };
 
 export function batchToJson(
@@ -54,6 +59,7 @@ export function batchToJson(
   const s = batch.toPersistenceState();
   const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
   const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
+  const blockingReturnKg = extras?.blockingReturnKg ?? 0;
   return {
     id: s.id,
     purchaseId: s.purchaseId,
@@ -69,7 +75,8 @@ export function batchToJson(
     ...(extras
       ? {
           qualityRejectWrittenOffKg,
-          // Список «Погрузка» показывает склад; блокировка только при расчёте строк ПН.
+          blockingReturnKg,
+          // Список «Погрузка» показывает склад; блокировка только при расчёте строк ПН / остатка в отборе.
           availableForLoadingKg: onWarehouseKg,
         }
       : {}),

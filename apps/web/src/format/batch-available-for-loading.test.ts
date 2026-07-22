@@ -11,27 +11,41 @@ import {
 } from "./batch-available-for-loading.js";
 
 describe("batchKgInSelectionRemainder", () => {
-  it("после возврата из отбора: API уменьшает к погрузке, остаток в отборе = склад − журнал", () => {
+  it("без активной блокировки показывает склад к погрузке (журнал — история)", () => {
+    const b = batch({
+      id: "b1",
+      onWarehouseKg: 4300,
+      availableForLoadingKg: 4300,
+      qualityRejectWrittenOffKg: 4300,
+      blockingReturnKg: 0,
+    });
+    expect(batchAvailableForLoadingKg(b)).toBe(4300);
+    expect(batchKgInSelectionRemainder(b)).toBe(4300);
+  });
+
+  it("активная блокировка из отбора уменьшает остаток до создания ПН", () => {
     const b = batch({
       id: "b1",
       onWarehouseKg: 100,
-      availableForLoadingKg: 60,
+      availableForLoadingKg: 100,
       qualityRejectWrittenOffKg: 40,
+      blockingReturnKg: 40,
     });
-    expect(batchAvailableForLoadingKg(b)).toBe(60);
+    expect(batchAvailableForLoadingKg(b)).toBe(100);
     expect(batchKgInSelectionRemainder(b)).toBe(60);
   });
 
-  it("полный возврат из рейса: на складе есть кг (к погрузке), в отборе 0", () => {
+  it("полный возврат из рейса без блокировки: на складе есть кг, в отборе тоже", () => {
     const b = batch({
       id: "b1",
       onWarehouseKg: 15950,
       availableForLoadingKg: 15950,
       inTransitKg: 0,
       qualityRejectWrittenOffKg: 15950,
+      blockingReturnKg: 0,
     });
     expect(batchAvailableForLoadingKg(b)).toBe(15950);
-    expect(batchKgInSelectionRemainder(b)).toBe(0);
+    expect(batchKgInSelectionRemainder(b)).toBe(15950);
     expect(batchReturnableToWarehouseKg(b)).toBe(0);
   });
 });

@@ -24,6 +24,11 @@ export type BatchListItem = {
   };
   /** Кг в журнале «возврат на склад» (история; погрузку не блокирует). */
   qualityRejectWrittenOffKg?: number;
+  /**
+   * Кг возврата из отбора с blocks_loading — ещё не «отпущены» после создания ПН.
+   * Уменьшают «остаток в отборе» до сохранения погрузочной.
+   */
+  blockingReturnKg?: number;
   /** Кг для отбора в погрузку (= физический остаток на складе). */
   availableForLoadingKg?: number;
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */

@@ -17,11 +17,16 @@ export function batchAvailableForLoadingKg(batch: BatchListItem): number {
 }
 
 /**
- * Остаток в черновом отборе (ещё нет сохранённой ПН): физический склад минус журнал возврата.
- * Не через `availableForLoadingKg` — иначе при blocks_loading журнал вычлось бы дважды.
+ * Остаток в отборе к погрузке/догрузке.
+ * Вычитает только активную блокировку (blocks_loading), не всю историю журнала возвратов —
+ * иначе после «вернуть на склад» в догрузке навсегда 0 кг при полном journal.
  */
 export function batchKgInSelectionRemainder(batch: BatchListItem): number {
-  return Math.max(0, batch.onWarehouseKg - batchQualityRejectReturnKg(batch));
+  const blocking = batch.blockingReturnKg;
+  if (blocking != null && Number.isFinite(blocking) && blocking > 0) {
+    return Math.max(0, batch.onWarehouseKg - blocking);
+  }
+  return batchAvailableForLoadingKg(batch);
 }
 
 /**
