@@ -22,7 +22,6 @@ import {
   formatPurchaseDocumentDisplayLabel,
   loadingManifestRoadCsvContent,
   sumLoadingManifestTotals,
-  summarizeAllocationBreakdown,
 } from "./loading-manifest.js";
 import { batchAvailableForLoadingKg } from "./batch-available-for-loading.js";
 
@@ -232,39 +231,6 @@ describe("aggregateBatchesByPurchaseDocument", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.rowKey).toBe(AGGREGATE_NO_PURCHASE_DOCUMENT_KEY);
     expect(rows[0]!.totalKg).toBe(3);
-  });
-});
-
-describe("summarizeAllocationBreakdown", () => {
-  it("делит кг на складе по destination и без направления", () => {
-    const batches = [
-      b({
-        id: "1",
-        onWarehouseKg: 10,
-        totalKg: 10,
-        allocation: { qualityTier: null, destination: "moscow" },
-      }),
-      b({ id: "2", onWarehouseKg: 5, totalKg: 5 }),
-    ];
-    const s = summarizeAllocationBreakdown(batches, ["moscow", "regions"], { moscow: "Москва", regions: "Регионы" });
-    expect(s.assignedRows.find((r) => r.code === "moscow")).toMatchObject({ kg: 10, batchCount: 1 });
-    expect(s.unassigned).toMatchObject({ kg: 5, batchCount: 1 });
-    expect(s.inTransit.kg).toBe(0);
-  });
-
-  it("учитывает inTransitKg по партиям", () => {
-    const batches = [
-      b({
-        id: "1",
-        onWarehouseKg: 10,
-        totalKg: 50,
-        inTransitKg: 25,
-        allocation: { qualityTier: null, destination: null },
-      }),
-    ];
-    const s = summarizeAllocationBreakdown(batches, ["moscow"], { moscow: "Москва" });
-    expect(s.unassigned.kg).toBe(10);
-    expect(s.inTransit).toMatchObject({ kg: 25, batchCount: 1 });
   });
 });
 

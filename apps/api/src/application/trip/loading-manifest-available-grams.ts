@@ -1,5 +1,5 @@
 /**
- * Кг в строку ПН: склад минус резерв в других ПН минус возврат из отбора (blocks_loading).
+ * Кг в строку ПН: склад минус резерв черновых ПН минус возврат из отбора (blocks_loading).
  * Возврат с рейса на склад (blocks_loading=false) доступность не уменьшает.
  * После создания ПН блокировку снимают — возвращённое снова можно грузить.
  */
@@ -8,8 +8,6 @@ export function availableGramsForLoadingManifestLine(input: {
   reservedOnOtherManifestsGrams: bigint;
   /** Кг журнала возврата из отбора (один раз не попадают в ПН). */
   blockingReturnGrams?: bigint;
-  /** @deprecated Игнорируется. */
-  qualityRejectReturnedGrams?: bigint;
 }): bigint {
   const reserved =
     input.reservedOnOtherManifestsGrams > 0n ? input.reservedOnOtherManifestsGrams : 0n;

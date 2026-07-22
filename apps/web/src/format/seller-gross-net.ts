@@ -1,4 +1,4 @@
-import { grossKgFromNetKg, netKgFromGrossKg, TARE_GRAMS_PER_PACKAGE } from "@birzha/contracts";
+import { netKgFromGrossKg, TARE_GRAMS_PER_PACKAGE } from "@birzha/contracts";
 
 /** Нетто кг для API продажи: при ящиках поле ввода — брутто. */
 export function sellerNetKgFromGrossInput(grossKgRaw: string, packageCount: number): number {
@@ -31,8 +31,4 @@ export function sellerNetKgDisplayFromGross(grossKgRaw: string, packageCountRaw:
 export function saleGrossGramsFromNet(netGrams: bigint, packageCount: bigint): bigint {
   const pkgs = packageCount > 0n ? packageCount : 0n;
   return netGrams + pkgs * BigInt(TARE_GRAMS_PER_PACKAGE);
-}
-
-export function saleGrossKgLabelFromNetKg(netKg: number, packageCount: number): number {
-  return grossKgFromNetKg(netKg, packageCount);
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   saleGrossGramsFromNet,
-  saleGrossKgLabelFromNetKg,
   sellerNetKgDisplayFromGross,
   sellerNetKgFromGrossInput,
 } from "./seller-gross-net.js";
@@ -26,6 +25,5 @@ describe("seller-gross-net", () => {
   it("отчёт: нетто г + ящики → брутто г", () => {
     expect(saleGrossGramsFromNet(95_000n, 10n)).toBe(100_000n);
     expect(saleGrossGramsFromNet(12_500n, 0n)).toBe(12_500n);
-    expect(saleGrossKgLabelFromNetKg(95, 10)).toBe(100);
   });
 });

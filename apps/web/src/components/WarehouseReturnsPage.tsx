@@ -187,6 +187,3 @@ export function WarehouseReturnsPage() {
     </div>
   );
 }
-
-/** @deprecated Используйте {@link WarehouseReturnsPage}. */
-export const AdminWarehouseWriteOffsLedgerPage = WarehouseReturnsPage;

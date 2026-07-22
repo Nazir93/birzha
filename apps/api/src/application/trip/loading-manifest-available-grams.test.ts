@@ -35,13 +35,12 @@ describe("availableGramsForLoadingManifestLine", () => {
     ).toBe(0n);
   });
 
-  it("возврат с рейса без blocks_loading не обнуляет доступность", () => {
+  it("без блокировки весь свободный склад доступен в строку ПН", () => {
     expect(
       availableGramsForLoadingManifestLine({
         onWarehouseGrams: 1_220_000n,
         reservedOnOtherManifestsGrams: 0n,
         blockingReturnGrams: 0n,
-        qualityRejectReturnedGrams: 1_220_000n,
       }),
     ).toBe(1_220_000n);
   });
