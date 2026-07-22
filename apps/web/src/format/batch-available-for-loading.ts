@@ -31,7 +31,8 @@ export function batchKgInSelectionRemainder(batch: BatchListItem): number {
 
 /**
  * Кг, которые ещё можно оформить как «вернуть на склад»:
- * склад + в рейсе минус журнал; если журнал уже полный, но масса в рейсе — ремонт (снять с ПН).
+ * склад + рейс минус журнал; ремонт по inTransit; если журнал полный, но склад есть —
+ * можно снова исключить из отбора (включить blocks_loading).
  */
 export function batchReturnableToWarehouseKg(batch: BatchListItem): number {
   const onWh = Math.max(0, batch.onWarehouseKg);
@@ -44,7 +45,11 @@ export function batchReturnableToWarehouseKg(batch: BatchListItem): number {
   if (inTransit > 0) {
     return inTransit;
   }
-  return 0;
+  const blocking =
+    batch.blockingReturnKg != null && Number.isFinite(batch.blockingReturnKg)
+      ? Math.max(0, batch.blockingReturnKg)
+      : 0;
+  return Math.max(0, onWh - blocking);
 }
 
 function estimatedPackagesForKg(b: BatchListItem, availKg: number): number | null {

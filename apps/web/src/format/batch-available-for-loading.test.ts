@@ -46,7 +46,7 @@ describe("batchKgInSelectionRemainder", () => {
     });
     expect(batchAvailableForLoadingKg(b)).toBe(15950);
     expect(batchKgInSelectionRemainder(b)).toBe(15950);
-    expect(batchReturnableToWarehouseKg(b)).toBe(0);
+    expect(batchReturnableToWarehouseKg(b)).toBe(15950);
   });
 });
 
@@ -135,7 +135,7 @@ describe("batchReturnableToWarehouseKg", () => {
     ).toBe(15950);
   });
 
-  it("после полного возврата на складе — 0", () => {
+  it("после полного журнала без блокировки — можно снова вернуть из отбора", () => {
     expect(
       batchReturnableToWarehouseKg(
         batch({
@@ -143,6 +143,21 @@ describe("batchReturnableToWarehouseKg", () => {
           onWarehouseKg: 15950,
           inTransitKg: 0,
           qualityRejectWrittenOffKg: 15950,
+          blockingReturnKg: 0,
+        }),
+      ),
+    ).toBe(15950);
+  });
+
+  it("когда уже заблокировано из отбора — 0", () => {
+    expect(
+      batchReturnableToWarehouseKg(
+        batch({
+          id: "b1",
+          onWarehouseKg: 15950,
+          inTransitKg: 0,
+          qualityRejectWrittenOffKg: 15950,
+          blockingReturnKg: 15950,
         }),
       ),
     ).toBe(0);

@@ -29,12 +29,24 @@ describe("maxWarehouseReturnGrams", () => {
     ).toBe(15_950_000n);
   });
 
-  it("после полного возврата на складе — 0", () => {
+  it("после полного возврата на складе без блокировки — можно снова исключить из отбора", () => {
     expect(
       maxWarehouseReturnGrams({
         onWarehouseGrams: 15_950_000n,
         inTransitGrams: 0n,
         alreadyReturnedGrams: 15_950_000n,
+        alreadyBlockingGrams: 0n,
+      }),
+    ).toBe(15_950_000n);
+  });
+
+  it("после полного возврата с активной блокировкой — 0", () => {
+    expect(
+      maxWarehouseReturnGrams({
+        onWarehouseGrams: 15_950_000n,
+        inTransitGrams: 0n,
+        alreadyReturnedGrams: 15_950_000n,
+        alreadyBlockingGrams: 15_950_000n,
       }),
     ).toBe(0n);
   });
@@ -184,5 +196,37 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     const reloaded = await batches.findById("b-repair");
     expect(gramsToKg(reloaded!.toPersistenceState().onWarehouseGrams)).toBe(100);
     expect(gramsToKg(reloaded!.toPersistenceState().inTransitGrams)).toBe(0);
+  });
+
+  it("при полном журнале на складе повторный возврат из отбора включает blocks_loading", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    await ledger.append({
+      id: "wo-full",
+      batchId: "b-reblock",
+      grams: 100_000n,
+      reason: "quality_reject",
+      blocksLoading: false,
+    });
+    const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-reblock",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await batches.save(b);
+
+    const { writeOffId } = await uc.execute({
+      batchId: "b-reblock",
+      kg: 100,
+      reason: "quality_reject",
+    });
+    expect(writeOffId).toBe("wo-full");
+    const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-reblock"]);
+    expect(sums.get("b-reblock") ?? 0n).toBe(100_000n);
+    const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-reblock"]);
+    expect(blocking.get("b-reblock") ?? 0n).toBe(100_000n);
   });
 });

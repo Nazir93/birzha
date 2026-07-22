@@ -24,4 +24,6 @@ export interface BatchWarehouseWriteOffLedger {
   totalBlockingLoadingGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
   /** После создания ПН: снять блокировку, чтобы возвращённое снова можно было грузить. */
   clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
+  /** Повторный возврат из отбора при полном журнале: снова включить blocks_loading. */
+  enableBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
 }

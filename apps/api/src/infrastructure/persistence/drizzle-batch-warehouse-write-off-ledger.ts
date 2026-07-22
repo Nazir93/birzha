@@ -119,4 +119,20 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
         ),
       );
   }
+
+  async enableBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    await this.db
+      .update(batchWarehouseWriteOffs)
+      .set({ blocksLoading: true })
+      .where(
+        and(
+          inArray(batchWarehouseWriteOffs.batchId, batchIds),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+          eq(batchWarehouseWriteOffs.blocksLoading, false),
+        ),
+      );
+  }
 }
