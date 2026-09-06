@@ -13,6 +13,7 @@ import {
   hrefForPanelInCabinet,
   isFieldSellerOnly,
   operationsPanelOrder,
+  adminSidebarPanelOrder,
   postLoginRedirectPath,
 } from "./role-panels.js";
 
@@ -208,10 +209,12 @@ describe("role-panels", () => {
     expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
   });
 
-  it("purchaseByPurchaser — только admin и manager", () => {
+  it("purchaseByPurchaser — доступ есть, в сайдбаре нет (вход из Отчётов)", () => {
     expect(canAccessPanel(userWithRoles("admin"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("manager"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("purchaser"), "purchaseByPurchaser")).toBe(false);
     expect(canAccessPanel(userWithRoles("warehouse"), "purchaseByPurchaser")).toBe(false);
+    expect(adminSidebarPanelOrder(userWithRoles("admin"))).not.toContain("purchaseByPurchaser");
+    expect(operationsPanelOrder(userWithRoles("manager"))).not.toContain("purchaseByPurchaser");
   });
 });

@@ -23,7 +23,7 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
-import { canCreateTrip, isFieldSellerOnly } from "../auth/role-panels.js";
+import { canCreateTrip, canAccessPanel, isFieldSellerOnly } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesByIdsQueryOptions,
@@ -73,6 +73,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const { user } = useAuth();
   /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
   const canTripWrite = user == null || canCreateTrip(user);
+  const showPurchaseByPurchaserLink =
+    viewContext === "default" && (user == null || canAccessPanel(user, "purchaseByPurchaser"));
+  const purchaseByPurchaserPath = adminAwarePathForPath(
+    pathname,
+    adminRoutes.purchaseByPurchaser,
+    ops.purchaseByPurchaser,
+  );
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [tripId, setTripId] = useState<string | "">("");
@@ -285,6 +292,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       <h2 id="trip-report-heading" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
         {headingByContext[viewContext]}
       </h2>
+      {showPurchaseByPurchaserLink ? (
+        <p className="no-print birzha-ui-sm" style={{ margin: "0 0 1rem", lineHeight: 1.5 }}>
+          Другие отчёты:{" "}
+          <Link to={purchaseByPurchaserPath} style={{ fontWeight: 600 }}>
+            Закупки по закупщикам
+          </Link>
+          {" — "}
+          сумма, кг и ящики по закупщику и складу за период.
+        </p>
+      ) : null}
       {tripsQuery.isPending && (
         <div className="no-print" style={{ marginTop: "0.35rem", marginBottom: 0 }}>
           <LoadingBlock label="Загрузка списка рейсов…" minHeight={64} skeleton skeletonRows={5} />

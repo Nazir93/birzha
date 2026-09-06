@@ -320,7 +320,6 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
 export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const base: PanelId[] = [
     "nakladnaya",
-    "purchaseByPurchaser",
     "trips",
     "distribution",
     "warehouseReturns",
@@ -351,7 +350,6 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
 export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
   return [
     "nakladnaya",
-    "purchaseByPurchaser",
     "trips",
     "distribution",
     "warehouseReturns",
