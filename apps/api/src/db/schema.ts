@@ -46,8 +46,10 @@ export const purchaseDocuments = pgTable("purchase_documents", {
     .references(() => warehouses.id),
   /** default через sql — иначе drizzle-kit push падает на JSON.stringify(BigInt). */
   extraCostKopecks: bigint("extra_cost_kopecks", { mode: "bigint" }).notNull().default(sql`0`),
-  /** Кто создал накладную (JWT `sub`); для закупщика — фильтр «свои». */
+  /** Кто создал накладную (JWT `sub`) — аудит ввода. */
   createdByUserId: text("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  /** Закупщик (сотрудник), на кого относится закупка в отчётах; фильтр «свои» для роли purchaser. */
+  purchaserUserId: text("purchaser_user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 

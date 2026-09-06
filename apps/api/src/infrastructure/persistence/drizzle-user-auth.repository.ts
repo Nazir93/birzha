@@ -66,3 +66,30 @@ export async function listGlobalSellerUsers(db: DbClient): Promise<FieldSellerOp
   }
   return out;
 }
+
+/** Пользователи с глобальной ролью `purchaser` (активные) — выбор закупщика в накладной. */
+export async function listGlobalPurchaserUsers(db: DbClient): Promise<FieldSellerOptionRow[]> {
+  const rows = await db
+    .select({ id: users.id, login: users.login })
+    .from(users)
+    .innerJoin(userRoles, eq(userRoles.userId, users.id))
+    .where(
+      and(
+        eq(users.isActive, true),
+        eq(userRoles.roleCode, "purchaser"),
+        eq(userRoles.scopeType, "global"),
+        eq(userRoles.scopeId, ""),
+      ),
+    )
+    .orderBy(asc(users.login));
+
+  const seen = new Set<string>();
+  const out: FieldSellerOptionRow[] = [];
+  for (const r of rows) {
+    if (!seen.has(r.id)) {
+      seen.add(r.id);
+      out.push(r);
+    }
+  }
+  return out;
+}

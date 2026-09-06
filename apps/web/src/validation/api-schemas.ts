@@ -343,6 +343,7 @@ export function parseCreatePurchaseDocumentForm(input: {
   supplierName: string;
   supplierId?: string;
   buyerLabel: string;
+  purchaserUserId: string;
   extraCostKopecks: string;
   lines: Array<{
     productGradeId: string;
@@ -422,6 +423,11 @@ export function parseCreatePurchaseDocumentForm(input: {
       throw new Error("Укажите тепличника (выберите из списка или создайте нового)");
     }
 
+    const purchaserUserId = input.purchaserUserId.trim();
+    if (!purchaserUserId) {
+      throw new Error("Выберите закупщика");
+    }
+
     const payload: Record<string, unknown> = {
       documentNumber: documentNumberFromSupplierName(sup, input.docDate.trim()),
       docDate: input.docDate.trim(),
@@ -429,6 +435,7 @@ export function parseCreatePurchaseDocumentForm(input: {
       extraCostKopecks,
       lines,
       supplierName: sup,
+      purchaserUserId,
     };
     const sid = input.supplierId?.trim();
     if (sid) {

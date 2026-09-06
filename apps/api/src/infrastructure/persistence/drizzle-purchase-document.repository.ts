@@ -17,6 +17,7 @@ import {
   tripBatchSales,
   tripBatchShipments,
   tripBatchShortages,
+  users,
 } from "../../db/schema.js";
 import { gramsToKg } from "../../application/units/mass.js";
 import { grossGramsFromNet } from "@birzha/domain";
@@ -52,6 +53,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
         warehouseId: header.warehouseId,
         extraCostKopecks: header.extraCostKopecks,
         createdByUserId: header.createdByUserId ?? null,
+        purchaserUserId: header.purchaserUserId ?? null,
       });
 
       for (const line of lines) {
@@ -95,6 +97,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       warehouseId: d.warehouseId,
       lineCount: countMap.get(d.id) ?? 0,
       createdByUserId: d.createdByUserId ?? null,
+      purchaserUserId: d.purchaserUserId ?? null,
     }));
   }
 
@@ -193,11 +196,20 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
   }
 
   async findByIdWithLines(id: string): Promise<PurchaseDocumentDetail | null> {
-    const docRows = await this.db.select().from(purchaseDocuments).where(eq(purchaseDocuments.id, id)).limit(1);
-    const doc = docRows[0];
-    if (!doc) {
+    const docRows = await this.db
+      .select({
+        doc: purchaseDocuments,
+        purchaserLogin: users.login,
+      })
+      .from(purchaseDocuments)
+      .leftJoin(users, eq(users.id, purchaseDocuments.purchaserUserId))
+      .where(eq(purchaseDocuments.id, id))
+      .limit(1);
+    const row = docRows[0];
+    if (!row) {
       return null;
     }
+    const doc = row.doc;
 
     const lineRows = await this.db
       .select({
@@ -220,6 +232,8 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       extraCostKopecks: doc.extraCostKopecks.toString(),
       createdAt: doc.createdAt.toISOString(),
       createdByUserId: doc.createdByUserId ?? null,
+      purchaserUserId: doc.purchaserUserId ?? null,
+      purchaserLogin: row.purchaserLogin ?? null,
       lines: lineRows.map(({ line, gradeCode }) => ({
         lineNo: line.lineNo,
         productGradeId: line.productGradeId,

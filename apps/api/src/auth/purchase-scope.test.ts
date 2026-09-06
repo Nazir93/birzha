@@ -13,9 +13,33 @@ function globalGrant(roleCode: string): AuthRoleGrant[] {
 
 describe("purchase-scope", () => {
   const docs: PurchaseDocumentSummary[] = [
-    { id: "a", documentNumber: "1", docDate: "2026-01-01", warehouseId: "w", lineCount: 0, createdByUserId: null },
-    { id: "b", documentNumber: "2", docDate: "2026-01-01", warehouseId: "w", lineCount: 1, createdByUserId: "u1" },
-    { id: "c", documentNumber: "3", docDate: "2026-01-01", warehouseId: "w", lineCount: 1, createdByUserId: "u2" },
+    {
+      id: "a",
+      documentNumber: "1",
+      docDate: "2026-01-01",
+      warehouseId: "w",
+      lineCount: 0,
+      createdByUserId: null,
+      purchaserUserId: null,
+    },
+    {
+      id: "b",
+      documentNumber: "2",
+      docDate: "2026-01-01",
+      warehouseId: "w",
+      lineCount: 1,
+      createdByUserId: "u1",
+      purchaserUserId: null,
+    },
+    {
+      id: "c",
+      documentNumber: "3",
+      docDate: "2026-01-01",
+      warehouseId: "w",
+      lineCount: 1,
+      createdByUserId: "u2",
+      purchaserUserId: null,
+    },
   ];
 
   it("без пользователя не режет", () => {
@@ -25,6 +49,22 @@ describe("purchase-scope", () => {
   it("закупщик видит без автора и только свои", () => {
     const out = filterPurchaseSummariesForPurchaserScope(docs, { roles: globalGrant("purchaser") }, "u1");
     expect(out.map((d) => d.id)).toEqual(["a", "b"]);
+  });
+
+  it("закупщик видит по purchaserUserId, даже если автор другой", () => {
+    const mixed: PurchaseDocumentSummary[] = [
+      {
+        id: "d",
+        documentNumber: "4",
+        docDate: "2026-01-01",
+        warehouseId: "w",
+        lineCount: 1,
+        createdByUserId: "warehouse-1",
+        purchaserUserId: "u1",
+      },
+    ];
+    const out = filterPurchaseSummariesForPurchaserScope(mixed, { roles: globalGrant("purchaser") }, "u1");
+    expect(out.map((d) => d.id)).toEqual(["d"]);
   });
 
   it("manager не режет по автору", () => {
@@ -41,6 +81,13 @@ describe("purchase-scope", () => {
     ).toBe(true);
     expect(
       purchaseDocumentReadableByPurchaser({ createdByUserId: null }, { roles: globalGrant("purchaser") }, "u1"),
+    ).toBe(true);
+    expect(
+      purchaseDocumentReadableByPurchaser(
+        { createdByUserId: "wh", purchaserUserId: "u1" },
+        { roles: globalGrant("purchaser") },
+        "u1",
+      ),
     ).toBe(true);
   });
 });

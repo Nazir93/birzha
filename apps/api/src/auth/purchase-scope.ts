@@ -2,10 +2,23 @@ import type { PurchaseDocumentSummary } from "../application/ports/purchase-docu
 import { globalRoleCodes } from "./global-roles.js";
 import type { AuthRoleGrant } from "./role-grant.js";
 
-export type PurchaseDocWithCreator = { createdByUserId: string | null };
+export type PurchaseDocWithPurchaser = {
+  createdByUserId: string | null;
+  purchaserUserId?: string | null;
+};
+
+/** Эффективный закупщик: явное поле, иначе автор ввода (старые строки). */
+export function effectivePurchasePurchaserUserId(doc: PurchaseDocWithPurchaser): string | null {
+  const p = doc.purchaserUserId?.trim();
+  if (p) {
+    return p;
+  }
+  const c = doc.createdByUserId?.trim();
+  return c && c.length > 0 ? c : null;
+}
 
 /**
- * Список накладных для глобального закупщика: свои + без автора (миграция/старые данные).
+ * Список накладных для глобального закупщика: свои (по purchaser / fallback author) + без закупщика.
  * Без `user` / `userId` (dev без JWT) — без доп. фильтра.
  */
 export function filterPurchaseSummariesForPurchaserScope(
@@ -21,13 +34,16 @@ export function filterPurchaseSummariesForPurchaserScope(
     return docs;
   }
   if (globals.includes("purchaser")) {
-    return docs.filter((d) => d.createdByUserId == null || d.createdByUserId === userId);
+    return docs.filter((d) => {
+      const pid = effectivePurchasePurchaserUserId(d);
+      return pid == null || pid === userId;
+    });
   }
   return docs;
 }
 
 export function purchaseDocumentReadableByPurchaser(
-  doc: PurchaseDocumentSummary | PurchaseDocWithCreator,
+  doc: PurchaseDocumentSummary | PurchaseDocWithPurchaser,
   user: { roles: AuthRoleGrant[] },
   userId: string,
 ): boolean {
@@ -36,7 +52,8 @@ export function purchaseDocumentReadableByPurchaser(
     return true;
   }
   if (globals.includes("purchaser")) {
-    return doc.createdByUserId == null || doc.createdByUserId === userId;
+    const pid = effectivePurchasePurchaserUserId(doc);
+    return pid == null || pid === userId;
   }
   return true;
 }

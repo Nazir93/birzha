@@ -241,7 +241,7 @@ export async function getPurchaseByPurchaserReport(
 
   const rows = await db
     .select({
-      purchaserUserId: purchaseDocuments.createdByUserId,
+      purchaserUserId: sql<string | null>`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`,
       purchaserLogin: users.login,
       warehouseId: purchaseDocuments.warehouseId,
       warehouseName: warehouses.name,
@@ -252,12 +252,15 @@ export async function getPurchaseByPurchaserReport(
     })
     .from(purchaseDocuments)
     .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
-    .leftJoin(users, eq(users.id, purchaseDocuments.createdByUserId))
+    .leftJoin(
+      users,
+      eq(users.id, sql`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`),
+    )
     .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
     .where(and(gte(purchaseDocuments.docDate, fromDate), lte(purchaseDocuments.docDate, toDate)))
     .groupBy(
       purchaseDocuments.id,
-      purchaseDocuments.createdByUserId,
+      sql`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`,
       users.login,
       purchaseDocuments.warehouseId,
       warehouses.name,

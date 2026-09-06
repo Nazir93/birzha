@@ -10,6 +10,7 @@ export type PurchaseDocumentHeaderRow = {
   warehouseId: string;
   extraCostKopecks: bigint;
   createdByUserId?: string | null;
+  purchaserUserId?: string | null;
 };
 
 /** Строка накладной для сохранения: партия создаётся в use case и передаётся целиком. */
@@ -35,6 +36,7 @@ export type PurchaseDocumentSummary = {
   warehouseId: string;
   lineCount: number;
   createdByUserId: string | null;
+  purchaserUserId: string | null;
 };
 
 export type PurchaseDocumentLineDetail = {
@@ -62,6 +64,9 @@ export type PurchaseDocumentDetail = {
   extraCostKopecks: string;
   createdAt: string | null;
   createdByUserId: string | null;
+  purchaserUserId: string | null;
+  /** Логин закупщика, если `purchaserUserId` задан и пользователь найден. */
+  purchaserLogin: string | null;
   lines: PurchaseDocumentLineDetail[];
 };
 

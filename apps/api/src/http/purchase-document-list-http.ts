@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, gt, inArray, isNull, notExists, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, notExists, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
@@ -82,13 +82,12 @@ export async function listPurchaseDocumentsForHttp(
     parts.push(inArray(purchaseDocuments.warehouseId, [...options.warehouseIds]));
   }
   if (options?.purchaserUserId) {
-    const purchaserFilter = or(
-      isNull(purchaseDocuments.createdByUserId),
-      eq(purchaseDocuments.createdByUserId, options.purchaserUserId),
-    );
-    if (purchaserFilter) {
-      parts.push(purchaserFilter);
-    }
+    const uid = options.purchaserUserId;
+    const purchaserFilter = sql`(
+      coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId}) is null
+      or coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId}) = ${uid}
+    )`;
+    parts.push(purchaserFilter);
   }
   const where = parts.length === 0 ? undefined : parts.length === 1 ? parts[0] : and(...parts);
 
@@ -106,6 +105,7 @@ export async function listPurchaseDocumentsForHttp(
       docDate: purchaseDocuments.docDate,
       warehouseId: purchaseDocuments.warehouseId,
       createdByUserId: purchaseDocuments.createdByUserId,
+      purchaserUserId: purchaseDocuments.purchaserUserId,
     })
     .from(purchaseDocuments)
     .orderBy(desc(purchaseDocuments.docDate), desc(purchaseDocuments.documentNumber))
@@ -141,6 +141,7 @@ export async function listPurchaseDocumentsForHttp(
       warehouseId: d.warehouseId,
       lineCount: countMap.get(d.id) ?? 0,
       createdByUserId: d.createdByUserId ?? null,
+      purchaserUserId: d.purchaserUserId ?? null,
     })),
     listMeta: {
       limit,

@@ -37,6 +37,7 @@ import { readPreferredWarehouseId, writePreferredWarehouseId } from "../preferen
 import {
   productGradesFullListQueryOptions,
   purchaseDocumentsPagedQueryOptions,
+  purchasePurchaserOptionsQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
@@ -96,6 +97,7 @@ export function PurchaseNakladnayaSection() {
 
   const warehousesQ = useQuery({ ...warehousesFullListQueryOptions(), enabled });
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
+  const purchasersQ = useQuery({ ...purchasePurchaserOptionsQueryOptions(), enabled });
   const nakladPageOffset = nakladListPage * WORK_LIST_PAGE_SIZE;
   const listQ = useQuery({
     ...purchaseDocumentsPagedQueryOptions({
@@ -111,6 +113,7 @@ export function PurchaseNakladnayaSection() {
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [buyerLabel, setBuyerLabel] = useState("");
+  const [purchaserUserId, setPurchaserUserId] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
   const [formError, setFormError] = useState<string | null>(null);
@@ -118,6 +121,16 @@ export function PurchaseNakladnayaSection() {
   const refreshLists = useCallback(async () => {
     await refreshPurchaseAndBatchLists(queryClient);
   }, [queryClient]);
+
+  useEffect(() => {
+    if (purchaserUserId) {
+      return;
+    }
+    const opts = purchasersQ.data?.purchasers ?? [];
+    if (user?.id && opts.some((p) => p.id === user.id)) {
+      setPurchaserUserId(user.id);
+    }
+  }, [purchasersQ.data, user?.id, purchaserUserId]);
 
   const suppliersCatalogEnabled = meta?.suppliersCatalogApi === "enabled";
 
@@ -131,6 +144,7 @@ export function PurchaseNakladnayaSection() {
         supplierName,
         supplierId,
         buyerLabel,
+        purchaserUserId,
         extraCostKopecks,
         lines,
       });
@@ -144,6 +158,7 @@ export function PurchaseNakladnayaSection() {
       setSupplierId("");
       setSupplierName("");
       setBuyerLabel("");
+      setPurchaserUserId(user?.id && (purchasersQ.data?.purchasers ?? []).some((p) => p.id === user.id) ? user.id : "");
       setExtraCostKopecks("0");
       setLines([emptyLine()]);
       await refreshLists();
@@ -401,6 +416,24 @@ export function PurchaseNakladnayaSection() {
               ...(warehousesQ.data?.warehouses ?? []).map((w) => ({
                 value: w.id,
                 label: `${w.name} (${w.code})`,
+              })),
+            ]}
+          />
+        </label>
+        <label className="birzha-form-label">
+          Закупщик *
+          <BirzhaSelect
+            value={purchaserUserId}
+            onChange={setPurchaserUserId}
+            className="birzha-clean-ops-field"
+            style={selectFieldStyle}
+            placeholder={purchasersQ.isPending ? "Загрузка…" : "— выберите —"}
+            disabled={purchasersQ.isPending}
+            options={[
+              { value: "", label: "— выберите —" },
+              ...(purchasersQ.data?.purchasers ?? []).map((p) => ({
+                value: p.id,
+                label: p.login,
               })),
             ]}
           />

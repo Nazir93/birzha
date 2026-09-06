@@ -10,6 +10,7 @@ import type {
   PurchaseByPurchaserReportResponse,
   PurchaseDocumentDetail,
   PurchaseDocumentsListResponse,
+  PurchasePurchaserOptionsResponse,
   LoadingManifestDetailResponse,
   LoadingManifestReservedBatchIdsResponse,
   LoadingManifestsListResponse,
@@ -231,6 +232,13 @@ export const purchaseDocumentsPagedQueryOptions = (opts: {
     },
     staleTime: QUERY_STALE_LISTS_MS,
     placeholderData: keepPreviousData,
+  });
+
+export const purchasePurchaserOptionsQueryOptions = () =>
+  queryOptions({
+    queryKey: [...queryRoots.purchaseDocuments, "purchaser-options"] as const,
+    queryFn: () => apiGetJson<PurchasePurchaserOptionsResponse>("/api/purchase-documents/purchaser-options"),
+    staleTime: QUERY_STALE_LISTS_MS,
   });
 
 export const adminDashboardSummaryQueryOptions = (since?: string) =>

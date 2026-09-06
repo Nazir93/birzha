@@ -67,6 +67,7 @@ export class CreatePurchaseDocumentUseCase {
     }
 
     const createdBy = ctx?.createdByUserId?.trim();
+    const purchaserRaw = body.purchaserUserId?.trim() || createdBy;
     const header: PurchaseDocumentHeaderRow = {
       id: documentId,
       documentNumber: body.documentNumber.trim(),
@@ -77,6 +78,7 @@ export class CreatePurchaseDocumentUseCase {
       warehouseId: body.warehouseId,
       extraCostKopecks: BigInt(body.extraCostKopecks ?? 0),
       createdByUserId: createdBy && createdBy.length > 0 ? createdBy : null,
+      purchaserUserId: purchaserRaw && purchaserRaw.length > 0 ? purchaserRaw : null,
     };
 
     const lines: NewPurchaseDocumentLine[] = [];

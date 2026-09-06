@@ -47,6 +47,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
       warehouseId: "wh-manas",
       supplierName: "Поставщик",
       buyerLabel: "",
+      purchaserUserId: "u-purchaser",
       extraCostKopecks: "0",
       lines: [
         {
@@ -60,6 +61,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
     });
     expect(body.documentNumber).toBe("Поставщик · 16.04.2026");
     expect(body.supplierName).toBe("Поставщик");
+    expect(body.purchaserUserId).toBe("u-purchaser");
     expect(body.lines[0]?.grossKg).toBe(10);
     expect(body.lines[0]?.lineTotalKopecks).toBe(45_000);
     expect(body.lines[0]?.packageCount).toBe(2);
@@ -72,6 +74,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
         warehouseId: "wh-1",
         supplierName: "  ",
         buyerLabel: "",
+        purchaserUserId: "u-purchaser",
         extraCostKopecks: "0",
         lines: [
           {
@@ -86,12 +89,35 @@ describe("parseCreatePurchaseDocumentForm", () => {
     ).toThrow(/тепличник/i);
   });
 
+  it("требует закупщика", () => {
+    expect(() =>
+      parseCreatePurchaseDocumentForm({
+        docDate: "2026-04-16",
+        warehouseId: "wh-1",
+        supplierName: "Поставщик",
+        buyerLabel: "",
+        purchaserUserId: "",
+        extraCostKopecks: "0",
+        lines: [
+          {
+            productGradeId: "pg-1",
+            grossKg: "1",
+            packageCount: "",
+            pricePerKg: "0",
+            lineTotalKopecks: "0",
+          },
+        ],
+      }),
+    ).toThrow(/закупщик/i);
+  });
+
   it("ящики с запятой округляются до целого", () => {
     const body = parseCreatePurchaseDocumentForm({
       docDate: "2026-04-16",
       warehouseId: "wh-1",
       supplierName: "ООО Ромашка",
       buyerLabel: "",
+      purchaserUserId: "u-purchaser",
       extraCostKopecks: "0",
       lines: [
         {
@@ -114,6 +140,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
         warehouseId: "wh-1",
         supplierName: "Поставщик",
         buyerLabel: "",
+        purchaserUserId: "u-purchaser",
         extraCostKopecks: "0",
         lines: [
           {
@@ -134,6 +161,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
       warehouseId: "wh-1",
       supplierName: "Поставщик",
       buyerLabel: "",
+      purchaserUserId: "u-purchaser",
       extraCostKopecks: "100,50",
       lines: [
         {

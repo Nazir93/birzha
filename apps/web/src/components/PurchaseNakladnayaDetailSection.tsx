@@ -363,6 +363,11 @@ export function PurchaseNakladnayaDetailSection() {
             warehouseLabel(doc.warehouseId)
           )}
         </div>
+        {doc.purchaserLogin || doc.purchaserUserId ? (
+          <div>
+            <strong>Закупщик:</strong> {doc.purchaserLogin ?? doc.purchaserUserId}
+          </div>
+        ) : null}
         {doc.buyerLabel && (
           <div>
             <strong>Покупатель / подпись:</strong> {doc.buyerLabel}

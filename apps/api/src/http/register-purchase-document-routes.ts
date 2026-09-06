@@ -73,6 +73,7 @@ export function registerPurchaseDocumentRoutes(
     replacePurchaseDocumentLines: ReplacePurchaseDocumentLinesUseCase;
     deleteWarehouse: DeleteWarehouseUseCase;
     deleteProductGrade: DeleteProductGradeUseCase;
+    listPurchasers?: () => Promise<{ id: string; login: string }[]>;
   },
   routeAuth: BusinessRouteAuth,
 ): void {
@@ -89,6 +90,7 @@ export function registerPurchaseDocumentRoutes(
     replacePurchaseDocumentLines,
     deleteWarehouse,
     deleteProductGrade,
+    listPurchasers = async () => [],
   } = deps;
 
   app.get("/warehouses", { ...withPreHandlers(routeAuth.catalogRead) }, async (_req, reply) => {
@@ -157,6 +159,15 @@ export function registerPurchaseDocumentRoutes(
         productGroup: body.productGroup,
       });
       return reply.code(201).send({ productGrade });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.get("/purchase-documents/purchaser-options", { ...withPreHandlers(routeAuth.batchCreate) }, async (_req, reply) => {
+    try {
+      const purchasers = await listPurchasers();
+      return reply.send({ purchasers });
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -245,6 +256,21 @@ export function registerPurchaseDocumentRoutes(
     try {
       const body = createPurchaseDocumentBodySchema.parse(req.body);
       const user = req.user as JwtUser | undefined;
+      const purchasers = await listPurchasers();
+      const requested = body.purchaserUserId?.trim();
+      if (requested) {
+        const allowed =
+          purchasers.some((p) => p.id === requested) || (user?.sub != null && requested === user.sub);
+        if (!allowed) {
+          return reply.code(400).send({ error: "purchaser_user_not_assignable", purchaserUserId: requested });
+        }
+      } else if (purchasers.length > 0 && user?.sub && !purchasers.some((p) => p.id === user.sub)) {
+        // Есть справочник закупщиков, а текущий пользователь не закупщик — нужно явно выбрать.
+        return reply.code(400).send({
+          error: "purchaser_user_required",
+          message: "Укажите закупщика (purchaserUserId)",
+        });
+      }
       const result = await createPurchaseDocument.execute(body, { createdByUserId: user?.sub });
       return reply.code(201).send(result);
     } catch (error) {

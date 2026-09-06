@@ -227,6 +227,8 @@ export type PurchaseDocumentSummary = {
   lineCount: number;
   /** Автор накладной (`users.id`), если записан при создании. */
   createdByUserId: string | null;
+  /** Закупщик (`users.id`); в отчётах и фильтре «свои». */
+  purchaserUserId?: string | null;
 };
 
 /** Строка `GET /purchase-documents/:id` — согласовано с `PurchaseDocumentDetail` в API. */
@@ -255,6 +257,8 @@ export type PurchaseDocumentDetail = {
   extraCostKopecks: string;
   createdAt: string | null;
   createdByUserId: string | null;
+  purchaserUserId?: string | null;
+  purchaserLogin?: string | null;
   lines: PurchaseDocumentLineDetail[];
   /** Можно править строки (нет партий в ПН / движений). Только UI+admin; PUT всё равно проверяет. */
   linesEditable?: boolean;
@@ -397,6 +401,10 @@ export type TripsListResponse = {
 /** `GET /api/trips/field-seller-options` — продавцы для назначения на рейс (роли `tripWrite`). */
 export type FieldSellerOptionJson = { id: string; login: string };
 export type FieldSellerOptionsResponse = { fieldSellers: FieldSellerOptionJson[] };
+
+/** `GET /api/purchase-documents/purchaser-options` — закупщики для поля в накладной. */
+export type PurchasePurchaserOptionJson = { id: string; login: string };
+export type PurchasePurchaserOptionsResponse = { purchasers: PurchasePurchaserOptionJson[] };
 
 export type CounterpartyJson = {
   id: string;

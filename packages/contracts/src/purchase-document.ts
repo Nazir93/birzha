@@ -45,6 +45,11 @@ export const createPurchaseDocumentBodySchema = z.object({
   supplierId: z.string().min(1).max(64).optional(),
   buyerLabel: z.string().max(300).optional(),
   warehouseId: z.string().min(1).max(64),
+  /**
+   * Сотрудник-закупщик (`users.id`). Если не передан — сервер подставляет JWT `sub`.
+   * Не путать с `buyerLabel` (свободная подпись «Покупатель»).
+   */
+  purchaserUserId: z.string().min(1).max(64).optional(),
   extraCostKopecks: z.number().int().nonnegative().optional().default(0),
   lines: z.array(purchaseDocumentLineInputSchema).min(1).max(200),
 });

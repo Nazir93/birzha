@@ -60,7 +60,7 @@ import {
 import { DrizzlePurchaseDocumentRepository } from "./infrastructure/persistence/drizzle-purchase-document.repository.js";
 import { DrizzleWholesalerRepository } from "./infrastructure/persistence/drizzle-wholesaler.repository.js";
 import { DrizzleSupplierRepository } from "./infrastructure/persistence/drizzle-supplier.repository.js";
-import { listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
+import { listGlobalPurchaserUsers, listGlobalSellerUsers } from "./infrastructure/persistence/drizzle-user-auth.repository.js";
 import { InMemoryCounterpartyRepository } from "./infrastructure/persistence/in-memory-counterparty.repository.js";
 import { InMemoryWholesalerRepository } from "./infrastructure/persistence/in-memory-wholesaler.repository.js";
 import { InMemorySupplierRepository } from "./infrastructure/persistence/in-memory-supplier.repository.js";
@@ -430,6 +430,7 @@ export async function buildApp(options: {
         replacePurchaseDocumentLines: replacePurchaseDocumentLinesUseCase,
         deleteWarehouse: deleteWarehouseUseCase,
         deleteProductGrade: deleteProductGradeUseCase,
+        listPurchasers: db ? () => listGlobalPurchaserUsers(db) : async () => [],
       },
       routeAuth,
     );
