@@ -6,6 +6,10 @@ import {
   getAdminDashboardSummary,
 } from "./admin-dashboard-summary-http.js";
 import { sendMappedError } from "./map-http-error.js";
+import {
+  getPurchaseByPurchaserReport,
+  purchaseByPurchaserReportQuerySchema,
+} from "./purchase-by-purchaser-report.js";
 import { getStockBalancesSummary } from "./stock-balances-http.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 
@@ -23,6 +27,21 @@ export function registerAdminSummaryRoutes(
       return sendMappedError(reply, error);
     }
   });
+
+  /** Отчёт «закупщик × склад» за период по дате накладной — только admin/manager. */
+  app.get(
+    "/admin/purchase-by-purchaser",
+    { ...withPreHandlers(routeAuth.purchasePurchaserReportRead) },
+    async (req, reply) => {
+      try {
+        const query = purchaseByPurchaserReportQuerySchema.parse(req.query);
+        const report = await getPurchaseByPurchaserReport(db, query);
+        return reply.send(report);
+      } catch (error) {
+        return sendMappedError(reply, error);
+      }
+    },
+  );
 
   app.get("/stock-balances", { ...withPreHandlers(routeAuth.dataRead) }, async (_req, reply) => {
     try {

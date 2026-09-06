@@ -14,6 +14,7 @@ import type { AuthUser } from "./auth-context.js";
 export type PanelId =
   | "reports"
   | "nakladnaya"
+  | "purchaseByPurchaser"
   | "distribution"
   | "warehouseReturns"
   | "loadingAppend"
@@ -31,6 +32,7 @@ export type PanelId =
 /** Подписи вкладок навигации (шапка / сайдбар). */
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
+  purchaseByPurchaser: "Закупки по закупщикам",
   distribution: "Погрузка на машину",
   warehouseReturns: "Возврат на склад",
   loadingAppend: "Догрузка",
@@ -52,6 +54,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   reports: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller", "accountant"],
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
+  /** Сводка закупщик × склад — только руководство (как API). */
+  purchaseByPurchaser: ["admin", "manager"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   warehouseReturns: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingAppend: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
@@ -316,6 +320,7 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
 export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   const base: PanelId[] = [
     "nakladnaya",
+    "purchaseByPurchaser",
     "trips",
     "distribution",
     "warehouseReturns",
@@ -346,6 +351,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
 export function adminSidebarPanelOrder(_user: AuthUser): PanelId[] {
   return [
     "nakladnaya",
+    "purchaseByPurchaser",
     "trips",
     "distribution",
     "warehouseReturns",
@@ -393,6 +399,21 @@ export function hrefForPanelInCabinet(
 ): string | null {
   if (panel === "loadingManifests") {
     return hrefForPanelInCabinet(user, "distribution", currentCabinet);
+  }
+  if (panel === "purchaseByPurchaser") {
+    if (!canAccessPanel(user, "purchaseByPurchaser")) {
+      return null;
+    }
+    if (!canAccessCabinet(user, currentCabinet)) {
+      return null;
+    }
+    if (currentCabinet === "admin") {
+      return adminRoutes.purchaseByPurchaser;
+    }
+    if (currentCabinet === "operations") {
+      return ops.purchaseByPurchaser;
+    }
+    return null;
   }
   if (panel === "inventory" || panel === "users" || panel === "settings") {
     const accessPanel: PanelId =

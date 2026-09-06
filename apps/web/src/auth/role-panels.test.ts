@@ -207,4 +207,11 @@ describe("role-panels", () => {
     expect(canAccessPanel(userWithRoles("seller"), "users")).toBe(false);
     expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
   });
+
+  it("purchaseByPurchaser — только admin и manager", () => {
+    expect(canAccessPanel(userWithRoles("admin"), "purchaseByPurchaser")).toBe(true);
+    expect(canAccessPanel(userWithRoles("manager"), "purchaseByPurchaser")).toBe(true);
+    expect(canAccessPanel(userWithRoles("purchaser"), "purchaseByPurchaser")).toBe(false);
+    expect(canAccessPanel(userWithRoles("warehouse"), "purchaseByPurchaser")).toBe(false);
+  });
 });

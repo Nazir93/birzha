@@ -89,7 +89,7 @@ cd /opt/birzha
 bash deploy/backup-database.sh
 ```
 
-Дамп: `backups/birzha-daily-YYYY-MM-DD-HHMMSS.dump` (формат `pg_restore`). Старые `birzha-daily-*` удаляются через **7** дней (`BIRZHA_BACKUP_KEEP_DAYS`).
+Дамп: `backups/birzha-daily-YYYY-MM-DD-HHMMSS.dump` (формат `pg_restore`). Retention локально: **7** дней daily, **28** дней weekly (воскресенье UTC), **14** дней `birzha-before-*`.
 
 **Автоматически каждый день (03:15 UTC):**
 
@@ -100,14 +100,26 @@ bash deploy/install-backup-cron.sh
 
 Лог: `backups/backup.log`. Проверка: `crontab -l | grep birzha-pg-backup`.
 
+**Offsite (S3 / Яндекс Object Storage через rclone)** — обязательно для production, иначе смерть диска VPS = потеря дампов:
+
+```bash
+sudo bash deploy/install-backup-offsite.sh
+# rclone config + /etc/birzha/backup.env — см. deploy/backup-offsite.env.example
+# BIRZHA_BACKUP_RCLONE_REMOTE=birzha-s3:birzha-backups
+bash deploy/backup-database.sh
+```
+
+Пока remote не задан, скрипт пишет `SKIP offsite: not configured` и не падает. Если remote задан, а upload падает — exit ≠ 0.
+
+Опционально: `BIRZHA_BACKUP_HEALTHCHECK_URL` (ping после успеха). Свежесть: `bash deploy/daily-ops-check.sh`.
+
 **Восстановление** (только в отдельную БД, не поверх рабочей — см. `docs/deployment/runbook.md` §9):
 
 ```bash
 createdb birzha_restore_check
 pg_restore --dbname=birzha_restore_check backups/birzha-daily-....dump
+dropdb birzha_restore_check
 ```
-
-Рекомендуется раз в месяц скачивать свежий `.dump` **на другой носитель** (не только диск VPS).
 
 ## Очистка данных (начать с нуля)
 
@@ -138,6 +150,12 @@ cd /opt/birzha/apps/api
 BIRZHA_ARCHIVE_NKL_COUNT=50000 pnpm db:seed-archive-nakladnaya-bulk
 BIRZHA_ARCHIVE_MIN_DOCS=50000 pnpm db:verify-archive
 ```
+
+## Мониторинг (uptime)
+
+Внешний пинг: workflow **Uptime** (`.github/workflows/uptime.yml`) — каждые ~15 мин `https://24birzha.ru/api/health` и `/api/health/ready`. Алерт: письмо GitHub при FAIL; опционально секреты `BIRZHA_TELEGRAM_BOT_TOKEN` + `BIRZHA_TELEGRAM_CHAT_ID`. Подробнее: `docs/deployment/runbook.md` §9a.
+
+На VPS (дополнение): `deploy/notify-health-fail.sh` + `deploy/monitor.env.example`.
 
 ## Из GitHub (CI → SSH)
 

@@ -90,27 +90,90 @@ curl -fsS http://127.0.0.1:3000/health
 
 Минимальный регламент:
 
-- Перед `pnpm db:push` на production — свежий **`pg_dump`**.
-- По расписанию — ежедневный `pg_dump` в хранилище вне VPS (или снапшоты провайдера + копия вне сервера).
-- Ретеншн: например 7 ежедневных + 4 еженедельных копии.
-- Не реже раза в месяц — пробное восстановление в отдельную БД и проверка запуска API.
+- Перед `pnpm db:push` / `db:migrate` на production — свежий дамп (`bash deploy/backup-database.sh` или `BIRZHA_AUTO_BACKUP=1`).
+- **Ежедневно** (cron 03:15 UTC): локальный `pg_dump` в `/opt/birzha/backups` **и** копия в S3-совместимое хранилище через `rclone` (если настроен `BIRZHA_BACKUP_RCLONE_REMOTE`).
+- Retention: **7** daily + **4** weekly (28 дней); локальные `birzha-before-*` — 14 дней. В бакете предпочтительно lifecycle с теми же сроками.
+- Опционально: `BIRZHA_BACKUP_HEALTHCHECK_URL` (Healthchecks.io) — ping после успешного dump(+upload).
+- Не реже раза в месяц — restore-drill в отдельную БД (ниже).
 
-Пример ручного дампа:
+### Локально + cron
 
 ```bash
-pg_dump "$DATABASE_URL" --format=custom --file "birzha-$(date +%F-%H%M).dump"
+cd /opt/birzha
+bash deploy/backup-database.sh
+bash deploy/install-backup-cron.sh
 ```
 
-Восстановление проверяйте в отдельную тестовую БД, не поверх рабочей.
+Лог: `backups/backup.log`. Пока offsite не настроен, в логе будет `SKIP offsite: not configured`.
 
-Пример проверки восстановления:
+### Offsite (Яндекс Object Storage / любой S3)
+
+1. Создайте бакет (пример: `birzha-backups`), ключи доступа с правом put/list/delete объектов.
+2. На VPS:
 
 ```bash
+cd /opt/birzha
+sudo bash deploy/install-backup-offsite.sh
+# от пользователя, под которым крутится cron (часто birzha):
+rclone config
+# тип: s3, provider: Other (или Yandex), endpoint storage.yandexcloud.net,
+# access_key_id / secret_access_key, remote name например birzha-s3
+sudo install -d -m 755 /etc/birzha
+sudo cp deploy/backup-offsite.env.example /etc/birzha/backup.env
+sudo chmod 600 /etc/birzha/backup.env
+# в backup.env:
+#   BIRZHA_BACKUP_RCLONE_REMOTE=birzha-s3:birzha-backups
+#   BIRZHA_BACKUP_HEALTHCHECK_URL=https://hc-ping.com/...   # опционально
+bash deploy/backup-database.sh
+rclone ls birzha-s3:birzha-backups | head
+```
+
+Секреты rclone — в `~/.config/rclone/rclone.conf` пользователя cron, не в git.
+
+### Restore-drill (не поверх рабочей БД)
+
+```bash
+cd /opt/birzha
+# локальный файл или скачанный с S3:
+# rclone copy birzha-s3:birzha-backups/birzha-daily-….dump /tmp/
 createdb birzha_restore_check
-pg_restore --dbname=birzha_restore_check "birzha-YYYY-MM-DD-HHMM.dump"
-DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/birzha_restore_check pnpm --filter @birzha/api test
+pg_restore --dbname=birzha_restore_check backups/birzha-daily-YYYY-MM-DD-HHMMSS.dump
+# убедиться, что restore завершился без критичных ошибок
 dropdb birzha_restore_check
 ```
+
+Свежесть дампа: `bash deploy/daily-ops-check.sh` (ошибка, если нет `birzha-daily-*.dump` новее 36 часов).
+
+## 9a. Мониторинг (uptime)
+
+**Снаружи (обязательный минимум):** workflow [`.github/workflows/uptime.yml`](../../.github/workflows/uptime.yml) раз в ~15 минут дергает:
+
+- `https://24birzha.ru/api/health` — процесс API жив;
+- `https://24birzha.ru/api/health/ready` — PostgreSQL отвечает (`"database":"ok"`).
+
+После merge в `main`/`master` workflow появится в Actions. При падении GitHub шлёт письмо владельцу репозитория (включить: GitHub → Settings → Notifications → Actions).
+
+**Telegram (опционально):** в Secrets репозитория:
+
+| Secret | Назначение |
+|--------|------------|
+| `BIRZHA_TELEGRAM_BOT_TOKEN` | токен бота от @BotFather |
+| `BIRZHA_TELEGRAM_CHAT_ID` | id чата (себе или группе) |
+
+При FAIL workflow отправит сообщение в Telegram.
+
+Ручной прогон: Actions → **Uptime** → Run workflow.
+
+**На VPS (дополнение, не замена):** если API/БД легли, а хост ещё жив:
+
+```bash
+# /etc/birzha/monitor.env — см. deploy/monitor.env.example
+bash deploy/notify-health-fail.sh
+# cron, например каждые 5 минут:
+# */5 * * * * cd /opt/birzha && bash deploy/notify-health-fail.sh >> /opt/birzha/backups/monitor.log 2>&1
+```
+
+Полный даун VPS этим скриптом не поймать — для этого нужен внешний Uptime (GitHub Actions выше или UptimeRobot на те же URL).
 
 ## 10. Быстрый security smoke (после выката/ребута)
 

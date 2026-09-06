@@ -13,6 +13,7 @@
 |---------|-------------|------------|
 | `GET /api/batches` | Все MVP (`dataRead`) | При **scoped** роли `warehouse` / `receiver` с `scope_type=warehouse` список фильтруется по складу накладной — см. [`warehouse-scope.ts`](../../apps/api/src/auth/warehouse-scope.ts). |
 | `GET /api/purchase-documents` | `dataRead` | Ограничение по складу ([`warehouse-scope.ts`](../../apps/api/src/auth/warehouse-scope.ts)); для глобального **закупщика** (`purchaser`) — только накладные без автора или созданные им (`created_by_user_id`, см. [`purchase-scope.ts`](../../apps/api/src/auth/purchase-scope.ts)); чужой документ — **`403`** на `GET …/:id`. |
+| `GET /api/admin/purchase-by-purchaser` | `purchasePurchaserReportRead` | Только **admin** / **manager**. Период `from`/`to` по дате накладной; сводка закупщик × склад. |
 | `GET /api/trips` | `dataRead` | Полевой продавец (`isGlobalSellerOnly`): только рейсы с `assigned_seller_user_id === sub` ([`seller-scope.ts`](../../apps/api/src/auth/seller-scope.ts)); остальные роли — полный список. |
 | `GET /api/trips/field-seller-options` | `tripAssignSeller` | Активные пользователи с глобальной ролью `seller` — для выбора при создании/назначении рейса (только PostgreSQL; без БД — пустой список). |
 | `POST /api/trips/:id/assign-seller` | `tripAssignSeller` | “Отгрузить с рейса”: закрепляет рейс за конкретным продавцом. Роли `admin`, `manager`, `purchaser`, `logistics`. |

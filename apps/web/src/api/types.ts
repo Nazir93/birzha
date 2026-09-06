@@ -140,6 +140,44 @@ export type AdminDashboardSummaryResponse = {
   };
 };
 
+/** GET /api/admin/purchase-by-purchaser?from=&to= */
+export type PurchaseByPurchaserReportResponse = {
+  from: string;
+  to: string;
+  cells: Array<{
+    purchaserUserId: string | null;
+    purchaserLogin: string;
+    warehouseId: string;
+    warehouseName: string;
+    totalKg: number;
+    packageCount: number;
+    totalKopecks: string;
+    documentCount: number;
+  }>;
+  byPurchaser: Array<{
+    purchaserUserId: string | null;
+    purchaserLogin: string;
+    totalKg: number;
+    packageCount: number;
+    totalKopecks: string;
+    documentCount: number;
+  }>;
+  byWarehouse: Array<{
+    warehouseId: string;
+    warehouseName: string;
+    totalKg: number;
+    packageCount: number;
+    totalKopecks: string;
+    documentCount: number;
+  }>;
+  grand: {
+    totalKg: number;
+    packageCount: number;
+    totalKopecks: string;
+    documentCount: number;
+  };
+};
+
 export type StockBalancesResponse = {
   totals: {
     onWarehouseKg: number;

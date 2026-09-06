@@ -44,6 +44,9 @@ export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => v
 /** Управление учётными записями (`GET/POST /admin/users`) — только admin. */
 const USER_MANAGEMENT_ROLES = ["admin"] as const;
 
+/** Отчёт закупщик × склад — руководство. */
+const PURCHASE_PURCHASER_REPORT_ROLES = ["admin", "manager"] as const;
+
 export type BusinessRouteAuth = {
   dataRead: AuthPreHandler[];
   tripReportRead: AuthPreHandler[];
@@ -60,6 +63,8 @@ export type BusinessRouteAuth = {
   inventoryCatalogWrite: AuthPreHandler[];
   /** Список и создание пользователей — только admin. */
   userManagement: AuthPreHandler[];
+  /** GET /admin/purchase-by-purchaser — admin/manager. */
+  purchasePurchaserReportRead: AuthPreHandler[];
 };
 
 const EMPTY_AUTH: BusinessRouteAuth = {
@@ -76,6 +81,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   catalogWrite: [],
   inventoryCatalogWrite: [],
   userManagement: [],
+  purchasePurchaserReportRead: [],
 };
 
 function requireGlobalRoles(allowed: readonly string[]): AuthPreHandler {
@@ -113,6 +119,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
     userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
+    purchasePurchaserReportRead: [a, requireGlobalRoles(PURCHASE_PURCHASER_REPORT_ROLES)],
   };
 }
 

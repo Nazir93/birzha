@@ -7,6 +7,7 @@ import type {
   CounterpartiesListResponse,
   FieldSellerOptionsResponse,
   ProductGradesListResponse,
+  PurchaseByPurchaserReportResponse,
   PurchaseDocumentDetail,
   PurchaseDocumentsListResponse,
   LoadingManifestDetailResponse,
@@ -42,6 +43,7 @@ export const queryRoots = {
   shipDestinations: ["ship-destinations"] as const,
   loadingManifest: ["loading-manifest"] as const,
   adminDashboard: ["admin-dashboard-summary"] as const,
+  purchaseByPurchaser: ["purchase-by-purchaser"] as const,
   stockBalances: ["stock-balances"] as const,
   warehouseWriteOffsLedger: ["warehouse-write-offs-ledger"] as const,
   shipmentReport: ["shipment-report"] as const,
@@ -239,6 +241,17 @@ export const adminDashboardSummaryQueryOptions = (since?: string) =>
       return apiGetJson<AdminDashboardSummaryResponse>(`/api/admin/dashboard-summary${p}`);
     },
     staleTime: QUERY_STALE_LISTS_MS,
+  });
+
+export const purchaseByPurchaserReportQueryOptions = (from: string, to: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.purchaseByPurchaser, from, to] as const,
+    queryFn: () => {
+      const q = new URLSearchParams({ from, to });
+      return apiGetJson<PurchaseByPurchaserReportResponse>(`/api/admin/purchase-by-purchaser?${q}`);
+    },
+    staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
   });
 
 export const stockBalancesQueryOptions = () =>

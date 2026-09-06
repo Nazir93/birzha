@@ -39,6 +39,11 @@ const OperationsPanel = lazy(() =>
 const AssignSellerPanel = lazy(() =>
   import("../components/AssignSellerPanel.js").then((m) => ({ default: m.AssignSellerPanel })),
 );
+const PurchaseByPurchaserReportPanel = lazy(() =>
+  import("../components/PurchaseByPurchaserReportPanel.js").then((m) => ({
+    default: m.PurchaseByPurchaserReportPanel,
+  })),
+);
 
 /**
  * Общие панели закупа/склада/логистики в кабинетах `/o` и `/a`.
@@ -71,6 +76,16 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
         <Route index element={<PurchaseNakladnayaSection />} />
         <Route path=":documentId" element={<PurchaseNakladnayaDetailSection />} />
       </Route>
+      <Route
+        path="purchase-by-purchaser"
+        element={
+          <RequirePanel panel="purchaseByPurchaser">
+            <section className="birzha-card">
+              <PurchaseByPurchaserReportPanel />
+            </section>
+          </RequirePanel>
+        }
+      />
       <Route
         path="distribution"
         element={

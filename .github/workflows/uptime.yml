@@ -1,0 +1,53 @@
+# Внешний мониторинг production: сайт и БД доступны с интернета.
+# Алерт: упавший workflow → письмо GitHub (Settings → Notifications).
+# Опционально: секреты BIRZHA_TELEGRAM_BOT_TOKEN + BIRZHA_TELEGRAM_CHAT_ID → сообщение в Telegram.
+name: Uptime
+
+on:
+  schedule:
+    # Каждые 15 минут (у GitHub cron может сдвигаться на несколько минут).
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BIRZHA_PUBLIC_BASE: https://24birzha.ru
+    steps:
+      - name: Liveness /api/health
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 2 --retry-delay 5 --max-time 30 \
+            "${BIRZHA_PUBLIC_BASE}/api/health"
+          echo
+
+      - name: Readiness /api/health/ready (PostgreSQL)
+        run: |
+          set -euo pipefail
+          body="$(curl -fsS --retry 2 --retry-delay 5 --max-time 30 \
+            "${BIRZHA_PUBLIC_BASE}/api/health/ready")"
+          echo "$body"
+          echo "$body" | grep -q '"database":"ok"'
+
+      - name: Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.BIRZHA_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.BIRZHA_TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]]; then
+            echo "Telegram secrets not set — skip (GitHub email still applies)"
+            exit 0
+          fi
+          text="Биржа uptime FAIL: ${BIRZHA_PUBLIC_BASE}/api/health или /api/health/ready"
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${text}" \
+            >/dev/null
+          echo "Telegram notified"

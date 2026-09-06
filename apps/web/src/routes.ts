@@ -53,13 +53,19 @@ export function sharedOpsPath(cabinet: "operations" | "admin", segment: SharedOp
 }
 
 /** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
-export const ops = sharedOpsPaths(prefix.operations);
+export const ops = {
+  ...sharedOpsPaths(prefix.operations),
+  /** Зеркало отчёта закупщик × склад для manager (кабинет `/a` ему закрыт). */
+  purchaseByPurchaser: `${prefix.operations}/purchase-by-purchaser`,
+} as const;
 
 /** Справочники (склады, калибры) и meta — узкий круг. */
 export const adminRoutes = {
   /** Главная админки — сводка KPI. */
   home: prefix.admin,
   ...sharedOpsPaths(prefix.admin),
+  /** Отчёт: закупщик × склад за период (admin; у manager — зеркало в `/o`). */
+  purchaseByPurchaser: `${prefix.admin}/purchase-by-purchaser`,
   /** Настройки: справочники и сотрудники. */
   settings: `${prefix.admin}/settings`,
   settingsCatalog: `${prefix.admin}/settings/catalog`,
