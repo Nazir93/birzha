@@ -35,7 +35,8 @@ export default defineConfig({
         theme_color: "#18181b",
         background_color: "#18181b",
         display: "standalone",
-        orientation: "portrait-primary",
+        /** Книжная и альбомная — без принудительной блокировки. */
+        orientation: "any",
         lang: "ru",
         start_url: pwaStartUrl,
         scope: "/",
