@@ -24,6 +24,11 @@ export const purchaseByPurchaserReportQuerySchema = z
 
 export type PurchaseByPurchaserReportQuery = z.infer<typeof purchaseByPurchaserReportQuerySchema>;
 
+export type PurchaseByPurchaserReportOptions = {
+  /** Только накладные этого закупщика (поле purchaser / fallback author). */
+  onlyPurchaserUserId?: string;
+};
+
 export type PurchaseByPurchaserCell = {
   purchaserUserId: string | null;
   purchaserLogin: string;
@@ -235,13 +240,26 @@ export function buildPurchaseByPurchaserReport(
 export async function getPurchaseByPurchaserReport(
   db: DbClient,
   query: PurchaseByPurchaserReportQuery,
+  options?: PurchaseByPurchaserReportOptions,
 ): Promise<PurchaseByPurchaserReport> {
   const fromDate = new Date(`${query.from}T00:00:00.000Z`);
   const toDate = new Date(`${query.to}T00:00:00.000Z`);
+  const onlyId = options?.onlyPurchaserUserId?.trim();
+
+  const effectivePurchaser = sql`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`;
+
+  const periodFilters = [
+    gte(purchaseDocuments.docDate, fromDate),
+    lte(purchaseDocuments.docDate, toDate),
+  ] as const;
+  const where =
+    onlyId && onlyId.length > 0
+      ? and(...periodFilters, sql`${effectivePurchaser} = ${onlyId}`)
+      : and(...periodFilters);
 
   const rows = await db
     .select({
-      purchaserUserId: sql<string | null>`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`,
+      purchaserUserId: sql<string | null>`${effectivePurchaser}`,
       purchaserLogin: users.login,
       warehouseId: purchaseDocuments.warehouseId,
       warehouseName: warehouses.name,
@@ -252,15 +270,12 @@ export async function getPurchaseByPurchaserReport(
     })
     .from(purchaseDocuments)
     .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
-    .leftJoin(
-      users,
-      eq(users.id, sql`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`),
-    )
+    .leftJoin(users, eq(users.id, effectivePurchaser))
     .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
-    .where(and(gte(purchaseDocuments.docDate, fromDate), lte(purchaseDocuments.docDate, toDate)))
+    .where(where)
     .groupBy(
       purchaseDocuments.id,
-      sql`coalesce(${purchaseDocuments.purchaserUserId}, ${purchaseDocuments.createdByUserId})`,
+      effectivePurchaser,
       users.login,
       purchaseDocuments.warehouseId,
       warehouses.name,

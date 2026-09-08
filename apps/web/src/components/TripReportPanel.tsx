@@ -23,7 +23,7 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
-import { canCreateTrip, canAccessPanel, isFieldSellerOnly } from "../auth/role-panels.js";
+import { canCreateTrip, canAccessPanel, isFieldSellerOnly, isPurchaserScoped } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesByIdsQueryOptions,
@@ -80,6 +80,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     adminRoutes.purchaseByPurchaser,
     ops.purchaseByPurchaser,
   );
+  const purchaserScoped = Boolean(user && isPurchaserScoped(user));
+  /** Закупщик: массы отгрузки/недостачи без продаж и денег. */
+  const hideSalesAndMoney = purchaserScoped && viewContext === "default";
+  const purchaseReportLinkLabel = purchaserScoped ? "Мои закупки" : "Закупки по закупщикам";
+  const purchaseReportLinkNote = purchaserScoped
+    ? "сумма, кг и ящики по вашим накладным за период."
+    : "сумма, кг и ящики по закупщику и складу за период.";
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [tripId, setTripId] = useState<string | "">("");
@@ -296,10 +303,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
         <p className="no-print birzha-ui-sm" style={{ margin: "0 0 1rem", lineHeight: 1.5 }}>
           Другие отчёты:{" "}
           <Link to={purchaseByPurchaserPath} style={{ fontWeight: 600 }}>
-            Закупки по закупщикам
+            {purchaseReportLinkLabel}
           </Link>
           {" — "}
-          сумма, кг и ящики по закупщику и складу за период.
+          {purchaseReportLinkNote}
         </p>
       ) : null}
       {tripsQuery.isPending && (
@@ -496,39 +503,43 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     <td style={thtd}>{packageCountLabel(r.shipment.totalPackageCount)}</td>
                   </tr>
                 ) : null}
-                <tr>
-                  <td style={thtd}>Продажи, нетто</td>
-                  <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
-                </tr>
-                <tr>
-                  <td style={thtd}>Продажи, брутто</td>
-                  <td style={thtd}>
-                    {(() => {
-                      const net = BigInt(r.sales.totalGrams || "0");
-                      const pkgs = BigInt((r.sales.totalPackageCount ?? "0").trim() || "0");
-                      return gramsToKgLabel(saleGrossGramsFromNet(net, pkgs).toString());
-                    })()}{" "}
-                    кг
-                  </td>
-                </tr>
-                <tr>
-                  <td style={thtd}>Продажи, ящики</td>
-                  <td style={thtd}>{packageCountLabel(r.sales.totalPackageCount)}</td>
-                </tr>
-                <tr>
-                  <td style={thtd}>в т.ч. розница</td>
-                  <td style={thtd}>
-                    {gramsToKgLabel(r.sales.retailGrams)} кг · выручка{" "}
-                    {kopecksToRubLabel(r.sales.retailRevenueKopecks)} ₽
-                  </td>
-                </tr>
-                <tr>
-                  <td style={thtd}>в т.ч. опт</td>
-                  <td style={thtd}>
-                    {gramsToKgLabel(r.sales.wholesaleGrams)} кг · выручка{" "}
-                    {kopecksToRubLabel(r.sales.wholesaleRevenueKopecks)} ₽
-                  </td>
-                </tr>
+                {!hideSalesAndMoney ? (
+                  <>
+                    <tr>
+                      <td style={thtd}>Продажи, нетто</td>
+                      <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>Продажи, брутто</td>
+                      <td style={thtd}>
+                        {(() => {
+                          const net = BigInt(r.sales.totalGrams || "0");
+                          const pkgs = BigInt((r.sales.totalPackageCount ?? "0").trim() || "0");
+                          return gramsToKgLabel(saleGrossGramsFromNet(net, pkgs).toString());
+                        })()}{" "}
+                        кг
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>Продажи, ящики</td>
+                      <td style={thtd}>{packageCountLabel(r.sales.totalPackageCount)}</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>в т.ч. розница</td>
+                      <td style={thtd}>
+                        {gramsToKgLabel(r.sales.retailGrams)} кг · выручка{" "}
+                        {kopecksToRubLabel(r.sales.retailRevenueKopecks)} ₽
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>в т.ч. опт</td>
+                      <td style={thtd}>
+                        {gramsToKgLabel(r.sales.wholesaleGrams)} кг · выручка{" "}
+                        {kopecksToRubLabel(r.sales.wholesaleRevenueKopecks)} ₽
+                      </td>
+                    </tr>
+                  </>
+                ) : null}
                 <tr>
                   <td style={thtd}>Недостача (фикс.)</td>
                   <td style={thtd}>{gramsToKgLabel(r.shortage.totalGrams)} кг</td>
@@ -538,6 +549,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           </div>
           </BirzhaDisclosure>
 
+          {!hideSalesAndMoney ? (
+            <>
           <BirzhaDisclosure
             defaultOpen
             title={
@@ -716,6 +729,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </div>
             </BirzhaDisclosure>
           )}
+            </>
+          ) : null}
 
           <BirzhaDisclosure
             defaultOpen
@@ -726,7 +741,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             }
           >
             <div className="no-print birzha-clean-ops-row-actions" style={{ marginBottom: "0.35rem" }}>
-              {batchRows.length > 0 && (
+              {batchRows.length > 0 && !hideSalesAndMoney && (
                 <button
                   type="button"
                   className="birzha-btn"
@@ -737,7 +752,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </button>
               )}
             </div>
-          {reconciliationIssues.length > 0 && (
+          {reconciliationIssues.length > 0 && !hideSalesAndMoney && (
             <p role="status" className="birzha-callout-warning">
               <strong>Сверка строк с итогами:</strong> {reconciliationIssues.join("; ")} — проверьте данные или
               сообщите разработчикам.
@@ -759,27 +774,35 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     <th scope="col" style={thHead}>
                       Отгр., ящ.
                     </th>
-                    <th scope="col" style={thHead}>
-                      Прод., нетто кг
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Прод., брутто кг
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Прод., ящ.
-                    </th>
+                    {!hideSalesAndMoney ? (
+                      <>
+                        <th scope="col" style={thHead}>
+                          Прод., нетто кг
+                        </th>
+                        <th scope="col" style={thHead}>
+                          Прод., брутто кг
+                        </th>
+                        <th scope="col" style={thHead}>
+                          Прод., ящ.
+                        </th>
+                      </>
+                    ) : null}
                     <th scope="col" style={thHead}>
                       Недост., кг
                     </th>
-                    <th scope="col" style={thHead}>
-                      Остаток погруженного, кг
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Выручка
-                    </th>
-                    <th scope="col" style={thHead}>
-                      Нал / карта / долг
-                    </th>
+                    {!hideSalesAndMoney ? (
+                      <>
+                        <th scope="col" style={thHead}>
+                          Остаток погруженного, кг
+                        </th>
+                        <th scope="col" style={thHead}>
+                          Выручка
+                        </th>
+                        <th scope="col" style={thHead}>
+                          Нал / карта / долг
+                        </th>
+                      </>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -793,26 +816,34 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </td>
                       <td style={thtd}>{gramsToKgLabel(row.shippedG.toString())}</td>
                       <td style={thtd}>{packageCountLabel(row.shippedPackages)}</td>
-                      <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
-                      <td style={thtd}>
-                        {gramsToKgLabel(saleGrossGramsFromNet(row.soldG, row.soldPackages).toString())}
-                      </td>
-                      <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
+                      {!hideSalesAndMoney ? (
+                        <>
+                          <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
+                          <td style={thtd}>
+                            {gramsToKgLabel(saleGrossGramsFromNet(row.soldG, row.soldPackages).toString())}
+                          </td>
+                          <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
+                        </>
+                      ) : null}
                       <td style={thtd}>{gramsToKgLabel(row.shortageG.toString())}</td>
-                      <td
-                        className={row.netTransitG < 0n ? "birzha-text-danger" : undefined}
-                        style={{
-                          ...thtd,
-                          ...(row.netTransitG < 0n ? { fontWeight: 600 } : {}),
-                        }}
-                      >
-                        {gramsToKgLabel(row.netTransitG.toString())}
-                      </td>
-                      <td style={thtd}>{kopecksToRubLabel(row.revenueK.toString())} ₽</td>
-                      <td style={thtd}>
-                        {kopecksToRubLabel(row.cashK.toString())} / {kopecksToRubLabel(row.cardTransferK.toString())} /{" "}
-                        {kopecksToRubLabel(row.debtK.toString())}
-                      </td>
+                      {!hideSalesAndMoney ? (
+                        <>
+                          <td
+                            className={row.netTransitG < 0n ? "birzha-text-danger" : undefined}
+                            style={{
+                              ...thtd,
+                              ...(row.netTransitG < 0n ? { fontWeight: 600 } : {}),
+                            }}
+                          >
+                            {gramsToKgLabel(row.netTransitG.toString())}
+                          </td>
+                          <td style={thtd}>{kopecksToRubLabel(row.revenueK.toString())} ₽</td>
+                          <td style={thtd}>
+                            {kopecksToRubLabel(row.cashK.toString())} / {kopecksToRubLabel(row.cardTransferK.toString())} /{" "}
+                            {kopecksToRubLabel(row.debtK.toString())}
+                          </td>
+                        </>
+                      ) : null}
                     </tr>
                     );
                   })}
@@ -824,18 +855,26 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     </th>
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shippedG.toString())}</td>
                     <td style={thtd}>{packageCountLabel(batchAgg.shippedPackages)}</td>
-                    <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
-                    <td style={thtd}>
-                      {gramsToKgLabel(saleGrossGramsFromNet(batchAgg.soldG, batchAgg.soldPackages).toString())}
-                    </td>
-                    <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
+                    {!hideSalesAndMoney ? (
+                      <>
+                        <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
+                        <td style={thtd}>
+                          {gramsToKgLabel(saleGrossGramsFromNet(batchAgg.soldG, batchAgg.soldPackages).toString())}
+                        </td>
+                        <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
+                      </>
+                    ) : null}
                     <td style={thtd}>{gramsToKgLabel(batchAgg.shortageG.toString())}</td>
-                    <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>
-                    <td style={thtd}>{kopecksToRubLabel(batchAgg.revenueK.toString())} ₽</td>
-                    <td style={thtd}>
-                      {kopecksToRubLabel(batchAgg.cashK.toString())} / {kopecksToRubLabel(batchAgg.cardTransferK.toString())}{" "}
-                      / {kopecksToRubLabel(batchAgg.debtK.toString())}
-                    </td>
+                    {!hideSalesAndMoney ? (
+                      <>
+                        <td style={thtd}>{gramsToKgLabel(batchAgg.netTransitG.toString())}</td>
+                        <td style={thtd}>{kopecksToRubLabel(batchAgg.revenueK.toString())} ₽</td>
+                        <td style={thtd}>
+                          {kopecksToRubLabel(batchAgg.cashK.toString())} / {kopecksToRubLabel(batchAgg.cardTransferK.toString())}{" "}
+                          / {kopecksToRubLabel(batchAgg.debtK.toString())}
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
                 </tfoot>
               </table>

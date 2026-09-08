@@ -4,6 +4,8 @@ import { Navigate, Outlet, Route } from "react-router-dom";
 import { RedirectLoadingManifestRoute } from "./RedirectLoadingManifestRoute.js";
 import { RedirectSellerDispatchRoute } from "./RedirectSellerDispatchRoute.js";
 
+import { useAuth } from "../auth/auth-context.js";
+import { isPurchaserScoped } from "../auth/role-panels.js";
 import { RequirePanel } from "../components/RequirePanel.js";
 
 const TripReportPanel = lazy(() =>
@@ -44,6 +46,21 @@ const PurchaseByPurchaserReportPanel = lazy(() =>
     default: m.PurchaseByPurchaserReportPanel,
   })),
 );
+const PurchaserCabinetHome = lazy(() =>
+  import("../components/PurchaserCabinetHome.js").then((m) => ({ default: m.PurchaserCabinetHome })),
+);
+
+function OperationsCabinetIndex() {
+  const { user } = useAuth();
+  if (user && isPurchaserScoped(user)) {
+    return (
+      <section className="birzha-card">
+        <PurchaserCabinetHome />
+      </section>
+    );
+  }
+  return <Navigate to="reports" replace />;
+}
 
 /**
  * Общие панели закупа/склада/логистики в кабинетах `/o` и `/a`.
@@ -197,7 +214,7 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
           </RequirePanel>
         }
       />
-      {defaultIndex === "reports" ? <Route index element={<Navigate to="reports" replace />} /> : null}
+      {defaultIndex === "reports" ? <Route index element={<OperationsCabinetIndex />} /> : null}
     </>
   );
 }

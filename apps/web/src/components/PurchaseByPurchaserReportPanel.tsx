@@ -2,6 +2,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
+import { useAuth } from "../auth/auth-context.js";
+import { isPurchaserScoped } from "../auth/role-panels.js";
 import { purchaseByPurchaserReportQueryOptions } from "../query/core-list-queries.js";
 import { formatYmd } from "./BirzhaCalendarFields.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
@@ -35,11 +37,16 @@ const tdText: CSSProperties = { ...thtd, whiteSpace: "nowrap" };
 
 /**
  * Отчёт «закупщик × склад» за период по дате накладной.
- * Вход: из «Отчёты и рейсы» (не отдельный пункт сайдбара).
+ * У purchaser — только свои накладные («Мои закупки»).
  */
 export function PurchaseByPurchaserReportPanel() {
   const { pathname } = useLocation();
-  const reportsPath = adminAwarePathForPath(pathname, adminRoutes.reports, ops.reports);
+  const { user } = useAuth();
+  const purchaserScoped = Boolean(user && isPurchaserScoped(user));
+  const backPath = purchaserScoped
+    ? ops.home
+    : adminAwarePathForPath(pathname, adminRoutes.reports, ops.reports);
+  const backLabel = purchaserScoped ? "← Сводка" : "← Отчёты и рейсы";
   const initial = useMemo(() => defaultMonthRange(), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
@@ -54,18 +61,19 @@ export function PurchaseByPurchaserReportPanel() {
   return (
     <section className="birzha-section-shell" aria-labelledby="purchase-by-purchaser-h">
       <p className="birzha-ui-sm no-print" style={{ margin: "0 0 0.75rem" }}>
-        <Link to={reportsPath} style={{ fontWeight: 600 }}>
-          ← Отчёты и рейсы
+        <Link to={backPath} style={{ fontWeight: 600 }}>
+          {backLabel}
         </Link>
       </p>
 
       <header className="birzha-section-hero" style={{ marginBottom: "1rem" }}>
         <h2 id="purchase-by-purchaser-h" className="birzha-home-hero__title">
-          Закупки по закупщикам
+          {purchaserScoped ? "Мои закупки" : "Закупки по закупщикам"}
         </h2>
         <p className="birzha-ui-sm birzha-section-note" style={{ maxWidth: "40rem" }}>
-          Сколько каждый закупщик занёс на склад: сумма ₽, кг и ящики. Период — по дате
-          закупочной накладной.
+          {purchaserScoped
+            ? "Сколько вы занесли на склад: сумма ₽, кг и ящики. Период — по дате закупочной накладной."
+            : "Сколько каждый закупщик занёс на склад: сумма ₽, кг и ящики. Период — по дате закупочной накладной."}
         </p>
       </header>
 
@@ -91,7 +99,14 @@ export function PurchaseByPurchaserReportPanel() {
       </form>
 
       {q.isError ? (
-        <ErrorAlert message="Не удалось загрузить отчёт. Нужны права admin или manager." title="Отчёт" />
+        <ErrorAlert
+          message={
+            purchaserScoped
+              ? "Не удалось загрузить отчёт по вашим закупкам."
+              : "Не удалось загрузить отчёт. Нужны права admin или manager."
+          }
+          title="Отчёт"
+        />
       ) : null}
 
       {q.isFetching && !report ? (
@@ -131,7 +146,7 @@ export function PurchaseByPurchaserReportPanel() {
             defaultOpen
             title={
               <h3 id="pbp-cells" style={{ fontSize: "0.95rem", margin: 0 }}>
-                Закупщик × склад
+                {purchaserScoped ? "По складам" : "Закупщик × склад"}
               </h3>
             }
           >
@@ -139,9 +154,11 @@ export function PurchaseByPurchaserReportPanel() {
               <table style={{ ...tableStyle, minWidth: 640 }} aria-labelledby="pbp-cells">
                 <thead>
                   <tr>
-                    <th scope="col" style={thHead}>
-                      Закупщик
-                    </th>
+                    {!purchaserScoped ? (
+                      <th scope="col" style={thHead}>
+                        Закупщик
+                      </th>
+                    ) : null}
                     <th scope="col" style={thHead}>
                       Склад
                     </th>
@@ -162,14 +179,14 @@ export function PurchaseByPurchaserReportPanel() {
                 <tbody>
                   {report.cells.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ ...thtd, textAlign: "center" }}>
+                      <td colSpan={purchaserScoped ? 5 : 6} style={{ ...thtd, textAlign: "center" }}>
                         Нет накладных за период
                       </td>
                     </tr>
                   ) : (
                     report.cells.map((c) => (
                       <tr key={`${c.purchaserUserId ?? "none"}-${c.warehouseId}`}>
-                        <td style={tdText}>{c.purchaserLogin}</td>
+                        {!purchaserScoped ? <td style={tdText}>{c.purchaserLogin}</td> : null}
                         <td style={tdText}>{c.warehouseName}</td>
                         <td style={tdNum}>{c.documentCount}</td>
                         <td style={tdNum}>{kgLabel(c.totalKg)}</td>
@@ -183,62 +200,64 @@ export function PurchaseByPurchaserReportPanel() {
             </div>
           </BirzhaDisclosure>
 
-          <div style={{ marginTop: "1rem" }}>
-            <BirzhaDisclosure
-              defaultOpen
-              title={
-                <h3 id="pbp-by-purchaser" style={{ fontSize: "0.95rem", margin: 0 }}>
-                  Итого по закупщикам
-                </h3>
-              }
-            >
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="pbp-by-purchaser">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={thHead}>
-                        Закупщик
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Накл.
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Кг
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Ящ.
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Сумма, ₽
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.byPurchaser.map((p) => (
-                      <tr key={p.purchaserUserId ?? "none"}>
-                        <td style={tdText}>{p.purchaserLogin}</td>
-                        <td style={tdNum}>{p.documentCount}</td>
-                        <td style={tdNum}>{kgLabel(p.totalKg)}</td>
-                        <td style={tdNum}>{p.packageCount}</td>
-                        <td style={tdNum}>{kopecksToRubDisplay(p.totalKopecks)}</td>
-                      </tr>
-                    ))}
-                    {report.byPurchaser.length > 0 ? (
-                      <tr className="birzha-table-subtotal-row birzha-table-subtotal-row--emphasis">
-                        <th scope="row" style={thtd}>
-                          Всего
+          {!purchaserScoped ? (
+            <div style={{ marginTop: "1rem" }}>
+              <BirzhaDisclosure
+                defaultOpen
+                title={
+                  <h3 id="pbp-by-purchaser" style={{ fontSize: "0.95rem", margin: 0 }}>
+                    Итого по закупщикам
+                  </h3>
+                }
+              >
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                  <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="pbp-by-purchaser">
+                    <thead>
+                      <tr>
+                        <th scope="col" style={thHead}>
+                          Закупщик
                         </th>
-                        <td style={tdNum}>{report.grand.documentCount}</td>
-                        <td style={tdNum}>{kgLabel(report.grand.totalKg)}</td>
-                        <td style={tdNum}>{report.grand.packageCount}</td>
-                        <td style={tdNum}>{kopecksToRubDisplay(report.grand.totalKopecks)}</td>
+                        <th scope="col" style={thNum}>
+                          Накл.
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Кг
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Ящ.
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Сумма, ₽
+                        </th>
                       </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </BirzhaDisclosure>
-          </div>
+                    </thead>
+                    <tbody>
+                      {report.byPurchaser.map((p) => (
+                        <tr key={p.purchaserUserId ?? "none"}>
+                          <td style={tdText}>{p.purchaserLogin}</td>
+                          <td style={tdNum}>{p.documentCount}</td>
+                          <td style={tdNum}>{kgLabel(p.totalKg)}</td>
+                          <td style={tdNum}>{p.packageCount}</td>
+                          <td style={tdNum}>{kopecksToRubDisplay(p.totalKopecks)}</td>
+                        </tr>
+                      ))}
+                      {report.byPurchaser.length > 0 ? (
+                        <tr className="birzha-table-subtotal-row birzha-table-subtotal-row--emphasis">
+                          <th scope="row" style={thtd}>
+                            Всего
+                          </th>
+                          <td style={tdNum}>{report.grand.documentCount}</td>
+                          <td style={tdNum}>{kgLabel(report.grand.totalKg)}</td>
+                          <td style={tdNum}>{report.grand.packageCount}</td>
+                          <td style={tdNum}>{kopecksToRubDisplay(report.grand.totalKopecks)}</td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </BirzhaDisclosure>
+            </div>
+          ) : null}
 
           <div style={{ marginTop: "1rem" }}>
             <BirzhaDisclosure

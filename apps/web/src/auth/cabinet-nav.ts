@@ -3,6 +3,7 @@ import {
   canAccessCabinet,
   hrefForPanelInCabinet,
   isFieldSellerOnly,
+  isPurchaserScoped,
   NAV_PANEL_LABELS,
   adminSidebarPanelOrder,
   operationsPanelOrder,
@@ -79,6 +80,9 @@ export function buildCabinetNavEntries(
   if (cabinet === "admin") {
     out.push({ to: adminRoutes.home, label: "Сводка", key: "admin-home" });
   }
+  if (cabinet === "operations" && user && isPurchaserScoped(user)) {
+    out.push({ to: ops.home, label: "Сводка", key: "ops-home" });
+  }
   if (cabinet === "sales") {
     out.push({
       to: sales.home,
@@ -101,7 +105,9 @@ export function buildCabinetNavEntries(
           ? isFieldSellerOnly(user)
             ? "Отчёт по рейсу"
             : "Отчёты по рейсу"
-          : NAV_PANEL_LABELS[p];
+          : p === "purchaseByPurchaser" && isPurchaserScoped(user)
+            ? "Мои закупки"
+            : NAV_PANEL_LABELS[p];
       out.push({ to, label, key: p });
     }
   }
@@ -115,6 +121,9 @@ export function buildCabinetNavEntries(
 export function cabinetNavLinkUsesEnd(cabinet: CabinetId, to: string): boolean {
   if (cabinet === "admin") {
     return to === prefix.admin;
+  }
+  if (cabinet === "operations") {
+    return to === prefix.operations;
   }
   if (cabinet === "sales") {
     return to === prefix.sales;

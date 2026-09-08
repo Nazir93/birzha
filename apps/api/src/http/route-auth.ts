@@ -13,7 +13,7 @@ const REPORT_READ_ROLES = MVP_ROLE_CODES;
 const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
 
 /** Закрепить рейс за продавцом: узкое право без создания/закрытия рейсов. */
-const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "purchaser", "logistics"] as const;
+const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "logistics"] as const;
 
 /** Создание партии (закупка) — закуп + склад + руководство. */
 const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as const;
@@ -44,8 +44,11 @@ export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => v
 /** Управление учётными записями (`GET/POST /admin/users`) — только admin. */
 const USER_MANAGEMENT_ROLES = ["admin"] as const;
 
-/** Отчёт закупщик × склад — руководство. */
-const PURCHASE_PURCHASER_REPORT_ROLES = ["admin", "manager"] as const;
+/** Отчёт закупщик × склад — руководство + сам закупщик (ему API отдаёт только свои). */
+const PURCHASE_PURCHASER_REPORT_ROLES = ["admin", "manager", "purchaser"] as const;
+
+/** Сводка KPI админа — не для полевых ролей. */
+const DASHBOARD_SUMMARY_ROLES = ["admin", "manager"] as const;
 
 export type BusinessRouteAuth = {
   dataRead: AuthPreHandler[];
@@ -63,8 +66,10 @@ export type BusinessRouteAuth = {
   inventoryCatalogWrite: AuthPreHandler[];
   /** Список и создание пользователей — только admin. */
   userManagement: AuthPreHandler[];
-  /** GET /admin/purchase-by-purchaser — admin/manager. */
+  /** GET /admin/purchase-by-purchaser — admin/manager (+ purchaser, только свои). */
   purchasePurchaserReportRead: AuthPreHandler[];
+  /** GET /admin/dashboard-summary — admin/manager. */
+  dashboardSummaryRead: AuthPreHandler[];
 };
 
 const EMPTY_AUTH: BusinessRouteAuth = {
@@ -82,6 +87,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   inventoryCatalogWrite: [],
   userManagement: [],
   purchasePurchaserReportRead: [],
+  dashboardSummaryRead: [],
 };
 
 function requireGlobalRoles(allowed: readonly string[]): AuthPreHandler {
@@ -120,6 +126,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
     userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
     purchasePurchaserReportRead: [a, requireGlobalRoles(PURCHASE_PURCHASER_REPORT_ROLES)],
+    dashboardSummaryRead: [a, requireGlobalRoles(DASHBOARD_SUMMARY_ROLES)],
   };
 }
 

@@ -54,8 +54,10 @@ export function sharedOpsPath(cabinet: "operations" | "admin", segment: SharedOp
 
 /** Маршруты кабинета «операции» (закуп, склад, логист, приём, руководитель в поле). */
 export const ops = {
+  /** Сводка закупщика (корень `/o`); у остальных ролей индекс уходит в отчёты. */
+  home: prefix.operations,
   ...sharedOpsPaths(prefix.operations),
-  /** Зеркало отчёта закупщик × склад для manager (кабинет `/a` ему закрыт). */
+  /** Зеркало отчёта закупщик × склад для manager / purchaser (кабинет `/a` им закрыт). */
   purchaseByPurchaser: `${prefix.operations}/purchase-by-purchaser`,
 } as const;
 

@@ -12,6 +12,7 @@ import {
   defaultRouteForUser,
   hrefForPanelInCabinet,
   isFieldSellerOnly,
+  isPurchaserScoped,
   operationsPanelOrder,
   adminSidebarPanelOrder,
   postLoginRedirectPath,
@@ -102,7 +103,7 @@ describe("role-panels", () => {
     expect(defaultRouteForUser(userWithRoles("accountant"))).toBe(accounting.home);
     expect(defaultRouteForUser(userWithRoles("seller"))).toBe(sales.home);
     expect(defaultRouteForUser(userWithRoles("warehouse"))).toBe(ops.purchaseNakladnaya);
-    expect(defaultRouteForUser(userWithRoles("purchaser"))).toBe(ops.purchaseNakladnaya);
+    expect(defaultRouteForUser(userWithRoles("purchaser"))).toBe(ops.home);
     expect(defaultRouteForUser(userWithRoles("admin"))).toBe(adminRoutes.home);
   });
 
@@ -164,6 +165,28 @@ describe("role-panels", () => {
     expect(isFieldSellerOnly(null)).toBe(false);
   });
 
+  it("isPurchaserScoped: purchaser без admin/manager", () => {
+    expect(isPurchaserScoped(userWithRoles("purchaser"))).toBe(true);
+    expect(isPurchaserScoped(userWithRoles("purchaser", "warehouse"))).toBe(true);
+    expect(isPurchaserScoped(userWithRoles("purchaser", "manager"))).toBe(false);
+    expect(isPurchaserScoped(userWithRoles("admin"))).toBe(false);
+    expect(isPurchaserScoped(userWithRoles("warehouse"))).toBe(false);
+    expect(isPurchaserScoped(null)).toBe(false);
+  });
+
+  it("purchaser: без продаж, со сводкой своих закупок в сайдбаре", () => {
+    const u = userWithRoles("purchaser");
+    expect(canAccessPanel(u, "assignSeller")).toBe(false);
+    expect(canAccessPanel(u, "sellerDispatch")).toBe(false);
+    expect(canAccessPanel(u, "purchaseByPurchaser")).toBe(true);
+    expect(canAccessPanel(u, "nakladnaya")).toBe(true);
+    expect(canAccessPanel(u, "reports")).toBe(true);
+    const order = operationsPanelOrder(u);
+    expect(order).toContain("purchaseByPurchaser");
+    expect(order).not.toContain("assignSeller");
+    expect(order.indexOf("purchaseByPurchaser")).toBeGreaterThan(order.indexOf("nakladnaya"));
+  });
+
   it("без глобальных ролей — только отчёты", () => {
     const u = { id: "x", login: "x", roles: [] as { roleCode: string; scopeType: string; scopeId: string }[] };
     expect(canAccessPanel(u, "reports")).toBe(true);
@@ -209,12 +232,13 @@ describe("role-panels", () => {
     expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
   });
 
-  it("purchaseByPurchaser — доступ есть, в сайдбаре нет (вход из Отчётов)", () => {
+  it("purchaseByPurchaser — admin/manager/purchaser; в сайдбаре только у purchaser", () => {
     expect(canAccessPanel(userWithRoles("admin"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("manager"), "purchaseByPurchaser")).toBe(true);
-    expect(canAccessPanel(userWithRoles("purchaser"), "purchaseByPurchaser")).toBe(false);
+    expect(canAccessPanel(userWithRoles("purchaser"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("warehouse"), "purchaseByPurchaser")).toBe(false);
     expect(adminSidebarPanelOrder(userWithRoles("admin"))).not.toContain("purchaseByPurchaser");
     expect(operationsPanelOrder(userWithRoles("manager"))).not.toContain("purchaseByPurchaser");
+    expect(operationsPanelOrder(userWithRoles("purchaser"))).toContain("purchaseByPurchaser");
   });
 });

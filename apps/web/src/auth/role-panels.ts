@@ -54,8 +54,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   reports: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller", "accountant"],
   /** Закуп / склад / логист; без бухгалтера и отдельного кабинета для продавца. */
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
-  /** Сводка закупщик × склад — только руководство (как API). */
-  purchaseByPurchaser: ["admin", "manager"],
+  /** Сводка закупщик × склад — руководство; закупщик видит только свои. */
+  purchaseByPurchaser: ["admin", "manager", "purchaser"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   warehouseReturns: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingAppend: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
@@ -64,8 +64,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   archive: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   loadingManifests: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
-  sellerDispatch: ["admin", "manager", "purchaser", "logistics"],
-  assignSeller: ["admin", "manager", "purchaser", "logistics"],
+  sellerDispatch: ["admin", "manager", "logistics"],
+  assignSeller: ["admin", "manager", "logistics"],
   /** Склады и калибры — только admin (согласовано с API). */
   inventory: ["admin"],
   /** Учётные записи (логин/роль) — как `userManagement` на API. */
@@ -111,6 +111,24 @@ export function isFieldSellerOnly(user: AuthUser | null): boolean {
     return false;
   }
   return isSellerOnly(globalRoleCodes(user));
+}
+
+/**
+ * Закупщик без руководства: сводка и отчёт только по своим накладным;
+ * без панелей продаж и без денег в отчёте рейса.
+ */
+export function isPurchaserScoped(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  if (!codes.has("purchaser")) {
+    return false;
+  }
+  if (codes.has("admin") || codes.has("manager")) {
+    return false;
+  }
+  return true;
 }
 
 export type CabinetId = "admin" | "operations" | "sales" | "accounting";
@@ -339,11 +357,19 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   if (isSellerOnly(codes)) {
     return ["reports", "archive"];
   }
+  let order = base;
+  if (isPurchaserScoped(user)) {
+    order = base.filter((p) => p !== "assignSeller");
+    const naklIdx = order.indexOf("nakladnaya");
+    if (naklIdx >= 0) {
+      order = [...order.slice(0, naklIdx + 1), "purchaseByPurchaser", ...order.slice(naklIdx + 1)];
+    }
+  }
   if (codes.has("logistics")) {
-    const rest = base.filter((p) => p !== "reports");
+    const rest = order.filter((p) => p !== "reports");
     return ["reports", ...rest];
   }
-  return base;
+  return order;
 }
 
 /** Боковое меню `/a`: закупка и распределение в начале, как в `/o`. */
@@ -482,7 +508,10 @@ export function defaultRouteForUser(user: AuthUser | null): string {
   }
   if (c === "operations") {
     const codes = globalRoleCodes(user);
-    if ((codes.has("warehouse") || codes.has("purchaser")) && canAccessPanel(user, "nakladnaya")) {
+    if (isPurchaserScoped(user)) {
+      return ops.home;
+    }
+    if (codes.has("warehouse") && canAccessPanel(user, "nakladnaya")) {
       return ops.purchaseNakladnaya;
     }
     return ops.reports;
