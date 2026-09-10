@@ -177,6 +177,7 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(409).send({
       error: "product_grade_code_conflict",
       code: error.code,
+      productGroup: error.productGroup,
     });
   }
   if (error instanceof PurchaseLineTotalMismatchError) {

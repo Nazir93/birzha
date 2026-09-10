@@ -210,14 +210,16 @@ describe("recordTripShortageBodySchema", () => {
 });
 
 describe("createProductGradeBodySchema", () => {
-  it("принимает код и подпись", () => {
+  it("принимает код, подпись и товар", () => {
     const r = createProductGradeBodySchema.parse({
       code: "№9",
       displayName: "Калибр №9",
       sortOrder: 9,
+      productGroup: "Помидоры",
     });
     expect(r.code).toBe("№9");
     expect(r.sortOrder).toBe(9);
+    expect(r.productGroup).toBe("Помидоры");
   });
 
   it("принимает группу товара", () => {
@@ -227,6 +229,15 @@ describe("createProductGradeBodySchema", () => {
       productGroup: "Огурцы",
     });
     expect(r.productGroup).toBe("Огурцы");
+  });
+
+  it("требует productGroup", () => {
+    expect(() =>
+      createProductGradeBodySchema.parse({
+        code: "№9",
+        displayName: "Калибр №9",
+      }),
+    ).toThrow();
   });
 });
 

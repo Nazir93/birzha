@@ -1,5 +1,5 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { apiDelete, apiDeleteOr403, apiPostJson, apiPostJsonOr403 } from "../api/fetch-api.js";
@@ -279,6 +279,17 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
 
   const gradesQ = useQuery({ ...productGradesFullListQueryOptions(), enabled });
 
+  const existingProductGroups = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of gradesQ.data?.productGrades ?? []) {
+      const pg = (g.productGroup ?? "").trim();
+      if (pg) {
+        set.add(pg);
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "ru"));
+  }, [gradesQ.data?.productGrades]);
+
   const createWarehouse = useMutation({
     mutationFn: async () => {
       setWarehouseFormError(null);
@@ -311,14 +322,18 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
       setGradeFormError(null);
       const code = newGradeCode.trim();
       const displayName = newGradeDisplayName.trim();
+      const productGroup = newGradeProductGroup.trim();
+      if (!productGroup) {
+        throw new Error("Укажите товар (например Помидоры или Огурцы)");
+      }
       if (!code || !displayName) {
         throw new Error("Укажите код калибра и подпись (как на накладной)");
       }
-      const body: { code: string; displayName: string; sortOrder?: number; productGroup?: string } = { code, displayName };
-      const pg = newGradeProductGroup.trim();
-      if (pg) {
-        body.productGroup = pg;
-      }
+      const body: { code: string; displayName: string; productGroup: string; sortOrder?: number } = {
+        code,
+        displayName,
+        productGroup,
+      };
       const so = newGradeSortOrder.trim();
       if (so) {
         const n = Number(so.replace(",", "."));
@@ -332,7 +347,6 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
     onSuccess: () => {
       setNewGradeCode("");
       setNewGradeDisplayName("");
-      setNewGradeProductGroup("");
       setNewGradeSortOrder("");
       invalidate();
     },
@@ -396,7 +410,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           className={sectionTabClassName(activeSection === "grades")}
           onClick={() => setActiveSection("grades")}
         >
-          Калибры
+          Товары и калибры
         </button>
         {shipDestEnabled ? (
           <button
@@ -808,7 +822,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           title={
             <span className="birzha-disclosure__title-stack">
               <span className="birzha-section-heading__eyebrow">Справочник</span>
-              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Калибры (сорта)</span>
+              <span style={{ fontSize: "0.95rem", margin: 0, fontWeight: 600 }}>Товары и калибры</span>
             </span>
           }
         >
@@ -816,20 +830,31 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
       {gradesQ.isPending && (
         <LoadingBlock label="Загрузка калибров…" minHeight={48} skeleton skeletonRows={3} />
       )}
+      <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.75rem", maxWidth: "40rem" }}>
+        Сначала укажите товар (Помидоры, Огурцы…), затем вид/калибр. Один и тот же код (например НС+)
+        можно завести у разных товаров.
+      </p>
       <div className="birzha-inventory-inline-tools birzha-inventory-inline-tools--grades">
         <input
           value={newGradeProductGroup}
           onChange={(e) => setNewGradeProductGroup(e.target.value)}
           style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-          placeholder="Группа (опц.)"
+          placeholder="Товар *"
+          list="inv-product-group-options"
           autoComplete="off"
-          aria-label="Группа товара"
+          aria-label="Товар"
+          required
         />
+        <datalist id="inv-product-group-options">
+          {existingProductGroups.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
         <input
           value={newGradeCode}
           onChange={(e) => setNewGradeCode(e.target.value)}
           style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-          placeholder="Код"
+          placeholder="Код вида *"
           autoComplete="off"
           aria-label="Код калибра"
         />
@@ -837,7 +862,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
           value={newGradeDisplayName}
           onChange={(e) => setNewGradeDisplayName(e.target.value)}
           style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-          placeholder="Подпись"
+          placeholder="Подпись *"
           autoComplete="off"
           aria-label="Подпись калибра"
         />
@@ -864,30 +889,35 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
         <table style={{ ...tableStyle, minWidth: 560 }}>
           <thead>
             <tr>
+              <th style={thHeadDense}>Товар</th>
               <th style={thHeadDense}>Код</th>
               <th style={thHeadDense}>Название</th>
-              <th style={thHeadDense}>Группа</th>
               <th style={thHeadDense} />
             </tr>
           </thead>
           <tbody>
             {(gradesQ.data?.productGrades ?? [])
               .slice()
-              .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru"))
+              .sort(
+                (a, b) =>
+                  (a.productGroup ?? "").localeCompare(b.productGroup ?? "", "ru") ||
+                  a.sortOrder - b.sortOrder ||
+                  a.code.localeCompare(b.code, "ru"),
+              )
               .map((g) => (
                 <tr key={g.id}>
+                  <td style={thtdDense}>{g.productGroup ?? "—"}</td>
                   <td style={thtdDense}>
                     <code style={{ fontSize: "0.82rem" }}>{g.code}</code>
                   </td>
                   <td style={thtdDense}>{g.displayName}</td>
-                  <td style={thtdDense}>{g.productGroup ?? "—"}</td>
                   <td style={thtdDense}>
                     <button
                       type="button"
                       className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                       disabled={deleteProductGrade.isPending}
                       onClick={() => {
-                        if (window.confirm(`Удалить калибр «${g.code}»?`)) {
+                        if (window.confirm(`Удалить калибр «${g.code}» (${g.productGroup ?? "без товара"})?`)) {
                           void deleteProductGrade.mutate(g.id);
                         }
                       }}

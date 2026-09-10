@@ -191,14 +191,16 @@ export class WarehouseNameConflictError extends Error {
   }
 }
 
-/** Код калибра уже занят (уникальный `product_grades.code`). */
+/** Код калибра уже занят у этого товара (`product_grades` unique product_group+code). */
 export class ProductGradeCodeConflictError extends Error {
   readonly code: string;
+  readonly productGroup: string;
 
-  constructor(code: string) {
-    super(`Код калибра уже занят: ${code}`);
+  constructor(code: string, productGroup: string) {
+    super(`Код калибра уже занят у товара «${productGroup}»: ${code}`);
     this.name = "ProductGradeCodeConflictError";
     this.code = code;
+    this.productGroup = productGroup;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

@@ -7,14 +7,14 @@ export type ProductGradeRecord = {
   sortOrder: number;
 };
 
-/** Новая строка справочника калибров (код как на накладной, уникален). */
+/** Новая строка справочника калибров (код уникален внутри товара). */
 export type CreateProductGradeInput = {
   code: string;
   displayName: string;
   /** Порядок в списке; по умолчанию сервер подставит значение. */
   sortOrder?: number;
-  /** Опционально: группа товара (одинаковая строка — одна группа в выпадающем списке). */
-  productGroup?: string | null;
+  /** Товар (одинаковая строка — одна группа в выпадающем списке). */
+  productGroup: string;
 };
 
 export interface ProductGradeRepository {

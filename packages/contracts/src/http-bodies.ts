@@ -105,13 +105,13 @@ export const createCounterpartyBodySchema = z.object({
   displayName: z.string().min(1).max(200).trim(),
 });
 
-/** POST /product-grades — калибр / строка накладной (`code` как на бумаге, уникален). */
+/** POST /product-grades — калибр внутри товара (`code` уникален в паре с `productGroup`). */
 export const createProductGradeBodySchema = z.object({
   code: z.string().min(1).max(64).trim(),
   displayName: z.string().min(1).max(200).trim(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
-  /** Группа номенклатуры (помидоры, огурцы, перец…); у разных товаров разные калибры. */
-  productGroup: z.string().min(1).max(120).trim().optional(),
+  /** Товар (помидоры, огурцы, перец…) — обязателен; у разных товаров свои калибры. */
+  productGroup: z.string().min(1).max(120).trim(),
 });
 
 /** POST /warehouses — склад поступления (название произвольное; код — латиница, уникальный, опционально). */

@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, date, integer, numeric, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  date,
+  integer,
+  numeric,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 /** Склад поступления (Манас, Каякент и т.д.). */
 export const warehouses = pgTable("warehouses", {
@@ -8,16 +19,23 @@ export const warehouses = pgTable("warehouses", {
   name: text("name").notNull(),
 });
 
-/** Коммерческий калибр / код строки накладной (№5, НС-, …). Опционально `product_group` — вид товара (помидоры, огурцы…). */
-export const productGrades = pgTable("product_grades", {
-  id: text("id").primaryKey(),
-  code: text("code").notNull().unique(),
-  displayName: text("display_name").notNull(),
-  /** Группа номенклатуры для списка в накладной (у разных товаров разные калибры). */
-  productGroup: text("product_group"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  isActive: boolean("is_active").notNull().default(true),
-});
+/**
+ * Коммерческий калибр / код строки накладной (№5, НС-, Корнишон…).
+ * `product_group` — товар (помидоры, огурцы…); код уникален внутри группы.
+ */
+export const productGrades = pgTable(
+  "product_grades",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    displayName: text("display_name").notNull(),
+    /** Товар для списка в накладной (у разных товаров свои калибры). */
+    productGroup: text("product_group"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+  },
+  (t) => [uniqueIndex("product_grades_product_group_code_uidx").on(t.productGroup, t.code)],
+);
 
 /**
  * Тепличники / поставщики закупки (справочник из админки; на ЗН выбирается или создаётся новый).

@@ -11,7 +11,7 @@ import type {
   ProductGradeRepository,
 } from "../../application/ports/product-grade-repository.port.js";
 
-/** Совпадает с сидом миграции `0011_purchase_nakladnaya`; без PostgreSQL список можно дополнять через `create`. */
+/** Совпадает с сидом миграций `0011` + `0013` + `0032`; без PostgreSQL список можно дополнять через `create`. */
 const SEED: readonly ProductGradeRecord[] = [
   { id: "pg-n5", code: "№5", displayName: "Калибр №5", productGroup: "Помидоры", sortOrder: 5 },
   { id: "pg-n6", code: "№6", displayName: "Калибр №6", productGroup: "Помидоры", sortOrder: 6 },
@@ -20,6 +20,12 @@ const SEED: readonly ProductGradeRecord[] = [
   { id: "pg-nsp", code: "НС+", displayName: "НС+", productGroup: "Помидоры", sortOrder: 20 },
   { id: "pg-nsm", code: "НС-", displayName: "НС-", productGroup: "Помидоры", sortOrder: 21 },
   { id: "pg-om", code: "Ом.", displayName: "Ом.", productGroup: "Помидоры", sortOrder: 30 },
+  { id: "pg-cu-cornishon", code: "Корнишон", displayName: "Корнишон", productGroup: "Огурцы", sortOrder: 1 },
+  { id: "pg-cu-euro-msk", code: "Евро Москва", displayName: "Евро Москва", productGroup: "Огурцы", sortOrder: 2 },
+  { id: "pg-cu-krupnye", code: "крупные", displayName: "крупные", productGroup: "Огурцы", sortOrder: 4 },
+  { id: "pg-cu-matovy", code: "матовый", displayName: "матовый", productGroup: "Огурцы", sortOrder: 5 },
+  { id: "pg-cu-nsp", code: "НС+", displayName: "НС+", productGroup: "Огурцы", sortOrder: 20 },
+  { id: "pg-cu-nsm", code: "НС-", displayName: "НС-", productGroup: "Огурцы", sortOrder: 21 },
 ];
 
 let memory: ProductGradeRecord[] | null = null;
@@ -52,15 +58,10 @@ export class StaticProductGradeRepository implements ProductGradeRepository {
     const code = input.code.trim();
     const displayName = input.displayName.trim();
     const sortOrder = input.sortOrder ?? 100;
-    const productGroup =
-      input.productGroup === undefined || input.productGroup === null
-        ? null
-        : input.productGroup.trim() === ""
-          ? null
-          : input.productGroup.trim();
+    const productGroup = input.productGroup.trim();
     const rows = getRows();
-    if (rows.some((g) => g.code === code)) {
-      throw new ProductGradeCodeConflictError(code);
+    if (rows.some((g) => g.code === code && (g.productGroup ?? "") === productGroup)) {
+      throw new ProductGradeCodeConflictError(code, productGroup);
     }
     const id = `pg-${randomUUID()}`;
     const rec: ProductGradeRecord = { id, code, displayName, productGroup, sortOrder };

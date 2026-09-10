@@ -24,15 +24,18 @@ export function productGradeOptionLabel(code: string, displayName: string): stri
 }
 
 /**
- * Ключ суммирования продаж в отчётах: только калибр, без номера накладной и партии.
- * Две партии «№5» из разных закупок дают одну строку.
+ * Ключ суммирования продаж в отчётах: товар + калибр (без номера накладной и партии).
+ * Две партии «Помидоры · №5» из разных закупок дают одну строку; огуречный «НС+» не смешивается с помидорным.
  */
 export function salesCaliberAggregateKey(batch: BatchListItem | undefined, batchId = ""): string {
   const code = batch?.nakladnaya?.productGradeCode?.trim();
+  const group = batch?.nakladnaya?.productGroup?.trim();
+  if (code && group) {
+    return `${group.toLowerCase()}::${code.toLowerCase()}`;
+  }
   if (code) {
     return code.toLowerCase();
   }
-  const group = batch?.nakladnaya?.productGroup?.trim();
   if (group) {
     return `group:${group.toLowerCase()}`;
   }

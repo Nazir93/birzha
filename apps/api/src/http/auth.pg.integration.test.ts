@@ -303,7 +303,13 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
       method: "POST",
       url: "/product-grades",
       headers: { authorization: `Bearer ${adminTok}` },
-      payload: { id: gradeId, code: `№${Math.floor(Math.random() * 90) + 10}`, displayName: "Auth grade", sortOrder: 1 },
+      payload: {
+        id: gradeId,
+        code: `№${Math.floor(Math.random() * 90) + 10}`,
+        displayName: "Auth grade",
+        sortOrder: 1,
+        productGroup: "Помидоры",
+      },
     });
     expect(gradeCreate.statusCode).toBe(201);
     const createdGrade = JSON.parse(gradeCreate.body) as { productGrade: { id: string } };
