@@ -46,7 +46,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
       docDate: "2026-04-16",
       warehouseId: "wh-manas",
       supplierName: "Поставщик",
-      buyerLabel: "",
       purchaserUserId: "u-purchaser",
       extraCostKopecks: "0",
       lines: [
@@ -73,7 +72,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
         docDate: "2026-04-16",
         warehouseId: "wh-1",
         supplierName: "  ",
-        buyerLabel: "",
         purchaserUserId: "u-purchaser",
         extraCostKopecks: "0",
         lines: [
@@ -95,7 +93,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
         docDate: "2026-04-16",
         warehouseId: "wh-1",
         supplierName: "Поставщик",
-        buyerLabel: "",
         purchaserUserId: "",
         extraCostKopecks: "0",
         lines: [
@@ -116,7 +113,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
       docDate: "2026-04-16",
       warehouseId: "wh-1",
       supplierName: "ООО Ромашка",
-      buyerLabel: "",
       purchaserUserId: "u-purchaser",
       extraCostKopecks: "0",
       lines: [
@@ -139,7 +135,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
         docDate: "2026-04-16",
         warehouseId: "wh-1",
         supplierName: "Поставщик",
-        buyerLabel: "",
         purchaserUserId: "u-purchaser",
         extraCostKopecks: "0",
         lines: [
@@ -160,7 +155,6 @@ describe("parseCreatePurchaseDocumentForm", () => {
       docDate: "2026-04-16",
       warehouseId: "wh-1",
       supplierName: "Поставщик",
-      buyerLabel: "",
       purchaserUserId: "u-purchaser",
       extraCostKopecks: "100,50",
       lines: [

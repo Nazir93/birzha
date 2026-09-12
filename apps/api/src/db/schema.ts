@@ -58,7 +58,6 @@ export const purchaseDocuments = pgTable("purchase_documents", {
   supplierName: text("supplier_name"),
   /** Ссылка на справочник тепличников; `supplier_name` — снимок названия на момент создания. */
   supplierId: text("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
-  buyerLabel: text("buyer_label"),
   warehouseId: text("warehouse_id")
     .notNull()
     .references(() => warehouses.id),

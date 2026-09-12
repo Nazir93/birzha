@@ -43,11 +43,9 @@ export const createPurchaseDocumentBodySchema = z.object({
   supplierName: z.string().max(300).optional(),
   /** Id тепличника из справочника; если задан — имя берётся из справочника. */
   supplierId: z.string().min(1).max(64).optional(),
-  buyerLabel: z.string().max(300).optional(),
   warehouseId: z.string().min(1).max(64),
   /**
    * Сотрудник-закупщик (`users.id`). Если не передан — сервер подставляет JWT `sub`.
-   * Не путать с `buyerLabel` (свободная подпись «Покупатель»).
    */
   purchaserUserId: z.string().min(1).max(64).optional(),
   extraCostKopecks: z.number().int().nonnegative().optional().default(0),

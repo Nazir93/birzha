@@ -112,7 +112,6 @@ export function PurchaseNakladnayaSection() {
   const [warehouseId, setWarehouseId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
-  const [buyerLabel, setBuyerLabel] = useState("");
   const [purchaserUserId, setPurchaserUserId] = useState("");
   const [extraCostKopecks, setExtraCostKopecks] = useState("0");
   const [lines, setLines] = useState<LineDraft[]>(() => [emptyLine()]);
@@ -143,7 +142,6 @@ export function PurchaseNakladnayaSection() {
         warehouseId,
         supplierName,
         supplierId,
-        buyerLabel,
         purchaserUserId,
         extraCostKopecks,
         lines,
@@ -437,10 +435,6 @@ export function PurchaseNakladnayaSection() {
               })),
             ]}
           />
-        </label>
-        <label className="birzha-form-label">
-          Покупатель / подпись (опц.)
-          <input value={buyerLabel} onChange={(e) => setBuyerLabel(e.target.value)} style={fieldStyle} />
         </label>
       </div>
 

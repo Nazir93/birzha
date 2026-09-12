@@ -342,7 +342,6 @@ export function parseCreatePurchaseDocumentForm(input: {
   warehouseId: string;
   supplierName: string;
   supplierId?: string;
-  buyerLabel: string;
   purchaserUserId: string;
   extraCostKopecks: string;
   lines: Array<{
@@ -440,10 +439,6 @@ export function parseCreatePurchaseDocumentForm(input: {
     const sid = input.supplierId?.trim();
     if (sid) {
       payload.supplierId = sid;
-    }
-    const buy = input.buyerLabel.trim();
-    if (buy) {
-      payload.buyerLabel = buy;
     }
     return createPurchaseDocumentBodySchema.parse(payload);
   });

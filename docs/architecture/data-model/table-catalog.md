@@ -12,7 +12,7 @@
 |-------------------------|-------------------------------|
 | Склады | Таблица **`warehouses`** (`id`, `code`, `name`); сид складов Манас / Каякент |
 | Калибры / коды строк накладной | Таблица **`product_grades`** (`code` — №5…№8, НС−, НС+, Ом.) |
-| Закупочный документ | **`purchase_documents`**: шапка (`document_number`, `doc_date`, `warehouse_id`, `extra_cost_kopecks`, опционально `supplier_name`, `buyer_label`) |
+| Закупочный документ | **`purchase_documents`**: шапка (`document_number`, `doc_date`, `warehouse_id`, `extra_cost_kopecks`, опционально `supplier_name`, `purchaser_user_id`) |
 | Строки закупки → партии | **`purchase_document_lines`**: связь с **`product_grades`**, **`batches`** (одна строка — одна партия), масса в **`quantity_grams`**, сумма строки в копейках, **`package_count`** |
 | Партия | **`batches`**: как в разделе ниже по домену (граммы, состояния), плюс опционально **`warehouse_id`** — склад поступления из накладной |
 

@@ -368,11 +368,6 @@ export function PurchaseNakladnayaDetailSection() {
             <strong>Закупщик:</strong> {doc.purchaserLogin ?? doc.purchaserUserId}
           </div>
         ) : null}
-        {doc.buyerLabel && (
-          <div>
-            <strong>Покупатель / подпись:</strong> {doc.buyerLabel}
-          </div>
-        )}
         {totals && totals.extraKop > 0 && (
           <div>
             <strong>Доп. расходы:</strong> {kopecksToRubLabel(String(doc.extraCostKopecks))} ₽

@@ -74,7 +74,6 @@ export class CreatePurchaseDocumentUseCase {
       docDate: parseIsoDateOnly(body.docDate),
       supplierName,
       supplierId,
-      buyerLabel: body.buyerLabel?.trim() || null,
       warehouseId: body.warehouseId,
       extraCostKopecks: BigInt(body.extraCostKopecks ?? 0),
       createdByUserId: createdBy && createdBy.length > 0 ? createdBy : null,

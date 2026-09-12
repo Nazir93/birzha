@@ -144,7 +144,6 @@ export class InMemoryPurchaseDocumentRepository implements PurchaseDocumentRepos
       docDate: formatHeaderDate(header.docDate),
       supplierName: header.supplierName,
       supplierId: header.supplierId ?? null,
-      buyerLabel: header.buyerLabel,
       warehouseId: header.warehouseId,
       extraCostKopecks: header.extraCostKopecks.toString(),
       createdAt: null,

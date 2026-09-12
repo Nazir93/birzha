@@ -49,7 +49,7 @@ Next.js по умолчанию не используем.
 | `POST` | `/warehouses` | `name`, опционально `code` (латиница, уник.) — новый склад (**201** `{ warehouse }`); конфликт кода — **409** `warehouse_code_conflict` |
 | `GET` | `/product-grades` | — справочник калибров / кодов строк накладной (`id`, `code`, `displayName`, `sortOrder`), только **активные** |
 | `POST` | `/product-grades` | `code`, `displayName`, опционально `sortOrder` (0–9999) — новый калибр (**201** `{ productGrade }`); конфликт кода — **409** `product_grade_code_conflict` |
-| `POST` | `/purchase-documents` | Закупочная накладная: шапка (`documentNumber`, `docDate`, `warehouseId`, опционально `id`, `supplierName`, `buyerLabel`, `extraCostKopecks`) и **`lines`**: `productGradeId`, `totalKg`, `pricePerKg`, `lineTotalKopecks` (сверка с кг×ценой в копейках, допуск ±1 коп.), опционально `packageCount`. **Одна строка → одна партия** на складе. **201** `{ documentId }` |
+| `POST` | `/purchase-documents` | Закупочная накладная: шапка (`documentNumber`, `docDate`, `warehouseId`, опционально `id`, `supplierName`, `purchaserUserId`, `extraCostKopecks`) и **`lines`**: `productGradeId`, `totalKg`, `pricePerKg`, `lineTotalKopecks` (сверка с кг×ценой в копейках, допуск ±1 коп.), опционально `packageCount`. **Одна строка → одна партия** на складе. **201** `{ documentId }` |
 | `GET` | `/purchase-documents` | — краткий список накладных |
 | `GET` | `/purchase-documents/:documentId` | — накладная со строками (калибр, партия, суммы) |
 | `GET` | `/batches` | — список партий; при PostgreSQL: **`nakladnaya`** (калибр, накладная) и при необходимости **`allocation`**: `qualityTier`, `destination` |
