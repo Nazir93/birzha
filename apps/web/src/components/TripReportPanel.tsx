@@ -280,6 +280,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     const csv = tripBatchRowsToCsv(batchRows, {
       tripNumber: r.trip.tripNumber,
       batchCaption: (batchId) => formatBatchPartyCaption(batchById.get(batchId), batchId),
+      productGroupForBatch: (batchId) => batchById.get(batchId)?.nakladnaya?.productGroup,
     });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -513,9 +514,14 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <td style={thtd}>Продажи, брутто</td>
                       <td style={thtd}>
                         {(() => {
-                          const net = BigInt(r.sales.totalGrams || "0");
-                          const pkgs = BigInt((r.sales.totalPackageCount ?? "0").trim() || "0");
-                          return gramsToKgLabel(saleGrossGramsFromNet(net, pkgs).toString());
+                          let gross = 0n;
+                          for (const line of r.sales.byBatch) {
+                            const net = BigInt(line.grams || "0");
+                            const pkgs = BigInt((line.packageCount ?? "0").trim() || "0");
+                            const pg = batchById.get(line.batchId)?.nakladnaya?.productGroup;
+                            gross += saleGrossGramsFromNet(net, pkgs, pg);
+                          }
+                          return gramsToKgLabel(gross.toString());
                         })()}{" "}
                         кг
                       </td>
@@ -658,7 +664,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
                         <td style={thtd}>
-                          {gramsToKgLabel(saleGrossGramsFromNet(row.grams, row.packages).toString())}
+                          {gramsToKgLabel(
+                            saleGrossGramsFromNet(row.grams, row.packages, row.productGroup).toString(),
+                          )}
                         </td>
                         <td style={thtd}>{packageCountLabel(row.packages)}</td>
                         {!fieldSellerSalesReport ? (
@@ -820,7 +828,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <>
                           <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
                           <td style={thtd}>
-                            {gramsToKgLabel(saleGrossGramsFromNet(row.soldG, row.soldPackages).toString())}
+                            {gramsToKgLabel(
+                              saleGrossGramsFromNet(
+                                row.soldG,
+                                row.soldPackages,
+                                batchMeta?.nakladnaya?.productGroup,
+                              ).toString(),
+                            )}
                           </td>
                           <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
                         </>
@@ -859,7 +873,20 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <>
                         <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
                         <td style={thtd}>
-                          {gramsToKgLabel(saleGrossGramsFromNet(batchAgg.soldG, batchAgg.soldPackages).toString())}
+                          {gramsToKgLabel(
+                            batchRows
+                              .reduce(
+                                (s, row) =>
+                                  s +
+                                  saleGrossGramsFromNet(
+                                    row.soldG,
+                                    row.soldPackages,
+                                    batchById.get(row.batchId)?.nakladnaya?.productGroup,
+                                  ),
+                                0n,
+                              )
+                              .toString(),
+                          )}
                         </td>
                         <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
                       </>

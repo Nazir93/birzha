@@ -13,6 +13,7 @@ function bi(x: string | undefined): bigint {
 
 export type TripSalesByProductLineRow = {
   lineLabel: string;
+  productGroup: string | null;
   grams: bigint;
   packages: bigint;
   revenue: bigint;
@@ -39,6 +40,7 @@ export function aggregateTripSalesByProductLine(
     if (!row) {
       row = {
         lineLabel: salesCaliberLineLabel(b, key),
+        productGroup: b?.nakladnaya?.productGroup?.trim() || null,
         grams: 0n,
         packages: 0n,
         revenue: 0n,

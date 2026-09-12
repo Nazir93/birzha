@@ -17,7 +17,7 @@ import {
   sellerCaliberGroupKey,
 } from "../format/seller-trip-caliber-groups.js";
 import { buildSellerSellChunks, sellerSellPlanBlockReason } from "../format/seller-sell-chunk-plan.js";
-import { sellerNetKgDisplayFromGross, sellerNetKgFromGrossInput } from "../format/seller-gross-net.js";
+import { sellerNetKgDisplayFromGross, sellerNetKgFromGrossInput, sellerNetFromGrossHint } from "../format/seller-gross-net.js";
 import { randomUuid } from "../lib/random-uuid.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -404,6 +404,7 @@ export function SellFromTripSection() {
     hasShipped: boolean;
     hasPkgData: boolean;
     subUnitPackages: boolean;
+    productGroup: string | null;
   } | null => {
     if (!sellBatchId) {
       return null;
@@ -417,6 +418,7 @@ export function SellFromTripSection() {
     }
     const netG = group?.totalNetG ?? row.netTransitG;
     const b = batchByIdForSell.get(row.batchId);
+    const productGroup = b?.nakladnaya?.productGroup?.trim() || null;
     const estPkg = group
       ? group.rows.reduce(
           (s, r) => s + estimateNetTransitPackageCountForSell(r, batchByIdForSell.get(r.batchId)),
@@ -434,6 +436,7 @@ export function SellFromTripSection() {
       hasShipped: group ? group.rows.some((r) => r.shippedG > 0n) : row.shippedG > 0n,
       hasPkgData,
       subUnitPackages: hasPkgData && netG > 0n && estPkg === 0n,
+      productGroup,
     };
   }, [sellBatchId, sellableOnTripRows, batchByIdForSell, selectedSellerCaliberGroup]);
 
@@ -442,8 +445,8 @@ export function SellFromTripSection() {
     if (!sellSelectionSummary?.hasPkgData) {
       return sellKg;
     }
-    return sellerNetKgDisplayFromGross(sellKg, sellPackages);
-  }, [sellKg, sellPackages, sellSelectionSummary?.hasPkgData]);
+    return sellerNetKgDisplayFromGross(sellKg, sellPackages, sellSelectionSummary.productGroup);
+  }, [sellKg, sellPackages, sellSelectionSummary?.hasPkgData, sellSelectionSummary?.productGroup]);
 
   const sellDealTotalKopecks = useMemo(
     () =>
@@ -469,7 +472,11 @@ export function SellFromTripSection() {
     let kgNum = Number(sellKg.replace(",", "."));
     if (sellPackages.trim()) {
       try {
-        kgNum = sellerNetKgFromGrossInput(sellKg, Number.parseInt(sellPackages.trim(), 10));
+        kgNum = sellerNetKgFromGrossInput(
+          sellKg,
+          Number.parseInt(sellPackages.trim(), 10),
+          sellSelectionSummary.productGroup,
+        );
       } catch {
         kgNum = NaN;
       }
@@ -482,6 +489,7 @@ export function SellFromTripSection() {
   }, [
     sellSelectionSummary?.hasPkgData,
     sellSelectionSummary?.estPkg,
+    sellSelectionSummary?.productGroup,
     sellBatchId,
     sellKg,
     sellPackages,
@@ -581,7 +589,7 @@ export function SellFromTripSection() {
         return "Количество ящиков должно быть больше нуля";
       }
       try {
-        sellerNetKgFromGrossInput(sellKg, n);
+        sellerNetKgFromGrossInput(sellKg, n, sellSelectionSummary.productGroup);
       } catch (e) {
         return e instanceof Error ? e.message : "Проверьте брутто и ящики";
       }
@@ -593,7 +601,13 @@ export function SellFromTripSection() {
       let kgForPlan = sellKg;
       if (sellSelectionSummary?.hasPkgData) {
         try {
-          kgForPlan = String(sellerNetKgFromGrossInput(sellKg, Number.parseInt(sellPackages.trim(), 10)));
+          kgForPlan = String(
+            sellerNetKgFromGrossInput(
+              sellKg,
+              Number.parseInt(sellPackages.trim(), 10),
+              sellSelectionSummary.productGroup,
+            ),
+          );
         } catch {
           return null;
         }
@@ -631,6 +645,7 @@ export function SellFromTripSection() {
     sellPrice,
     sellBatchId,
     sellSelectionSummary?.hasPkgData,
+    sellSelectionSummary?.productGroup,
     sellNetKgForDeal,
     sellableOnTripRows,
     batchByIdForSell,
@@ -699,7 +714,11 @@ export function SellFromTripSection() {
       let kgForApi = sellKg;
       if (requirePackageCount) {
         kgForApi = String(
-          sellerNetKgFromGrossInput(sellKg, Number.parseInt(sellPackages.trim(), 10)),
+          sellerNetKgFromGrossInput(
+            sellKg,
+            Number.parseInt(sellPackages.trim(), 10),
+            sellSelectionSummary?.productGroup,
+          ),
         );
       }
       const { batchId, body } = parseSellFromTripForm({
@@ -1074,7 +1093,10 @@ export function SellFromTripSection() {
           />
           <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.55rem" }} role="status">
             Нетто, кг: <strong>{sellNetKgForDeal || "—"}</strong>
-            <span className="birzha-text-muted"> (брутто − 0,5×ящ.)</span>
+            <span className="birzha-text-muted">
+              {" "}
+              ({sellerNetFromGrossHint(sellSelectionSummary.productGroup)})
+            </span>
           </p>
         </>
       ) : null}
