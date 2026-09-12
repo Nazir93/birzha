@@ -39,15 +39,21 @@ export function PwaUpdateBanner() {
 
   return (
     <div className="birzha-pwa-toast no-print" role="status" aria-live="polite">
-      <span className="birzha-pwa-toast__text">
+      <p className="birzha-pwa-toast__text">
         Доступна новая версия. Обновите, чтобы получить последние изменения.
-      </span>
-      <button type="button" className="birzha-btn-ghost birzha-pwa-toast__btn" onClick={() => void updateServiceWorker(true)}>
-        Обновить
-      </button>
-      <button type="button" className="birzha-btn-ghost birzha-pwa-toast__btn" onClick={() => setNeedRefresh(false)}>
-        Позже
-      </button>
+      </p>
+      <div className="birzha-pwa-toast__actions">
+        <button
+          type="button"
+          className="birzha-btn-ghost birzha-pwa-toast__btn"
+          onClick={() => void updateServiceWorker(true)}
+        >
+          Обновить
+        </button>
+        <button type="button" className="birzha-btn-ghost birzha-pwa-toast__btn" onClick={() => setNeedRefresh(false)}>
+          Позже
+        </button>
+      </div>
     </div>
   );
 }

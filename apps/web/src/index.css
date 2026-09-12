@@ -123,7 +123,10 @@ label,
   }
 
   .birzha-pwa-toast {
-    max-width: min(calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)), 52rem);
+    max-width: min(
+      calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)),
+      28rem
+    );
   }
 }
 
@@ -142,6 +145,7 @@ label,
   border: 1px solid var(--color-border);
   font-size: 0.88rem;
   line-height: 1.45;
+  box-sizing: border-box;
 }
 
 .birzha-pwa-install {
@@ -151,17 +155,18 @@ label,
 }
 
 .birzha-pwa-toast {
-  top: 50%;
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  transform: translate(-50%, -50%);
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  top: auto;
+  transform: none;
   z-index: 9999;
   display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.55rem;
-  max-width: min(calc(100vw - 24px), 52rem);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  width: auto;
+  max-width: min(28rem, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
   text-align: left;
 }
 
@@ -171,10 +176,18 @@ label,
 
 .birzha-pwa-toast__text {
   margin: 0;
-  flex: 1 1 auto;
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
+}
+
+.birzha-pwa-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .birzha-pwa-toast__btn {
@@ -186,6 +199,17 @@ label,
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .birzha-pwa-toast {
+    top: 50%;
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: min(28rem, calc(100vw - 24px));
+  }
 }
 
 html[data-birzha-theme="dark"] .birzha-pwa-install,
