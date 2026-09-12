@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { Batch } from "@birzha/domain";
+import { Batch, tareGramsPerPackageForProductGroup } from "@birzha/domain";
 import {
   type ReplacePurchaseDocumentLinesBody,
   numberToDecimalStringForKopecks,
@@ -122,6 +122,7 @@ export class ReplacePurchaseDocumentLinesUseCase {
       const mass = resolvePurchaseLineMass({
         grossKg: row.grossKg,
         packageCount: row.packageCount,
+        tareGramsPerPackage: tareGramsPerPackageForProductGroup(grade.productGroup),
       });
       const expected = expectedLineKopecks(mass.netKg, row.pricePerKg);
       if (!lineTotalsMatch(expected, row.lineTotalKopecks)) {

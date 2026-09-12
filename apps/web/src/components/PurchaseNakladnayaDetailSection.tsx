@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import { putPurchaseDocumentLines } from "../api/fetch-api.js";
-import type { ProductGradeJson, PurchaseDocumentLineDetail } from "../api/types.js";
+import type { PurchaseDocumentLineDetail } from "../api/types.js";
 import {
   purchaseDocumentDetailQueryOptions,
   productGradesFullListQueryOptions,
@@ -19,12 +19,17 @@ import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canManageInventoryCatalog } from "../auth/role-panels.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
+import {
+  groupProductGradesByProduct,
+  productGroupOptionsFromGradeGroups,
+} from "../format/product-grade-groups.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import {
-  NAKLADNAYA_NET_FROM_GROSS_HINT,
   nakladnayaLineSumFieldFromGrossKgPrice,
+  nakladnayaNetFromGrossHint,
   nakladnayaNetKgFieldFromGross,
   purchaseLineDisplayGrossKg,
+  tareGramsForNakladnayaProductGroup,
 } from "../format/purchase-nakladnaya-line-sum.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
@@ -43,6 +48,7 @@ import { btnClassSpaced, fieldStyle, selectFieldStyle, successText, thHeadDense,
 type EditLineDraft = {
   key: string;
   batchId?: string;
+  productGroup: string;
   productGradeId: string;
   /** Брутто, кг (с весов). */
   grossKg: string;
@@ -53,10 +59,13 @@ type EditLineDraft = {
 
 function lineToDraft(line: PurchaseDocumentLineDetail): EditLineDraft {
   const kop = Number(line.lineTotalKopecks);
-  const gross = purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount);
+  const productGroup = (line.productGroup ?? "").trim();
+  const tare = tareGramsForNakladnayaProductGroup(productGroup);
+  const gross = purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount, tare);
   return {
     key: line.batchId || randomUuid(),
     batchId: line.batchId,
+    productGroup,
     productGradeId: line.productGradeId,
     grossKg: String(gross).replace(".", ","),
     packageCount: line.packageCount?.trim() ?? "",
@@ -70,6 +79,7 @@ function lineToDraft(line: PurchaseDocumentLineDetail): EditLineDraft {
 function emptyEditLine(): EditLineDraft {
   return {
     key: randomUuid(),
+    productGroup: "",
     productGradeId: "",
     grossKg: "",
     packageCount: "",
@@ -140,7 +150,8 @@ export function PurchaseNakladnayaDetailSection() {
     let totalPackages = 0;
     let lineKopSum = 0;
     for (const line of d.lines) {
-      totalGrossKg += purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount);
+      const tare = tareGramsForNakladnayaProductGroup(line.productGroup);
+      totalGrossKg += purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount, tare);
       totalNetKg += line.totalKg;
       totalPackages += linePackageCountForNakladnayaSum(line.packageCount ?? "");
       lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
@@ -158,10 +169,11 @@ export function PurchaseNakladnayaDetailSection() {
     for (const line of editLines) {
       const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
       const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
+      const tare = tareGramsForNakladnayaProductGroup(line.productGroup);
       if (Number.isFinite(gross) && gross > 0) {
         totalGrossKg += gross;
         try {
-          totalNetKg += netKgFromGrossKg(gross, pkgs);
+          totalNetKg += netKgFromGrossKg(gross, pkgs, tare);
         } catch {
           /* нетто ≤ 0 — в итог нетто не включаем */
         }
@@ -186,41 +198,21 @@ export function PurchaseNakladnayaDetailSection() {
     });
   }, [docQ.data?.lines]);
 
-  const gradeOptionGroups = useMemo(() => {
-    const list = (gradesQ.data?.productGrades ?? []).slice();
-    list.sort((a, b) => {
-      const ga = (a.productGroup ?? "").trim();
-      const gb = (b.productGroup ?? "").trim();
-      if (ga !== gb) {
-        if (ga === "") return 1;
-        if (gb === "") return -1;
-        return ga.localeCompare(gb, "ru");
-      }
-      return a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru");
-    });
-    const byKey = new Map<string, ProductGradeJson[]>();
-    for (const g of list) {
-      const groupKey = (g.productGroup ?? "").trim() || "";
-      if (!byKey.has(groupKey)) {
-        byKey.set(groupKey, []);
-      }
-      byKey.get(groupKey)!.push(g);
-    }
-    const keys = [...byKey.keys()].sort((a, b) => {
-      if (a === "" && b !== "") return 1;
-      if (b === "" && a !== "") return -1;
-      return a.localeCompare(b, "ru");
-    });
-    return keys.map((k) => ({
-      key: k || "__empty__",
-      label: k === "" ? "Без группы товара" : k,
-      grades: byKey.get(k)!,
-    }));
-  }, [gradesQ.data?.productGrades]);
+  const gradeOptionGroups = useMemo(
+    () => groupProductGradesByProduct(gradesQ.data?.productGrades ?? []),
+    [gradesQ.data?.productGrades],
+  );
+  const productOptions = useMemo(
+    () => productGroupOptionsFromGradeGroups(gradeOptionGroups),
+    [gradeOptionGroups],
+  );
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const body = parseReplacePurchaseDocumentLinesForm(editLines);
+      const body = parseReplacePurchaseDocumentLinesForm(
+        editLines,
+        gradesQ.data?.productGrades,
+      );
       await putPurchaseDocumentLines(
         id,
         body,
@@ -252,11 +244,19 @@ export function PurchaseNakladnayaDetailSection() {
           return l;
         }
         const next = { ...l, ...patch };
-        if ("grossKg" in patch || "packageCount" in patch || "pricePerKg" in patch) {
+        if (
+          "grossKg" in patch ||
+          "packageCount" in patch ||
+          "pricePerKg" in patch ||
+          "productGroup" in patch ||
+          "productGradeId" in patch
+        ) {
+          const tare = tareGramsForNakladnayaProductGroup(next.productGroup);
           next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
             next.grossKg,
             next.packageCount,
             next.pricePerKg,
+            tare,
           );
         }
         return next;
@@ -390,7 +390,10 @@ export function PurchaseNakladnayaDetailSection() {
                   <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
                   <th className="birzha-nakl-lines-table__num">Брутто, кг</th>
                   <th className="birzha-nakl-lines-table__num">Ящики</th>
-                  <th className="birzha-nakl-lines-table__num" title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+                  <th
+                    className="birzha-nakl-lines-table__num"
+                    title="Нетто = брутто − тара×ящ. (помидоры 0,5; огурцы 0,4)"
+                  >
                     Нетто, кг
                   </th>
                   <th className="birzha-nakl-lines-table__num">₽/кг</th>
@@ -407,21 +410,44 @@ export function PurchaseNakladnayaDetailSection() {
                 {editLines.map((line) => (
                   <tr key={line.key}>
                     <td className="birzha-nakl-lines-table__grade-cell" data-label="Товар / калибр">
-                      <BirzhaSelect
-                        value={line.productGradeId}
-                        onChange={(v) => updateLine(line.key, { productGradeId: v })}
-                        className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
-                        style={{ ...selectFieldStyle, marginTop: 0 }}
-                        disabled={gradesQ.isPending}
-                        placeholder={gradesQ.isPending ? "Загрузка…" : "— выберите —"}
-                        groups={gradeOptionGroups.map((grp) => ({
-                          label: grp.label,
-                          options: grp.grades.map((g) => ({
+                      <div className="birzha-nakl-line-grade-stack">
+                        <BirzhaSelect
+                          value={line.productGroup}
+                          onChange={(v) =>
+                            updateLineWithAutoSum(line.key, {
+                              productGroup: v,
+                              productGradeId: "",
+                            })
+                          }
+                          className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                          style={{ ...selectFieldStyle, marginTop: 0 }}
+                          disabled={gradesQ.isPending}
+                          placeholder={gradesQ.isPending ? "Загрузка…" : "— товар —"}
+                          aria-label="Товар"
+                          options={productOptions}
+                        />
+                        <BirzhaSelect
+                          value={line.productGradeId}
+                          onChange={(v) => updateLineWithAutoSum(line.key, { productGradeId: v })}
+                          className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                          style={{ ...selectFieldStyle, marginTop: 0 }}
+                          disabled={gradesQ.isPending || !line.productGroup}
+                          placeholder={
+                            !line.productGroup
+                              ? "Сначала товар"
+                              : gradesQ.isPending
+                                ? "Загрузка…"
+                                : "— калибр —"
+                          }
+                          aria-label="Калибр"
+                          options={(
+                            gradeOptionGroups.find((g) => g.label === line.productGroup)?.grades ?? []
+                          ).map((g) => ({
                             value: g.id,
                             label: productGradeOptionLabel(g.code, g.displayName),
-                          })),
-                        }))}
-                      />
+                          }))}
+                        />
+                      </div>
                     </td>
                     <td className="birzha-nakl-lines-table__num-cell" data-label="Брутто, кг">
                       <input
@@ -446,12 +472,18 @@ export function PurchaseNakladnayaDetailSection() {
                     </td>
                     <td className="birzha-nakl-lines-table__num-cell" data-label="Нетто, кг">
                       <input
-                        value={nakladnayaNetKgFieldFromGross(line.grossKg, line.packageCount)}
+                        value={nakladnayaNetKgFieldFromGross(
+                          line.grossKg,
+                          line.packageCount,
+                          tareGramsForNakladnayaProductGroup(line.productGroup),
+                        )}
                         readOnly
                         tabIndex={-1}
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                         style={fieldStyle}
-                        title={NAKLADNAYA_NET_FROM_GROSS_HINT}
+                        title={nakladnayaNetFromGrossHint(
+                          tareGramsForNakladnayaProductGroup(line.productGroup),
+                        )}
                         aria-label="Нетто, кг"
                       />
                     </td>
@@ -504,7 +536,7 @@ export function PurchaseNakladnayaDetailSection() {
                   </td>
                   <td
                     className="birzha-nakl-lines-table__total-cell"
-                    title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+                    title="Сумма нетто (брутто − тара×ящ.: помидоры 0,5; огурцы 0,4)"
                   >
                     {editNetKgLabel}{" "}
                     <span className="birzha-text-muted birzha-text-muted--xs">кг</span>
@@ -563,10 +595,13 @@ export function PurchaseNakladnayaDetailSection() {
               <thead>
                 <tr>
                   <th style={thHeadDense}>№</th>
-                  <th style={thHeadDense}>Калибр</th>
+                  <th style={thHeadDense}>Товар / калибр</th>
                   <th style={thHeadDense}>Брутто, кг</th>
                   <th style={thHeadDense}>Ящики</th>
-                  <th style={thHeadDense} title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+                  <th
+                    style={thHeadDense}
+                    title="Нетто = брутто − тара×ящ. (помидоры 0,5; огурцы 0,4)"
+                  >
                     Нетто, кг
                   </th>
                   <th style={thHeadDense}>₽/кг</th>
@@ -577,9 +612,18 @@ export function PurchaseNakladnayaDetailSection() {
                 {displayLines.map((line) => (
                   <tr key={`${line.lineNo}-${line.batchId}`}>
                     <td style={thtdDense}>{line.lineNo}</td>
-                    <td style={thtdDense}>{line.productGradeCode}</td>
                     <td style={thtdDense}>
-                      {purchaseLineDisplayGrossKg(line.grossKg, line.totalKg, line.packageCount)}
+                      {line.productGroup
+                        ? `${line.productGroup} / ${line.productGradeCode}`
+                        : line.productGradeCode}
+                    </td>
+                    <td style={thtdDense}>
+                      {purchaseLineDisplayGrossKg(
+                        line.grossKg,
+                        line.totalKg,
+                        line.packageCount,
+                        tareGramsForNakladnayaProductGroup(line.productGroup),
+                      )}
                     </td>
                     <td style={thtdDense}>{line.packageCount ?? "—"}</td>
                     <td style={thtdDense}>{line.totalKg}</td>
@@ -604,7 +648,7 @@ export function PurchaseNakladnayaDetailSection() {
                     </td>
                     <td
                       style={{ ...thtdDense, fontWeight: 600 }}
-                      title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+                      title="Сумма нетто (брутто − тара×ящ.: помидоры 0,5; огурцы 0,4)"
                     >
                       {totalNetKgLabel}{" "}
                       <span className="birzha-text-muted birzha-text-muted--sm">кг</span>

@@ -20,7 +20,7 @@ import {
   users,
 } from "../../db/schema.js";
 import { gramsToKg } from "../../application/units/mass.js";
-import { grossGramsFromNet } from "@birzha/domain";
+import { grossGramsFromNet, tareGramsPerPackageForProductGroup } from "@birzha/domain";
 
 import { DrizzleBatchRepository } from "./drizzle-batch.repository.js";
 
@@ -214,6 +214,7 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       .select({
         line: purchaseDocumentLines,
         gradeCode: productGrades.code,
+        productGroup: productGrades.productGroup,
       })
       .from(purchaseDocumentLines)
       .innerJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
@@ -232,17 +233,23 @@ export class DrizzlePurchaseDocumentRepository implements PurchaseDocumentReposi
       createdByUserId: doc.createdByUserId ?? null,
       purchaserUserId: doc.purchaserUserId ?? null,
       purchaserLogin: row.purchaserLogin ?? null,
-      lines: lineRows.map(({ line, gradeCode }) => ({
-        lineNo: line.lineNo,
-        productGradeId: line.productGradeId,
-        productGradeCode: gradeCode,
-        batchId: line.batchId,
-        totalKg: gramsToKg(line.quantityGrams),
-        grossKg: gramsToKg(line.grossQuantityGrams ?? grossGramsFromNet(line.quantityGrams, line.packageCount)),
-        packageCount: line.packageCount === null ? null : line.packageCount.toString(),
-        pricePerKg: Number(line.pricePerKg),
-        lineTotalKopecks: line.lineTotalKopecks.toString(),
-      })),
+      lines: lineRows.map(({ line, gradeCode, productGroup }) => {
+        const tare = tareGramsPerPackageForProductGroup(productGroup);
+        return {
+          lineNo: line.lineNo,
+          productGradeId: line.productGradeId,
+          productGradeCode: gradeCode,
+          productGroup: productGroup ?? null,
+          batchId: line.batchId,
+          totalKg: gramsToKg(line.quantityGrams),
+          grossKg: gramsToKg(
+            line.grossQuantityGrams ?? grossGramsFromNet(line.quantityGrams, line.packageCount, tare),
+          ),
+          packageCount: line.packageCount === null ? null : line.packageCount.toString(),
+          pricePerKg: Number(line.pricePerKg),
+          lineTotalKopecks: line.lineTotalKopecks.toString(),
+        };
+      }),
     };
   }
 }

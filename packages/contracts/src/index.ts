@@ -25,8 +25,11 @@ export type {
 export {
   grossKgFromNetKg,
   netKgFromGrossKg,
+  PRODUCT_GROUP_CUCUMBERS,
+  TARE_GRAMS_CUCUMBERS_PER_PACKAGE,
   TARE_GRAMS_PER_PACKAGE,
   TARE_KG_PER_PACKAGE,
+  tareGramsPerPackageForProductGroup,
 } from "./package-tare.js";
 export {
   nonnegativeDecimalStringToNumber,

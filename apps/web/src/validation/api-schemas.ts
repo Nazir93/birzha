@@ -14,6 +14,7 @@ import {
   replacePurchaseDocumentLinesBodySchema,
   sellFromTripBodySchema,
   shipBodySchema,
+  tareGramsPerPackageForProductGroup,
   updateTripSaleBodySchema,
 } from "@birzha/contracts";
 import type { CreatePurchaseDocumentBody, ReplacePurchaseDocumentLinesBody } from "@birzha/contracts";
@@ -346,12 +347,16 @@ export function parseCreatePurchaseDocumentForm(input: {
   extraCostKopecks: string;
   lines: Array<{
     productGradeId: string;
+    /** Товар (для тары ящика); если нет — смотрим productGrades. */
+    productGroup?: string;
     /** Брутто, кг (с весов). */
     grossKg: string;
     packageCount: string;
     pricePerKg: string;
     lineTotalKopecks: string;
   }>;
+  /** Справочник калибров — чтобы взять productGroup / тару. */
+  productGrades?: Array<{ id: string; productGroup: string | null }>;
 }): CreatePurchaseDocumentBody {
   return mapZod(() => {
     const extraTrim = input.extraCostKopecks.trim();
@@ -364,12 +369,17 @@ export function parseCreatePurchaseDocumentForm(input: {
       throw new Error("Доп. расходы: неотрицательная сумма");
     }
     const extraCostKopecks = extraParsed;
+    const gradesById = new Map((input.productGrades ?? []).map((g) => [g.id, g]));
 
     const lines = input.lines.map((row, idx) => {
       const productGradeId = row.productGradeId.trim();
       if (!productGradeId) {
         throw new Error(`Строка ${idx + 1}: выберите калибр`);
       }
+      const groupFromGrade = gradesById.get(productGradeId)?.productGroup;
+      const productGroup = (row.productGroup ?? groupFromGrade ?? "").trim();
+      const tareGrams = tareGramsPerPackageForProductGroup(productGroup || null);
+      const tareKgLabel = String(tareGrams / 1000).replace(".", ",");
       const grossKg = nonnegativeDecimalStringToNumber(row.grossKg, 6);
       const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
       if (!Number.isFinite(grossKg) || grossKg <= 0) {
@@ -390,10 +400,10 @@ export function parseCreatePurchaseDocumentForm(input: {
         packageCount = parsed;
       }
       try {
-        netKgFromGrossKg(grossKg, packageCount ?? 0);
+        netKgFromGrossKg(grossKg, packageCount ?? 0, tareGrams);
       } catch {
         throw new Error(
-          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус 0,5 кг × ящики). Уменьшите ящики или увеличьте брутто.`,
+          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус ${tareKgLabel} кг × ящики). Уменьшите ящики или увеличьте брутто.`,
         );
       }
       const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());
@@ -449,18 +459,25 @@ export function parseReplacePurchaseDocumentLinesForm(
   lines: Array<{
     batchId?: string;
     productGradeId: string;
+    productGroup?: string;
     grossKg: string;
     packageCount: string;
     pricePerKg: string;
     lineTotalKopecks: string;
   }>,
+  productGrades?: Array<{ id: string; productGroup: string | null }>,
 ): ReplacePurchaseDocumentLinesBody {
   return mapZod(() => {
+    const gradesById = new Map((productGrades ?? []).map((g) => [g.id, g]));
     const parsed = lines.map((row, idx) => {
       const productGradeId = row.productGradeId.trim();
       if (!productGradeId) {
         throw new Error(`Строка ${idx + 1}: выберите калибр`);
       }
+      const groupFromGrade = gradesById.get(productGradeId)?.productGroup;
+      const productGroup = (row.productGroup ?? groupFromGrade ?? "").trim();
+      const tareGrams = tareGramsPerPackageForProductGroup(productGroup || null);
+      const tareKgLabel = String(tareGrams / 1000).replace(".", ",");
       const grossKg = nonnegativeDecimalStringToNumber(row.grossKg, 6);
       const pricePerKg = nonnegativeDecimalStringToNumber(row.pricePerKg, 4);
       if (!Number.isFinite(grossKg) || grossKg <= 0) {
@@ -481,10 +498,10 @@ export function parseReplacePurchaseDocumentLinesForm(
         packageCount = p;
       }
       try {
-        netKgFromGrossKg(grossKg, packageCount ?? 0);
+        netKgFromGrossKg(grossKg, packageCount ?? 0, tareGrams);
       } catch {
         throw new Error(
-          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус 0,5 кг × ящики). Уменьшите ящики или увеличьте брутто.`,
+          `Строка ${idx + 1}: нетто ≤ 0 (брутто минус ${tareKgLabel} кг × ящики). Уменьшите ящики или увеличьте брутто.`,
         );
       }
       const lineK = kopecksFromNakladnayaAmountField(row.lineTotalKopecks.trim());

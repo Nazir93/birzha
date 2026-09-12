@@ -1813,6 +1813,14 @@ a.birzha-kpi-tile--link:focus-visible {
   font-size: 0.82rem;
 }
 
+.birzha-nakl-line-grade-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+}
+
 .birzha-nakl-line-field--numeric {
   width: 4.9rem;
 }

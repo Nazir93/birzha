@@ -22,8 +22,8 @@ const SEED: readonly ProductGradeRecord[] = [
   { id: "pg-om", code: "Ом.", displayName: "Ом.", productGroup: "Помидоры", sortOrder: 30 },
   { id: "pg-cu-cornishon", code: "Корнишон", displayName: "Корнишон", productGroup: "Огурцы", sortOrder: 1 },
   { id: "pg-cu-euro-msk", code: "Евро Москва", displayName: "Евро Москва", productGroup: "Огурцы", sortOrder: 2 },
-  { id: "pg-cu-krupnye", code: "крупные", displayName: "крупные", productGroup: "Огурцы", sortOrder: 4 },
-  { id: "pg-cu-matovy", code: "матовый", displayName: "матовый", productGroup: "Огурцы", sortOrder: 5 },
+  { id: "pg-cu-krupnye", code: "Крупные", displayName: "Крупные", productGroup: "Огурцы", sortOrder: 4 },
+  { id: "pg-cu-matovy", code: "Матовый", displayName: "Матовый", productGroup: "Огурцы", sortOrder: 5 },
   { id: "pg-cu-nsp", code: "НС+", displayName: "НС+", productGroup: "Огурцы", sortOrder: 20 },
   { id: "pg-cu-nsm", code: "НС-", displayName: "НС-", productGroup: "Огурцы", sortOrder: 21 },
 ];

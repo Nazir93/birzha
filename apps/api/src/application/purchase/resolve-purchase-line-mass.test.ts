@@ -12,6 +12,16 @@ describe("resolvePurchaseLineMass", () => {
     expect(mass.packageCount).toBe(10n);
   });
 
+  it("огурцы: тара 400 г × 10 ящ → нетто 96 кг", () => {
+    const mass = resolvePurchaseLineMass({
+      grossKg: 100,
+      packageCount: 10,
+      tareGramsPerPackage: 400,
+    });
+    expect(mass.netKg).toBe(96);
+    expect(mass.netGrams).toBe(96_000n);
+  });
+
   it("без ящиков: нетто = брутто", () => {
     const mass = resolvePurchaseLineMass({ grossKg: 12.5 });
     expect(mass.netGrams).toBe(12_500n);

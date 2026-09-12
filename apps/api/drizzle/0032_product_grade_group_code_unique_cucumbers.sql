@@ -11,8 +11,8 @@ INSERT INTO "product_grades" ("id", "code", "display_name", "product_group", "so
 VALUES
   ('pg-cu-cornishon', 'Корнишон', 'Корнишон', 'Огурцы', 1, true),
   ('pg-cu-euro-msk', 'Евро Москва', 'Евро Москва', 'Огурцы', 2, true),
-  ('pg-cu-krupnye', 'крупные', 'крупные', 'Огурцы', 4, true),
-  ('pg-cu-matovy', 'матовый', 'матовый', 'Огурцы', 5, true),
+  ('pg-cu-krupnye', 'Крупные', 'Крупные', 'Огурцы', 4, true),
+  ('pg-cu-matovy', 'Матовый', 'Матовый', 'Огурцы', 5, true),
   ('pg-cu-nsp', 'НС+', 'НС+', 'Огурцы', 20, true),
   ('pg-cu-nsm', 'НС-', 'НС-', 'Огурцы', 21, true)
 ON CONFLICT ("id") DO NOTHING;

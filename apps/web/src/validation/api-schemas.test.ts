@@ -51,6 +51,7 @@ describe("parseCreatePurchaseDocumentForm", () => {
       lines: [
         {
           productGradeId: "pg-n5",
+          productGroup: "Помидоры",
           grossKg: "10",
           packageCount: "2",
           pricePerKg: "50",
@@ -64,6 +65,27 @@ describe("parseCreatePurchaseDocumentForm", () => {
     expect(body.lines[0]?.grossKg).toBe(10);
     expect(body.lines[0]?.lineTotalKopecks).toBe(45_000);
     expect(body.lines[0]?.packageCount).toBe(2);
+  });
+
+  it("огурцы: тара 0,4 кг (брутто 10 − 0,4×2 = 9,2 → 46000 при 50 ₽/кг)", () => {
+    const body = parseCreatePurchaseDocumentForm({
+      docDate: "2026-04-16",
+      warehouseId: "wh-manas",
+      supplierName: "Поставщик",
+      purchaserUserId: "u-purchaser",
+      extraCostKopecks: "0",
+      lines: [
+        {
+          productGradeId: "pg-cu-cornishon",
+          productGroup: "Огурцы",
+          grossKg: "10",
+          packageCount: "2",
+          pricePerKg: "50",
+          lineTotalKopecks: "46000",
+        },
+      ],
+    });
+    expect(body.lines[0]?.lineTotalKopecks).toBe(46_000);
   });
 
   it("требует поставщика", () => {

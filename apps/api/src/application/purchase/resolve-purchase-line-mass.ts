@@ -3,11 +3,14 @@ import {
   InvalidPackageTareError,
   kgToGrams,
   netGramsFromGross,
+  TARE_GRAMS_PER_PACKAGE,
 } from "@birzha/domain";
 
 export type PurchaseLineMassInput = {
   grossKg: number;
   packageCount?: number;
+  /** Граммы тары на 1 ящик; по умолчанию 500 (помидоры). */
+  tareGramsPerPackage?: number | bigint;
 };
 
 export type ResolvedPurchaseLineMass = {
@@ -25,7 +28,8 @@ export function resolvePurchaseLineMass(input: PurchaseLineMassInput): ResolvedP
   if (grossGrams <= 0n) {
     throw new InvalidPackageTareError("gross_grams_non_positive");
   }
-  const netGrams = netGramsFromGross(grossGrams, pkg);
+  const tare = input.tareGramsPerPackage ?? TARE_GRAMS_PER_PACKAGE;
+  const netGrams = netGramsFromGross(grossGrams, pkg, tare);
   return {
     grossGrams,
     netGrams,

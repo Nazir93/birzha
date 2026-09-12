@@ -28,10 +28,15 @@ describe("nakladnayaLineSumFieldFromKgPrice", () => {
 });
 
 describe("nakladnayaNetKgFieldFromGross", () => {
-  it("считает нетто: брутто − 0,5×ящ.", () => {
+  it("считает нетто: брутто − 0,5×ящ. (помидоры)", () => {
     expect(nakladnayaNetKgFieldFromGross("10", "2")).toBe("9");
     expect(nakladnayaNetKgFieldFromGross("12,5", "0")).toBe("12,5");
     expect(nakladnayaNetKgFieldFromGross("100", "10")).toBe("95");
+  });
+
+  it("огурцы: тара 400 г", () => {
+    expect(nakladnayaNetKgFieldFromGross("10", "2", 400)).toBe("9,2");
+    expect(nakladnayaNetKgFieldFromGross("100", "10", 400)).toBe("96");
   });
 
   it("пусто при нетто ≤ 0 или пустом брутто", () => {
@@ -46,6 +51,10 @@ describe("nakladnayaLineSumFieldFromGrossKgPrice", () => {
     expect(nakladnayaLineSumFieldFromGrossKgPrice("10", "2", "50")).toBe("450,00");
     // без ящиков брутто = нетто
     expect(nakladnayaLineSumFieldFromGrossKgPrice("10", "", "50")).toBe("500,00");
+  });
+
+  it("огурцы: брутто 10, 2 ящ. → нетто 9,2 × 50", () => {
+    expect(nakladnayaLineSumFieldFromGrossKgPrice("10", "2", "50", 400)).toBe("460,00");
   });
 
   it("пусто, если нетто нельзя посчитать", () => {
@@ -63,5 +72,9 @@ describe("purchaseLineDisplayGrossKg", () => {
     expect(purchaseLineDisplayGrossKg(null, 95, "10")).toBe(100);
     expect(purchaseLineDisplayGrossKg(undefined, 12.5, "")).toBe(12.5);
     expect(purchaseLineDisplayGrossKg(0, 9, "2")).toBe(10);
+  });
+
+  it("без сохранённого брутто, огурцы: нетто + 0,4×ящ.", () => {
+    expect(purchaseLineDisplayGrossKg(null, 96, "10", 400)).toBe(100);
   });
 });

@@ -236,6 +236,8 @@ export type PurchaseDocumentLineDetail = {
   lineNo: number;
   productGradeId: string;
   productGradeCode: string;
+  /** Товар (помидоры / огурцы…); для тары и каскада в UI. */
+  productGroup?: string | null;
   batchId: string;
   /** Нетто, кг. */
   totalKg: number;

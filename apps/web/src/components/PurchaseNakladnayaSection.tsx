@@ -5,7 +5,6 @@ import { Link, useLocation } from "react-router-dom";
 import { apiPostJson } from "../api/fetch-api.js";
 import type {
   CreatePurchaseDocumentResponse,
-  ProductGradeJson,
   PurchaseDocumentSummary,
   WarehouseJson,
 } from "../api/types.js";
@@ -23,11 +22,16 @@ import {
 } from "../validation/api-schemas.js";
 import { WORK_LIST_PAGE_SIZE, clampListPageIndex, listPageCount } from "../format/list-page-sizes.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
+import {
+  groupProductGradesByProduct,
+  productGroupOptionsFromGradeGroups,
+} from "../format/product-grade-groups.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import {
-  NAKLADNAYA_NET_FROM_GROSS_HINT,
   nakladnayaLineSumFieldFromGrossKgPrice,
+  nakladnayaNetFromGrossHint,
   nakladnayaNetKgFieldFromGross,
+  tareGramsForNakladnayaProductGroup,
 } from "../format/purchase-nakladnaya-line-sum.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { randomUuid } from "../lib/random-uuid.js";
@@ -67,6 +71,8 @@ function todayIsoDate(): string {
 
 type LineDraft = {
   key: string;
+  /** Товар (Помидоры / Огурцы…); калибры фильтруются по нему. */
+  productGroup: string;
   productGradeId: string;
   /** Брутто, кг (с весов). */
   grossKg: string;
@@ -78,6 +84,7 @@ type LineDraft = {
 function emptyLine(): LineDraft {
   return {
     key: randomUuid(),
+    productGroup: "",
     productGradeId: "",
     grossKg: "",
     packageCount: "",
@@ -145,6 +152,7 @@ export function PurchaseNakladnayaSection() {
         purchaserUserId,
         extraCostKopecks,
         lines,
+        productGrades: gradesQ.data?.productGrades,
       });
       return apiPostJson("/api/purchase-documents", body) as Promise<CreatePurchaseDocumentResponse>;
     },
@@ -155,7 +163,6 @@ export function PurchaseNakladnayaSection() {
       setWarehouseId("");
       setSupplierId("");
       setSupplierName("");
-      setBuyerLabel("");
       setPurchaserUserId(user?.id && (purchasersQ.data?.purchasers ?? []).some((p) => p.id === user.id) ? user.id : "");
       setExtraCostKopecks("0");
       setLines([emptyLine()]);
@@ -194,11 +201,19 @@ export function PurchaseNakladnayaSection() {
           return l;
         }
         const next = { ...l, ...patch };
-        if ("grossKg" in patch || "packageCount" in patch || "pricePerKg" in patch) {
+        if (
+          "grossKg" in patch ||
+          "packageCount" in patch ||
+          "pricePerKg" in patch ||
+          "productGroup" in patch ||
+          "productGradeId" in patch
+        ) {
+          const tare = tareGramsForNakladnayaProductGroup(next.productGroup);
           next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
             next.grossKg,
             next.packageCount,
             next.pricePerKg,
+            tare,
           );
         }
         return next;
@@ -206,37 +221,14 @@ export function PurchaseNakladnayaSection() {
     );
   };
 
-  const gradeOptionGroups = useMemo(() => {
-    const list = (gradesQ.data?.productGrades ?? []).slice();
-    list.sort((a, b) => {
-      const ga = (a.productGroup ?? "").trim();
-      const gb = (b.productGroup ?? "").trim();
-      if (ga !== gb) {
-        if (ga === "") return 1;
-        if (gb === "") return -1;
-        return ga.localeCompare(gb, "ru");
-      }
-      return a.sortOrder - b.sortOrder || a.code.localeCompare(b.code, "ru");
-    });
-    const byKey = new Map<string, ProductGradeJson[]>();
-    for (const g of list) {
-      const groupKey = (g.productGroup ?? "").trim() || "";
-      if (!byKey.has(groupKey)) {
-        byKey.set(groupKey, []);
-      }
-      byKey.get(groupKey)!.push(g);
-    }
-    const keys = [...byKey.keys()].sort((a, b) => {
-      if (a === "" && b !== "") return 1;
-      if (b === "" && a !== "") return -1;
-      return a.localeCompare(b, "ru");
-    });
-    return keys.map((k) => ({
-      key: k || "__empty__",
-      label: k === "" ? "Без группы товара" : k,
-      grades: byKey.get(k)!,
-    }));
-  }, [gradesQ.data?.productGrades]);
+  const gradeOptionGroups = useMemo(
+    () => groupProductGradesByProduct(gradesQ.data?.productGrades ?? []),
+    [gradesQ.data?.productGrades],
+  );
+  const productOptions = useMemo(
+    () => productGroupOptionsFromGradeGroups(gradeOptionGroups),
+    [gradeOptionGroups],
+  );
 
   const warehouseCount = warehousesQ.data?.warehouses?.length ?? 0;
   const gradeCount = gradesQ.data?.productGrades?.length ?? 0;
@@ -275,10 +267,11 @@ export function PurchaseNakladnayaSection() {
     for (const line of lines) {
       const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
       const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
+      const tare = tareGramsForNakladnayaProductGroup(line.productGroup);
       if (Number.isFinite(gross) && gross > 0) {
         totalGrossKg += gross;
         try {
-          totalNetKg += netKgFromGrossKg(gross, pkgs);
+          totalNetKg += netKgFromGrossKg(gross, pkgs, tare);
         } catch {
           /* нетто ≤ 0 — в итог нетто не включаем */
         }
@@ -459,7 +452,7 @@ export function PurchaseNakladnayaSection() {
               <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
               <th className="birzha-nakl-lines-table__num">Брутто, кг</th>
               <th className="birzha-nakl-lines-table__num">Ящики</th>
-              <th className="birzha-nakl-lines-table__num" title={NAKLADNAYA_NET_FROM_GROSS_HINT}>
+              <th className="birzha-nakl-lines-table__num" title="Нетто = брутто − тара×ящ. (помидоры 0,5; огурцы 0,4)">
                 Нетто, кг
               </th>
               <th className="birzha-nakl-lines-table__num">₽/кг</th>
@@ -476,21 +469,44 @@ export function PurchaseNakladnayaSection() {
             {lines.map((line) => (
               <tr key={line.key}>
                 <td className="birzha-nakl-lines-table__grade-cell" data-label="Товар / калибр">
-                  <BirzhaSelect
-                    value={line.productGradeId}
-                    onChange={(v) => updateLine(line.key, { productGradeId: v })}
-                    className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
-                    style={{ ...selectFieldStyle, marginTop: 0 }}
-                    disabled={gradesQ.isPending}
-                    placeholder={gradesQ.isPending ? "Загрузка…" : "— выберите —"}
-                    groups={gradeOptionGroups.map((grp) => ({
-                      label: grp.label,
-                      options: grp.grades.map((g) => ({
+                  <div className="birzha-nakl-line-grade-stack">
+                    <BirzhaSelect
+                      value={line.productGroup}
+                      onChange={(v) =>
+                        updateLineWithAutoSum(line.key, {
+                          productGroup: v,
+                          productGradeId: "",
+                        })
+                      }
+                      className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                      style={{ ...selectFieldStyle, marginTop: 0 }}
+                      disabled={gradesQ.isPending}
+                      placeholder={gradesQ.isPending ? "Загрузка…" : "— товар —"}
+                      aria-label="Товар"
+                      options={productOptions}
+                    />
+                    <BirzhaSelect
+                      value={line.productGradeId}
+                      onChange={(v) => updateLineWithAutoSum(line.key, { productGradeId: v })}
+                      className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                      style={{ ...selectFieldStyle, marginTop: 0 }}
+                      disabled={gradesQ.isPending || !line.productGroup}
+                      placeholder={
+                        !line.productGroup
+                          ? "Сначала товар"
+                          : gradesQ.isPending
+                            ? "Загрузка…"
+                            : "— калибр —"
+                      }
+                      aria-label="Калибр"
+                      options={(
+                        gradeOptionGroups.find((g) => g.label === line.productGroup)?.grades ?? []
+                      ).map((g) => ({
                         value: g.id,
                         label: productGradeOptionLabel(g.code, g.displayName),
-                      })),
-                    }))}
-                  />
+                      }))}
+                    />
+                  </div>
                 </td>
                 <td className="birzha-nakl-lines-table__num-cell" data-label="Брутто, кг">
                   <input
@@ -516,12 +532,18 @@ export function PurchaseNakladnayaSection() {
                 </td>
                 <td className="birzha-nakl-lines-table__num-cell" data-label="Нетто, кг">
                   <input
-                    value={nakladnayaNetKgFieldFromGross(line.grossKg, line.packageCount)}
+                    value={nakladnayaNetKgFieldFromGross(
+                      line.grossKg,
+                      line.packageCount,
+                      tareGramsForNakladnayaProductGroup(line.productGroup),
+                    )}
                     readOnly
                     tabIndex={-1}
                     className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                     style={fieldStyle}
-                    title={NAKLADNAYA_NET_FROM_GROSS_HINT}
+                    title={nakladnayaNetFromGrossHint(
+                      tareGramsForNakladnayaProductGroup(line.productGroup),
+                    )}
                     aria-label="Нетто, кг"
                   />
                 </td>
@@ -593,7 +615,7 @@ export function PurchaseNakladnayaSection() {
               </td>
               <td
                 className="birzha-nakl-lines-table__total-cell"
-                title={`Сумма нетто (${NAKLADNAYA_NET_FROM_GROSS_HINT})`}
+                title="Сумма нетто (брутто − тара×ящ.: помидоры 0,5; огурцы 0,4)"
               >
                 {totalNetKgLabel}{" "}
                 <span className="birzha-text-muted birzha-text-muted--xs">
