@@ -17,8 +17,10 @@ export class Trip {
     private driverName: string | null,
     private departedAt: Date | null,
     private assignedSellerUserId: string | null,
-    /** Город/направление рейса (`ship_destinations.code`); нумерация 1,2,3… в рамках города. */
+    /** Город/направление рейса (`ship_destinations.code`); нумерация в рамках города + товара. */
     private destinationCode: string | null,
+    /** Товар рейса (Помидоры / Огурцы…); своя нумерация 01, 02… на каждый товар. */
+    private productGroup: string | null,
   ) {}
 
   static create(config: {
@@ -29,6 +31,7 @@ export class Trip {
     departedAt?: Date | null;
     assignedSellerUserId?: string | null;
     destinationCode?: string | null;
+    productGroup?: string | null;
   }): Trip {
     if (!config.id.trim()) {
       throw new Error("trip id не может быть пустым");
@@ -45,6 +48,7 @@ export class Trip {
       config.departedAt == null || Number.isNaN(config.departedAt.getTime()) ? null : config.departedAt,
       normText(config.assignedSellerUserId ?? null),
       normText(config.destinationCode ?? null),
+      normText(config.productGroup ?? null),
     );
   }
 
@@ -81,6 +85,10 @@ export class Trip {
     return this.destinationCode;
   }
 
+  getProductGroup(): string | null {
+    return this.productGroup;
+  }
+
   assignSeller(userId: string): void {
     const normalized = normText(userId);
     if (!normalized) {
@@ -96,6 +104,7 @@ export class Trip {
     driverName?: string | null;
     departedAt?: Date | null;
     destinationCode?: string | null;
+    productGroup?: string | null;
   }): void {
     if (input.tripNumber !== undefined) {
       const n = input.tripNumber.trim();
@@ -117,6 +126,9 @@ export class Trip {
     if (input.destinationCode !== undefined) {
       this.destinationCode = normText(input.destinationCode);
     }
+    if (input.productGroup !== undefined) {
+      this.productGroup = normText(input.productGroup);
+    }
   }
 
   canAcceptShipments(): boolean {
@@ -136,6 +148,7 @@ export class Trip {
     departedAt?: Date | null;
     assignedSellerUserId?: string | null;
     destinationCode?: string | null;
+    productGroup?: string | null;
   }): Trip {
     return new Trip(
       config.id,
@@ -148,6 +161,7 @@ export class Trip {
         : new Date(config.departedAt),
       normText(config.assignedSellerUserId ?? null),
       normText(config.destinationCode ?? null),
+      normText(config.productGroup ?? null),
     );
   }
 }

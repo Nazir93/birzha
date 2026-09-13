@@ -12,6 +12,7 @@ export {
   InvalidPackageTareError,
   netGramsFromGross,
   PRODUCT_GROUP_CUCUMBERS,
+  PRODUCT_GROUP_TOMATOES,
   TARE_GRAMS_CUCUMBERS_PER_PACKAGE,
   TARE_GRAMS_PER_PACKAGE,
   tareGramsPerPackageForProductGroup,

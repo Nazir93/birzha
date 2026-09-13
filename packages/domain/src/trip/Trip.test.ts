@@ -62,13 +62,15 @@ describe("Trip", () => {
     expect(() => t.assignSeller(" ")).toThrow("assignedSellerUserId");
   });
 
-  it("хранит город/направление рейса", () => {
+  it("хранит город и товар рейса", () => {
     const t = Trip.create({
       id: "t-dest",
       tripNumber: "01",
       destinationCode: "moscow",
+      productGroup: "Огурцы",
     });
     expect(t.getDestinationCode()).toBe("moscow");
+    expect(t.getProductGroup()).toBe("Огурцы");
   });
 
   it("updateHeader меняет номер, ТС и дату", () => {

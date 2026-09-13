@@ -22,6 +22,7 @@ function rowToTrip(row: typeof trips.$inferSelect): Trip {
     departedAt: row.departedAt,
     assignedSellerUserId: row.assignedSellerUserId,
     destinationCode: row.destinationCode,
+    productGroup: row.productGroup,
   });
 }
 
@@ -38,6 +39,7 @@ export class DrizzleTripRepository implements TripRepository {
       departedAt: trip.getDepartedAt(),
       assignedSellerUserId: trip.getAssignedSellerUserId(),
       destinationCode: trip.getDestinationCode(),
+      productGroup: trip.getProductGroup(),
     };
 
     const existing = await this.db

@@ -324,7 +324,9 @@ HTTP и use case: **`README.md`** (таблица API). Концептуальн
 ### `trips`
 Поля:
 - `id`
-- `tripNumber`
+- `tripNumber` — порядковый № (01, 02…) в рамках `destinationCode` + `productGroup`
+- `destinationCode` — город/направление
+- `productGroup` — товар (Помидоры / Огурцы…); у каждого товара своя нумерация
 - `routeId`
 - `vehicleId`
 - `driverName`
@@ -336,7 +338,6 @@ HTTP и use case: **`README.md`** (таблица API). Концептуальн
 - `status`
 
 Индексы:
-- unique(`tripNumber`)
 - index(`status`, `plannedDepartureAt`)
 
 ### `tripShipments`

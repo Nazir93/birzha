@@ -19,6 +19,7 @@ export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
     departedAt: departedAt ? departedAt.toISOString() : null,
     assignedSellerUserId: trip.getAssignedSellerUserId(),
     destinationCode: trip.getDestinationCode(),
+    productGroup: trip.getProductGroup(),
   };
   if (!listExtra) {
     return base;

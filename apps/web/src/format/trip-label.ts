@@ -61,15 +61,32 @@ export function formatTripStatusLabel(status: string): string {
   return status;
 }
 
-/** Следующий порядковый № рейса (01, 02, …). При `destinationCode` — только среди рейсов этого города. */
+/** Следующий порядковый № рейса (01, 02, …).
+ * При `destinationCode` — среди рейсов этого города;
+ * при `productGroup` — ещё и среди этого товара (помидоры и огурцы нумеруются отдельно).
+ * Рейсы без товара считаются помидорами (исторические данные).
+ */
 export function suggestNextTripNumber(
-  trips: readonly { tripNumber: string; destinationCode?: string | null }[],
+  trips: readonly {
+    tripNumber: string;
+    destinationCode?: string | null;
+    productGroup?: string | null;
+  }[],
   destinationCode?: string | null,
+  productGroup?: string | null,
 ): string {
   const dest = destinationCode?.trim() || "";
-  const scoped = dest
-    ? trips.filter((t) => (t.destinationCode?.trim() || "") === dest)
-    : trips;
+  const product = (productGroup?.trim() || "Помидоры");
+  let scoped = trips;
+  if (dest) {
+    scoped = scoped.filter((t) => (t.destinationCode?.trim() || "") === dest);
+  }
+  if (productGroup != null && productGroup.trim() !== "") {
+    scoped = scoped.filter((t) => {
+      const g = (t.productGroup?.trim() || "Помидоры");
+      return g === product;
+    });
+  }
   let max = 0;
   for (const t of scoped) {
     const m = /^(\d+)/.exec(t.tripNumber.trim());

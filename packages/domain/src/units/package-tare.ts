@@ -7,6 +7,9 @@ export const TARE_GRAMS_CUCUMBERS_PER_PACKAGE = 400n;
 /** Имя товара в справочнике калибров (`product_grades.product_group`). */
 export const PRODUCT_GROUP_CUCUMBERS = "Огурцы";
 
+/** Товар по умолчанию для рейсов/тары (исторические данные без явного товара). */
+export const PRODUCT_GROUP_TOMATOES = "Помидоры";
+
 /**
  * Тара одного ящика по товару.
  * Помидоры и всё остальное — 500 г; огурцы — 400 г.

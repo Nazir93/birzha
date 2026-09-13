@@ -104,6 +104,18 @@ describe("trip-label", () => {
     expect(suggestNextTripNumber(trips, "spb")).toBe("01");
   });
 
+  it("suggestNextTripNumber — отдельно по товару внутри города", () => {
+    const trips = [
+      { tripNumber: "01", destinationCode: "moscow", productGroup: "Помидоры" },
+      { tripNumber: "02", destinationCode: "moscow", productGroup: "Помидоры" },
+      { tripNumber: "01", destinationCode: "moscow", productGroup: "Огурцы" },
+      { tripNumber: "03", destinationCode: "moscow" }, // без товара = помидоры
+    ];
+    expect(suggestNextTripNumber(trips, "moscow", "Помидоры")).toBe("04");
+    expect(suggestNextTripNumber(trips, "moscow", "Огурцы")).toBe("02");
+    expect(suggestNextTripNumber(trips, "rostov", "Огурцы")).toBe("01");
+  });
+
   it("buildTripDisplayNumber собирает водитель · машина · дата", () => {
     expect(
       buildTripDisplayNumber({

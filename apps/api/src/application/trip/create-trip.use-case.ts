@@ -11,6 +11,7 @@ export type CreateTripInput = {
   departedAt?: string | null;
   assignedSellerUserId?: string | null;
   destinationCode?: string | null;
+  productGroup?: string | null;
 };
 
 export class CreateTripUseCase {
@@ -27,6 +28,7 @@ export class CreateTripUseCase {
         departedAt: iso == null || iso.trim() === "" ? null : new Date(iso),
         assignedSellerUserId: input.assignedSellerUserId ?? null,
         destinationCode: input.destinationCode ?? null,
+        productGroup: input.productGroup ?? null,
       }),
     );
   }

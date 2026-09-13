@@ -155,8 +155,14 @@ export const createTripBodySchema = z.object({
     .max(200)
     .nullish()
     .transform((s) => (s == null || s.trim() === "" ? null : s.trim())),
-  /** Город/направление (`ship_destinations.code`); нумерация рейса в рамках города. */
+  /** Город/направление (`ship_destinations.code`); нумерация рейса в рамках города и товара. */
   destinationCode: z
+    .string()
+    .max(120)
+    .nullish()
+    .transform((s) => (s == null || s.trim() === "" ? null : s.trim())),
+  /** Товар рейса (Помидоры / Огурцы…); своя нумерация 01, 02… на товар. */
+  productGroup: z
     .string()
     .max(120)
     .nullish()

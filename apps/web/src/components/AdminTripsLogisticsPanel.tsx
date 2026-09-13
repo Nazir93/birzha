@@ -18,6 +18,7 @@ import {
   loadingManifestDetailQueryOptions,
   loadingManifestsPagedQueryOptions,
   shipDestinationsFullListQueryOptions,
+  productGradesFullListQueryOptions,
   tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
 import { loadingManifestTripDetachLockMessage } from "../format/loading-manifest-trip-detach-lock.js";
@@ -57,6 +58,7 @@ export function AdminTripsLogisticsPanel() {
 
   const [newTripNumber, setNewTripNumber] = useState("");
   const [newTripDestinationCode, setNewTripDestinationCode] = useState("");
+  const [newTripProductGroup, setNewTripProductGroup] = useState("");
   const [newTripVehicle, setNewTripVehicle] = useState("");
   const [newTripDriver, setNewTripDriver] = useState("");
   const [newTripDeparted, setNewTripDeparted] = useState("");
@@ -93,6 +95,11 @@ export function AdminTripsLogisticsPanel() {
     enabled: tripsApiEnabled,
   });
 
+  const gradesQ = useQuery({
+    ...productGradesFullListQueryOptions(),
+    enabled: tripsApiEnabled && canWriteTrips,
+  });
+
   const destinationOptions = useMemo(() => {
     const list = activeShipDestinationsForSelect(destinationsQ.data?.shipDestinations ?? []);
     return [
@@ -100,6 +107,24 @@ export function AdminTripsLogisticsPanel() {
       ...list.map((d) => ({ value: d.code, label: d.displayName || d.code })),
     ];
   }, [destinationsQ.data?.shipDestinations]);
+
+  const productGroupOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const g of gradesQ.data?.productGrades ?? []) {
+      const name = (g.productGroup ?? "").trim();
+      if (name) {
+        set.add(name);
+      }
+    }
+    if (set.size === 0) {
+      set.add("Помидоры");
+      set.add("Огурцы");
+    }
+    return [
+      { value: "", label: "— выберите товар —" },
+      ...[...set].sort((a, b) => a.localeCompare(b, "ru")).map((name) => ({ value: name, label: name })),
+    ];
+  }, [gradesQ.data?.productGrades]);
 
   const destinationLabelByCode = useMemo(
     () => shipDestinationLabelByCode(destinationsQ.data?.shipDestinations ?? []),
@@ -167,32 +192,36 @@ export function AdminTripsLogisticsPanel() {
   const tripsForSuggest = tripsSuggestQ.data?.trips ?? [];
 
   const suggestedTripNumber = useMemo(() => {
-    if (!newTripDestinationCode.trim()) {
+    if (!newTripDestinationCode.trim() || !newTripProductGroup.trim()) {
       return "";
     }
-    return suggestNextTripNumber(tripsForSuggest, newTripDestinationCode);
-  }, [tripsForSuggest, newTripDestinationCode]);
+    return suggestNextTripNumber(tripsForSuggest, newTripDestinationCode, newTripProductGroup);
+  }, [tripsForSuggest, newTripDestinationCode, newTripProductGroup]);
 
   useEffect(() => {
-    if (!newTripDestinationCode.trim()) {
+    if (!newTripDestinationCode.trim() || !newTripProductGroup.trim()) {
       setNewTripNumber("");
       return;
     }
     if (suggestedTripNumber) {
       setNewTripNumber(suggestedTripNumber);
     }
-  }, [newTripDestinationCode, suggestedTripNumber]);
+  }, [newTripDestinationCode, newTripProductGroup, suggestedTripNumber]);
 
   const createTrip = useMutation({
     mutationFn: async () => {
       setTripError(null);
       const id = randomUuid();
       const dest = newTripDestinationCode.trim();
+      const product = newTripProductGroup.trim();
       const num = newTripNumber.trim() || suggestedTripNumber;
       const dr = newTripDriver.trim();
       const vl = newTripVehicle.trim();
       if (!dest) {
         throw new Error("Укажите город рейса");
+      }
+      if (!product) {
+        throw new Error("Укажите товар рейса");
       }
       if (!num) {
         throw new Error("Укажите № рейса");
@@ -220,6 +249,7 @@ export function AdminTripsLogisticsPanel() {
           driverName: dr,
           departedAt,
           destinationCode: dest,
+          productGroup: product,
         },
         "Нет прав: создание рейса — роли admin, manager, logistics",
       );
@@ -230,6 +260,7 @@ export function AdminTripsLogisticsPanel() {
       setNewTripDeparted("");
       setNewTripNumber("");
       setNewTripDestinationCode("");
+      setNewTripProductGroup("");
       invalidateTrips();
     },
     onError: (e: Error) => {
@@ -339,15 +370,34 @@ export function AdminTripsLogisticsPanel() {
                 />
               </label>
               <label className="birzha-form-label">
-                № рейса (по городу)
+                Товар *
+                <BirzhaSelect
+                  value={newTripProductGroup}
+                  onChange={setNewTripProductGroup}
+                  className="birzha-clean-ops-field"
+                  style={selectFieldStyle}
+                  placeholder="— выберите товар —"
+                  options={productGroupOptions}
+                  disabled={gradesQ.isPending}
+                />
+              </label>
+              <label className="birzha-form-label">
+                № рейса (по городу и товару)
                 <input
                   value={newTripNumber}
                   onChange={(e) => setNewTripNumber(e.target.value)}
                   style={fieldStyle}
-                  placeholder={suggestedTripNumber || "сначала город"}
+                  placeholder={
+                    suggestedTripNumber ||
+                    (!newTripDestinationCode.trim()
+                      ? "сначала город"
+                      : !newTripProductGroup.trim()
+                        ? "сначала товар"
+                        : "01")
+                  }
                   inputMode="numeric"
                   autoComplete="off"
-                  disabled={!newTripDestinationCode.trim()}
+                  disabled={!newTripDestinationCode.trim() || !newTripProductGroup.trim()}
                 />
               </label>
               <label className="birzha-form-label">
@@ -405,6 +455,7 @@ export function AdminTripsLogisticsPanel() {
                 <thead>
                   <tr>
                     <th>№</th>
+                    <th>Товар</th>
                     <th>Город</th>
                     <th>Водитель</th>
                     <th>Машина</th>
@@ -417,7 +468,7 @@ export function AdminTripsLogisticsPanel() {
                 <tbody>
                   {openTrips.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="birzha-text-muted">
+                      <td colSpan={9} className="birzha-text-muted">
                         Нет рейсов в работе
                       </td>
                     </tr>
@@ -434,6 +485,7 @@ export function AdminTripsLogisticsPanel() {
                       <td>
                         <strong>{t.tripNumber}</strong>
                       </td>
+                      <td>{t.productGroup?.trim() || "Помидоры"}</td>
                       <td>{cityLabel}</td>
                       <td>{t.driverName ?? "—"}</td>
                       <td>{t.vehicleLabel ?? "—"}</td>

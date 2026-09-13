@@ -76,10 +76,10 @@ function lineToDraft(line: PurchaseDocumentLineDetail): EditLineDraft {
   };
 }
 
-function emptyEditLine(): EditLineDraft {
+function emptyEditLine(productGroup = ""): EditLineDraft {
   return {
     key: randomUuid(),
-    productGroup: "",
+    productGroup,
     productGradeId: "",
     grossKg: "",
     packageCount: "",
@@ -124,6 +124,8 @@ export function PurchaseNakladnayaDetailSection() {
   });
 
   const [editLines, setEditLines] = useState<EditLineDraft[]>([]);
+  /** Товар накладной: один на все строки (калибры только этого товара). */
+  const [docProductGroup, setDocProductGroup] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -135,7 +137,9 @@ export function PurchaseNakladnayaDetailSection() {
     if (!d) {
       return;
     }
-    setEditLines(d.lines.map(lineToDraft));
+    const drafts = d.lines.map(lineToDraft);
+    setEditLines(drafts);
+    setDocProductGroup(drafts.find((l) => l.productGroup)?.productGroup ?? "");
     setFormError(null);
     setSavedMsg(null);
   }, [docQ.data]);
@@ -166,10 +170,10 @@ export function PurchaseNakladnayaDetailSection() {
     let totalNetKg = 0;
     let totalPackages = 0;
     let lineKopSum = 0;
+    const tare = tareGramsForNakladnayaProductGroup(docProductGroup);
     for (const line of editLines) {
       const gross = nonnegativeDecimalStringToNumber(line.grossKg, 6);
       const pkgs = linePackageCountForNakladnayaSum(line.packageCount);
-      const tare = tareGramsForNakladnayaProductGroup(line.productGroup);
       if (Number.isFinite(gross) && gross > 0) {
         totalGrossKg += gross;
         try {
@@ -182,7 +186,7 @@ export function PurchaseNakladnayaDetailSection() {
       lineKopSum += lineTotalKopecksForNakladnayaSum(line.lineTotalKopecks);
     }
     return { totalGrossKg, totalNetKg, totalPackages, lineKopSum };
-  }, [editLines]);
+  }, [editLines, docProductGroup]);
 
   const displayLines = useMemo(() => {
     const lines = docQ.data?.lines;
@@ -206,11 +210,20 @@ export function PurchaseNakladnayaDetailSection() {
     () => productGroupOptionsFromGradeGroups(gradeOptionGroups),
     [gradeOptionGroups],
   );
+  const caliberOptionsForDoc = useMemo(() => {
+    if (!docProductGroup) {
+      return [];
+    }
+    return (gradeOptionGroups.find((g) => g.label === docProductGroup)?.grades ?? []).map((g) => ({
+      value: g.id,
+      label: productGradeOptionLabel(g.code, g.displayName),
+    }));
+  }, [gradeOptionGroups, docProductGroup]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       const body = parseReplacePurchaseDocumentLinesForm(
-        editLines,
+        editLines.map((l) => ({ ...l, productGroup: docProductGroup })),
         gradesQ.data?.productGrades,
       );
       await putPurchaseDocumentLines(
@@ -248,10 +261,9 @@ export function PurchaseNakladnayaDetailSection() {
           "grossKg" in patch ||
           "packageCount" in patch ||
           "pricePerKg" in patch ||
-          "productGroup" in patch ||
           "productGradeId" in patch
         ) {
-          const tare = tareGramsForNakladnayaProductGroup(next.productGroup);
+          const tare = tareGramsForNakladnayaProductGroup(docProductGroup);
           next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
             next.grossKg,
             next.packageCount,
@@ -259,6 +271,23 @@ export function PurchaseNakladnayaDetailSection() {
             tare,
           );
         }
+        return next;
+      }),
+    );
+  };
+
+  const changeDocProductGroup = (productGroup: string) => {
+    setDocProductGroup(productGroup);
+    setEditLines((prev) =>
+      prev.map((l) => {
+        const next = { ...l, productGroup, productGradeId: "" };
+        const tare = tareGramsForNakladnayaProductGroup(productGroup);
+        next.lineTotalKopecks = nakladnayaLineSumFieldFromGrossKgPrice(
+          next.grossKg,
+          next.packageCount,
+          next.pricePerKg,
+          tare,
+        );
         return next;
       }),
     );
@@ -383,11 +412,26 @@ export function PurchaseNakladnayaDetailSection() {
         <>
           {formError ? <ErrorAlert message={formError} /> : null}
           {savedMsg ? <p style={successText}>{savedMsg}</p> : null}
+          <label className="birzha-form-label no-print" style={{ maxWidth: "16rem", marginBottom: "0.75rem" }}>
+            Товар *
+            <BirzhaSelect
+              value={docProductGroup}
+              onChange={changeDocProductGroup}
+              className="birzha-clean-ops-field"
+              style={selectFieldStyle}
+              placeholder={gradesQ.isPending ? "Загрузка…" : "— выберите —"}
+              disabled={gradesQ.isPending || saveMutation.isPending}
+              options={[
+                { value: "", label: "— выберите —" },
+                ...productOptions,
+              ]}
+            />
+          </label>
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card birzha-nakl-lines-card--form no-print">
             <table className="birzha-nakl-lines-table">
               <thead>
                 <tr>
-                  <th className="birzha-nakl-lines-table__grade">Товар / калибр</th>
+                  <th className="birzha-nakl-lines-table__grade">Калибр</th>
                   <th className="birzha-nakl-lines-table__num">Брутто, кг</th>
                   <th className="birzha-nakl-lines-table__num">Ящики</th>
                   <th
@@ -409,45 +453,23 @@ export function PurchaseNakladnayaDetailSection() {
               <tbody>
                 {editLines.map((line) => (
                   <tr key={line.key}>
-                    <td className="birzha-nakl-lines-table__grade-cell" data-label="Товар / калибр">
-                      <div className="birzha-nakl-line-grade-stack">
-                        <BirzhaSelect
-                          value={line.productGroup}
-                          onChange={(v) =>
-                            updateLineWithAutoSum(line.key, {
-                              productGroup: v,
-                              productGradeId: "",
-                            })
-                          }
-                          className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
-                          style={{ ...selectFieldStyle, marginTop: 0 }}
-                          disabled={gradesQ.isPending}
-                          placeholder={gradesQ.isPending ? "Загрузка…" : "— товар —"}
-                          aria-label="Товар"
-                          options={productOptions}
-                        />
-                        <BirzhaSelect
-                          value={line.productGradeId}
-                          onChange={(v) => updateLineWithAutoSum(line.key, { productGradeId: v })}
-                          className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
-                          style={{ ...selectFieldStyle, marginTop: 0 }}
-                          disabled={gradesQ.isPending || !line.productGroup}
-                          placeholder={
-                            !line.productGroup
-                              ? "Сначала товар"
-                              : gradesQ.isPending
-                                ? "Загрузка…"
-                                : "— калибр —"
-                          }
-                          aria-label="Калибр"
-                          options={(
-                            gradeOptionGroups.find((g) => g.label === line.productGroup)?.grades ?? []
-                          ).map((g) => ({
-                            value: g.id,
-                            label: productGradeOptionLabel(g.code, g.displayName),
-                          }))}
-                        />
-                      </div>
+                    <td className="birzha-nakl-lines-table__grade-cell" data-label="Калибр">
+                      <BirzhaSelect
+                        value={line.productGradeId}
+                        onChange={(v) => updateLineWithAutoSum(line.key, { productGradeId: v })}
+                        className="birzha-nakl-line-field birzha-nakl-line-field--grade birzha-clean-ops-field"
+                        style={{ ...selectFieldStyle, marginTop: 0 }}
+                        disabled={gradesQ.isPending || !docProductGroup}
+                        placeholder={
+                          !docProductGroup
+                            ? "Сначала товар выше"
+                            : gradesQ.isPending
+                              ? "Загрузка…"
+                              : "— калибр —"
+                        }
+                        aria-label="Калибр"
+                        options={caliberOptionsForDoc}
+                      />
                     </td>
                     <td className="birzha-nakl-lines-table__num-cell" data-label="Брутто, кг">
                       <input
@@ -475,14 +497,14 @@ export function PurchaseNakladnayaDetailSection() {
                         value={nakladnayaNetKgFieldFromGross(
                           line.grossKg,
                           line.packageCount,
-                          tareGramsForNakladnayaProductGroup(line.productGroup),
+                          tareGramsForNakladnayaProductGroup(docProductGroup),
                         )}
                         readOnly
                         tabIndex={-1}
                         className="birzha-nakl-line-field birzha-nakl-line-field--numeric"
                         style={fieldStyle}
                         title={nakladnayaNetFromGrossHint(
-                          tareGramsForNakladnayaProductGroup(line.productGroup),
+                          tareGramsForNakladnayaProductGroup(docProductGroup),
                         )}
                         aria-label="Нетто, кг"
                       />
@@ -557,7 +579,7 @@ export function PurchaseNakladnayaDetailSection() {
               type="button"
               className={btnClassSpaced}
               disabled={saveMutation.isPending}
-              onClick={() => setEditLines((prev) => [...prev, emptyEditLine()])}
+              onClick={() => setEditLines((prev) => [...prev, emptyEditLine(docProductGroup)])}
             >
               Добавить строку
             </button>
@@ -578,7 +600,9 @@ export function PurchaseNakladnayaDetailSection() {
               className="birzha-btn-ghost"
               disabled={saveMutation.isPending}
               onClick={() => {
-                setEditLines(doc.lines.map(lineToDraft));
+                const drafts = doc.lines.map(lineToDraft);
+                setEditLines(drafts);
+                setDocProductGroup(drafts.find((l) => l.productGroup)?.productGroup ?? "");
                 setFormError(null);
                 setSavedMsg(null);
               }}
