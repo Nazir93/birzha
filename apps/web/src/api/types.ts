@@ -21,6 +21,8 @@ export type BatchListItem = {
     documentNumber: string | null;
     /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
     linePackageCount?: number | null;
+    /** Тепличник с закупочной накладной. */
+    supplierName?: string | null;
   };
   /** Кг в журнале «возврат на склад» (история; погрузку не блокирует). */
   qualityRejectWrittenOffKg?: number;
@@ -345,6 +347,8 @@ export type LoadingManifestDetail = {
     purchaseDocumentNumber: string | null;
     /** Id закупочной накладной (если партия из строки документа). */
     purchaseDocumentId?: string | null;
+    /** Тепличник (снимок с закупочной). */
+    supplierName?: string | null;
     productGradeCode: string | null;
     productGroup: string | null;
     warehouseId?: string | null;
@@ -373,6 +377,8 @@ export type TripJson = {
   assignedSellerUserId: string | null;
   /** Город/направление (`ship_destinations.code`); нумерация рейса в рамках города и товара. */
   destinationCode?: string | null;
+  /** Подпись направления из справочника (для списков и select). */
+  destinationName?: string | null;
   /** Товар рейса (Помидоры / Огурцы…); своя нумерация на товар. */
   productGroup?: string | null;
   /**

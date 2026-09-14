@@ -12,6 +12,7 @@ import {
   buildWriteOffItemsFromBatchesByPackages,
   buildWriteOffItemsFromInputs,
   aggregateLoadingManifestLinesByCaliber,
+  aggregateLoadingManifestLinesBySupplier,
   estimatedPackageCountOnShelf,
   formatLoadingManifestCardHeader,
   formatLoadingManifestDisplayName,
@@ -267,6 +268,22 @@ describe("aggregateLoadingManifestLinesByCaliber", () => {
       "Помидоры · НС+",
       "Помидоры · НС-",
       "Помидоры · Ом.",
+    ]);
+  });
+});
+
+describe("aggregateLoadingManifestLinesBySupplier", () => {
+  it("суммирует кг по тепличникам", () => {
+    const rows = aggregateLoadingManifestLinesBySupplier([
+      { kg: 100, packageCount: "10", supplierName: "Юг" },
+      { kg: 40, packageCount: "4", supplierName: "Юг" },
+      { kg: 20, packageCount: null, supplierName: "Север" },
+      { kg: 5, packageCount: "1", supplierName: null },
+    ]);
+    expect(rows).toEqual([
+      { supplierName: "Без тепличника", totalKg: 5, totalPackages: 1 },
+      { supplierName: "Север", totalKg: 20, totalPackages: null },
+      { supplierName: "Юг", totalKg: 140, totalPackages: 14 },
     ]);
   });
 });

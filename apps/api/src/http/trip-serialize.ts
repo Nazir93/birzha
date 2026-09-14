@@ -8,7 +8,17 @@ export type TripListJsonExtra = {
   soldGrams: string;
 };
 
-export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
+/** Опциональные подписи из справочников (JOIN при сериализации HTTP). */
+export type TripJsonNameExtras = {
+  /** Человекочитаемое направление (`ship_destinations.display_name`). */
+  destinationName?: string | null;
+};
+
+export function tripToJson(
+  trip: Trip,
+  listExtra?: TripListJsonExtra | null,
+  nameExtras?: TripJsonNameExtras | null,
+) {
   const departedAt = trip.getDepartedAt();
   const base = {
     id: trip.getId(),
@@ -19,6 +29,7 @@ export function tripToJson(trip: Trip, listExtra?: TripListJsonExtra | null) {
     departedAt: departedAt ? departedAt.toISOString() : null,
     assignedSellerUserId: trip.getAssignedSellerUserId(),
     destinationCode: trip.getDestinationCode(),
+    destinationName: nameExtras?.destinationName ?? null,
     productGroup: trip.getProductGroup(),
   };
   if (!listExtra) {

@@ -272,6 +272,7 @@ describe("createTripBodySchema", () => {
       departedAt: null,
       assignedSellerUserId: null,
       destinationCode: null,
+      productGroup: null,
     });
   });
 

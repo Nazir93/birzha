@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { productGradeOptionLabel, salesCaliberLineLabel } from "./batch-label.js";
+import { formatBatchPartyCaption, productGradeOptionLabel, salesCaliberLineLabel } from "./batch-label.js";
 
 describe("productGradeOptionLabel", () => {
   it("не дублирует одинаковые код и название", () => {
@@ -14,6 +14,32 @@ describe("productGradeOptionLabel", () => {
 
   it("оставляет разные код и название", () => {
     expect(productGradeOptionLabel("X", "Экстра")).toBe("X — Экстра");
+  });
+});
+
+describe("formatBatchPartyCaption", () => {
+  it("включает тепличника перед номером накладной", () => {
+    expect(
+      formatBatchPartyCaption({
+        id: "b1",
+        purchaseId: "p1",
+        totalKg: 10,
+        pricePerKg: 1,
+        pendingInboundKg: 0,
+        onWarehouseKg: 10,
+        inTransitKg: 0,
+        soldKg: 0,
+        writtenOffKg: 0,
+        nakladnaya: {
+          documentId: "d1",
+          warehouseId: "w1",
+          productGradeCode: "№5",
+          productGroup: "Помидоры",
+          documentNumber: "ЗН-1",
+          supplierName: "Теплица Юг",
+        },
+      }),
+    ).toBe("Теплица Юг · № ЗН-1 · Помидоры · №5");
   });
 });
 

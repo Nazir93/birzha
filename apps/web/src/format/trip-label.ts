@@ -160,6 +160,8 @@ export type FormatTripSelectLabelOptions = {
   includeTechnicalId?: boolean;
   /** Номера погрузочных накладных, привязанных к рейсу. */
   linkedManifestNumbers?: readonly string[];
+  /** Подпись направления; если нет — берём `destinationName` / `destinationCode` с рейса. */
+  destinationLabel?: string | null;
 };
 
 /** Хвост подписи рейса: привязанные погрузочные накладные. */
@@ -175,16 +177,24 @@ export function formatLinkedManifestsTripSelectSuffix(manifestNumbers: readonly 
   return ` · ПН: ${shown}${extra}`;
 }
 
-/** Подпись рейса в селекторах: №, водитель, машина, дата, статус. */
+/** Подпись рейса в селекторах: №, направление, товар, водитель, машина, дата, статус. */
 export function formatTripSelectLabel(t: TripJson, opts?: FormatTripSelectLabelOptions): string {
   const num = t.tripNumber.trim();
   const display = buildTripDisplayNumber(t);
+  const dest =
+    opts?.destinationLabel?.trim() ||
+    t.destinationName?.trim() ||
+    t.destinationCode?.trim() ||
+    "";
+  const product = t.productGroup?.trim() || "";
+  const prefixParts = [num, dest, product].filter((p) => p.length > 0);
+  const prefix = prefixParts.join(" · ");
   const head =
     display === "Рейс"
-      ? num || "Рейс"
-      : num && !display.startsWith(num)
-        ? `${num} · ${display}`
-        : display;
+      ? prefix || "Рейс"
+      : prefix && !display.startsWith(num)
+        ? `${prefix} · ${display}`
+        : prefix || display;
   let label = `${head} (${formatTripListStatusLabel(t)})`;
   label += formatLinkedManifestsTripSelectSuffix(opts?.linkedManifestNumbers ?? []);
   if (opts?.includeTechnicalId === true) {

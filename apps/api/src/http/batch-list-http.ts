@@ -17,6 +17,7 @@ type LineMeta = {
   productGroup: string | null;
   documentNumber: string | null;
   linePackageCount: number | null;
+  supplierName: string | null;
 };
 
 /** Склад для группировки в «Распределении»: из накладной, иначе с колонки партий (всё, что пришло с приёмов). */
@@ -40,6 +41,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
       productGroup: null,
       documentNumber: null,
       linePackageCount: null,
+      supplierName: null,
     };
   }
   if (!m) {
@@ -52,6 +54,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
     productGroup: m.productGroup,
     documentNumber: m.documentNumber,
     linePackageCount: m.linePackageCount,
+    supplierName: m.supplierName,
   };
 }
 
@@ -88,6 +91,7 @@ export async function listBatchesForHttp(
       productGroup: productGrades.productGroup,
       documentNumber: purchaseDocuments.documentNumber,
       linePackageCount: purchaseDocumentLines.packageCount,
+      supplierName: purchaseDocuments.supplierName,
     })
     .from(purchaseDocumentLines)
     .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
@@ -103,6 +107,7 @@ export async function listBatchesForHttp(
       productGroup: string | null;
       documentNumber: string | null;
       linePackageCount: number | null;
+      supplierName: string | null;
     }
   >();
   for (const r of rows) {
@@ -114,6 +119,7 @@ export async function listBatchesForHttp(
       productGroup: r.productGroup,
       documentNumber: r.documentNumber,
       linePackageCount: pk != null ? Number(pk) : null,
+      supplierName: r.supplierName,
     });
   }
 

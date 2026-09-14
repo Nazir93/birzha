@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { LoadingManifestDetail, LoadingManifestSummary, TripJson } from "../../api/types.js";
 import {
   aggregateLoadingManifestLinesByCaliber,
+  aggregateLoadingManifestLinesBySupplier,
   formatLoadingManifestCardHeader,
   formatManifestWarehouseNames,
   loadingManifestRoadCsvContent,
@@ -84,6 +85,10 @@ export function LoadingManifestAccordion({
   const navigate = useNavigate();
   const caliberRows = useMemo(
     () => (detail ? aggregateLoadingManifestLinesByCaliber(detail.lines) : []),
+    [detail],
+  );
+  const supplierRows = useMemo(
+    () => (detail ? aggregateLoadingManifestLinesBySupplier(detail.lines) : []),
     [detail],
   );
   const partyLinesSorted = useMemo(() => {
@@ -384,6 +389,59 @@ export function LoadingManifestAccordion({
                   </tfoot>
                 </table>
               </div>
+              {supplierRows.length > 0 ? (
+                <div
+                  className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card"
+                  style={{ marginTop: "0.75rem" }}
+                >
+                  <h4 style={{ margin: "0 0 0.4rem", fontSize: "0.92rem" }}>По тепличникам</h4>
+                  <table
+                    className="birzha-data-table birzha-data-table--compact"
+                    style={{ minWidth: 420 }}
+                    aria-label="Загружено по тепличникам"
+                  >
+                    <thead>
+                      <tr>
+                        <th>Тепличник</th>
+                        <th className="birzha-data-table__num">Кг</th>
+                        <th className="birzha-data-table__num">Ящ.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supplierRows.map((r) => (
+                        <tr key={r.supplierName}>
+                          <td>{r.supplierName}</td>
+                          <td className="birzha-data-table__num">
+                            {r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="birzha-data-table__num">
+                            {r.totalPackages != null ? r.totalPackages.toLocaleString("ru-RU") : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row" style={{ fontWeight: 700 }}>
+                          Итого
+                        </th>
+                        <td className="birzha-data-table__num">
+                          {supplierRows
+                            .reduce((a, r) => a + r.totalKg, 0)
+                            .toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="birzha-data-table__num">
+                          {supplierRows.some((r) => r.totalPackages != null)
+                            ? supplierRows
+                                .reduce((a, r) => a + (r.totalPackages ?? 0), 0)
+                                .toLocaleString("ru-RU", { maximumFractionDigits: 0 })
+                            : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : null}
               <div className="no-print birzha-clean-ops-row-actions" style={{ marginTop: "0.65rem" }}>
                 {variant === "full" && canAppendLoad && onAppendLoad && canShipTrip ? (
                   <button type="button" className={btnClassSpaced} onClick={onAppendLoad}>
@@ -456,6 +514,7 @@ export function LoadingManifestAccordion({
                       <tr>
                         <th>№</th>
                         {showLineWarehouseColumn ? <th>Склад</th> : null}
+                        <th>Тепличник</th>
                         <th>Накладная закупки</th>
                         <th>Калибр</th>
                         <th className="birzha-data-table__num">Кг</th>
@@ -469,6 +528,7 @@ export function LoadingManifestAccordion({
                           {showLineWarehouseColumn ? (
                             <td>{line.warehouseName?.trim() || "—"}</td>
                           ) : null}
+                          <td>{line.supplierName?.trim() || "—"}</td>
                           <td>{line.purchaseDocumentNumber ?? "—"}</td>
                           <td>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
                           <td className="birzha-data-table__num">

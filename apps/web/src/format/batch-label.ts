@@ -74,20 +74,28 @@ export function formatNakladLineLabel(b: BatchListItem): string {
 }
 
 /**
- * Человекочитаемая строка для отчётов: номер накладной + товар/калибр;
+ * Человекочитаемая строка для отчётов: тепличник · номер накладной · товар/калибр;
  * если нет данных накладной — нейтральная подпись без UUID.
  */
 export function formatBatchPartyCaption(b: BatchListItem | undefined, _batchId?: string): string {
   if (!b) {
     return "партия без накладной";
   }
+  const supplier = b.nakladnaya?.supplierName?.trim();
   const doc = b.nakladnaya?.documentNumber?.trim();
   const line = formatNakladLineLabel(b);
-  if (doc && line !== "—") {
-    return `№ ${doc} · ${line}`;
+  const parts: string[] = [];
+  if (supplier) {
+    parts.push(supplier);
+  }
+  if (doc) {
+    parts.push(`№ ${doc}`);
   }
   if (line !== "—") {
-    return line;
+    parts.push(line);
+  }
+  if (parts.length > 0) {
+    return parts.join(" · ");
   }
   return "партия без накладной";
 }

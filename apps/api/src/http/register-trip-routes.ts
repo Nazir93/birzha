@@ -29,6 +29,10 @@ import {
   shipmentLedgerToJson,
   tripFinancialsToJson,
 } from "./trip-report-serialize.js";
+import {
+  destinationNameFromMap,
+  shipDestinationDisplayNamesByCodes,
+} from "./ship-destination-names.js";
 import { tripToJson } from "./trip-serialize.js";
 
 type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
@@ -87,10 +91,17 @@ export function registerTripRoutes(
       }
       const [list, totalCount] = await Promise.all([trips.list(filter), trips.count(filter)]);
       const listMeta = { limit, offset, hasMore: offset + list.length < totalCount, totalCount };
+      const destNames = await shipDestinationDisplayNamesByCodes(
+        db,
+        list.map((t) => t.getDestinationCode()),
+      );
 
       const toJson = async (trip: (typeof list)[number]) => {
+        const nameExtras = {
+          destinationName: destinationNameFromMap(destNames, trip.getDestinationCode()),
+        };
         if (trip.getStatus() === "closed") {
-          return tripToJson(trip);
+          return tripToJson(trip, null, nameExtras);
         }
         const tripId = trip.getId();
         const [shipment, saleAgg, shortageAgg] = await Promise.all([
@@ -99,12 +110,16 @@ export function registerTripRoutes(
           shortages.aggregateByTripId(tripId),
         ]);
         const digest = computeTripTransitDigest(shipment, saleAgg, shortageAgg);
-        return tripToJson(trip, {
-          transitRemainingGrams: digest.remainingNetTransitGrams.toString(),
-          hasShipmentToTrip: digest.hasShipmentToTrip,
-          shippedGrams: digest.totalShippedGrams.toString(),
-          soldGrams: digest.totalSoldGrams.toString(),
-        });
+        return tripToJson(
+          trip,
+          {
+            transitRemainingGrams: digest.remainingNetTransitGrams.toString(),
+            hasShipmentToTrip: digest.hasShipmentToTrip,
+            shippedGrams: digest.totalShippedGrams.toString(),
+            soldGrams: digest.totalSoldGrams.toString(),
+          },
+          nameExtras,
+        );
       };
 
       const tripsPayload = await Promise.all(list.map(toJson));
@@ -137,8 +152,11 @@ export function registerTripRoutes(
       const onlySales = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
       const { trip, shipment, sales: saleAgg, salesForTripStock, shortage: shortageAgg, financials } =
         await tripReport.execute(tripId, onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined);
+      const destNames = await shipDestinationDisplayNamesByCodes(db, [trip.getDestinationCode()]);
       return reply.send({
-        trip: tripToJson(trip),
+        trip: tripToJson(trip, null, {
+          destinationName: destinationNameFromMap(destNames, trip.getDestinationCode()),
+        }),
         shipment: shipmentLedgerToJson(shipment),
         sales: saleLedgerAggregateToJson(saleAgg),
         ...(salesForTripStock ? { salesForTripStock: saleLedgerAggregateToJson(salesForTripStock) } : {}),
@@ -161,7 +179,12 @@ export function registerTripRoutes(
       if (u && isGlobalSellerOnly(u.roles) && !tripVisibleToFieldSeller(trip, u.sub)) {
         return reply.code(403).send({ error: "forbidden" });
       }
-      return reply.send({ trip: tripToJson(trip) });
+      const destNames = await shipDestinationDisplayNamesByCodes(db, [trip.getDestinationCode()]);
+      return reply.send({
+        trip: tripToJson(trip, null, {
+          destinationName: destinationNameFromMap(destNames, trip.getDestinationCode()),
+        }),
+      });
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -197,7 +220,16 @@ export function registerTripRoutes(
       }
       await assignTripSeller.execute({ tripId, sellerUserId: body.sellerUserId });
       const trip = await trips.findById(tripId);
-      return reply.code(200).send({ ok: true, trip: trip ? tripToJson(trip) : null });
+      if (!trip) {
+        return reply.code(200).send({ ok: true, trip: null });
+      }
+      const destNames = await shipDestinationDisplayNamesByCodes(db, [trip.getDestinationCode()]);
+      return reply.code(200).send({
+        ok: true,
+        trip: tripToJson(trip, null, {
+          destinationName: destinationNameFromMap(destNames, trip.getDestinationCode()),
+        }),
+      });
     } catch (error) {
       return sendMappedError(reply, error);
     }

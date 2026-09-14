@@ -27,6 +27,8 @@ export type BatchJson = {
      * `onWarehouseKg / totalKg` к этому числу (см. «Распределение»).
      */
     linePackageCount: number | null;
+    /** Тепличник (снимок с закупочной накладной). */
+    supplierName: string | null;
   };
   /** Присвоение качества / направления (PostgreSQL); при in-memory API может отсутствовать. */
   allocation?: {

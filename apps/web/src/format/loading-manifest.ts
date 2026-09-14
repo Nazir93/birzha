@@ -551,6 +551,13 @@ export type LoadingManifestDetailLineForCaliber = {
   productGradeCode: string | null;
 };
 
+/** Строка для свода по тепличникам. */
+export type LoadingManifestDetailLineForSupplier = {
+  kg: number;
+  packageCount: string | null;
+  supplierName?: string | null;
+};
+
 function parseManifestLinePackageCount(raw: string | null | undefined): number | null {
   if (raw == null || String(raw).trim() === "") {
     return null;
@@ -585,6 +592,31 @@ export function aggregateLoadingManifestLinesByCaliber(
       totalPackages: v.pkgLines > 0 ? Math.round(v.pkgSum) : null,
     }))
     .sort((a, b) => compareProductGradeLineLabels(a.caliberLabel, b.caliberLabel));
+}
+
+/** Свод ПН: сколько кг/ящ. загружено у каждого тепличника. */
+export function aggregateLoadingManifestLinesBySupplier(
+  lines: readonly LoadingManifestDetailLineForSupplier[],
+): { supplierName: string; totalKg: number; totalPackages: number | null }[] {
+  const m = new Map<string, { totalKg: number; pkgSum: number; pkgLines: number }>();
+  for (const line of lines) {
+    const supplierName = line.supplierName?.trim() || "Без тепличника";
+    const cur = m.get(supplierName) ?? { totalKg: 0, pkgSum: 0, pkgLines: 0 };
+    cur.totalKg += line.kg;
+    const p = parseManifestLinePackageCount(line.packageCount);
+    if (p != null) {
+      cur.pkgSum += p;
+      cur.pkgLines += 1;
+    }
+    m.set(supplierName, cur);
+  }
+  return [...m.entries()]
+    .map(([supplierName, v]) => ({
+      supplierName,
+      totalKg: v.totalKg,
+      totalPackages: v.pkgLines > 0 ? Math.round(v.pkgSum) : null,
+    }))
+    .sort((a, b) => a.supplierName.localeCompare(b.supplierName, "ru"));
 }
 
 export type LoadingManifestRoadCsvParams = {

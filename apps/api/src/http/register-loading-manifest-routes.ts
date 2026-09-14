@@ -304,6 +304,7 @@ export function registerLoadingManifestRoutes(
           inTransitGrams: batches.inTransitGrams,
           purchaseDocumentNumber: purchaseDocuments.documentNumber,
           purchaseDocumentId: purchaseDocuments.id,
+          supplierName: purchaseDocuments.supplierName,
           productGradeCode: productGrades.code,
           productGroup: productGrades.productGroup,
         })
@@ -357,6 +358,7 @@ export function registerLoadingManifestRoutes(
               packageCount: r.line.packageCount?.toString() ?? null,
               purchaseDocumentNumber: r.purchaseDocumentNumber,
               purchaseDocumentId: r.purchaseDocumentId,
+              supplierName: r.supplierName,
               productGradeCode: r.productGradeCode,
               productGroup: r.productGroup,
               warehouseId: r.batchWarehouseId,

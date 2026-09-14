@@ -440,7 +440,13 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             }}
           >
             <span>
-              <strong>{r.trip.tripNumber}</strong> · статус: <code>{formatTripReportStatusLabel(r)}</code>
+              <strong>{r.trip.tripNumber}</strong>
+              {r.trip.destinationName?.trim() || r.trip.destinationCode?.trim()
+                ? ` · ${r.trip.destinationName?.trim() || r.trip.destinationCode}`
+                : null}
+              {r.trip.productGroup?.trim() ? ` · ${r.trip.productGroup.trim()}` : null}
+              {" · "}
+              статус: <code>{formatTripReportStatusLabel(r)}</code>
             </span>
             <div className="no-print birzha-clean-ops-row-actions">
               <button
@@ -774,7 +780,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 <thead>
                   <tr>
                     <th scope="col" style={thHead}>
-                      Партия (накладная · товар · калибр)
+                      Партия (тепличник · накладная · товар · калибр)
                     </th>
                     <th scope="col" style={thHead}>
                       Отгр., кг

@@ -116,6 +116,21 @@ describe("trip-label", () => {
     expect(suggestNextTripNumber(trips, "rostov", "Огурцы")).toBe("01");
   });
 
+  it("добавляет направление и товар в подпись рейса", () => {
+    const label = formatTripSelectLabel({
+      ...baseTrip,
+      tripNumber: "01",
+      destinationName: "Москва",
+      productGroup: "Помидоры",
+      driverName: "Иванов",
+      departedAt: "2026-05-10T08:00:00.000Z",
+    });
+    expect(label).toContain("01");
+    expect(label).toContain("Москва");
+    expect(label).toContain("Помидоры");
+    expect(label).toContain("Иванов");
+  });
+
   it("buildTripDisplayNumber собирает водитель · машина · дата", () => {
     expect(
       buildTripDisplayNumber({
