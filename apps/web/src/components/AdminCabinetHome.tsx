@@ -1,6 +1,6 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { closeTripById } from "../api/fetch-api.js";
 import {
@@ -22,6 +22,7 @@ import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-lab
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { adminRoutes, accounting } from "../routes.js";
+import { tripReportHref } from "../format/trip-report-href.js";
 import {
   DashboardSummaryPeriodToggles,
   MassBalanceLegend,
@@ -47,10 +48,24 @@ const ADMIN_TRIPS_SECTION_ID = "admin-trips-in-work";
  */
 export function AdminCabinetHome() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showCloseTrip = canCreateTrip(user ?? null);
   const [summaryChartMode, setSummaryChartMode] = useState<DashboardSummaryChartMode>("mass");
   const [summaryPeriod, setSummaryPeriod] = useState<DashboardSummaryPeriod>("30d");
+
+  /** Сводка → отчёт: два шага в истории, чтобы «Назад» вернул к выбору рейса, а не сразу на сводку. */
+  const openTripReport = (tripId: string) => {
+    const id = tripId.trim();
+    if (!id) {
+      return;
+    }
+    const withTrip = tripReportHref(adminRoutes.reports, id);
+    void navigate(adminRoutes.reports);
+    queueMicrotask(() => {
+      void navigate(withTrip);
+    });
+  };
 
   const periodStart = useMemo(() => dashboardPeriodStartDate(summaryPeriod), [summaryPeriod]);
   const sinceParam = periodStart ? periodStart.toISOString().slice(0, 10) : undefined;
@@ -512,7 +527,7 @@ export function AdminCabinetHome() {
                   </thead>
                   <tbody>
                     {tripsPageSlice.map((t) => {
-                      const reportTo = `${adminRoutes.reports}?${new URLSearchParams({ trip: t.id }).toString()}`;
+                      const reportTo = tripReportHref(adminRoutes.reports, t.id);
                       const dest =
                         t.destinationName?.trim() ||
                         t.destinationCode?.trim() ||
@@ -521,7 +536,14 @@ export function AdminCabinetHome() {
                       return (
                       <tr key={t.id}>
                         <th scope="row" className="birzha-admin-trips-table__row-head">
-                          <Link to={reportTo} style={{ fontWeight: 700, textDecoration: "none" }}>
+                          <Link
+                            to={reportTo}
+                            style={{ fontWeight: 700, textDecoration: "none" }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openTripReport(t.id);
+                            }}
+                          >
                             {t.tripNumber}
                           </Link>
                         </th>
@@ -551,7 +573,14 @@ export function AdminCabinetHome() {
                           {[t.vehicleLabel, t.driverName].filter(Boolean).join(" · ") || "—"}
                         </td>
                         <td className="birzha-admin-trips-table__cell birzha-admin-trips-table__cell--right">
-                          <Link to={reportTo} style={{ fontWeight: 600 }}>
+                          <Link
+                            to={reportTo}
+                            style={{ fontWeight: 600 }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openTripReport(t.id);
+                            }}
+                          >
                             Открыть
                           </Link>
                         </td>

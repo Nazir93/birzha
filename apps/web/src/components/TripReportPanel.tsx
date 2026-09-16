@@ -1,5 +1,5 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { closeTripById, deleteTripById } from "../api/fetch-api.js";
@@ -89,8 +89,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     : "сумма, кг и ящики по закупщику и складу за период.";
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [tripId, setTripId] = useState<string | "">("");
-  const initialTripFromUrl = useRef(false);
 
   const tripsQuery = useQuery(tripsFullListQueryOptions());
 
@@ -132,33 +130,47 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     [tripsAllowedForReport.length, openTripsForSelect.length],
   );
 
-  useEffect(() => {
-    if (initialTripFromUrl.current) {
-      return;
+  /** Рейс из URL — чтобы «Назад» снимал выбор, а не уводил со страницы. */
+  const tripIdFromUrl = searchParams.get("trip")?.trim() ?? "";
+  const tripId = useMemo(() => {
+    if (!tripIdFromUrl) {
+      return "";
     }
-    const p = searchParams.get("trip")?.trim() ?? "";
-    if (!p || !tripsQuery.data) {
-      return;
+    if (!tripsQuery.data) {
+      return tripIdFromUrl;
     }
-    if (openTripsForSelect.some((t) => t.id === p)) {
-      setTripId(p);
-      initialTripFromUrl.current = true;
-    }
-  }, [searchParams, openTripsForSelect, tripsQuery.data]);
+    return openTripsForSelect.some((t) => t.id === tripIdFromUrl) ? tripIdFromUrl : "";
+  }, [tripIdFromUrl, tripsQuery.data, openTripsForSelect]);
 
+  const setTripId = useCallback(
+    (nextId: string, opts?: { replace?: boolean }) => {
+      const id = nextId.trim();
+      const cur = searchParams.get("trip")?.trim() ?? "";
+      if (id === cur) {
+        return;
+      }
+      const next = new URLSearchParams(searchParams);
+      if (id) {
+        next.set("trip", id);
+      } else {
+        next.delete("trip");
+      }
+      const qs = next.toString();
+      void navigate({ pathname, search: qs ? `?${qs}` : "" }, { replace: opts?.replace === true });
+    },
+    [searchParams, navigate, pathname],
+  );
+
+  /** В URL закрытый/чужой рейс — убираем параметр (replace, без лишнего шага в истории). */
   useEffect(() => {
-    if (!tripId || !tripsQuery.data) {
+    if (!tripIdFromUrl || !tripsQuery.data) {
       return;
     }
-    if (openTripsForSelect.some((t) => t.id === tripId)) {
+    if (openTripsForSelect.some((t) => t.id === tripIdFromUrl)) {
       return;
     }
-    setTripId("");
-    const next = new URLSearchParams(searchParams);
-    next.delete("trip");
-    const qs = next.toString();
-    void navigate({ pathname, search: qs ? `?${qs}` : "" }, { replace: true });
-  }, [tripId, tripsQuery.data, openTripsForSelect, searchParams, navigate, pathname]);
+    setTripId("", { replace: true });
+  }, [tripIdFromUrl, tripsQuery.data, openTripsForSelect, setTripId]);
 
   const reportQuery = useQuery({
     ...shipmentReportQueryOptions(tripId || ""),
@@ -212,7 +224,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
       await deleteTripById(id, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
     },
     onSuccess: async () => {
-      setTripId("");
+      setTripId("", { replace: true });
       await queryClient.invalidateQueries({ queryKey: queryRoots.trips });
       await queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
     },
