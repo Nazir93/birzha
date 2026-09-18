@@ -35,8 +35,10 @@ export default defineConfig({
         theme_color: "#18181b",
         background_color: "#18181b",
         display: "standalone",
-        /** Книжная и альбомная — без принудительной блокировки. */
-        orientation: "any",
+        /**
+         * Поле `orientation` не задаём: Chrome на Android читает `"any"` как блокировку книжной.
+         * Без поля иконка PWA крутится вместе с устройством (iOS и Android).
+         */
         lang: "ru",
         start_url: pwaStartUrl,
         scope: "/",
