@@ -18,6 +18,7 @@ import type { TripRepository } from "../application/ports/trip-repository.port.j
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
+import { assertBatchesMatchTripProduct } from "../application/trip/assert-batches-match-trip-product.js";
 import { syncLoadingManifestDestinationFromTrip } from "../application/trip/sync-loading-manifest-destination-from-trip.js";
 import {
   loadingManifestTripAssignLock,
@@ -450,6 +451,15 @@ export function registerLoadingManifestRoutes(
           })
         : null;
 
+      const manifestBatchIds = await db
+        .select({ batchId: loadingManifestLines.batchId })
+        .from(loadingManifestLines)
+        .where(eq(loadingManifestLines.manifestId, manifestId));
+      await assertBatchesMatchTripProduct(db, {
+        tripId: body.tripId,
+        batchIds: manifestBatchIds.map((row) => row.batchId),
+      });
+
       if (!tripRead || !assignedTrip) {
         await db
           .update(loadingManifests)
@@ -607,6 +617,10 @@ export function registerLoadingManifestRoutes(
             message: "Рейс уже закрыт — добавление в погрузочную недоступно.",
           });
         }
+        await assertBatchesMatchTripProduct(db, {
+          tripId: manifest.tripId,
+          batchIds,
+        });
       }
 
       const selected = await db

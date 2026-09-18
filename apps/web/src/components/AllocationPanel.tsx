@@ -90,6 +90,7 @@ export function AllocationPanel() {
     loadNaklSelection,
     distributionBase,
     filterTripId: focusTripId,
+    loadingTripId: newManifestTripId || focusTripId,
   });
 
   const {

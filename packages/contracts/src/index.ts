@@ -1,3 +1,8 @@
+export {
+  conflictingBatchProduct,
+  effectiveTripProductGroup,
+  tripProductMismatchMessage,
+} from "./trip-product-match.js";
 export { createShipDestinationBodySchema } from "./ship-destination.js";
 export type { CreateShipDestinationBody } from "./ship-destination.js";
 export {

@@ -1,7 +1,7 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo } from "react";
 
-import { BATCH_DESTINATIONS } from "@birzha/contracts";
+import { BATCH_DESTINATIONS, effectiveTripProductGroup } from "@birzha/contracts";
 import type { BatchListItem, LoadingManifestSummary } from "../../api/types.js";
 import { useAuth } from "../../auth/auth-context.js";
 import { closedTripIdSet, filterTripsInWork } from "../../format/archive.js";
@@ -88,6 +88,8 @@ export type UseDistributionWorkspaceParams = {
   workspaceMode?: "default" | "append" | "trip";
   /** Фильтр списка ПН и контекст «к операциям» с конкретного рейса (`?trip=`). */
   filterTripId?: string;
+  /** Рейс, на который грузят: в отборе только партии этого товара. */
+  loadingTripId?: string;
 };
 
 export function useDistributionWorkspace({
@@ -100,6 +102,7 @@ export function useDistributionWorkspace({
   distributionBase,
   workspaceMode = "default",
   filterTripId = "",
+  loadingTripId = "",
 }: UseDistributionWorkspaceParams) {
   const { meta } = useAuth();
   const queryClient = useQueryClient();
@@ -257,9 +260,27 @@ export function useDistributionWorkspace({
     return Boolean(tid && closedIds.has(tid));
   }, [routeManifestId, routeDetail, closedIds]);
 
+  const loadingTripProduct = useMemo(() => {
+    const id = loadingTripId.trim() || routeDetail?.tripId?.trim() || "";
+    if (!id) {
+      return null;
+    }
+    const trip = openTripsForAssign.find((t) => t.id === id);
+    return trip ? effectiveTripProductGroup(trip.productGroup) : null;
+  }, [loadingTripId, routeDetail?.tripId, openTripsForAssign]);
+
   const batchesOnWarehouse = useMemo(
-    () => batchesMerged.filter((b) => batchAvailableForLoadingKg(b) > 0),
-    [batchesMerged],
+    () =>
+      batchesMerged
+        .filter((b) => batchAvailableForLoadingKg(b) > 0)
+        .filter((b) => {
+          if (!loadingTripProduct) {
+            return true;
+          }
+          const group = b.nakladnaya?.productGroup?.trim() ?? "";
+          return !group || group === loadingTripProduct;
+        }),
+    [batchesMerged, loadingTripProduct],
   );
 
   const list = useMemo(

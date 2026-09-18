@@ -58,6 +58,22 @@ export class TripSellerCrossWarehouseLoadingError extends Error {
   }
 }
 
+/** Партии другого товара, чем товар рейса. */
+export class TripProductMismatchError extends Error {
+  readonly tripId: string;
+  readonly tripProduct: string;
+  readonly batchProduct: string;
+
+  constructor(tripId: string, tripProduct: string, batchProduct: string, message: string) {
+    super(message);
+    this.name = "TripProductMismatchError";
+    this.tripId = tripId;
+    this.tripProduct = tripProduct;
+    this.batchProduct = batchProduct;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 /** Удаление из архива разрешено только для закрытого рейса. */
 export class TripArchiveDeleteRequiresClosedError extends Error {
   readonly tripId: string;

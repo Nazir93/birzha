@@ -1,4 +1,4 @@
-﻿import { compareProductGradeLineLabels } from "@birzha/contracts";
+﻿import { compareProductGradeLineLabels, conflictingBatchProduct } from "@birzha/contracts";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -149,7 +149,9 @@ export function LoadingManifestAccordion({
   const changeTripTargetReady =
     assignTripId.trim().length > 0 && assignTripId.trim() !== linkedTripId;
   const tripSelectOptions = useMemo(() => {
-    const base = trips.map((t) => ({
+    const products = (detail?.lines ?? []).map((line) => line.productGroup);
+    const allowed = trips.filter((t) => conflictingBatchProduct(t.productGroup, products) == null);
+    const base = allowed.map((t) => ({
       value: t.id,
       label: formatTripSelectLabel(t),
     }));
@@ -157,7 +159,7 @@ export function LoadingManifestAccordion({
       return [{ value: "", label: "— выбрать рейс —" }, ...base];
     }
     return [{ value: "", label: "— выбрать другой рейс —" }, ...base.filter((o) => o.value !== linkedTripId)];
-  }, [trips, linkedTripId]);
+  }, [trips, linkedTripId, detail]);
   /** Текущий рейс показываем текстом выше; в селекте — только выбор другого. */
   const tripSelectValue =
     linkedTripId && assignTripId.trim() === linkedTripId ? "" : assignTripId;

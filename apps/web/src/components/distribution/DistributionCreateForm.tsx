@@ -1,5 +1,7 @@
-﻿import { Link } from "react-router-dom";
+﻿import { useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 
+import { conflictingBatchProduct } from "@birzha/contracts";
 import type { BatchListItem, LoadingManifestSummary, TripJson } from "../../api/types.js";
 import { formatLoadingManifestDisplayName, resolveLoadingManifestNumberForSave } from "../../format/loading-manifest.js";
 import { tripLocksManifestDestination } from "../../format/loading-manifest-trip-destination.js";
@@ -64,12 +66,28 @@ export function DistributionCreateForm({
   onSave,
 }: Props) {
   const tripId = newManifestTripId.trim();
-  const selectedTrip = openTripsForAssign.find((t) => t.id === tripId);
+  const batchProducts = useMemo(
+    () => tableRows.map((b) => b.nakladnaya?.productGroup),
+    [tableRows],
+  );
+  const tripsForProduct = useMemo(
+    () => openTripsForAssign.filter((t) => conflictingBatchProduct(t.productGroup, batchProducts) == null),
+    [openTripsForAssign, batchProducts],
+  );
+  const selectedTrip = tripsForProduct.find((t) => t.id === tripId);
+  const productLimited = tripsForProduct.length < openTripsForAssign.length;
   const destinationLockedByTrip = !appendMode && tripLocksManifestDestination(selectedTrip);
   const effectiveDestinationCode =
     destinationLockedByTrip && selectedTrip?.destinationCode?.trim()
       ? selectedTrip.destinationCode.trim()
       : manifestDestinationCode;
+
+  useEffect(() => {
+    if (!tripId || tripsForProduct.some((t) => t.id === tripId)) {
+      return;
+    }
+    onNewManifestTripIdChange("");
+  }, [tripId, tripsForProduct, onNewManifestTripIdChange]);
 
   const handleSave = () => {
     if (appendMode && appendTargetManifest) {
@@ -129,8 +147,8 @@ export function DistributionCreateForm({
             placeholder={
               tripsPending
                 ? "— загрузка рейсов —"
-                : openTripsForAssign.length === 0
-                  ? "— сначала создайте рейс —"
+                : tripsForProduct.length === 0
+                  ? "— нет рейса этого товара —"
                   : "— выберите рейс (необязательно) —"
             }
             options={[
@@ -138,11 +156,11 @@ export function DistributionCreateForm({
                 value: "",
                 label: tripsPending
                   ? "— загрузка рейсов —"
-                  : openTripsForAssign.length === 0
-                    ? "— сначала создайте рейс —"
+                  : tripsForProduct.length === 0
+                    ? "— нет рейса этого товара —"
                     : "— без рейса (привязать позже) —",
               },
-              ...openTripsForAssign.map((t) => ({
+              ...tripsForProduct.map((t) => ({
                 value: t.id,
                 label: formatTripSelectLabel(t),
               })),
@@ -167,6 +185,11 @@ export function DistributionCreateForm({
           <BirzhaDateField value={manifestDate} onChange={onManifestDateChange} style={fieldStyle} />
         </label>
       </div>
+      {productLimited ? (
+        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
+          В списке только рейсы того же товара, что в отборе. Помидоры на рейс огурцов не попадают.
+        </p>
+      ) : null}
       {openTripsForAssign.length === 0 && !tripsPending ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
           Создайте рейс в разделе{" "}

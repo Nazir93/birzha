@@ -30,6 +30,7 @@ import {
   TripNotEmptyError,
   TripNotFoundError,
   TripSellerCrossWarehouseLoadingError,
+  TripProductMismatchError,
   TripSaleEditForbiddenError,
   TripSaleLineNotFoundError,
   TripShortageExceedsNetError,
@@ -213,6 +214,15 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
       error: "trip_seller_assigned_cross_warehouse",
       tripId: error.tripId,
       warehouseId: error.warehouseId,
+      message: error.message,
+    });
+  }
+  if (error instanceof TripProductMismatchError) {
+    return reply.code(400).send({
+      error: "trip_product_mismatch",
+      tripId: error.tripId,
+      tripProduct: error.tripProduct,
+      batchProduct: error.batchProduct,
       message: error.message,
     });
   }
