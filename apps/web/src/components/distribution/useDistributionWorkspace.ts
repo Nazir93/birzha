@@ -34,6 +34,7 @@ import {
   warehousesFullListQueryOptions,
 } from "../../query/core-list-queries.js";
 import { refreshDistributionLists } from "../../query/domain-list-refresh.js";
+import { distributionWarehouseBatchesPending } from "./distribution-warehouse-batches-pending.js";
 import { loadingSummaryFromDetail } from "../loading-manifest/loading-summary-from-detail.js";
 import type { LoadingManifestDocOption } from "../LoadingManifestBlock.js";
 
@@ -135,13 +136,19 @@ export function useDistributionWorkspace({
     [warehousesQuery.data?.warehouses],
   );
   const warehouseBatchQueries = useQueries({
-    queries: warehouseIds.map((id) => batchesForWarehouseQueryOptions(id, 500)),
+    queries: warehouseIds.map((id) => ({
+      ...batchesForWarehouseQueryOptions(id, 500),
+      refetchOnMount: "always" as const,
+    })),
   });
   const batchesMerged = useMemo(
     () => warehouseBatchQueries.flatMap((q) => q.data?.batches ?? []),
     [warehouseBatchQueries],
   );
-  const batchesQueryPending = warehousesQuery.isPending || warehouseBatchQueries.some((q) => q.isPending);
+  const batchesQueryPending = distributionWarehouseBatchesPending({
+    warehousesLoaded: warehousesQuery.isSuccess || warehousesQuery.isError,
+    queries: warehouseBatchQueries,
+  });
   const batchesQueryError = warehousesQuery.isError || warehouseBatchQueries.some((q) => q.isError);
   const batchesQueryErrorMessage = useMemo(() => {
     if (warehousesQuery.isError) {

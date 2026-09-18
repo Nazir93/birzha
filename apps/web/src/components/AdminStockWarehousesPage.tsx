@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
@@ -25,22 +25,6 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
-
-function warehouseRowCellStyle(selected: boolean, place: "first" | "middle" | "last"): CSSProperties {
-  if (!selected) {
-    return thtdDense;
-  }
-  const frame = "2px solid var(--birzha-danger)";
-  return {
-    ...thtdDense,
-    borderTop: frame,
-    borderBottom: frame,
-    borderLeft: place === "first" ? frame : "1px solid var(--birzha-danger)",
-    borderRight: place === "last" ? frame : "1px solid var(--birzha-danger)",
-    background: "color-mix(in srgb, var(--birzha-danger) 16%, transparent)",
-    boxShadow: "inset 0 0 12px color-mix(in srgb, var(--birzha-danger) 32%, transparent)",
-  };
-}
 
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
@@ -309,38 +293,37 @@ export function AdminStockWarehousesPage() {
                     const packages = warehousePackagesById.get(w.id) ?? 0;
                     const active = selectedWhId === w.id;
                     return (
-                      <tr key={w.id}>
-                        <td style={warehouseRowCellStyle(active, "first")}>
-                          <button
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => setSelectedWarehouseId(w.id)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              padding: 0,
-                              fontWeight: 600,
-                              color: "inherit",
-                              textAlign: "left",
-                              textDecoration: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {w.name}
-                          </button>
-                        </td>
-                        <td style={warehouseRowCellStyle(active, "middle")}>
-                          {kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
-                        </td>
-                        <td style={warehouseRowCellStyle(active, "middle")}>
-                          {packages.toLocaleString("ru-RU")} ящ.
-                        </td>
-                        <td style={warehouseRowCellStyle(active, "last")}>
+                      <tr
+                        key={w.id}
+                        className={
+                          active
+                            ? "birzha-stock-warehouse-row birzha-stock-warehouse-row--selected"
+                            : "birzha-stock-warehouse-row"
+                        }
+                        aria-selected={active}
+                        tabIndex={0}
+                        onClick={() => setSelectedWarehouseId(w.id)}
+                        onKeyDown={(event) => {
+                          if (event.target !== event.currentTarget) {
+                            return;
+                          }
+                          if (event.key !== "Enter" && event.key !== " ") {
+                            return;
+                          }
+                          event.preventDefault();
+                          setSelectedWarehouseId(w.id);
+                        }}
+                      >
+                        <td style={{ ...thtdDense, fontWeight: 600 }}>{w.name}</td>
+                        <td style={thtdDense}>{kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</td>
+                        <td style={thtdDense}>{packages.toLocaleString("ru-RU")} ящ.</td>
+                        <td style={thtdDense}>
                           <button
                             type="button"
                             className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
                             disabled={deleteWarehouse.isPending}
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               if (window.confirm(`Удалить склад «${w.name}»?`)) {
                                 void deleteWarehouse.mutate(w.id);
                               }

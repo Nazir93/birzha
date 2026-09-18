@@ -2413,6 +2413,19 @@ html[data-birzha-theme="dark"] .app-shell--cabinet .birzha-clean-ops-page.birzha
   background: color-mix(in srgb, var(--birzha-accent) 8%, transparent);
 }
 
+.birzha-stock-warehouse-row {
+  cursor: var(--birzha-cursor-red);
+}
+
+.birzha-stock-warehouse-row:hover td,
+.birzha-stock-warehouse-row--selected td {
+  background: var(--birzha-accent-soft);
+}
+
+.birzha-stock-warehouse-row--selected td {
+  font-weight: 600;
+}
+
 .birzha-distribution-manifest-row__actions {
   display: flex;
   flex-wrap: wrap;
