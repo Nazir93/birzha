@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { compareProductGradeCodes } from "@birzha/contracts";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { apiDelete, apiPostJson } from "../api/fetch-api.js";
@@ -25,6 +25,22 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+
+function warehouseRowCellStyle(selected: boolean, place: "first" | "middle" | "last"): CSSProperties {
+  if (!selected) {
+    return thtdDense;
+  }
+  const frame = "2px solid var(--birzha-danger)";
+  return {
+    ...thtdDense,
+    borderTop: frame,
+    borderBottom: frame,
+    borderLeft: place === "first" ? frame : "1px solid var(--birzha-danger)",
+    borderRight: place === "last" ? frame : "1px solid var(--birzha-danger)",
+    background: "color-mix(in srgb, var(--birzha-danger) 16%, transparent)",
+    boxShadow: "inset 0 0 12px color-mix(in srgb, var(--birzha-danger) 32%, transparent)",
+  };
+}
 
 export function AdminStockWarehousesPage() {
   const queryClient = useQueryClient();
@@ -294,27 +310,32 @@ export function AdminStockWarehousesPage() {
                     const active = selectedWhId === w.id;
                     return (
                       <tr key={w.id}>
-                        <td style={thtdDense}>
+                        <td style={warehouseRowCellStyle(active, "first")}>
                           <button
                             type="button"
+                            aria-pressed={active}
                             onClick={() => setSelectedWarehouseId(w.id)}
                             style={{
                               background: "none",
                               border: "none",
                               padding: 0,
-                              fontWeight: active ? 800 : 600,
+                              fontWeight: 600,
                               color: "inherit",
                               textAlign: "left",
-                              textDecoration: active ? "underline" : undefined,
+                              textDecoration: "none",
+                              cursor: "pointer",
                             }}
                           >
                             {w.name}
-                            <span className="birzha-text-muted birzha-ui-sm"> ({w.code})</span>
                           </button>
                         </td>
-                        <td style={thtdDense}>{kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг</td>
-                        <td style={thtdDense}>{packages.toLocaleString("ru-RU")} ящ.</td>
-                        <td style={thtdDense}>
+                        <td style={warehouseRowCellStyle(active, "middle")}>
+                          {kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
+                        </td>
+                        <td style={warehouseRowCellStyle(active, "middle")}>
+                          {packages.toLocaleString("ru-RU")} ящ.
+                        </td>
+                        <td style={warehouseRowCellStyle(active, "last")}>
                           <button
                             type="button"
                             className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
