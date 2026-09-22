@@ -21,6 +21,7 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
 import {
   aggregateTripBatchRows,
