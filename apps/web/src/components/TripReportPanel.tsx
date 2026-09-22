@@ -601,9 +601,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 : null}
               {r.trip.productGroup?.trim() ? ` · ${r.trip.productGroup.trim()}` : null}
             </p>
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
-              Одинаковые калибры сложены; цена и сумма — по закупу партий.
-            </p>
             {!loadingManifest || loadingManifest.rows.length === 0 ? (
               <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
             ) : (
