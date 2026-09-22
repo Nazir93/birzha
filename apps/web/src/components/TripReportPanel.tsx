@@ -6,6 +6,10 @@ import { closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
+import {
+  aggregateTripShipmentByCaliber,
+  buildTripShipmentDetailRows,
+} from "../format/aggregate-trip-shipment-loading.js";
 import { saleGrossGramsFromNet } from "../format/seller-gross-net.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
 import {
@@ -200,6 +204,15 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const batchRows = useMemo(() => (r ? buildTripBatchRows(r) : []), [r]);
 
   const salesByProductLine = useMemo(() => (r ? aggregateTripSalesByProductLine(r, batchById) : []), [r, batchById]);
+
+  const shipmentByCaliber = useMemo(
+    () => (r ? aggregateTripShipmentByCaliber(r, batchById) : []),
+    [r, batchById],
+  );
+  const shipmentDetailRows = useMemo(
+    () => (r ? buildTripShipmentDetailRows(r, batchById) : []),
+    [r, batchById],
+  );
 
   const batchAgg = useMemo(() => aggregateTripBatchRows(batchRows), [batchRows]);
 
@@ -571,6 +584,130 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </tbody>
             </table>
           </div>
+          </BirzhaDisclosure>
+
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-loading-caliber" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Погрузочная накладная (общая)
+              </h3>
+            }
+          >
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+              Одинаковые товар и калибр из разных партий сложены в одну строку — свод на всю машину.
+            </p>
+            {shipmentByCaliber.length === 0 ? (
+              <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
+            ) : (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 420 }} aria-labelledby="trip-report-loading-caliber">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Товар · калибр
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Ящ.
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shipmentByCaliber.map((row) => (
+                      <tr key={row.lineLabel}>
+                        <td style={thtd}>{row.lineLabel}</td>
+                        <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                        <td style={thtd}>{packageCountLabel(row.packages)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th scope="row" style={{ ...thtd, fontWeight: 700 }}>
+                        Итого
+                      </th>
+                      <td style={{ ...thtd, fontWeight: 700 }}>
+                        {gramsToKgLabel(r.shipment.totalGrams)}
+                      </td>
+                      <td style={{ ...thtd, fontWeight: 700 }}>
+                        {packageCountLabel(r.shipment.totalPackageCount)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </BirzhaDisclosure>
+
+          <BirzhaDisclosure
+            defaultOpen={false}
+            title={
+              <h3 id="trip-report-loading-detail" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Погрузочная накладная (подробная)
+              </h3>
+            }
+          >
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+              Каждая партия отдельно: тепличник, закупочная накладная, калибр, кг и ящики.
+            </p>
+            {shipmentDetailRows.length === 0 ? (
+              <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
+            ) : (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 640 }} aria-labelledby="trip-report-loading-detail">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        №
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Тепличник
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Накладная закупки
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Товар · калибр
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Ящ.
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shipmentDetailRows.map((row) => (
+                      <tr key={row.batchId}>
+                        <td style={thtd}>{row.lineNo}</td>
+                        <td style={thtd}>{row.supplierName}</td>
+                        <td style={thtd}>{row.documentNumber}</td>
+                        <td style={thtd}>{row.caliberLabel}</td>
+                        <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                        <td style={thtd}>{packageCountLabel(row.packages)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th scope="row" colSpan={4} style={{ ...thtd, fontWeight: 700 }}>
+                        Итого
+                      </th>
+                      <td style={{ ...thtd, fontWeight: 700 }}>
+                        {gramsToKgLabel(r.shipment.totalGrams)}
+                      </td>
+                      <td style={{ ...thtd, fontWeight: 700 }}>
+                        {packageCountLabel(r.shipment.totalPackageCount)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
           </BirzhaDisclosure>
 
           {!hideSalesAndMoney ? (
