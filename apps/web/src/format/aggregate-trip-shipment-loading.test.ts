@@ -4,15 +4,16 @@ import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 
 import {
   aggregateTripShipmentByCaliber,
-  buildTripShipmentDetailRows,
+  averagePurchaseRubPerKgLabel,
+  shipmentPurchaseCostKopecks,
 } from "./aggregate-trip-shipment-loading.js";
 
-function batch(id: string, group: string, grade: string, supplier = "Иван", doc = "Н-1"): BatchListItem {
+function batch(id: string, group: string, grade: string, pricePerKg: number): BatchListItem {
   return {
     id,
     purchaseId: "p",
     totalKg: 100,
-    pricePerKg: 1,
+    pricePerKg,
     pendingInboundKg: 0,
     onWarehouseKg: 0,
     inTransitKg: 0,
@@ -20,18 +21,18 @@ function batch(id: string, group: string, grade: string, supplier = "Иван", 
     writtenOffKg: 0,
     nakladnaya: {
       documentId: "d1",
-      documentNumber: doc,
+      documentNumber: "Н-1",
       warehouseId: "w1",
       productGroup: group,
       productGradeCode: grade,
-      supplierName: supplier,
+      supplierName: "Иван",
     },
   };
 }
 
 function minimalReport(overrides: Partial<ShipmentReportResponse> = {}): ShipmentReportResponse {
   const base: ShipmentReportResponse = {
-    trip: { id: "t1", tripNumber: "Р-1", status: "open" },
+    trip: { id: "t1", tripNumber: "Р-1", status: "open", vehicleLabel: "А123ВС" },
     shipment: { totalGrams: "0", totalPackageCount: "0", byBatch: [] },
     sales: {
       totalGrams: "0",
@@ -63,12 +64,18 @@ function minimalReport(overrides: Partial<ShipmentReportResponse> = {}): Shipmen
   return { ...base, ...overrides };
 }
 
+describe("shipmentPurchaseCostKopecks", () => {
+  it("считает 10 кг × 50 ₽ = 500 ₽", () => {
+    expect(shipmentPurchaseCostKopecks(10_000n, 50)).toBe(50_000n);
+  });
+});
+
 describe("aggregateTripShipmentByCaliber", () => {
-  it("складывает одинаковые калибры из разных партий", () => {
+  it("складывает калибры и суммы закупа", () => {
     const map = new Map([
-      ["b1", batch("b1", "Помидоры", "№5")],
-      ["b2", batch("b2", "Помидоры", "№5", "Пётр", "Н-2")],
-      ["b3", batch("b3", "Огурцы", "НС+")],
+      ["b1", batch("b1", "Помидоры", "№5", 40)],
+      ["b2", batch("b2", "Помидоры", "№5", 40)],
+      ["b3", batch("b3", "Помидоры", "№6", 50)],
     ]);
     const report = minimalReport({
       shipment: {
@@ -81,38 +88,38 @@ describe("aggregateTripShipmentByCaliber", () => {
         ],
       },
     });
-    const rows = aggregateTripShipmentByCaliber(report, map);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]?.lineLabel).toContain("Огурцы");
-    expect(rows[0]?.grams).toBe(3000n);
-    expect(rows[0]?.packages).toBe(6n);
-    expect(rows[1]?.lineLabel).toContain("Помидоры");
-    expect(rows[1]?.grams).toBe(3000n);
-    expect(rows[1]?.packages).toBe(6n);
+    const summary = aggregateTripShipmentByCaliber(report, map);
+    expect(summary.rows).toHaveLength(2);
+    const n5 = summary.rows.find((r) => r.lineLabel.includes("№5"));
+    const n6 = summary.rows.find((r) => r.lineLabel.includes("№6"));
+    expect(n5?.grams).toBe(3000n);
+    expect(n5?.packages).toBe(6n);
+    expect(n5?.costKopecks).toBe(12_000n);
+    expect(n6?.grams).toBe(3000n);
+    expect(n6?.costKopecks).toBe(15_000n);
+    expect(summary.totalCostKopecks).toBe(27_000n);
   });
-});
 
-describe("buildTripShipmentDetailRows", () => {
-  it("даёт по строке на партию с тепличником и накладной", () => {
-    const map = new Map([
-      ["b1", batch("b1", "Помидоры", "№5", "Иван", "Н-1")],
-      ["b2", batch("b2", "Помидоры", "№5", "Пётр", "Н-2")],
-    ]);
+  it("партии без калибра склеивает в одну строку", () => {
     const report = minimalReport({
       shipment: {
         totalGrams: "3000",
-        totalPackageCount: "6",
+        totalPackageCount: "3",
         byBatch: [
-          { batchId: "b1", grams: "2000", packageCount: "4" },
-          { batchId: "b2", grams: "1000", packageCount: "2" },
+          { batchId: "x1", grams: "1000", packageCount: "1" },
+          { batchId: "x2", grams: "2000", packageCount: "2" },
         ],
       },
     });
-    const rows = buildTripShipmentDetailRows(report, map);
-    expect(rows).toHaveLength(2);
-    expect(rows.map((r) => r.supplierName).sort()).toEqual(["Иван", "Пётр"]);
-    expect(rows.every((r) => r.caliberLabel.includes("№5"))).toBe(true);
-    expect(rows[0]?.lineNo).toBe(1);
-    expect(rows[1]?.lineNo).toBe(2);
+    const summary = aggregateTripShipmentByCaliber(report, new Map());
+    expect(summary.rows).toHaveLength(1);
+    expect(summary.rows[0]?.lineLabel).toBe("Калибр не указан");
+    expect(summary.rows[0]?.grams).toBe(3000n);
+  });
+});
+
+describe("averagePurchaseRubPerKgLabel", () => {
+  it("даёт среднюю цену", () => {
+    expect(averagePurchaseRubPerKgLabel(3000n, 12_000n)).toBe("40,00");
   });
 });

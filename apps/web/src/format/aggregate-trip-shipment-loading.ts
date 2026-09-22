@@ -1,7 +1,7 @@
-import { compareProductGradeLineLabels } from "@birzha/contracts";
+import { compareProductGradeLineLabels, purchaseLineAmountKopecksFromDecimalStrings } from "@birzha/contracts";
 
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
-import { salesCaliberAggregateKey, salesCaliberLineLabel, formatNakladLineLabel } from "./batch-label.js";
+import { salesCaliberAggregateKey, salesCaliberLineLabel } from "./batch-label.js";
 
 function bi(x: string | undefined): bigint {
   if (x === undefined || x === "") {
@@ -10,27 +10,44 @@ function bi(x: string | undefined): bigint {
   return BigInt(x);
 }
 
+function gramsToKgDecimalString(grams: bigint): string {
+  const abs = grams < 0n ? -grams : grams;
+  const whole = abs / 1000n;
+  const frac = abs % 1000n;
+  const body = `${whole}.${frac.toString().padStart(3, "0")}`;
+  return grams < 0n ? `-${body}` : body;
+}
+
+/** Закупочная стоимость отгруженных граммов по цене партии, копейки. */
+export function shipmentPurchaseCostKopecks(grams: bigint, pricePerKg: number | null | undefined): bigint {
+  if (grams <= 0n || pricePerKg == null || !Number.isFinite(pricePerKg) || pricePerKg < 0) {
+    return 0n;
+  }
+  return BigInt(
+    purchaseLineAmountKopecksFromDecimalStrings(gramsToKgDecimalString(grams), String(pricePerKg)),
+  );
+}
+
 export type TripShipmentByCaliberRow = {
   lineLabel: string;
   grams: bigint;
   packages: bigint;
+  /** Сумма закупа по строке, копейки. */
+  costKopecks: bigint;
 };
 
-export type TripShipmentDetailRow = {
-  batchId: string;
-  lineNo: number;
-  supplierName: string;
-  documentNumber: string;
-  caliberLabel: string;
-  grams: bigint;
-  packages: bigint;
+export type TripLoadingManifestSummary = {
+  rows: TripShipmentByCaliberRow[];
+  totalGrams: bigint;
+  totalPackages: bigint;
+  totalCostKopecks: bigint;
 };
 
-/** Общая погрузочная по рейсу: одинаковые товар·калибр складываются. */
+/** Свод погрузочной по рейсу: калибры сложены, с закупочной стоимостью. */
 export function aggregateTripShipmentByCaliber(
   report: ShipmentReportResponse,
   batchById: Map<string, BatchListItem>,
-): TripShipmentByCaliberRow[] {
+): TripLoadingManifestSummary {
   const m = new Map<string, TripShipmentByCaliberRow>();
   for (const line of report.shipment.byBatch) {
     const g = bi(line.grams);
@@ -38,53 +55,44 @@ export function aggregateTripShipmentByCaliber(
       continue;
     }
     const batch = batchById.get(line.batchId);
-    const key = salesCaliberAggregateKey(batch, line.batchId);
+    const key = batch?.nakladnaya?.productGradeCode?.trim() || batch?.nakladnaya?.productGroup?.trim()
+      ? salesCaliberAggregateKey(batch, line.batchId)
+      : "unknown-caliber";
     let row = m.get(key);
     if (!row) {
       row = {
-        lineLabel: salesCaliberLineLabel(batch, key),
+        lineLabel:
+          key === "unknown-caliber"
+            ? "Калибр не указан"
+            : salesCaliberLineLabel(batch, key),
         grams: 0n,
         packages: 0n,
+        costKopecks: 0n,
       };
       m.set(key, row);
     }
     row.grams += g;
     row.packages += bi(line.packageCount);
+    row.costKopecks += shipmentPurchaseCostKopecks(g, batch?.pricePerKg);
   }
-  return [...m.values()].sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
+  const rows = [...m.values()].sort((a, b) => compareProductGradeLineLabels(a.lineLabel, b.lineLabel));
+  return {
+    rows,
+    totalGrams: rows.reduce((a, r) => a + r.grams, 0n),
+    totalPackages: rows.reduce((a, r) => a + r.packages, 0n),
+    totalCostKopecks: rows.reduce((a, r) => a + r.costKopecks, 0n),
+  };
 }
 
-/** Подробная погрузочная по рейсу: одна строка на партию отгрузки. */
-export function buildTripShipmentDetailRows(
-  report: ShipmentReportResponse,
-  batchById: Map<string, BatchListItem>,
-): TripShipmentDetailRow[] {
-  const rows: TripShipmentDetailRow[] = [];
-  for (const line of report.shipment.byBatch) {
-    const g = bi(line.grams);
-    if (g <= 0n) {
-      continue;
-    }
-    const batch = batchById.get(line.batchId);
-    const n = batch?.nakladnaya;
-    const caliber = batch ? formatNakladLineLabel(batch) : "—";
-    rows.push({
-      batchId: line.batchId,
-      lineNo: 0,
-      supplierName: n?.supplierName?.trim() || "—",
-      documentNumber: n?.documentNumber?.trim() || "—",
-      caliberLabel: caliber === "—" ? "Товар · калибр не указан" : caliber,
-      grams: g,
-      packages: bi(line.packageCount),
-    });
+/** Средняя цена закупа ₽/кг по строке (для подписи); null если нет массы или суммы. */
+export function averagePurchaseRubPerKgLabel(grams: bigint, costKopecks: bigint): string | null {
+  if (grams <= 0n || costKopecks <= 0n) {
+    return null;
   }
-  rows.sort((a, b) => {
-    const byCaliber = compareProductGradeLineLabels(a.caliberLabel, b.caliberLabel);
-    if (byCaliber !== 0) {
-      return byCaliber;
-    }
-    return a.documentNumber.localeCompare(b.documentNumber, "ru") || a.batchId.localeCompare(b.batchId, "ru");
-  });
-  return rows.map((row, index) => ({ ...row, lineNo: index + 1 }));
+  const kgMilli = grams;
+  const rubMilli = (costKopecks * 1000n) / kgMilli;
+  const rub = rubMilli / 100n;
+  const kop = rubMilli % 100n;
+  const kopStr = kop < 10n ? `0${kop}` : `${kop}`;
+  return `${rub.toString()},${kopStr}`;
 }
-

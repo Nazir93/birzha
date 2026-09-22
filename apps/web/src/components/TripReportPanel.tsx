@@ -8,7 +8,7 @@ import { formatBatchPartyCaption } from "../format/batch-label.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import {
   aggregateTripShipmentByCaliber,
-  buildTripShipmentDetailRows,
+  averagePurchaseRubPerKgLabel,
 } from "../format/aggregate-trip-shipment-loading.js";
 import { saleGrossGramsFromNet } from "../format/seller-gross-net.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
@@ -205,12 +205,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const salesByProductLine = useMemo(() => (r ? aggregateTripSalesByProductLine(r, batchById) : []), [r, batchById]);
 
-  const shipmentByCaliber = useMemo(
-    () => (r ? aggregateTripShipmentByCaliber(r, batchById) : []),
-    [r, batchById],
-  );
-  const shipmentDetailRows = useMemo(
-    () => (r ? buildTripShipmentDetailRows(r, batchById) : []),
+  const loadingManifest = useMemo(
+    () => (r ? aggregateTripShipmentByCaliber(r, batchById) : null),
     [r, batchById],
   );
 
@@ -589,23 +585,34 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           <BirzhaDisclosure
             defaultOpen
             title={
-              <h3 id="trip-report-loading-caliber" style={{ fontSize: "0.95rem", margin: 0 }}>
-                Погрузочная накладная (общая)
+              <h3 id="trip-report-loading-manifest" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Погрузочная накладная
               </h3>
             }
           >
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
-              Одинаковые товар и калибр из разных партий сложены в одну строку — свод на всю машину.
+            <p className="birzha-ui-sm" style={{ margin: "0 0 0.55rem", lineHeight: 1.45 }}>
+              <strong>Машина:</strong>{" "}
+              {r.trip.vehicleLabel?.trim() || "—"}
+              {r.trip.driverName?.trim() ? ` · водитель ${r.trip.driverName.trim()}` : null}
+              {" · "}
+              рейс {r.trip.tripNumber}
+              {r.trip.destinationName?.trim() || r.trip.destinationCode?.trim()
+                ? ` · ${r.trip.destinationName?.trim() || r.trip.destinationCode}`
+                : null}
+              {r.trip.productGroup?.trim() ? ` · ${r.trip.productGroup.trim()}` : null}
             </p>
-            {shipmentByCaliber.length === 0 ? (
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+              Одинаковые калибры сложены; цена и сумма — по закупу партий.
+            </p>
+            {!loadingManifest || loadingManifest.rows.length === 0 ? (
               <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
             ) : (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 420 }} aria-labelledby="trip-report-loading-caliber">
+                <table style={{ ...tableStyle, minWidth: 560 }} aria-labelledby="trip-report-loading-manifest">
                   <thead>
                     <tr>
                       <th scope="col" style={thHead}>
-                        Товар · калибр
+                        Калибр
                       </th>
                       <th scope="col" style={thHead}>
                         Кг
@@ -613,16 +620,31 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <th scope="col" style={thHead}>
                         Ящ.
                       </th>
+                      <th scope="col" style={thHead}>
+                        Цена закупа, ₽/кг
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Сумма закупа
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {shipmentByCaliber.map((row) => (
-                      <tr key={row.lineLabel}>
-                        <td style={thtd}>{row.lineLabel}</td>
-                        <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
-                        <td style={thtd}>{packageCountLabel(row.packages)}</td>
-                      </tr>
-                    ))}
+                    {loadingManifest.rows.map((row) => {
+                      const avg = averagePurchaseRubPerKgLabel(row.grams, row.costKopecks);
+                      return (
+                        <tr key={row.lineLabel}>
+                          <td style={thtd}>{row.lineLabel}</td>
+                          <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                          <td style={thtd}>{packageCountLabel(row.packages)}</td>
+                          <td style={thtd}>{avg != null ? `${avg} ₽` : "—"}</td>
+                          <td style={thtd}>
+                            {row.costKopecks > 0n
+                              ? `${kopecksToRubLabel(row.costKopecks.toString())} ₽`
+                              : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr>
@@ -630,78 +652,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         Итого
                       </th>
                       <td style={{ ...thtd, fontWeight: 700 }}>
-                        {gramsToKgLabel(r.shipment.totalGrams)}
+                        {gramsToKgLabel(loadingManifest.totalGrams.toString())}
                       </td>
                       <td style={{ ...thtd, fontWeight: 700 }}>
-                        {packageCountLabel(r.shipment.totalPackageCount)}
+                        {packageCountLabel(loadingManifest.totalPackages)}
                       </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
-          </BirzhaDisclosure>
-
-          <BirzhaDisclosure
-            defaultOpen={false}
-            title={
-              <h3 id="trip-report-loading-detail" style={{ fontSize: "0.95rem", margin: 0 }}>
-                Погрузочная накладная (подробная)
-              </h3>
-            }
-          >
-            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem", lineHeight: 1.45 }}>
-              Каждая партия отдельно: тепличник, закупочная накладная, калибр, кг и ящики.
-            </p>
-            {shipmentDetailRows.length === 0 ? (
-              <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
-            ) : (
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 640 }} aria-labelledby="trip-report-loading-detail">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={thHead}>
-                        №
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Тепличник
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Накладная закупки
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Товар · калибр
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Кг
-                      </th>
-                      <th scope="col" style={thHead}>
-                        Ящ.
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shipmentDetailRows.map((row) => (
-                      <tr key={row.batchId}>
-                        <td style={thtd}>{row.lineNo}</td>
-                        <td style={thtd}>{row.supplierName}</td>
-                        <td style={thtd}>{row.documentNumber}</td>
-                        <td style={thtd}>{row.caliberLabel}</td>
-                        <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
-                        <td style={thtd}>{packageCountLabel(row.packages)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th scope="row" colSpan={4} style={{ ...thtd, fontWeight: 700 }}>
-                        Итого
-                      </th>
+                      <td style={thtd} />
                       <td style={{ ...thtd, fontWeight: 700 }}>
-                        {gramsToKgLabel(r.shipment.totalGrams)}
-                      </td>
-                      <td style={{ ...thtd, fontWeight: 700 }}>
-                        {packageCountLabel(r.shipment.totalPackageCount)}
+                        {loadingManifest.totalCostKopecks > 0n
+                          ? `${kopecksToRubLabel(loadingManifest.totalCostKopecks.toString())} ₽`
+                          : "—"}
                       </td>
                     </tr>
                   </tfoot>
