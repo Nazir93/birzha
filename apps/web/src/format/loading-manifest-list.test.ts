@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { LoadingManifestSummary } from "../api/types.js";
 
-import { groupLoadingManifestNumbersByTripId, sortLoadingManifestsByCreatedAtDesc } from "./loading-manifest-list.js";
+import {
+  groupLoadingManifestNumbersByTripId,
+  groupLoadingManifestsForList,
+  sortLoadingManifestsByCreatedAtDesc,
+} from "./loading-manifest-list.js";
 
 function m(p: Partial<LoadingManifestSummary> & Pick<LoadingManifestSummary, "id" | "warehouseId" | "createdAt">): LoadingManifestSummary {
   return {
@@ -40,5 +44,58 @@ describe("groupLoadingManifestNumbersByTripId", () => {
     ]);
     expect(map.get("t1")).toEqual(["PN-1", "PN-2"]);
     expect(map.has("t2")).toBe(false);
+  });
+});
+
+describe("groupLoadingManifestsForList", () => {
+  it("склеивает несколько ПН одного рейса в одну строку", () => {
+    const rows = groupLoadingManifestsForList([
+      m({
+        id: "m1",
+        warehouseId: "wh-manas",
+        warehouseName: "Манас",
+        createdAt: "2024-01-02T10:00:00.000Z",
+        tripId: "t1",
+        totalKg: 1225,
+        packagesApprox: 150,
+      }),
+      m({
+        id: "m2",
+        warehouseId: "wh-derbent",
+        warehouseName: "Дербент",
+        createdAt: "2024-01-03T10:00:00.000Z",
+        tripId: "t1",
+        totalKg: 12000,
+        packagesApprox: 2000,
+      }),
+      m({
+        id: "m3",
+        warehouseId: "wh-kay",
+        warehouseName: "Каякент",
+        createdAt: "2024-01-04T10:00:00.000Z",
+        tripId: null,
+        totalKg: 100,
+        packagesApprox: 10,
+      }),
+    ]);
+    expect(rows).toHaveLength(2);
+    const trip = rows.find((r) => r.kind === "trip");
+    const single = rows.find((r) => r.kind === "manifest");
+    expect(trip?.kind === "trip" && trip.totalKg).toBe(13225);
+    expect(trip?.kind === "trip" && trip.packagesApprox).toBe(2150);
+    expect(trip?.kind === "trip" && trip.warehouseLabel).toBe("Дербент, Манас");
+    expect(single?.kind === "manifest" && single.manifest.id).toBe("m3");
+  });
+
+  it("при groupByTrip: false не склеивает", () => {
+    const rows = groupLoadingManifestsForList(
+      [
+        m({ id: "m1", warehouseId: "a", createdAt: "2024-01-01T10:00:00.000Z", tripId: "t1" }),
+        m({ id: "m2", warehouseId: "b", createdAt: "2024-01-02T10:00:00.000Z", tripId: "t1" }),
+      ],
+      { groupByTrip: false },
+    );
+    expect(rows.every((r) => r.kind === "manifest")).toBe(true);
+    expect(rows).toHaveLength(2);
   });
 });

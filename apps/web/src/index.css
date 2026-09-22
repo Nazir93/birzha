@@ -5949,7 +5949,10 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
   font-size: 0.84rem;
 }
 
-/* Печать отчёта по рейсу: экранный chrome скрыт классом .no-print */
+.birzha-trip-loading-manifest-print__title {
+  display: none;
+}
+
 @media print {
   @page {
     margin: 12mm;
@@ -5978,6 +5981,27 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
     box-shadow: none;
     padding: 0;
     background: transparent;
+  }
+
+  /* Печать только погрузочной из отчёта по рейсу */
+  body.birzha-print-trip-loading-manifest * {
+    visibility: hidden !important;
+  }
+
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print,
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print * {
+    visibility: visible !important;
+  }
+
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  body.birzha-print-trip-loading-manifest .birzha-trip-loading-manifest-print__title {
+    display: block !important;
   }
 }
 

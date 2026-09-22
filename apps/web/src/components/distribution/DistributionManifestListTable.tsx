@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import type { LoadingManifestSummary } from "../../api/types.js";
 import { formatLoadingManifestTableNumberLabel } from "../../format/loading-manifest.js";
+import { groupLoadingManifestsForList } from "../../format/loading-manifest-list.js";
 import { formatPurchaseDocDateRu } from "../../format/purchase-doc-date.js";
 import { BirzhaPagination } from "../../ui/BirzhaPagination.js";
 
@@ -23,6 +25,8 @@ type Props = {
   deletingManifestId: string | null;
   onPageChange: (page: number) => void;
   onDelete: (manifest: LoadingManifestSummary) => void;
+  /** Уже фильтр по рейсу — не склеивать ПН (чтобы открыть/удалить каждую). */
+  groupByTrip?: boolean;
   openLinkLabel?: string;
   openLinkLabelCurrent?: string;
   showDelete?: boolean;
@@ -39,10 +43,16 @@ export function DistributionManifestListTable({
   deletingManifestId,
   onPageChange,
   onDelete,
+  groupByTrip = true,
   openLinkLabel = "Открыть",
   openLinkLabelCurrent = "Открыта",
   showDelete = true,
 }: Props) {
+  const rows = useMemo(
+    () => groupLoadingManifestsForList(manifests, { groupByTrip }),
+    [manifests, groupByTrip],
+  );
+
   return (
     <div className="birzha-clean-ops-list">
       <h4 className="birzha-clean-ops-list__title">
@@ -63,7 +73,34 @@ export function DistributionManifestListTable({
             </tr>
           </thead>
           <tbody>
-            {manifests.map((m) => {
+            {rows.map((row) => {
+              if (row.kind === "trip") {
+                const tripLabel = tripNumberById.get(row.tripId) ?? "—";
+                const isCurrent = row.manifests.some((m) => m.id === activeManifestId);
+                const tripFilterHref = `${distributionBase}?${new URLSearchParams({ trip: row.tripId }).toString()}`;
+                return (
+                  <tr key={row.key} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
+                    <td className="birzha-data-table__emph">—</td>
+                    <td>{tripLabel}</td>
+                    <td>{formatPurchaseDocDateRu(row.docDate)}</td>
+                    <td>{row.warehouseLabel}</td>
+                    <td>{row.destinationName}</td>
+                    <td className="birzha-data-table__num">
+                      {row.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="birzha-data-table__num">{formatManifestPackages(row.packagesApprox)}</td>
+                    <td className="birzha-distribution-manifest-row__actions">
+                      <div className="birzha-clean-ops-row-actions">
+                        <Link to={tripFilterHref} className="birzha-clean-ops-text-btn">
+                          {isCurrent ? openLinkLabelCurrent : openLinkLabel}
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              const m = row.manifest;
               const isCurrent = m.id === activeManifestId;
               const tripLabel = m.tripId ? (tripNumberById.get(m.tripId) ?? "—") : "—";
               const numberLabel = formatLoadingManifestTableNumberLabel({
@@ -74,7 +111,7 @@ export function DistributionManifestListTable({
               });
               const deleting = deletingManifestId === m.id;
               return (
-                <tr key={m.id} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
+                <tr key={row.key} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
                   <td className="birzha-data-table__emph">{numberLabel}</td>
                   <td>{tripLabel}</td>
                   <td>{formatPurchaseDocDateRu(m.docDate)}</td>
@@ -90,14 +127,14 @@ export function DistributionManifestListTable({
                         {isCurrent ? openLinkLabelCurrent : openLinkLabel}
                       </Link>
                       {showDelete ? (
-                      <button
-                        type="button"
-                        className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                      disabled={deletingManifestId != null}
-                      onClick={() => onDelete(m)}
-                    >
-                      {deleting ? "…" : "Удалить"}
-                    </button>
+                        <button
+                          type="button"
+                          className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                          disabled={deletingManifestId != null}
+                          onClick={() => onDelete(m)}
+                        >
+                          {deleting ? "…" : "Удалить"}
+                        </button>
                       ) : null}
                     </div>
                   </td>

@@ -20,7 +20,7 @@ import { adminAwarePathForPath, adminRoutes, ops, sales } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
-import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
 import {
   aggregateTripBatchRows,
@@ -316,6 +316,24 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     window.print();
   }, []);
 
+  const printLoadingManifest = useCallback(() => {
+    document.body.classList.add("birzha-print-trip-loading-manifest");
+    const cleanup = () => {
+      document.body.classList.remove("birzha-print-trip-loading-manifest");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.setTimeout(cleanup, 60_000);
+    window.print();
+  }, []);
+
+  const loadingManifestDateLabel = useMemo(() => {
+    if (!r?.trip.departedAt?.trim()) {
+      return null;
+    }
+    return formatPurchaseDocDateRu(r.trip.departedAt.trim());
+  }, [r?.trip.departedAt]);
+
   return (
     <div role="region" aria-labelledby="trip-report-heading">
       <h2 id="trip-report-heading" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
@@ -590,6 +608,24 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               </h3>
             }
           >
+            <div id="trip-loading-manifest-print" className="birzha-trip-loading-manifest-print">
+            <h3 className="birzha-trip-loading-manifest-print__title" style={{ fontSize: "1.05rem", margin: "0 0 0.5rem" }}>
+              Погрузочная накладная
+            </h3>
+            <div
+              className="no-print birzha-clean-ops-row-actions"
+              style={{ marginBottom: "0.45rem" }}
+            >
+              <button
+                type="button"
+                className="birzha-btn"
+                onClick={printLoadingManifest}
+                disabled={!loadingManifest || loadingManifest.rows.length === 0}
+                aria-label="Печать погрузочной накладной"
+              >
+                Печать
+              </button>
+            </div>
             <p className="birzha-ui-sm" style={{ margin: "0 0 0.55rem", lineHeight: 1.45 }}>
               <strong>Машина:</strong>{" "}
               {r.trip.vehicleLabel?.trim() || "—"}
@@ -600,6 +636,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 ? ` · ${r.trip.destinationName?.trim() || r.trip.destinationCode}`
                 : null}
               {r.trip.productGroup?.trim() ? ` · ${r.trip.productGroup.trim()}` : null}
+              {" · "}
+              <strong>дата:</strong> {loadingManifestDateLabel ?? "—"}
             </p>
             {!loadingManifest || loadingManifest.rows.length === 0 ? (
               <BirzhaEmptyState compact title="Погрузок в рейс пока нет" />
@@ -665,6 +703,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 </table>
               </div>
             )}
+            </div>
           </BirzhaDisclosure>
 
           {!hideSalesAndMoney ? (

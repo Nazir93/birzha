@@ -272,6 +272,7 @@ export function LoadingAppendPanel() {
             deletingManifestId={null}
             onPageChange={setManifestListPage}
             onDelete={() => undefined}
+            groupByTrip={false}
             openLinkLabel="Догрузить"
             openLinkLabelCurrent="Выбрана"
             showDelete={false}

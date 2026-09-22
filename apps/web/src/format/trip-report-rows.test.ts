@@ -92,6 +92,15 @@ describe("buildTripBatchRows", () => {
     expect(b2.revenueK).toBe(0n);
   });
 
+  it("сохраняет порядок отгрузки shipment.byBatch", () => {
+    const report = baseReport();
+    report.shipment.byBatch = [
+      { batchId: "b2", grams: "2000", packageCount: "40" },
+      { batchId: "b1", grams: "3000", packageCount: "60" },
+    ];
+    expect(buildTripBatchRows(report).map((r) => r.batchId)).toEqual(["b2", "b1"]);
+  });
+
   it("salesForTripStock: soldG и netTransit по всем продажам, выручка по строкам — из sales", () => {
     const r = baseReport();
     r.salesForTripStock = {

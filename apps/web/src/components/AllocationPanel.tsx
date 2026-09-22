@@ -703,6 +703,7 @@ export function AllocationPanel() {
             deletingManifestId={deletingManifestId}
             onPageChange={setManifestListPage}
             onDelete={handleDeleteManifest}
+            groupByTrip={!focusTripId}
           />
         </>
       ) : null}

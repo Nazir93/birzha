@@ -70,7 +70,11 @@ export function buildTripBatchRows(r: ShipmentReportResponse): TripBatchTableRow
     short.set(b.batchId, bi(b.grams));
   }
 
-  const sorted = [...ids].sort((a, b) => a.localeCompare(b, "ru"));
+  /** Как грузили на машину: порядок `shipment.byBatch`, остальное — в конец. */
+  const shipOrder = r.shipment.byBatch.map((b) => b.batchId).filter((id) => ids.has(id));
+  const shipOrderSet = new Set(shipOrder);
+  const rest = [...ids].filter((id) => !shipOrderSet.has(id)).sort((a, b) => a.localeCompare(b, "ru"));
+  const sorted = [...shipOrder, ...rest];
 
   return sorted.map((batchId) => {
     const sg = ship.get(batchId) ?? 0n;

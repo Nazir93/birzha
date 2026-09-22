@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type {
   TripShipmentAggregate,
@@ -6,7 +6,7 @@ import type {
   TripShipmentRepository,
 } from "../../application/ports/trip-shipment-repository.port.js";
 import type { DbClient } from "../../db/client.js";
-import { tripBatchShipments } from "../../db/schema.js";
+import { loadingManifestLines, loadingManifests, tripBatchShipments } from "../../db/schema.js";
 
 export class DrizzleTripShipmentRepository implements TripShipmentRepository {
   constructor(private readonly db: DbClient) {}
@@ -123,13 +123,52 @@ export class DrizzleTripShipmentRepository implements TripShipmentRepository {
       byPackages.set(r.batchId, (byPackages.get(r.batchId) ?? 0n) + p);
     }
     const batchIds = new Set([...byGrams.keys(), ...byPackages.keys()]);
+    const loadOrder = await this.loadOrderByBatchId(tripId);
     const lines = [...batchIds]
-      .sort((a, b) => a.localeCompare(b))
+      .sort((a, b) => {
+        const oa = loadOrder.get(a);
+        const ob = loadOrder.get(b);
+        if (oa != null && ob != null && oa !== ob) {
+          return oa - ob;
+        }
+        if (oa != null && ob == null) {
+          return -1;
+        }
+        if (oa == null && ob != null) {
+          return 1;
+        }
+        return a.localeCompare(b);
+      })
       .map((batchId) => ({
         batchId,
         grams: byGrams.get(batchId) ?? 0n,
         packageCount: byPackages.get(batchId) ?? 0n,
       }));
     return { totalGrams: total, totalPackageCount: totalPkg, byBatch: lines };
+  }
+
+  /** Порядок погрузки: время ПН на рейсе, внутри — номер строки (как грузили тепличников). */
+  private async loadOrderByBatchId(tripId: string): Promise<Map<string, number>> {
+    const orderRows = await this.db
+      .select({
+        batchId: loadingManifestLines.batchId,
+        createdAt: loadingManifests.createdAt,
+        lineNo: loadingManifestLines.lineNo,
+      })
+      .from(loadingManifestLines)
+      .innerJoin(loadingManifests, eq(loadingManifestLines.manifestId, loadingManifests.id))
+      .where(eq(loadingManifests.tripId, tripId))
+      .orderBy(asc(loadingManifests.createdAt), asc(loadingManifestLines.lineNo));
+
+    const loadOrder = new Map<string, number>();
+    let index = 0;
+    for (const row of orderRows) {
+      if (loadOrder.has(row.batchId)) {
+        continue;
+      }
+      loadOrder.set(row.batchId, index);
+      index += 1;
+    }
+    return loadOrder;
   }
 }

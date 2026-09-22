@@ -121,6 +121,7 @@ export function LoadingTripPanel() {
             deletingManifestId={null}
             onPageChange={setManifestListPage}
             onDelete={() => undefined}
+            groupByTrip={false}
             openLinkLabel="Сменить рейс"
             openLinkLabelCurrent="Открыта"
             showDelete={false}

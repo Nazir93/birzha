@@ -89,23 +89,29 @@ export class InMemoryTripShipmentRepository implements TripShipmentRepository {
     const relevant = this.rows.filter((r) => r.tripId === tripId);
     const byGrams = new Map<string, bigint>();
     const byPackages = new Map<string, bigint>();
+    const order: string[] = [];
     let total = 0n;
     let totalPkg = 0n;
     for (const r of relevant) {
       total += r.grams;
+      if (!byGrams.has(r.batchId) && !byPackages.has(r.batchId)) {
+        order.push(r.batchId);
+      }
       byGrams.set(r.batchId, (byGrams.get(r.batchId) ?? 0n) + r.grams);
       const p = r.packageCount ?? 0n;
       totalPkg += p;
       byPackages.set(r.batchId, (byPackages.get(r.batchId) ?? 0n) + p);
     }
-    const batchIds = new Set([...byGrams.keys(), ...byPackages.keys()]);
-    const lines = [...batchIds]
-      .sort((a, b) => a.localeCompare(b))
-      .map((batchId) => ({
-        batchId,
-        grams: byGrams.get(batchId) ?? 0n,
-        packageCount: byPackages.get(batchId) ?? 0n,
-      }));
+    for (const batchId of byPackages.keys()) {
+      if (!order.includes(batchId)) {
+        order.push(batchId);
+      }
+    }
+    const lines = order.map((batchId) => ({
+      batchId,
+      grams: byGrams.get(batchId) ?? 0n,
+      packageCount: byPackages.get(batchId) ?? 0n,
+    }));
     return { totalGrams: total, totalPackageCount: totalPkg, byBatch: lines };
   }
 }
