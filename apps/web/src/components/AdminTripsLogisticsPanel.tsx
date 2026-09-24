@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { apiPostJsonOr403, closeTripById, deleteTripById } from "../api/fetch-api.js";
 import type { LoadingManifestSummary } from "../api/types.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { sortLoadingManifestsByCreatedAtDesc } from "../format/loading-manifest-list.js";
 import {
   buildTripDisplayNumber,
   formatTripDepartedAtRu,
@@ -480,6 +481,19 @@ export function AdminTripsLogisticsPanel() {
                       (cityCode && destinationLabelByCode.get(cityCode)) ||
                       linkedManifests[0]?.destinationName ||
                       "—";
+                    const sortedManifests = sortLoadingManifestsByCreatedAtDesc(linkedManifests);
+                    const primaryManifest = sortedManifests[0];
+                    const manifestsTotalKg = sortedManifests.reduce((sum, m) => sum + m.totalKg, 0);
+                    const manifestsHref =
+                      sortedManifests.length === 1 && primaryManifest
+                        ? `${distributionPath}/${encodeURIComponent(primaryManifest.id)}`
+                        : sortedManifests.length > 1
+                          ? `${distributionPath}?${new URLSearchParams({ trip: t.id }).toString()}`
+                          : null;
+                    const onlyManifest = sortedManifests.length === 1 ? primaryManifest : null;
+                    const detachLock = onlyManifest
+                      ? detachLockByManifestId.get(onlyManifest.id)
+                      : undefined;
                     return (
                     <tr key={t.id}>
                       <td>
@@ -491,55 +505,50 @@ export function AdminTripsLogisticsPanel() {
                       <td>{t.vehicleLabel ?? "—"}</td>
                       <td className="birzha-data-table__emph">{formatTripDepartedAtRu(t.departedAt)}</td>
                       <td>
-                        {linkedManifests.length === 0 ? (
+                        {!primaryManifest || !manifestsHref ? (
                           <span className="birzha-text-muted birzha-ui-sm">—</span>
                         ) : (
-                          <ul className="birzha-trip-manifest-list">
-                            {linkedManifests.map((m) => (
-                              <li key={m.id} className="birzha-trip-manifest-list__item">
-                                <Link to={`${distributionPath}/${m.id}`} className="birzha-ui-sm">
-                                  <strong>
-                                    {t.tripNumber} · {m.destinationName} · {formatPurchaseDocDateRu(m.docDate)}
-                                  </strong>
-                                </Link>
-                                <span className="birzha-text-muted birzha-ui-sm">
-                                  {" "}
-                                  · {m.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
+                          <div className="birzha-trip-manifest-list__item">
+                            <Link to={manifestsHref} className="birzha-ui-sm">
+                              <strong>
+                                {t.tripNumber} · {primaryManifest.destinationName} ·{" "}
+                                {formatPurchaseDocDateRu(primaryManifest.docDate)}
+                              </strong>
+                            </Link>
+                            <span className="birzha-text-muted birzha-ui-sm">
+                              {" "}
+                              · {manifestsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг
+                            </span>
+                            {canDetachManifest && onlyManifest ? (
+                              detachLock?.locked === false ? (
+                                <button
+                                  type="button"
+                                  className="birzha-clean-ops-row-action birzha-ui-sm"
+                                  disabled={detachingManifestId === onlyManifest.id}
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `Отвязать погрузочную «${onlyManifest.manifestNumber}» от рейса ${t.tripNumber}? Масса вернётся на склад, если ещё не было продаж.`,
+                                      )
+                                    ) {
+                                      void detachManifest.mutate(onlyManifest.id);
+                                    }
+                                  }}
+                                >
+                                  {detachingManifestId === onlyManifest.id ? "…" : "Открепить"}
+                                </button>
+                              ) : detachLock?.reason ? (
+                                <span
+                                  className="birzha-text-muted birzha-ui-sm"
+                                  title={loadingManifestTripDetachLockMessage(detachLock.reason)}
+                                >
+                                  отвязка недоступна
                                 </span>
-                                {canDetachManifest ? (
-                                  detachLockByManifestId.get(m.id)?.locked === false ? (
-                                    <button
-                                      type="button"
-                                      className="birzha-clean-ops-row-action birzha-ui-sm"
-                                      disabled={detachingManifestId === m.id}
-                                      onClick={() => {
-                                        if (
-                                          window.confirm(
-                                            `Отвязать погрузочную «${m.manifestNumber}» от рейса ${t.tripNumber}? Масса вернётся на склад, если ещё не было продаж.`,
-                                          )
-                                        ) {
-                                          void detachManifest.mutate(m.id);
-                                        }
-                                      }}
-                                    >
-                                      {detachingManifestId === m.id ? "…" : "Открепить"}
-                                    </button>
-                                  ) : detachLockByManifestId.get(m.id)?.reason ? (
-                                    <span
-                                      className="birzha-text-muted birzha-ui-sm"
-                                      title={loadingManifestTripDetachLockMessage(
-                                        detachLockByManifestId.get(m.id)!.reason!,
-                                      )}
-                                    >
-                                      отвязка недоступна
-                                    </span>
-                                  ) : linkedManifestDetails.some((q) => q.isPending) ? (
-                                    <span className="birzha-text-muted birzha-ui-sm">…</span>
-                                  ) : null
-                                ) : null}
-                              </li>
-                            ))}
-                          </ul>
+                              ) : linkedManifestDetails.some((q) => q.isPending) ? (
+                                <span className="birzha-text-muted birzha-ui-sm">…</span>
+                              ) : null
+                            ) : null}
+                          </div>
                         )}
                       </td>
                       <td>

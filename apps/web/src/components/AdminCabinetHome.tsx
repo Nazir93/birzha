@@ -18,6 +18,7 @@ import {
 } from "../format/admin-dashboard-summary-rows.js";
 import { buildAdminSummaryAlerts } from "../format/admin-summary-alerts.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { groupLoadingManifestsForList } from "../format/loading-manifest-list.js";
 import { formatTripListStatusLabel, tripListFullySold } from "../format/trip-label.js";
 import { filterTripsInWork } from "../format/archive.js";
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
@@ -124,6 +125,19 @@ export function AdminCabinetHome() {
   const sortedTripsOpen = useMemo(
     () => sortTripsByDepartedDesc(filterTripsInWork(tripsQ.data?.trips ?? [])),
     [tripsQ.data?.trips],
+  );
+
+  const tripNumberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tripsQ.data?.trips ?? []) {
+      map.set(t.id, t.tripNumber);
+    }
+    return map;
+  }, [tripsQ.data?.trips]);
+
+  const activeManifestListRows = useMemo(
+    () => groupLoadingManifestsForList(activeManifestsQ.data?.loadingManifests ?? []),
+    [activeManifestsQ.data?.loadingManifests],
   );
 
   const [tripsPage, setTripsPage] = useState(0);
@@ -410,7 +424,7 @@ export function AdminCabinetHome() {
 
           <BirzhaDisclosure
             className="birzha-admin-dash-modern__trips-disclosure"
-            title={`Готовые погрузочные (${activeManifestsQ.data?.listMeta?.totalCount ?? activeManifestsQ.data?.loadingManifests.length ?? 0})`}
+            title={`Готовые погрузочные (${activeManifestListRows.length})`}
             defaultOpen={false}
           >
             {activeManifestsQ.isError ? (
@@ -423,13 +437,13 @@ export function AdminCabinetHome() {
             {activeManifestsQ.isPending ? (
               <LoadingBlock label="Погрузочные накладные…" minHeight={48} skeleton skeletonRows={3} />
             ) : null}
-            {activeManifestsQ.isSuccess && (activeManifestsQ.data.loadingManifests?.length ?? 0) === 0 ? (
+            {activeManifestsQ.isSuccess && activeManifestListRows.length === 0 ? (
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
                 Нет активных погрузочных.{" "}
                 <Link to={adminRoutes.distribution}>Создать погрузку →</Link>
               </p>
             ) : null}
-            {activeManifestsQ.isSuccess && (activeManifestsQ.data.loadingManifests?.length ?? 0) > 0 ? (
+            {activeManifestsQ.isSuccess && activeManifestListRows.length > 0 ? (
               <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-admin-trips-table-wrap">
                 <table className="birzha-admin-trips-table" aria-label="Готовые погрузочные накладные">
                   <thead>
@@ -452,10 +466,34 @@ export function AdminCabinetHome() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(activeManifestsQ.data.loadingManifests ?? []).map((m) => {
+                    {activeManifestListRows.map((row) => {
+                      if (row.kind === "trip") {
+                        const tripLabel = tripNumberById.get(row.tripId) ?? "—";
+                        const href = `${adminRoutes.distribution}?${new URLSearchParams({ trip: row.tripId }).toString()}`;
+                        return (
+                          <tr key={row.key}>
+                            <th scope="row" className="birzha-admin-trips-table__row-head">
+                              <Link to={href} style={{ fontWeight: 700, textDecoration: "none" }}>
+                                рейс {tripLabel}
+                              </Link>
+                            </th>
+                            <td className="birzha-admin-trips-table__cell">{row.destinationName}</td>
+                            <td className="birzha-admin-trips-table__cell birzha-text-muted">
+                              {row.warehouseLabel}
+                            </td>
+                            <td className="birzha-admin-trips-table__cell birzha-admin-trips-table__cell--right">
+                              {formatDashboardKg(row.totalKg)}
+                            </td>
+                            <td className="birzha-admin-trips-table__cell birzha-text-muted">
+                              {formatPurchaseDocDateRu(row.docDate)}
+                            </td>
+                          </tr>
+                        );
+                      }
+                      const m = row.manifest;
                       const href = `${adminRoutes.distribution}/${encodeURIComponent(m.id)}`;
                       return (
-                        <tr key={m.id}>
+                        <tr key={row.key}>
                           <th scope="row" className="birzha-admin-trips-table__row-head">
                             <Link to={href} style={{ fontWeight: 700, textDecoration: "none" }}>
                               {m.manifestNumber}
