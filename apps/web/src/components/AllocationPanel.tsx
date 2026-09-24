@@ -224,7 +224,7 @@ export function AllocationPanel() {
       }
       return { entries };
     },
-    onSuccess: (result, { inputKey }) => {
+    onSuccess: async (result, { inputKey }) => {
       setWriteOffUndoError(null);
       setRejectScrapInput((prev) => {
         const next = { ...prev };
@@ -237,8 +237,8 @@ export function AllocationPanel() {
         return next;
       });
       setRecentWriteOffs((prev) => [...prev, ...result.entries]);
-      void refreshDistributionLists(queryClient);
-      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+      await refreshDistributionLists(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
   });
 
@@ -248,10 +248,10 @@ export function AllocationPanel() {
       setUndoingWriteOffId(writeOffId);
       await deleteWarehouseWriteOffById(writeOffId);
     },
-    onSuccess: (_data, writeOffId) => {
+    onSuccess: async (_data, writeOffId) => {
       setRecentWriteOffs((prev) => prev.filter((r) => r.writeOffId !== writeOffId));
-      void refreshDistributionLists(queryClient);
-      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+      await refreshDistributionLists(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
     onError: (e: unknown) => setWriteOffUndoError(humanizeErrorMessage(e)),
     onSettled: () => setUndoingWriteOffId(null),

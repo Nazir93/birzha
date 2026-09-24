@@ -101,6 +101,14 @@ export function LoadingAppendPanel() {
     return appendTargetFromWorkspace;
   }, [allActiveManifestsSorted, appendTargetFromWorkspace, appendTargetManifestId, routeDetail]);
 
+  /** В догрузке возврат и «остаток в отборе» — по строкам выбранной ПН, не по свободному складу. */
+  const writeOffTargetManifest = useMemo(() => {
+    if (!routeDetail || routeDetail.id !== appendTargetManifestId) {
+      return null;
+    }
+    return routeDetail;
+  }, [appendTargetManifestId, routeDetail]);
+
   const appendManifestSummary = appendTargetManifest;
 
   const writeOff = useMutation({
@@ -119,7 +127,7 @@ export function LoadingAppendPanel() {
       }
       return { entries };
     },
-    onSuccess: (result, { inputKey }) => {
+    onSuccess: async (result, { inputKey }) => {
       setWriteOffUndoError(null);
       setRejectScrapInput((prev) => {
         const next = { ...prev };
@@ -132,8 +140,8 @@ export function LoadingAppendPanel() {
         return next;
       });
       setRecentWriteOffs((prev) => [...prev, ...result.entries]);
-      void refreshDistributionLists(queryClient);
-      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+      await refreshDistributionLists(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
   });
 
@@ -143,10 +151,10 @@ export function LoadingAppendPanel() {
       setUndoingWriteOffId(writeOffId);
       await deleteWarehouseWriteOffById(writeOffId);
     },
-    onSuccess: (_data, writeOffId) => {
+    onSuccess: async (_data, writeOffId) => {
       setRecentWriteOffs((prev) => prev.filter((r) => r.writeOffId !== writeOffId));
-      void refreshDistributionLists(queryClient);
-      void queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
+      await refreshDistributionLists(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryRoots.warehouseWriteOffsLedger });
     },
     onError: (e: unknown) => setWriteOffUndoError(humanizeErrorMessage(e)),
     onSettled: () => setUndoingWriteOffId(null),
@@ -387,10 +395,12 @@ export function LoadingAppendPanel() {
                 onClearNakl={onClearNakl}
                 batchesInWh={batchesInWh}
                 warehouseName={warehouseName(selectedWarehouse)}
-                /* Отбор для догрузки — только склад; строки уже сохранённой ПН сюда не подмешиваем. */
-                manifest={null}
+                /* Возврат и остаток в отборе — по строкам выбранной ПН; отбор к догрузке — свободный склад. */
+                manifest={writeOffTargetManifest}
                 writeOff={
-                  meta?.warehouseWriteOffApi === "enabled" && canReturn && batchesInWh.length > 0
+                  meta?.warehouseWriteOffApi === "enabled" &&
+                  canReturn &&
+                  (batchesInWh.length > 0 || (writeOffTargetManifest?.lines.length ?? 0) > 0)
                     ? {
                         enabled: true,
                         isPending: writeOff.isPending,

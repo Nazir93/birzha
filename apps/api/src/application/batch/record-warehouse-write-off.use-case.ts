@@ -136,9 +136,9 @@ export class RecordWarehouseWriteOffUseCase {
         return;
       }
 
-      // Журнал уже полный: повторный возврат из отбора только включает blocks_loading.
+      // Журнал уже полный: повторный возврат из отбора только включает blocks_loading на массу возврата.
       if (blocksLoading && after.onWarehouseGrams > 0n) {
-        await l.enableBlocksLoadingByBatchIds([input.batchId]);
+        await l.enableBlocksLoadingUpToGrams(input.batchId, grams);
         const existingId = await l.findLatestQualityRejectIdByBatchId(input.batchId);
         if (existingId) {
           writeOffId = existingId;

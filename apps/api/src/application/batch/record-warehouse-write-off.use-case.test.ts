@@ -198,7 +198,7 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(gramsToKg(reloaded!.toPersistenceState().inTransitGrams)).toBe(0);
   });
 
-  it("при полном журнале на складе повторный возврат из отбора включает blocks_loading", async () => {
+  it("при полном журнале на складе повторный возврат из отбора включает blocks_loading на массу возврата", async () => {
     const batches = new InMemoryBatchRepository();
     const ledger = new InMemoryBatchWarehouseWriteOffLedger();
     await ledger.append({
@@ -220,7 +220,7 @@ describe("RecordWarehouseWriteOffUseCase", () => {
 
     const { writeOffId } = await uc.execute({
       batchId: "b-reblock",
-      kg: 100,
+      kg: 40,
       reason: "quality_reject",
     });
     expect(writeOffId).toBe("wo-full");
@@ -228,5 +228,41 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(sums.get("b-reblock") ?? 0n).toBe(100_000n);
     const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-reblock"]);
     expect(blocking.get("b-reblock") ?? 0n).toBe(100_000n);
+  });
+
+  it("при полном журнале из нескольких записей блокирует только до массы возврата", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    await ledger.append({
+      id: "wo-a",
+      batchId: "b-partial-block",
+      grams: 30_000n,
+      reason: "quality_reject",
+      blocksLoading: false,
+    });
+    await ledger.append({
+      id: "wo-b",
+      batchId: "b-partial-block",
+      grams: 70_000n,
+      reason: "quality_reject",
+      blocksLoading: false,
+    });
+    const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-partial-block",
+      purchaseId: "p-1",
+      totalKg: 100,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await batches.save(b);
+
+    await uc.execute({
+      batchId: "b-partial-block",
+      kg: 30,
+      reason: "quality_reject",
+    });
+    const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-partial-block"]);
+    expect(blocking.get("b-partial-block") ?? 0n).toBe(30_000n);
   });
 });

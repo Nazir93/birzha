@@ -21,7 +21,8 @@ export function AccountingCabinetHome() {
             Сверка по рейсам
           </h2>
           <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: "42rem" }}>
-            Выручка, себестоимость, валовая прибыль и оплаты по каждому рейсу. Детали — в отчёте по рейсу.
+            По каждому рейсу — номер, направление, водитель, машина и деньги. Контрагенты: тепличники с накладными и
+            клиенты.
           </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия бухгалтерии">
@@ -30,7 +31,7 @@ export function AccountingCabinetHome() {
             <strong>Детали рейса</strong>
           </Link>
           <Link to={accounting.counterparties} className="birzha-home-action">
-            <span>Клиенты</span>
+            <span>Тепличники</span>
             <strong>Контрагенты</strong>
           </Link>
           {canGoToAdminPanel ? (

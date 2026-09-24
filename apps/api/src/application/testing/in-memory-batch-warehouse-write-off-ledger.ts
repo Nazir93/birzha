@@ -75,4 +75,21 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
       }
     }
   }
+
+  async enableBlocksLoadingUpToGrams(batchId: string, upToGrams: bigint): Promise<void> {
+    if (upToGrams <= 0n) {
+      return;
+    }
+    let need = upToGrams;
+    for (const r of this.rows) {
+      if (need <= 0n) {
+        break;
+      }
+      if (r.batchId !== batchId || r.reason !== "quality_reject" || r.blocksLoading) {
+        continue;
+      }
+      r.blocksLoading = true;
+      need -= r.grams;
+    }
+  }
 }

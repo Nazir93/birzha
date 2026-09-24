@@ -2,7 +2,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { formatTripStatusLabel } from "../format/trip-label.js";
+import { formatTripDepartedAtRu, formatTripStatusLabel } from "../format/trip-label.js";
 import { shipmentReportQueryOptions, tripsPickerQueryOptions } from "../query/core-list-queries.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
@@ -108,11 +108,29 @@ export function AccountingTripsSummary() {
         </p>
       )}
       <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-        <table style={{ ...tableStyle, minWidth: 880 }} aria-label="Сводка по деньгам и рейсам">
+        <table style={{ ...tableStyle, minWidth: 1280 }} aria-label="Сводка по деньгам и рейсам">
           <thead>
             <tr>
               <th scope="col" style={thHead}>
-                Рейс
+                №
+              </th>
+              <th scope="col" style={thHead}>
+                Направление
+              </th>
+              <th scope="col" style={thHead}>
+                Товар
+              </th>
+              <th scope="col" style={thHead}>
+                Водитель
+              </th>
+              <th scope="col" style={thHead}>
+                Машина
+              </th>
+              <th scope="col" style={thHead}>
+                Отправление
+              </th>
+              <th scope="col" style={thHead}>
+                Статус
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Продажа, кг
@@ -127,7 +145,7 @@ export function AccountingTripsSummary() {
                 Себ. недостачи, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Валовая прибыль, ₽
+                Валовая, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Нал / карта / долг, ₽
@@ -143,14 +161,33 @@ export function AccountingTripsSummary() {
               if (!q) {
                 return null;
               }
+              const tripMetaCells = (
+                <>
+                  <td style={thtd}>
+                    <strong>{t.tripNumber}</strong>
+                  </td>
+                  <td style={thtd}>{t.destinationName?.trim() || t.destinationCode?.trim() || "—"}</td>
+                  <td style={thtd}>{t.productGroup?.trim() || "Помидоры"}</td>
+                  <td style={thtd}>{t.driverName?.trim() || "—"}</td>
+                  <td style={thtd}>{t.vehicleLabel?.trim() || "—"}</td>
+                  <td style={thtd}>{formatTripDepartedAtRu(t.departedAt)}</td>
+                  <td style={thtd}>{formatTripStatusLabel(t.status)}</td>
+                </>
+              );
               if (q.isError) {
                 return (
                   <tr key={t.id}>
-                    <td colSpan={8} style={thtd}>
+                    {tripMetaCells}
+                    <td colSpan={6} style={thtd}>
                       <ErrorAlert
                         className="birzha-alert--compact"
                         message={`Нет отчёта по рейсу ${t.tripNumber}.`}
                       />
+                    </td>
+                    <td style={thtd}>
+                      <Link to={`${accounting.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}>
+                        К отчёту
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -158,14 +195,14 @@ export function AccountingTripsSummary() {
               if (!q.data) {
                 return (
                   <tr key={t.id}>
-                    <td style={thtd}>
-                      <strong>{t.tripNumber}</strong>
-                    </td>
+                    {tripMetaCells}
                     <td colSpan={6} className="birzha-text-muted" style={thtd}>
                       …
                     </td>
                     <td style={thtd}>
-                      <Link to={`${accounting.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}>К отчёту</Link>
+                      <Link to={`${accounting.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}>
+                        К отчёту
+                      </Link>
                     </td>
                   </tr>
                 );
@@ -173,12 +210,7 @@ export function AccountingTripsSummary() {
               const r = q.data;
               return (
                 <tr key={t.id}>
-                  <th scope="row" style={thtd}>
-                    <strong>{r.trip.tripNumber}</strong>{" "}
-                    <span className="birzha-text-muted birzha-text-muted--lg" title="статус">
-                      · {formatTripStatusLabel(r.trip.status)}
-                    </span>
-                  </th>
+                  {tripMetaCells}
                   <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(r.sales.totalGrams)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.revenueKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)}</td>
@@ -203,7 +235,7 @@ export function AccountingTripsSummary() {
             })}
             {!anyLoading && tripTotals.rows > 0 && (
               <tr className="birzha-table-subtotal-row">
-                <th scope="row" style={{ ...thtd, textAlign: "left" }}>
+                <th scope="row" colSpan={7} style={{ ...thtd, textAlign: "left" }}>
                   Итого на странице ({tripTotals.rows} рейс.)
                 </th>
                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(tripTotals.kg.toString())}</td>

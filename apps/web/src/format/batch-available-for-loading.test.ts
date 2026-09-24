@@ -35,6 +35,19 @@ describe("batchKgInSelectionRemainder", () => {
     expect(batchKgInSelectionRemainder(b)).toBe(60);
   });
 
+  it("сценарий догрузки: 4800 на складе, вернули 800 — в отборе 4000", () => {
+    const b = batch({
+      id: "b1",
+      totalKg: 4800,
+      onWarehouseKg: 4800,
+      availableForLoadingKg: 4800,
+      qualityRejectWrittenOffKg: 800,
+      blockingReturnKg: 800,
+    });
+    expect(batchKgInSelectionRemainder(b)).toBe(4000);
+    expect(batchReturnableToWarehouseKg(b)).toBe(4000);
+  });
+
   it("полный возврат из рейса без блокировки: на складе есть кг, в отборе тоже", () => {
     const b = batch({
       id: "b1",

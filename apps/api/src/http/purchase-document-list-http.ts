@@ -2,7 +2,8 @@ import { and, desc, eq, exists, gt, inArray, notExists, or, sql, type SQL } from
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
-import { batches, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
+import { batches, purchaseDocumentLines, purchaseDocuments, warehouses } from "../db/schema.js";
+import { gramsToKg } from "../application/units/mass.js";
 
 export const purchaseDocumentsListQuerySchema = z.object({
   search: z.string().optional(),
@@ -56,6 +57,19 @@ function formatPgDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+function asBigInt(value: bigint | string | number | null | undefined): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return BigInt(Math.trunc(value));
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    return BigInt(value.trim());
+  }
+  return 0n;
+}
+
 export async function listPurchaseDocumentsForHttp(
   db: DbClient,
   options?: {
@@ -72,7 +86,12 @@ export async function listPurchaseDocumentsForHttp(
   const parts: SQL[] = [];
   const q = options?.search?.trim();
   if (q) {
-    parts.push(sql`${purchaseDocuments.documentNumber} ilike ${`%${q}%`}`);
+    parts.push(
+      sql`(
+        ${purchaseDocuments.documentNumber} ilike ${`%${q}%`}
+        or coalesce(${purchaseDocuments.supplierName}, '') ilike ${`%${q}%`}
+      )`,
+    );
   }
   const sw = scopeWhere(db, options?.scope);
   if (sw) {
@@ -104,10 +123,15 @@ export async function listPurchaseDocumentsForHttp(
       documentNumber: purchaseDocuments.documentNumber,
       docDate: purchaseDocuments.docDate,
       warehouseId: purchaseDocuments.warehouseId,
+      warehouseName: warehouses.name,
+      supplierName: purchaseDocuments.supplierName,
+      supplierId: purchaseDocuments.supplierId,
+      extraCostKopecks: purchaseDocuments.extraCostKopecks,
       createdByUserId: purchaseDocuments.createdByUserId,
       purchaserUserId: purchaseDocuments.purchaserUserId,
     })
     .from(purchaseDocuments)
+    .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
     .orderBy(desc(purchaseDocuments.docDate), desc(purchaseDocuments.documentNumber))
     .limit(limit)
     .offset(offset);
@@ -119,30 +143,53 @@ export async function listPurchaseDocumentsForHttp(
   const rows = await query;
 
   const ids = rows.map((r) => r.id);
-  const lineCounts =
+  const lineAggs =
     ids.length === 0
       ? []
       : await db
           .select({
             documentId: purchaseDocumentLines.documentId,
-            c: sql<number>`count(*)::int`,
+            lineCount: sql<number>`count(*)::int`,
+            linesTotalKopecks: sql<string>`coalesce(sum(${purchaseDocumentLines.lineTotalKopecks}), 0)::text`,
+            totalGrams: sql<string>`coalesce(sum(${purchaseDocumentLines.quantityGrams}), 0)::text`,
           })
           .from(purchaseDocumentLines)
           .where(inArray(purchaseDocumentLines.documentId, ids))
           .groupBy(purchaseDocumentLines.documentId);
 
-  const countMap = new Map(lineCounts.map((r) => [r.documentId, r.c]));
+  const aggMap = new Map(
+    lineAggs.map((r) => [
+      r.documentId,
+      {
+        lineCount: r.lineCount,
+        linesTotalKopecks: asBigInt(r.linesTotalKopecks),
+        totalGrams: asBigInt(r.totalGrams),
+      },
+    ]),
+  );
 
   return {
-    purchaseDocuments: rows.map((d) => ({
-      id: d.id,
-      documentNumber: d.documentNumber,
-      docDate: formatPgDate(d.docDate),
-      warehouseId: d.warehouseId,
-      lineCount: countMap.get(d.id) ?? 0,
-      createdByUserId: d.createdByUserId ?? null,
-      purchaserUserId: d.purchaserUserId ?? null,
-    })),
+    purchaseDocuments: rows.map((d) => {
+      const agg = aggMap.get(d.id);
+      const linesTotal = agg?.linesTotalKopecks ?? 0n;
+      const extra = asBigInt(d.extraCostKopecks);
+      return {
+        id: d.id,
+        documentNumber: d.documentNumber,
+        docDate: formatPgDate(d.docDate),
+        warehouseId: d.warehouseId,
+        warehouseName: d.warehouseName?.trim() || "—",
+        supplierId: d.supplierId ?? null,
+        supplierName: d.supplierName?.trim() || null,
+        lineCount: agg?.lineCount ?? 0,
+        totalKg: gramsToKg(agg?.totalGrams ?? 0n),
+        linesTotalKopecks: linesTotal.toString(),
+        extraCostKopecks: extra.toString(),
+        documentTotalKopecks: (linesTotal + extra).toString(),
+        createdByUserId: d.createdByUserId ?? null,
+        purchaserUserId: d.purchaserUserId ?? null,
+      };
+    }),
     listMeta: {
       limit,
       offset,

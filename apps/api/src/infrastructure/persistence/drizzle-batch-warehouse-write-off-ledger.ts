@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import type { BatchWarehouseWriteOffLedger, BatchWarehouseWriteOffAppend } from "../../application/ports/batch-warehouse-write-off-ledger.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -134,5 +134,41 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
           eq(batchWarehouseWriteOffs.blocksLoading, false),
         ),
       );
+  }
+
+  async enableBlocksLoadingUpToGrams(batchId: string, upToGrams: bigint): Promise<void> {
+    if (upToGrams <= 0n) {
+      return;
+    }
+    const rows = await this.db
+      .select({
+        id: batchWarehouseWriteOffs.id,
+        grams: batchWarehouseWriteOffs.grams,
+      })
+      .from(batchWarehouseWriteOffs)
+      .where(
+        and(
+          eq(batchWarehouseWriteOffs.batchId, batchId),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+          eq(batchWarehouseWriteOffs.blocksLoading, false),
+        ),
+      )
+      .orderBy(asc(batchWarehouseWriteOffs.createdAt));
+    let need = upToGrams;
+    const ids: string[] = [];
+    for (const row of rows) {
+      if (need <= 0n) {
+        break;
+      }
+      ids.push(row.id);
+      need -= row.grams;
+    }
+    if (ids.length === 0) {
+      return;
+    }
+    await this.db
+      .update(batchWarehouseWriteOffs)
+      .set({ blocksLoading: true })
+      .where(inArray(batchWarehouseWriteOffs.id, ids));
   }
 }

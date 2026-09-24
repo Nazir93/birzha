@@ -26,4 +26,9 @@ export interface BatchWarehouseWriteOffLedger {
   clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
   /** Повторный возврат из отбора при полном журнале: снова включить blocks_loading. */
   enableBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
+  /**
+   * Включить блокировку только до `upToGrams` по партии (старые записи без флага — по порядку).
+   * Нужно, чтобы «вернуть 800» не блокировало все 4800 из журнала.
+   */
+  enableBlocksLoadingUpToGrams(batchId: string, upToGrams: bigint): Promise<void>;
 }

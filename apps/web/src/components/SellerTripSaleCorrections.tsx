@@ -315,7 +315,10 @@ function SellerTripSaleEditForm({
   );
 }
 
-function formatGroupCorrectionMeta(group: TripSaleLineCorrectionsGroup): string {
+function formatGroupCorrectionMetaParts(group: TripSaleLineCorrectionsGroup): {
+  muted: string;
+  emphasis: string | null;
+} {
   const sample = group.lines[0]!;
   const parts: string[] = [`${group.totalKg} кг`];
   const pricePart = formatSellerCorrectionSaleMeta(sample)
@@ -327,14 +330,15 @@ function formatGroupCorrectionMeta(group: TripSaleLineCorrectionsGroup): string 
   if (group.totalPackages) {
     parts.push(`${group.totalPackages} ящ`);
   }
+  let emphasis: string | null = null;
   if (sample.saleChannel === "wholesale") {
     const name = sample.clientLabel?.trim();
-    parts.push(name ? `Опт: ${name}` : "Опт");
+    emphasis = name ? `Опт: ${name}` : "Опт";
   } else if (BigInt(sample.debtKopecks ?? "0") > 0n) {
     const name = sample.clientLabel?.trim();
-    parts.push(name ? `Долг: ${name}` : "В долг");
+    emphasis = name ? `Долг: ${name}` : "В долг";
   }
-  return parts.join(" · ");
+  return { muted: parts.join(" · "), emphasis };
 }
 
 function SellerTripSaleCorrectionsGroupRow({
@@ -359,7 +363,7 @@ function SellerTripSaleCorrectionsGroupRow({
   remove: { isPending: boolean; mutate: (lineId: string) => void };
 }) {
   const sum = kopecksToRubLabel(String(group.totalRevenueKopecks));
-  const meta = formatGroupCorrectionMeta(group);
+  const { muted, emphasis } = formatGroupCorrectionMetaParts(group);
   const multi = group.lines.length > 1;
   const isEditing = editingGroupKey === group.key;
 
@@ -394,7 +398,17 @@ function SellerTripSaleCorrectionsGroupRow({
           <strong>{group.lineLabel}</strong>
           <span className="birzha-text-muted">
             {" "}
-            · {meta} · {sum} ₽
+            · {muted}
+          </span>
+          {emphasis ? (
+            <>
+              {" "}
+              · <strong>{emphasis}</strong>
+            </>
+          ) : null}
+          <span className="birzha-text-muted">
+            {" "}
+            · {sum} ₽
           </span>
         </span>
         {!isEditing ? (

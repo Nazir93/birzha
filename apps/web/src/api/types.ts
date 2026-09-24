@@ -226,7 +226,20 @@ export type PurchaseDocumentSummary = {
   documentNumber: string;
   docDate: string;
   warehouseId: string;
+  /** Подпись склада (список ЗН для бухгалтерии). */
+  warehouseName?: string | null;
+  /** Тепличник (снимок / справочник). */
+  supplierId?: string | null;
+  supplierName?: string | null;
   lineCount: number;
+  /** Сумма нетто по строкам, кг. */
+  totalKg?: number;
+  /** Сумма строк накладной, копейки. */
+  linesTotalKopecks?: string;
+  /** Доп. расходы шапки, копейки. */
+  extraCostKopecks?: string;
+  /** Итого к оплате тепличнику по документу (строки + доп.), копейки. */
+  documentTotalKopecks?: string;
   /** Автор накладной (`users.id`), если записан при создании. */
   createdByUserId: string | null;
   /** Закупщик (`users.id`); в отчётах и фильтре «свои». */

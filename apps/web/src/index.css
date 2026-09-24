@@ -1236,6 +1236,13 @@ a.birzha-kpi-tile--link:focus-visible {
   color: var(--color-text);
 }
 
+.birzha-seller-caliber-tile__pkg {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
 .birzha-seller-caliber-tile__meta {
   font-size: 0.72rem;
   font-weight: 600;
@@ -1313,14 +1320,14 @@ a.birzha-kpi-tile--link:focus-visible {
   background: transparent;
   cursor: var(--birzha-cursor-red);
   font-family: var(--font-ui);
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--color-text);
 }
 
 .birzha-seller-wholesaler-list__pick--active {
   background: var(--birzha-accent-soft);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .birzha-seller-wholesaler-list__pick:focus-visible {

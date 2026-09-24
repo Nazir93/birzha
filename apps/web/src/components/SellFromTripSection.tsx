@@ -85,7 +85,11 @@ function SellerSellStep({
       <span className={`birzha-seller-step-badge${muted ? " birzha-seller-step-badge--muted" : ""}`}>
         Шаг {step}
       </span>
-      <h4 id={stepHeadingId} className="birzha-seller-label" style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>
+      <h4
+        id={stepHeadingId}
+        className="birzha-seller-label"
+        style={{ margin: "0 0 0.5rem", fontSize: "1.05rem", fontWeight: 800 }}
+      >
         {title}
       </h4>
       {children}
@@ -301,11 +305,20 @@ export function SellFromTripSection() {
     return groups.map((group) => {
       const sampleBatch = batchByIdForSell.get(group.primaryBatchId);
       const key = sellerCaliberGroupKey(sampleBatch, group.primaryRow);
+      const estPkg = group.rows.reduce(
+        (s, r) => s + estimateNetTransitPackageCountForSell(r, batchByIdForSell.get(r.batchId)),
+        0n,
+      );
+      const hasPkgData = group.rows.some((r) =>
+        rowUsesPackageAccountingForSell(r, batchByIdForSell.get(r.batchId)),
+      );
       return {
         key,
         group,
         headline: group.lineLabel,
         totalNetG: group.totalNetG,
+        estPkg,
+        hasPkgData,
       };
     });
   }, [sellableOnTripRows, batchByIdForSell]);
@@ -1013,6 +1026,12 @@ export function SellFromTripSection() {
                     {sellerTripSellTiles.map((t) => {
                       const selected = sellCaliberKey === t.key;
                       const kgLine = gramsBigIntToKgDecimalString(t.totalNetG);
+                      const pkgLabel =
+                        t.hasPkgData && t.estPkg > 0n
+                          ? `≈ ${String(t.estPkg)} ящ`
+                          : t.hasPkgData && t.totalNetG > 0n
+                            ? "< 1 ящ"
+                            : null;
                       return (
                         <button
                           key={t.key}
@@ -1028,6 +1047,9 @@ export function SellFromTripSection() {
                         >
                           <span className="birzha-seller-caliber-tile__line">{t.headline}</span>
                           <span className="birzha-seller-caliber-tile__kg">{kgLine} кг</span>
+                          {pkgLabel ? (
+                            <span className="birzha-seller-caliber-tile__pkg">{pkgLabel}</span>
+                          ) : null}
                         </button>
                       );
                     })}

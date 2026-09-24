@@ -564,6 +564,58 @@ describe("batchSnapshotForManifestLineRemainder / WriteOff", () => {
     expect(batchAvailableForLoadingKg(live)).toBe(15950);
   });
 
+  it("после возврата 800 из 4800 в ПН остаток в отборе — 4000 (кг строки, не блокировка склада)", () => {
+    const live = b({
+      id: "b1",
+      totalKg: 4800,
+      onWarehouseKg: 4800,
+      availableForLoadingKg: 4800,
+      qualityRejectWrittenOffKg: 800,
+      blockingReturnKg: 800,
+    });
+    const before = batchSnapshotForManifestLineRemainder(
+      {
+        batchId: "b1",
+        kg: 4800,
+        packageCount: "480",
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "1",
+        productGradeCode: "5",
+        productGroup: "Помидоры",
+      },
+      live,
+    );
+    expect(sumLoadingManifestTotals([before], "selection_remainder").kg).toBe(4800);
+
+    const afterReturn = batchSnapshotForManifestLineRemainder(
+      {
+        batchId: "b1",
+        kg: 4000,
+        packageCount: "400",
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "1",
+        productGradeCode: "5",
+        productGroup: "Помидоры",
+      },
+      live,
+    );
+    expect(sumLoadingManifestTotals([afterReturn], "selection_remainder").kg).toBe(4000);
+
+    const writeOffSnap = batchSnapshotForManifestLineWriteOff(
+      {
+        batchId: "b1",
+        kg: 4000,
+        packageCount: "400",
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "1",
+        productGradeCode: "5",
+        productGroup: "Помидоры",
+      },
+      live,
+    );
+    expect(sumLoadingManifestTotals([writeOffSnap], "warehouse_return").kg).toBeLessThanOrEqual(4000);
+  });
+
   it("возврат ограничен кг строки ПН", () => {
     const live = b({
       id: "b1",
