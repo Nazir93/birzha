@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   date,
+  index,
   integer,
   numeric,
   pgTable,
@@ -307,4 +308,24 @@ export const userRoles = pgTable(
     scopeId: text("scope_id").notNull().default(""),
   },
   (t) => [primaryKey({ columns: [t.userId, t.roleCode, t.scopeType, t.scopeId] })],
+);
+
+/**
+ * Web Push подписки (PWA). Endpoint уникален; привязка к users.id.
+ * Уведомления о продажах с рейса — только устройствам пользователей с ролью admin.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    endpoint: text("endpoint").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("push_subscriptions_user_id_idx").on(t.userId)],
 );

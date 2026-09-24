@@ -17,6 +17,11 @@ const envSchema = z
       .string()
       .optional()
       .transform((v): boolean => v === "true" || v === "1"),
+    /** Web Push (PWA): публичный VAPID-ключ; без пары ключей push отключён. */
+    VAPID_PUBLIC_KEY: z.string().min(20).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(20).optional(),
+    /** mailto: или https: контакт для VAPID (требование спецификации). */
+    VAPID_SUBJECT: z.string().min(3).default("mailto:admin@24birzha.ru"),
   })
   .superRefine((data, ctx) => {
     if (data.DATABASE_URL && !data.JWT_SECRET) {
@@ -38,6 +43,15 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         message: "REQUIRE_API_AUTH требует DATABASE_URL (маршруты /auth и проверка ролей)",
         path: ["REQUIRE_API_AUTH"],
+      });
+    }
+    const hasPub = Boolean(data.VAPID_PUBLIC_KEY?.trim());
+    const hasPriv = Boolean(data.VAPID_PRIVATE_KEY?.trim());
+    if (hasPub !== hasPriv) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "VAPID_PUBLIC_KEY и VAPID_PRIVATE_KEY задаются вместе",
+        path: hasPub ? ["VAPID_PRIVATE_KEY"] : ["VAPID_PUBLIC_KEY"],
       });
     }
   });

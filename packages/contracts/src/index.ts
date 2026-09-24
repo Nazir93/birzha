@@ -67,6 +67,7 @@ export {
   loadingManifestTripDetachLockReasonSchema,
   loadingManifestTripActionOkSchema,
   loadingManifestReservedBatchIdsQuerySchema,
+  pushSubscribeBodySchema,
   createBatchBodySchema,
   createLoadingManifestBodySchema,
   createCounterpartyBodySchema,

@@ -36,6 +36,7 @@ import {
   type DashboardSummaryPeriod,
 } from "./dashboard/dashboard-summary-ui.js";
 import { AdminSummaryAttention } from "./admin/AdminSummaryAttention.js";
+import { AdminPushNotificationsCard } from "./AdminPushNotificationsCard.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -255,6 +256,8 @@ export function AdminCabinetHome() {
               </Link>
             </nav>
           </header>
+
+          <AdminPushNotificationsCard />
 
           <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi">
               <Link

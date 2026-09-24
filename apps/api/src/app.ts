@@ -34,8 +34,12 @@ import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-
 import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
+import { registerPushRoutes } from "./http/register-push-routes.js";
 import { createBusinessRouteAuth } from "./http/route-auth.js";
 import { registerTripRoutes } from "./http/register-trip-routes.js";
+import { NotifyAdminsOfTripSaleUseCase } from "./application/push/notify-admins-of-trip-sale.use-case.js";
+import { DrizzlePushSubscriptionRepository } from "./infrastructure/persistence/drizzle-push-subscription.repository.js";
+import { createWebPushSender } from "./infrastructure/push/web-push-sender.js";
 import { DrizzleBatchRepository } from "./infrastructure/persistence/drizzle-batch.repository.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "./infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { DrizzleTripRepository } from "./infrastructure/persistence/drizzle-trip.repository.js";
@@ -377,6 +381,14 @@ export async function buildApp(options: {
     requireApiAuth: env.REQUIRE_API_AUTH ? "enabled" : "disabled",
     adminUsersApi:
       db && env.JWT_SECRET && env.REQUIRE_API_AUTH ? "enabled" : "disabled",
+    pushNotificationsApi:
+      db &&
+      env.JWT_SECRET &&
+      env.REQUIRE_API_AUTH &&
+      env.VAPID_PUBLIC_KEY?.trim() &&
+      env.VAPID_PRIVATE_KEY?.trim()
+        ? "enabled"
+        : "disabled",
   }));
 
   if (db && env.JWT_SECRET) {
@@ -385,8 +397,26 @@ export async function buildApp(options: {
 
   const routeAuth = createBusinessRouteAuth(app, env);
 
+  const pushSubscriptions =
+    db && env.VAPID_PUBLIC_KEY?.trim() && env.VAPID_PRIVATE_KEY?.trim()
+      ? new DrizzlePushSubscriptionRepository(db)
+      : null;
+  const webPushSender =
+    env.VAPID_PUBLIC_KEY?.trim() && env.VAPID_PRIVATE_KEY?.trim()
+      ? createWebPushSender({
+          publicKey: env.VAPID_PUBLIC_KEY.trim(),
+          privateKey: env.VAPID_PRIVATE_KEY.trim(),
+          subject: env.VAPID_SUBJECT,
+        })
+      : null;
+  const notifyAdminsOfTripSale =
+    db && tripRepository && pushSubscriptions && webPushSender
+      ? new NotifyAdminsOfTripSaleUseCase(db, tripRepository, pushSubscriptions, webPushSender, app.log)
+      : null;
+
   if (db && env.JWT_SECRET && env.REQUIRE_API_AUTH) {
     registerAdminUserRoutes(app, db, routeAuth);
+    registerPushRoutes(app, { env, routeAuth, subscriptions: pushSubscriptions });
   }
 
   if (counterpartyRepository) {
@@ -462,6 +492,7 @@ export async function buildApp(options: {
       db,
       recordWarehouseWriteOff,
       reverseWarehouseWriteOff,
+      notifyAdminsOfTripSale,
     );
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);

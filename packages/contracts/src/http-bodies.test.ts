@@ -365,3 +365,14 @@ describe("appendLoadingManifestBatchesBodySchema", () => {
     expect(() => appendLoadingManifestBatchesBodySchema.parse({ batchIds: [] })).toThrow();
   });
 });
+
+describe("pushSubscribeBodySchema", () => {
+  it("принимает endpoint и keys", async () => {
+    const { pushSubscribeBodySchema } = await import("./http-bodies.js");
+    const r = pushSubscribeBodySchema.parse({
+      endpoint: "https://fcm.googleapis.com/fcm/send/abc",
+      keys: { p256dh: "x".repeat(20), auth: "y".repeat(16) },
+    });
+    expect(r.endpoint).toContain("fcm.googleapis.com");
+  });
+});

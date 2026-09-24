@@ -34,6 +34,7 @@ import { CreatePurchaseUseCase } from "../application/purchase/create-purchase.u
 import { DeleteTripSaleLineUseCase } from "../application/sale/delete-trip-sale-line.use-case.js";
 import { SellFromTripUseCase } from "../application/sale/sell-from-trip.use-case.js";
 import { UpdateTripSaleLineUseCase } from "../application/sale/update-trip-sale-line.use-case.js";
+import type { NotifyAdminsOfTripSaleUseCase } from "../application/push/notify-admins-of-trip-sale.use-case.js";
 import { ShipToTripUseCase } from "../application/trip/ship-to-trip.use-case.js";
 import { ReceiveOnWarehouseUseCase } from "../application/warehouse/receive-on-warehouse.use-case.js";
 import type { BatchListFilter, BatchRepository } from "../application/ports/batch-repository.port.js";
@@ -84,6 +85,7 @@ export function registerBatchRoutes(
   db: DbClient | null = null,
   recordWarehouseWriteOff: RecordWarehouseWriteOffUseCase | null = null,
   reverseWarehouseWriteOff: ReverseWarehouseWriteOffUseCase | null = null,
+  notifyAdminsOfTripSale: NotifyAdminsOfTripSaleUseCase | null = null,
 ): void {
   const createPurchase = new CreatePurchaseUseCase(batches);
   const receive = new ReceiveOnWarehouseUseCase(batches);
@@ -376,6 +378,38 @@ export function registerBatchRoutes(
         recordedByUserId: u?.sub,
         packageCount: body.packageCount,
       });
+
+      if (notifyAdminsOfTripSale) {
+        const saleChannel = body.saleChannel === "wholesale" ? "wholesale" : "retail";
+        let clientLabel: string | null = body.clientLabel?.trim() || null;
+        try {
+          if (saleChannel === "wholesale" && body.wholesaleBuyerId?.trim()) {
+            const w = await wholesalers.findActiveById(body.wholesaleBuyerId.trim());
+            clientLabel = w?.name.trim() || clientLabel;
+          } else if (body.counterpartyId?.trim()) {
+            const c = await counterparties.findActiveById(body.counterpartyId.trim());
+            clientLabel = c?.displayName.trim() || clientLabel;
+          }
+        } catch {
+          /* подпись клиента для push — best effort */
+        }
+        void notifyAdminsOfTripSale
+          .execute({
+            batchId: params.batchId,
+            tripId: body.tripId,
+            kg: body.kg,
+            pricePerKg: body.pricePerKg,
+            saleChannel,
+            clientLabel,
+            packageCount: body.packageCount ?? null,
+            recordedByUserId: u?.sub ?? null,
+            openUrl: `/a/reports?trip=${encodeURIComponent(body.tripId)}`,
+          })
+          .catch((err) => {
+            app.log.warn({ err }, "admin sale push failed");
+          });
+      }
+
       return reply.code(200).send({ ok: true });
     } catch (error) {
       return sendMappedError(reply, error);
