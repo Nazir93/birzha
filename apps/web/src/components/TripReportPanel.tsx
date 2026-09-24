@@ -325,7 +325,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     };
     window.addEventListener("afterprint", cleanup);
     window.setTimeout(cleanup, 60_000);
-    window.print();
+    // Класс и стили должны примениться до снимка для печати.
+    requestAnimationFrame(() => {
+      window.print();
+    });
   }, []);
 
   const loadingManifestDateLabel = useMemo(() => {

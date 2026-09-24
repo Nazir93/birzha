@@ -6000,11 +6000,47 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__warehouse-name {
     visibility: visible !important;
   }
 
+  /*
+   * Тёмная тема: светлый текст + тёмный фон. Браузер при печати часто
+   * сбрасывает фон на белый, а цвет текста оставляет — лист «пустой».
+   * fixed + overflow: иначе absolute внутри overflow:hidden кабинета уезжает за край.
+   */
+  body.birzha-print-trip-loading-manifest,
+  body.birzha-print-trip-loading-manifest #root,
+  body.birzha-print-trip-loading-manifest .app-shell,
+  body.birzha-print-trip-loading-manifest .birzha-cabinet-layout,
+  body.birzha-print-trip-loading-manifest .birzha-cabinet-main,
+  body.birzha-print-trip-loading-manifest .birzha-table-scroll {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
   body.birzha-print-trip-loading-manifest #trip-loading-manifest-print {
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
     width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #111 !important;
+    z-index: 99999;
+  }
+
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print,
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print * {
+    color: #111 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #333 !important;
+  }
+
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print th,
+  body.birzha-print-trip-loading-manifest #trip-loading-manifest-print td {
+    background: #fff !important;
+    color: #111 !important;
+    border: 1px solid #333 !important;
   }
 
   body.birzha-print-trip-loading-manifest .birzha-trip-loading-manifest-print__title {
