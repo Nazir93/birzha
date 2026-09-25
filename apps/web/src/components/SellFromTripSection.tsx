@@ -15,6 +15,8 @@ import {
   groupSellableRowsByCaliber,
   maxSellablePackagesForSellKg,
   sellerCaliberGroupKey,
+  sellerRequiresPackageCount,
+  sellerResidualKgOnly,
 } from "../format/seller-trip-caliber-groups.js";
 import { buildSellerSellChunks, sellerSellPlanBlockReason } from "../format/seller-sell-chunk-plan.js";
 import { sellerNetKgDisplayFromGross, sellerNetKgFromGrossInput, sellerNetFromGrossHint } from "../format/seller-gross-net.js";
@@ -355,7 +357,11 @@ export function SellFromTripSection() {
   const applySellerCaliberTile = useCallback((tile: (typeof sellerTripSellTiles)[number]) => {
     setSellCaliberKey(tile.key);
     setSellBatchId(tile.group.primaryBatchId);
-    setSellKg("");
+    if (sellerResidualKgOnly(tile.hasPkgData, tile.estPkg, tile.totalNetG)) {
+      setSellKg(gramsBigIntToKgDecimalString(tile.totalNetG));
+    } else {
+      setSellKg("");
+    }
     setSellPackages("");
   }, []);
 
@@ -417,6 +423,8 @@ export function SellFromTripSection() {
     hasShipped: boolean;
     hasPkgData: boolean;
     subUnitPackages: boolean;
+    residualKgOnly: boolean;
+    requirePackages: boolean;
     productGroup: string | null;
   } | null => {
     if (!sellBatchId) {
@@ -441,6 +449,7 @@ export function SellFromTripSection() {
     const hasPkgData = group
       ? group.rows.some((r) => rowUsesPackageAccountingForSell(r, batchByIdForSell.get(r.batchId)))
       : rowUsesPackageAccountingForSell(row, b);
+    const residualKgOnly = sellerResidualKgOnly(hasPkgData, estPkg, netG);
     return {
       line: group?.lineLabel ?? (b ? formatNakladLineLabel(b) : "—"),
       doc: b?.nakladnaya?.documentNumber?.trim() ?? "—",
@@ -449,17 +458,19 @@ export function SellFromTripSection() {
       hasShipped: group ? group.rows.some((r) => r.shippedG > 0n) : row.shippedG > 0n,
       hasPkgData,
       subUnitPackages: hasPkgData && netG > 0n && estPkg === 0n,
+      residualKgOnly,
+      requirePackages: sellerRequiresPackageCount(hasPkgData, estPkg),
       productGroup,
     };
   }, [sellBatchId, sellableOnTripRows, batchByIdForSell, selectedSellerCaliberGroup]);
 
   /** Сумма сделки: цена × нетто (при ящиках поле кг — брутто). */
   const sellNetKgForDeal = useMemo(() => {
-    if (!sellSelectionSummary?.hasPkgData) {
+    if (!sellSelectionSummary?.requirePackages) {
       return sellKg;
     }
     return sellerNetKgDisplayFromGross(sellKg, sellPackages, sellSelectionSummary.productGroup);
-  }, [sellKg, sellPackages, sellSelectionSummary?.hasPkgData, sellSelectionSummary?.productGroup]);
+  }, [sellKg, sellPackages, sellSelectionSummary?.requirePackages, sellSelectionSummary?.productGroup]);
 
   const sellDealTotalKopecks = useMemo(
     () =>
@@ -479,7 +490,7 @@ export function SellFromTripSection() {
   }, [sellDealTotalKopecks]);
 
   const sellPkgMaxHint = useMemo(() => {
-    if (!sellSelectionSummary?.hasPkgData || !sellBatchId.trim()) {
+    if (!sellSelectionSummary?.requirePackages || !sellBatchId.trim()) {
       return null;
     }
     let kgNum = Number(sellKg.replace(",", "."));
@@ -500,7 +511,7 @@ export function SellFromTripSection() {
         : sellSelectionSummary.estPkg;
     return max > 0n ? String(max) : null;
   }, [
-    sellSelectionSummary?.hasPkgData,
+    sellSelectionSummary?.requirePackages,
     sellSelectionSummary?.estPkg,
     sellSelectionSummary?.productGroup,
     sellBatchId,
@@ -587,9 +598,9 @@ export function SellFromTripSection() {
       return "Выберите калибр на рейсе";
     }
     if (!sellKg.trim()) {
-      return sellSelectionSummary?.hasPkgData ? "Укажите брутто, кг" : "Укажите кг продажи";
+      return sellSelectionSummary?.requirePackages ? "Укажите брутто, кг" : "Укажите кг продажи";
     }
-    if (sellSelectionSummary?.hasPkgData) {
+    if (sellSelectionSummary?.requirePackages) {
       const raw = sellPackages.trim();
       if (!raw) {
         return "Укажите количество ящиков в продаже";
@@ -612,7 +623,7 @@ export function SellFromTripSection() {
     }
     if (sellBatchId.trim() && sellKg.trim() && sellPrice.trim()) {
       let kgForPlan = sellKg;
-      if (sellSelectionSummary?.hasPkgData) {
+      if (sellSelectionSummary?.requirePackages) {
         try {
           kgForPlan = String(
             sellerNetKgFromGrossInput(
@@ -632,7 +643,7 @@ export function SellFromTripSection() {
         kgRaw: kgForPlan,
         priceRaw: sellPrice,
         packageCountRaw: sellPackages,
-        requirePackageCount: Boolean(sellSelectionSummary?.hasPkgData),
+        requirePackageCount: Boolean(sellSelectionSummary?.requirePackages),
         paymentKind,
       });
       if (planErr) {
@@ -657,7 +668,7 @@ export function SellFromTripSection() {
     sellPackages,
     sellPrice,
     sellBatchId,
-    sellSelectionSummary?.hasPkgData,
+    sellSelectionSummary?.requirePackages,
     sellSelectionSummary?.productGroup,
     sellNetKgForDeal,
     sellableOnTripRows,
@@ -723,7 +734,7 @@ export function SellFromTripSection() {
 
   const sell = useMutation({
     mutationFn: async () => {
-      const requirePackageCount = Boolean(sellSelectionSummary?.hasPkgData);
+      const requirePackageCount = Boolean(sellSelectionSummary?.requirePackages);
       let kgForApi = sellKg;
       if (requirePackageCount) {
         kgForApi = String(
@@ -747,7 +758,7 @@ export function SellFromTripSection() {
         cardTransferKopecks,
         wholesaleBuyerId: saleChannel === "wholesale" ? wholesaleBuyerId : undefined,
         sellerMoneyInRubles: true,
-        packageCountRaw: sellPackages,
+        packageCountRaw: requirePackageCount ? sellPackages : "",
         requirePackageCount,
       });
       const chunks = buildSellerSellChunks({
@@ -1074,17 +1085,29 @@ export function SellFromTripSection() {
           <strong>{sellSelectionSummary.line}</strong>
           {". "}
           <strong>В машине: {sellSelectionSummary.kg} кг</strong>
-          {sellSelectionSummary.hasPkgData && sellSelectionSummary.estPkg > 0n && (
+          {sellSelectionSummary.requirePackages && sellSelectionSummary.estPkg > 0n && (
             <>
               {" "}
               · <strong>≈ {String(sellSelectionSummary.estPkg)} ящ</strong>
             </>
           )}
-          {sellSelectionSummary.subUnitPackages && <> · &lt; 1 ящ</>}
+          {sellSelectionSummary.residualKgOnly && (
+            <>
+              {" "}
+              · <strong>ящики уже проданы — допродайте остаток кг</strong>
+            </>
+          )}
+          {!sellSelectionSummary.residualKgOnly && sellSelectionSummary.subUnitPackages && <> · &lt; 1 ящ</>}
         </p>
       )}
+      {sellSelectionSummary?.residualKgOnly ? (
+        <BirzhaAlert variant="warning" title="Остаток без ящиков" role="status">
+          Все ящики уже проданы, но в машине ещё остались килограммы (часто из‑за разницы брутто/нетто).
+          Укажите эти кг и цену — и нажмите «Зафиксировать продажу».
+        </BirzhaAlert>
+      ) : null}
       <label htmlFor={`${idPrefix}-in-kg`} className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
-        {sellSelectionSummary?.hasPkgData ? "Брутто, кг *" : "Сколько килограмм в этой сделке *"}
+        {sellSelectionSummary?.requirePackages ? "Брутто, кг *" : "Сколько килограмм в этой сделке *"}
       </label>
       <input
         id={`${idPrefix}-in-kg`}
@@ -1095,7 +1118,7 @@ export function SellFromTripSection() {
         inputMode="decimal"
         autoComplete="off"
       />
-      {sellSelectionSummary?.hasPkgData ? (
+      {sellSelectionSummary?.requirePackages ? (
         <>
           <label
             htmlFor={`${idPrefix}-in-pkg`}
@@ -1268,7 +1291,7 @@ export function SellFromTripSection() {
       ) : null}
       <button
         type="button"
-        className="birzha-btn birzha-btn--spaced"
+        className="birzha-btn birzha-btn--seller-save"
         disabled={sell.isPending || Boolean(sellerSellBlockReason)}
         aria-busy={sell.isPending || undefined}
         onClick={() => sell.mutate()}

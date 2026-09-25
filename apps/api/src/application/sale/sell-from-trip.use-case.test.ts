@@ -336,4 +336,70 @@ describe("SellFromTripUseCase", () => {
       sell.execute({ batchId: "b-seq", tripId: "t-seq", kg: 1, saleId: "s-c", pricePerKg: 1 }),
     ).rejects.toThrow(InsufficientStockForTripError);
   });
+
+  it("когда ящики уже проданы, разрешает допродать остаток кг без ящиков", async () => {
+    const repo = new InMemoryBatchRepository();
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const counterparties = new InMemoryCounterpartyRepository();
+    const wholesalers = new InMemoryWholesalerRepository();
+    const packages = {
+      async findByBatchId() {
+        return { linePackageCount: 10n, purchasedGrams: 440_000n };
+      },
+    };
+    const sell = new SellFromTripUseCase(
+      repo,
+      trips,
+      shipments,
+      sales,
+      shortages,
+      counterparties,
+      wholesalers,
+      packages,
+    );
+    await new CreateTripUseCase(trips).execute({ id: "t-pkg", tripNumber: "Ф-PKG" });
+    await new CreatePurchaseUseCase(repo).execute({
+      id: "b-pkg",
+      purchaseId: "p-pkg",
+      totalKg: 440,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await new ShipToTripUseCase(repo, trips, shipments).execute({
+      batchId: "b-pkg",
+      kg: 440,
+      tripId: "t-pkg",
+      packageCount: 10,
+    });
+    await sell.execute({
+      batchId: "b-pkg",
+      tripId: "t-pkg",
+      kg: 400,
+      saleId: "s-pkg-1",
+      pricePerKg: 10,
+      packageCount: 10,
+    });
+    await expect(
+      sell.execute({
+        batchId: "b-pkg",
+        tripId: "t-pkg",
+        kg: 40,
+        saleId: "s-pkg-2",
+        pricePerKg: 10,
+        packageCount: 1,
+      }),
+    ).rejects.toThrow(/уже проданы/);
+    await sell.execute({
+      batchId: "b-pkg",
+      tripId: "t-pkg",
+      kg: 40,
+      saleId: "s-pkg-2",
+      pricePerKg: 10,
+    });
+    const sold = await sales.totalGramsForTripAndBatch("t-pkg", "b-pkg");
+    expect(sold).toBe(440_000n);
+  });
 });

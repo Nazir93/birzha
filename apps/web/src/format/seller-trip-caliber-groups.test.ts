@@ -5,6 +5,8 @@ import type { TripBatchTableRow } from "./trip-report-rows.js";
 import {
   allocateSellGramsAcrossTripRows,
   groupSellableRowsByCaliber,
+  sellerRequiresPackageCount,
+  sellerResidualKgOnly,
 } from "./seller-trip-caliber-groups.js";
 
 function batch(id: string, group: string, grade: string): BatchListItem {
@@ -135,5 +137,19 @@ describe("groupSellableRowsByCaliber", () => {
       { batchId: "b-big", grams: 20_000n },
       { batchId: "b-small", grams: 2_000n },
     ]);
+  });
+});
+
+describe("sellerRequiresPackageCount / sellerResidualKgOnly", () => {
+  it("ящики нужны только пока есть остаток ящиков", () => {
+    expect(sellerRequiresPackageCount(true, 5n)).toBe(true);
+    expect(sellerRequiresPackageCount(true, 0n)).toBe(false);
+    expect(sellerRequiresPackageCount(false, 5n)).toBe(false);
+  });
+
+  it("остаток только кг — когда ящики кончились, а кг ещё есть", () => {
+    expect(sellerResidualKgOnly(true, 0n, 40_000n)).toBe(true);
+    expect(sellerResidualKgOnly(true, 2n, 40_000n)).toBe(false);
+    expect(sellerResidualKgOnly(true, 0n, 0n)).toBe(false);
   });
 });

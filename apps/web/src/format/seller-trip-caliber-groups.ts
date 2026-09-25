@@ -188,6 +188,16 @@ export function maxSellablePackagesForSellKg(
   return (maxPkg * reqG) / maxG;
 }
 
+/** Нужны ли ящики в форме продажи: да, пока по калибру ещё есть целые ящики. */
+export function sellerRequiresPackageCount(hasPkgData: boolean, estPkg: bigint): boolean {
+  return hasPkgData && estPkg > 0n;
+}
+
+/** Остаток только в кг (ящики уже списаны) — продаём килограммами без тары. */
+export function sellerResidualKgOnly(hasPkgData: boolean, estPkg: bigint, netG: bigint): boolean {
+  return hasPkgData && estPkg <= 0n && netG > 0n;
+}
+
 /** Группа, в которую входит выбранная партия (для продавца). */
 export function findSellerCaliberGroupForBatch(
   sellBatchId: string,

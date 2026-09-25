@@ -181,12 +181,6 @@ export class SellFromTripUseCase {
       salePackageCount = BigInt(Math.floor(input.packageCount));
     }
     if (usesPackages) {
-      if (salePackageCount === null) {
-        throw new Error("Укажите количество ящиков в продаже");
-      }
-      if (salePackageCount <= 0n) {
-        throw new Error("Количество ящиков должно быть больше нуля");
-      }
       const maxPkg = estimateTripBatchPackagesInTransit(
         shippedG,
         effectiveShipped,
@@ -194,10 +188,24 @@ export class SellFromTripUseCase {
         shortageBefore,
         soldPkgBefore,
       );
-      if (salePackageCount > maxPkg) {
-        throw new Error(
-          `Не больше ${maxPkg.toString()} ящ. в машине по этой партии (по отгрузке и уже проданному)`,
-        );
+      if (maxPkg <= 0n) {
+        // Ящики уже проданы, остались только кг — продаём без поля ящиков.
+        if (salePackageCount !== null && salePackageCount > 0n) {
+          throw new Error("Ящики по этой партии уже проданы — укажите только остаток в кг");
+        }
+        salePackageCount = null;
+      } else {
+        if (salePackageCount === null) {
+          throw new Error("Укажите количество ящиков в продаже");
+        }
+        if (salePackageCount <= 0n) {
+          throw new Error("Количество ящиков должно быть больше нуля");
+        }
+        if (salePackageCount > maxPkg) {
+          throw new Error(
+            `Не больше ${maxPkg.toString()} ящ. в машине по этой партии (по отгрузке и уже проданному)`,
+          );
+        }
       }
     } else if (salePackageCount !== null && salePackageCount > 0n) {
       throw new Error("По этой партии в рейсе ящики при отгрузке не указаны — поле ящиков оставьте пустым");

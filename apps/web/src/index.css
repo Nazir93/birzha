@@ -825,6 +825,29 @@ main.app-shell {
   margin-right: 0.5rem;
 }
 
+.birzha-btn--seller-save {
+  display: flex !important;
+  width: 100%;
+  min-height: 3.1rem !important;
+  margin-top: 0.85rem;
+  padding: 0.75rem 1rem !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.01em;
+  background: var(--birzha-accent) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+}
+
+.birzha-btn--seller-save:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--birzha-accent) 82%, #000) !important;
+  color: #fff !important;
+}
+
+.birzha-btn--seller-save:disabled {
+  opacity: 0.55;
+}
+
 .birzha-btn--inline {
   margin-top: 0;
   margin-right: 0.5rem;
