@@ -37,7 +37,7 @@ export type ApiMeta = {
   requireApiAuth: string;
   /** `GET/POST /admin/users` при PostgreSQL + JWT + REQUIRE_API_AUTH. */
   adminUsersApi?: string;
-  /** Web Push: `GET /push/vapid-public-key`, `POST/DELETE /push/subscribe` (только admin + VAPID). */
+  /** Web Push: `GET /push/vapid-public-key`, `POST/DELETE /push/subscribe` (admin/manager + VAPID). */
   pushNotificationsApi?: string;
 };
 

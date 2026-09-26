@@ -18,8 +18,8 @@ const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "logistics"] as const;
 /** Создание партии (закупка) — закуп + склад + руководство. */
 const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as const;
 
-/** POST/DELETE /warehouses, /product-grades — админ-кабинет. */
-const INVENTORY_CATALOG_ROLES = ["admin"] as const;
+/** POST/DELETE /warehouses, /product-grades — админ и зам. */
+const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
 
 /** Оприходование на склад. */
 const RECEIVE_ROLES = ["admin", "manager", "warehouse"] as const;
@@ -41,8 +41,8 @@ const CATALOG_WRITE_ROLES = ["admin", "manager", "accountant"] as const;
 
 export type AuthPreHandler = (request: FastifyRequest, reply: FastifyReply) => void | Promise<void>;
 
-/** Управление учётными записями (`GET/POST /admin/users`) — только admin. */
-const USER_MANAGEMENT_ROLES = ["admin"] as const;
+/** Управление учётными записями (`GET/POST /admin/users`) — admin и зам (manager). */
+const USER_MANAGEMENT_ROLES = ["admin", "manager"] as const;
 
 /** Отчёт закупщик × склад — руководство + сам закупщик (ему API отдаёт только свои). */
 const PURCHASE_PURCHASER_REPORT_ROLES = ["admin", "manager", "purchaser"] as const;
@@ -62,9 +62,9 @@ export type BusinessRouteAuth = {
   shortage: AuthPreHandler[];
   catalogRead: AuthPreHandler[];
   catalogWrite: AuthPreHandler[];
-  /** POST/DELETE /warehouses, /product-grades — только admin. */
+  /** POST/DELETE /warehouses, /product-grades — admin и manager. */
   inventoryCatalogWrite: AuthPreHandler[];
-  /** Список и создание пользователей — только admin. */
+  /** Список и создание пользователей — admin и manager. */
   userManagement: AuthPreHandler[];
   /** GET /admin/purchase-by-purchaser — admin/manager (+ purchaser, только свои). */
   purchasePurchaserReportRead: AuthPreHandler[];

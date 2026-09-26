@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 
 import type { TripRepository } from "../ports/trip-repository.port.js";
-import type { PushSubscriptionRepository } from "../ports/push-subscription.port.js";
+import type {
+  PushSubscriptionRecord,
+  PushSubscriptionRepository,
+} from "../ports/push-subscription.port.js";
 import type { DbClient } from "../../db/client.js";
 import {
   productGrades,
@@ -26,7 +29,7 @@ export type NotifyAdminsOfTripSaleInput = {
 };
 
 /**
- * После успешной продажи с рейса — push всем устройствам пользователей с ролью admin.
+ * После успешной продажи с рейса — push устройствам admin и manager (зам).
  * Ошибки доставки не пробрасываются наружу (продажа уже записана).
  */
 export class NotifyAdminsOfTripSaleUseCase {
@@ -65,7 +68,14 @@ export class NotifyAdminsOfTripSaleUseCase {
       at: new Date(),
     });
 
-    const list = await this.subscriptions.listForGlobalRole("admin");
+    const byEndpoint = new Map<string, PushSubscriptionRecord>();
+    for (const role of ["admin", "manager"] as const) {
+      const rows = await this.subscriptions.listForGlobalRole(role);
+      for (const row of rows) {
+        byEndpoint.set(row.endpoint, row);
+      }
+    }
+    const list = [...byEndpoint.values()];
     if (list.length === 0) {
       return;
     }

@@ -8,11 +8,11 @@ import { pushNotificationsSupported, urlBase64ToUint8Array } from "../pwa/push-s
 type PushStatus = "loading" | "unsupported" | "disabled_server" | "denied" | "off" | "on" | "error";
 
 /**
- * Включение Web Push на устройстве админа: продажи с рейса (калибр, кг, цена, продавец, время).
+ * Включение Web Push на устройстве админа/зама: продажи с рейса (калибр, кг, цена, продавец, время).
  */
 export function AdminPushNotificationsCard() {
   const { user, meta } = useAuth();
-  const isAdmin = user != null && globalRoleCodes(user).has("admin");
+  const isLeadership = user != null && (globalRoleCodes(user).has("admin") || globalRoleCodes(user).has("manager"));
   const serverEnabled = meta?.pushNotificationsApi === "enabled";
 
   const [status, setStatus] = useState<PushStatus>("loading");
@@ -20,7 +20,7 @@ export function AdminPushNotificationsCard() {
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!isAdmin) {
+    if (!isLeadership) {
       setStatus("unsupported");
       return;
     }
@@ -45,7 +45,7 @@ export function AdminPushNotificationsCard() {
       setStatus("error");
       setMessage("Не удалось проверить подписку.");
     }
-  }, [isAdmin, serverEnabled]);
+  }, [isLeadership, serverEnabled]);
 
   useEffect(() => {
     void refresh();
@@ -117,7 +117,7 @@ export function AdminPushNotificationsCard() {
     }
   };
 
-  if (!isAdmin) {
+  if (!isLeadership) {
     return null;
   }
 

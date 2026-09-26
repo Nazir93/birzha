@@ -19,6 +19,6 @@ export interface PushSubscriptionRepository {
   upsert(row: PushSubscriptionUpsert): Promise<void>;
   deleteByEndpoint(endpoint: string): Promise<void>;
   deleteByEndpointForUser(endpoint: string, userId: string): Promise<void>;
-  /** Подписки пользователей с глобальной ролью `admin`. */
+  /** Подписки пользователей с указанной глобальной ролью. */
   listForGlobalRole(roleCode: string): Promise<PushSubscriptionRecord[]>;
 }

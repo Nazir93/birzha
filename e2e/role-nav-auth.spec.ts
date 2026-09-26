@@ -18,7 +18,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
   const roleCases = [
     { login: "e2e_admin", home: /\/a\/?$/, disallowCabinets: [] as string[] },
     { login: "e2e_accountant", home: /\/b\/?$/, disallowCabinets: ["/a/reports", "/o/reports", "/s/reports"] },
-    { login: "e2e_manager", home: /\/o\/(purchase-nakladnaya|reports)$/, disallowCabinets: ["/a/reports", "/b/reports", "/s/reports"] },
+    { login: "e2e_manager", home: /\/a\/?$/, disallowCabinets: [] as string[] },
     { login: "e2e_purchaser", home: /\/o\/purchase-nakladnaya$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_warehouse", home: /\/o\/purchase-nakladnaya$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_logistics", home: /\/o\/reports$/, disallowCabinets: ["/a/reports", "/b/reports"] },
@@ -68,6 +68,12 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
   test("роли: видимость ключевых пунктов меню", async ({ page }) => {
     await uiLogin(page, "e2e_admin");
     let nav = page.getByRole("navigation", { name: "Разделы приложения" });
+    await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Настройки" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
+
+    await uiLogin(page, "e2e_manager");
+    nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Настройки" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
@@ -146,5 +152,11 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
       data: { name: "E2E warehouse", code: `A${Date.now().toString().slice(-4)}` }
     });
     expect(warehouseCreateByAdmin.status()).toBe(201);
+
+    const warehouseCreateByManager = await request.post("/warehouses", {
+      headers: { authorization: `Bearer ${managerToken}`, "content-type": "application/json" },
+      data: { name: "E2E manager warehouse", code: `M${Date.now().toString().slice(-4)}` }
+    });
+    expect(warehouseCreateByManager.status()).toBe(201);
   });
 });

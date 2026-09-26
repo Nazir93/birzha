@@ -66,11 +66,11 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   operations: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver", "seller"],
   sellerDispatch: ["admin", "manager", "logistics"],
   assignSeller: ["admin", "manager", "logistics"],
-  /** Склады и калибры — только admin (согласовано с API). */
-  inventory: ["admin"],
-  /** Учётные записи (логин/роль) — как `userManagement` на API. */
-  users: ["admin"],
-  settings: ["admin"],
+  /** Склады и калибры — admin и зам (manager). */
+  inventory: ["admin", "manager"],
+  /** Учётные записи (логин/роль) — admin и зам. */
+  users: ["admin", "manager"],
+  settings: ["admin", "manager"],
 };
 
 const OPERATIONS_CABINET_ROLES = new Set<string>(["purchaser", "warehouse", "logistics", "receiver", "manager"]);
@@ -134,11 +134,11 @@ export function isPurchaserScoped(user: AuthUser | null): boolean {
 export type CabinetId = "admin" | "operations" | "sales" | "accounting";
 
 /**
- * Склады/калибры POST/DELETE (как на API `inventoryCatalogWrite`). UI: админ-кабинет.
+ * Склады/калибры POST/DELETE (как на API `inventoryCatalogWrite`). UI: кабинет `/a`.
  */
 export function canManageInventoryCatalog(user: AuthUser): boolean {
   const codes = globalRoleCodes(user);
-  return codes.has("admin");
+  return codes.has("admin") || codes.has("manager");
 }
 
 /** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics. */
@@ -211,7 +211,7 @@ export function canAccessPanel(user: AuthUser, panel: PanelId): boolean {
   if (codes.size === 0) {
     return panel === "reports";
   }
-  if (codes.has("admin")) {
+  if (codes.has("admin") || codes.has("manager")) {
     return true;
   }
   const allowed = PANEL_ALLOWED_ROLES[panel];
@@ -233,19 +233,12 @@ export function hasOperationsCabinetAccess(user: AuthUser): boolean {
 
 export function canAccessCabinet(user: AuthUser, id: CabinetId): boolean {
   const codes = globalRoleCodes(user);
-  if (codes.has("admin")) {
+  if (codes.has("admin") || codes.has("manager")) {
     return true;
   }
   /**
-   * Заместитель (manager) работает в кабинете операций `/o` и не переключается
-   * в другие кабинеты (`/a`, `/s`, `/b`).
-   */
-  if (codes.has("manager")) {
-    return id === "operations";
-  }
-  /**
    * Бухгалтерский вход изолирован в отдельный кабинет: без переходов в /a, /o, /s.
-   * Исключение — admin, который обработан выше.
+   * Исключение — admin/manager, обработаны выше.
    */
   if (codes.has("accountant")) {
     return id === "accounting";
@@ -261,9 +254,7 @@ export function canAccessCabinet(user: AuthUser, id: CabinetId): boolean {
       return false;
     }
     if (codes.has("seller") && !codes.has("purchaser") && !codes.has("warehouse") && !codes.has("logistics") && !codes.has("receiver")) {
-      if (!codes.has("manager")) {
-        return false;
-      }
+      return false;
     }
     return hasOperationsCabinetAccess(user);
   }
@@ -290,11 +281,8 @@ export function cabinetForUser(user: AuthUser | null): CabinetId {
     return "operations";
   }
   const codes = globalRoleCodes(user);
-  if (codes.has("admin")) {
+  if (codes.has("admin") || codes.has("manager")) {
     return "admin";
-  }
-  if (codes.has("manager")) {
-    return "operations";
   }
   if (codes.has("accountant")) {
     return "accounting";

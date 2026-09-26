@@ -57,6 +57,19 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 
+  it("manager: в /a те же рабочие ссылки, что у admin", () => {
+    const user = {
+      id: "u-mgr",
+      login: "zam",
+      roles: [{ roleCode: "manager", scopeType: "global" as const, scopeId: "" }],
+    };
+    const links = buildCabinetNavEntries("admin", user, true);
+    expect(links.find((x) => x.key === "nakladnaya")?.to).toBe(adminRoutes.purchaseNakladnaya);
+    expect(links.find((x) => x.key === "assignSeller")?.to).toBe(adminRoutes.assignSeller);
+    expect(links.find((x) => x.key === "settings")?.to).toBe(adminRoutes.settingsCatalog);
+    expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
+  });
+
   it("аноним: бухгалтерия — сводка, отчёт и контрагенты (без /o)", () => {
     const links = buildCabinetNavEntries("accounting", null, false);
     expect(links).toHaveLength(3);
