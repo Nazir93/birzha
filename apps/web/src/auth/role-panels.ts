@@ -141,6 +141,18 @@ export function canManageInventoryCatalog(user: AuthUser): boolean {
   return codes.has("admin") || codes.has("manager");
 }
 
+/**
+ * Правка строк закупочной накладной (PUT lines) — как `purchaseDocumentLinesWrite` на API:
+ * admin, manager, purchaser (свои документы).
+ */
+export function canEditPurchaseDocumentLines(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  return codes.has("admin") || codes.has("manager") || codes.has("purchaser");
+}
+
 /** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics. */
 const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics"]);
 

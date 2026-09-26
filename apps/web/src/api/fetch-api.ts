@@ -352,7 +352,7 @@ export async function patchPurchaseDocumentHeader(
   );
 }
 
-/** PUT /purchase-documents/:id/lines — полная замена строк (только admin). */
+/** PUT /purchase-documents/:id/lines — полная замена строк (admin/manager/purchaser). */
 export async function putPurchaseDocumentLines(
   documentId: string,
   body: unknown,

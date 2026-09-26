@@ -21,6 +21,9 @@ const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as con
 /** POST/DELETE /warehouses, /product-grades — админ и зам. */
 const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
 
+/** PUT /purchase-documents/:id/lines — правка строк до погрузки: руководство + закупщик. */
+const PURCHASE_DOCUMENT_LINES_WRITE_ROLES = ["admin", "manager", "purchaser"] as const;
+
 /** Оприходование на склад. */
 const RECEIVE_ROLES = ["admin", "manager", "warehouse"] as const;
 
@@ -64,6 +67,8 @@ export type BusinessRouteAuth = {
   catalogWrite: AuthPreHandler[];
   /** POST/DELETE /warehouses, /product-grades — admin и manager. */
   inventoryCatalogWrite: AuthPreHandler[];
+  /** PUT /purchase-documents/:id/lines — admin/manager/purchaser. */
+  purchaseDocumentLinesWrite: AuthPreHandler[];
   /** Список и создание пользователей — admin и manager. */
   userManagement: AuthPreHandler[];
   /** GET /admin/purchase-by-purchaser — admin/manager (+ purchaser, только свои). */
@@ -85,6 +90,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   catalogRead: [],
   catalogWrite: [],
   inventoryCatalogWrite: [],
+  purchaseDocumentLinesWrite: [],
   userManagement: [],
   purchasePurchaserReportRead: [],
   dashboardSummaryRead: [],
@@ -124,6 +130,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
+    purchaseDocumentLinesWrite: [a, requireGlobalRoles(PURCHASE_DOCUMENT_LINES_WRITE_ROLES)],
     userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
     purchasePurchaserReportRead: [a, requireGlobalRoles(PURCHASE_PURCHASER_REPORT_ROLES)],
     dashboardSummaryRead: [a, requireGlobalRoles(DASHBOARD_SUMMARY_ROLES)],

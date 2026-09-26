@@ -17,7 +17,7 @@ import {
 } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canManageInventoryCatalog } from "../auth/role-panels.js";
+import { canEditPurchaseDocumentLines } from "../auth/role-panels.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
 import {
   groupProductGradesByProduct,
@@ -106,7 +106,7 @@ export function PurchaseNakladnayaDetailSection() {
   const listPath = purchaseNakladnayaBasePathForPath(pathname);
   const enabled = meta?.purchaseDocumentsApi === "enabled";
   const id = documentId ? decodeURIComponent(documentId) : "";
-  const canEditAsAdmin = user ? canManageInventoryCatalog(user) : false;
+  const canEditLines = canEditPurchaseDocumentLines(user);
 
   const warehousesQ = useQuery({
     ...warehousesFullListQueryOptions(),
@@ -115,7 +115,7 @@ export function PurchaseNakladnayaDetailSection() {
 
   const gradesQ = useQuery({
     ...productGradesFullListQueryOptions(),
-    enabled: enabled && Boolean(id) && canEditAsAdmin,
+    enabled: enabled && Boolean(id) && canEditLines,
   });
 
   const docQ = useQuery({
@@ -130,7 +130,7 @@ export function PurchaseNakladnayaDetailSection() {
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   const linesEditable = docQ.data?.linesEditable === true;
-  const showEditor = canEditAsAdmin && linesEditable;
+  const showEditor = canEditLines && linesEditable;
 
   useEffect(() => {
     const d = docQ.data;
@@ -404,7 +404,7 @@ export function PurchaseNakladnayaDetailSection() {
         )}
       </div>
 
-      {canEditAsAdmin && !linesEditable ? (
+      {canEditLines && !linesEditable ? (
         <InfoAlert title="Строки только для просмотра">{lockReasonLabel(doc.linesEditLockReason)}</InfoAlert>
       ) : null}
 

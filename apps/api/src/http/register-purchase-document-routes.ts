@@ -280,11 +280,21 @@ export function registerPurchaseDocumentRoutes(
 
   app.put(
     "/purchase-documents/:documentId/lines",
-    { ...withPreHandlers(routeAuth.inventoryCatalogWrite) },
+    { ...withPreHandlers(routeAuth.purchaseDocumentLinesWrite) },
     async (req, reply) => {
       try {
         const params = z.object({ documentId: z.string().min(1) }).parse(req.params);
         const body = replacePurchaseDocumentLinesBodySchema.parse(req.body);
+        const user = req.user as JwtUser | undefined;
+        if (user?.sub) {
+          const doc = await purchaseDocuments.findByIdWithLines(params.documentId);
+          if (!doc) {
+            return reply.code(404).send({ error: "purchase_document_not_found", documentId: params.documentId });
+          }
+          if (!purchaseDocumentReadableByPurchaser(doc, user, user.sub)) {
+            return reply.code(403).send({ error: "forbidden" });
+          }
+        }
         await replacePurchaseDocumentLines.execute(params.documentId, body);
         return reply.code(204).send();
       } catch (error) {

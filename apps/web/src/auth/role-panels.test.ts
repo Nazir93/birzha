@@ -7,6 +7,7 @@ import {
   canCreateTrip,
   canShipLoadingManifest,
   canManageInventoryCatalog,
+  canEditPurchaseDocumentLines,
   canRecordWarehouseReturn,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
@@ -44,6 +45,15 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "assignSeller")).toBe(true);
     expect(canManageInventoryCatalog(u)).toBe(true);
     expect(defaultRouteForUser(u)).toBe(adminRoutes.home);
+  });
+
+  it("правка строк закупочной накладной — admin, manager, purchaser", () => {
+    expect(canEditPurchaseDocumentLines(userWithRoles("admin"))).toBe(true);
+    expect(canEditPurchaseDocumentLines(userWithRoles("manager"))).toBe(true);
+    expect(canEditPurchaseDocumentLines(userWithRoles("purchaser"))).toBe(true);
+    expect(canEditPurchaseDocumentLines(userWithRoles("warehouse"))).toBe(false);
+    expect(canEditPurchaseDocumentLines(userWithRoles("seller"))).toBe(false);
+    expect(canEditPurchaseDocumentLines(null)).toBe(false);
   });
 
   it("возврат на склад — как batchCreate API, не как ship", () => {
