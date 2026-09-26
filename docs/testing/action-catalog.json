@@ -73,7 +73,7 @@
           "path": "/o/trips",
           "component": "apps/web/src/components/AdminTripsLogisticsPanel.tsx",
           "actions": [
-            { "id": "create-trip", "kind": "button", "label": "Создать рейс", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" },
+            { "id": "create-trip", "kind": "button", "label": "Создать рейс", "roleAccess": ["manager", "logistics", "purchaser"], "apiGuard": "tripWrite" },
             { "id": "close-trip", "kind": "button", "label": "Закрыть рейс", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" },
             { "id": "delete-trip", "kind": "button", "label": "Удалить", "roleAccess": ["manager", "logistics"], "apiGuard": "tripWrite" }
           ]

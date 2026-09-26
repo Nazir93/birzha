@@ -144,10 +144,11 @@ describe("role-panels", () => {
     expect(operationsPanelOrder(userWithRoles("seller"))).toEqual(["reports", "archive"]);
   });
 
-  it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics)", () => {
+  it("canCreateTrip совпадает с TRIP_WRITE (admin, manager, logistics, purchaser)", () => {
     expect(canCreateTrip(userWithRoles("admin"))).toBe(true);
     expect(canCreateTrip(userWithRoles("manager"))).toBe(true);
     expect(canCreateTrip(userWithRoles("logistics"))).toBe(true);
+    expect(canCreateTrip(userWithRoles("purchaser"))).toBe(true);
     expect(canCreateTrip(userWithRoles("seller"))).toBe(false);
     expect(canCreateTrip(userWithRoles("accountant"))).toBe(false);
     expect(canCreateTrip(userWithRoles("warehouse"))).toBe(false);

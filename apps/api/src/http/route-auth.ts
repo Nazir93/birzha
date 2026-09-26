@@ -9,8 +9,8 @@ const READ_ROLES = MVP_ROLE_CODES;
 /** Отчёт по рейсу — все роли MVP (в т.ч. бухгалтер). */
 const REPORT_READ_ROLES = MVP_ROLE_CODES;
 
-/** Создание/закрытие рейса — логист + руководство. */
-const TRIP_WRITE_ROLES = ["admin", "manager", "logistics"] as const;
+/** Создание/закрытие рейса — логист + руководство + закупщик. */
+const TRIP_WRITE_ROLES = ["admin", "manager", "logistics", "purchaser"] as const;
 
 /** Закрепить рейс за продавцом: узкое право без создания/закрытия рейсов. */
 const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "logistics"] as const;

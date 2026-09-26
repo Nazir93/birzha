@@ -19,7 +19,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     { login: "e2e_admin", home: /\/a\/?$/, disallowCabinets: [] as string[] },
     { login: "e2e_accountant", home: /\/b\/?$/, disallowCabinets: ["/a/reports", "/o/reports", "/s/reports"] },
     { login: "e2e_manager", home: /\/a\/?$/, disallowCabinets: [] as string[] },
-    { login: "e2e_purchaser", home: /\/o\/purchase-nakladnaya$/, disallowCabinets: ["/a/reports", "/b/reports"] },
+    { login: "e2e_purchaser", home: /\/o\/?$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_warehouse", home: /\/o\/purchase-nakladnaya$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_logistics", home: /\/o\/reports$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_receiver", home: /\/o\/reports$/, disallowCabinets: ["/a/reports", "/b/reports"] },
@@ -121,7 +121,7 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
       headers: { authorization: `Bearer ${purchaserToken}` },
       data: { ...tripPayload, id: `${tripPayload.id}-p`, tripNumber: `${tripPayload.tripNumber}-P` }
     });
-    expect(purchaserTripCreate.status()).toBe(403);
+    expect(purchaserTripCreate.status()).toBe(201);
 
     const receiverTripCreate = await request.post("/trips", {
       headers: { authorization: `Bearer ${receiverToken}` },

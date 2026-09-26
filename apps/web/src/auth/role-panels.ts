@@ -153,8 +153,8 @@ export function canEditPurchaseDocumentLines(user: AuthUser | null): boolean {
   return codes.has("admin") || codes.has("manager") || codes.has("purchaser");
 }
 
-/** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics. */
-const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics"]);
+/** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics, purchaser. */
+const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics", "purchaser"]);
 
 /** Привязка/отвязка ПН, отгрузка — как `ship` в API: admin, manager, warehouse, logistics. */
 const SHIP_LOADING_MANIFEST_ROLES = new Set<string>(["admin", "manager", "warehouse", "logistics"]);
