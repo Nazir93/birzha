@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "../auth/auth-context.js";
 import { isPurchaserScoped } from "../auth/role-panels.js";
+import { showPurchaseByPurchaserWarehouseTotals } from "../format/purchase-by-purchaser-ui.js";
 import { purchaseByPurchaserReportQueryOptions } from "../query/core-list-queries.js";
 import { formatYmd } from "./BirzhaCalendarFields.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
@@ -259,51 +260,53 @@ export function PurchaseByPurchaserReportPanel() {
             </div>
           ) : null}
 
-          <div style={{ marginTop: "1rem" }}>
-            <BirzhaDisclosure
-              defaultOpen
-              title={
-                <h3 id="pbp-by-warehouse" style={{ fontSize: "0.95rem", margin: 0 }}>
-                  Итого по складам
-                </h3>
-              }
-            >
-              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="pbp-by-warehouse">
-                  <thead>
-                    <tr>
-                      <th scope="col" style={thHead}>
-                        Склад
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Накл.
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Кг
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Ящ.
-                      </th>
-                      <th scope="col" style={thNum}>
-                        Сумма, ₽
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.byWarehouse.map((w) => (
-                      <tr key={w.warehouseId}>
-                        <td style={tdText}>{w.warehouseName}</td>
-                        <td style={tdNum}>{w.documentCount}</td>
-                        <td style={tdNum}>{kgLabel(w.totalKg)}</td>
-                        <td style={tdNum}>{w.packageCount}</td>
-                        <td style={tdNum}>{kopecksToRubDisplay(w.totalKopecks)}</td>
+          {showPurchaseByPurchaserWarehouseTotals(purchaserScoped) ? (
+            <div style={{ marginTop: "1rem" }}>
+              <BirzhaDisclosure
+                defaultOpen
+                title={
+                  <h3 id="pbp-by-warehouse" style={{ fontSize: "0.95rem", margin: 0 }}>
+                    Итого по складам
+                  </h3>
+                }
+              >
+                <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                  <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="pbp-by-warehouse">
+                    <thead>
+                      <tr>
+                        <th scope="col" style={thHead}>
+                          Склад
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Накл.
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Кг
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Ящ.
+                        </th>
+                        <th scope="col" style={thNum}>
+                          Сумма, ₽
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </BirzhaDisclosure>
-          </div>
+                    </thead>
+                    <tbody>
+                      {report.byWarehouse.map((w) => (
+                        <tr key={w.warehouseId}>
+                          <td style={tdText}>{w.warehouseName}</td>
+                          <td style={tdNum}>{w.documentCount}</td>
+                          <td style={tdNum}>{kgLabel(w.totalKg)}</td>
+                          <td style={tdNum}>{w.packageCount}</td>
+                          <td style={tdNum}>{kopecksToRubDisplay(w.totalKopecks)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </BirzhaDisclosure>
+            </div>
+          ) : null}
         </>
       ) : null}
     </section>
