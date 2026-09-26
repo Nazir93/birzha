@@ -70,6 +70,29 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 
+  it("purchaser: сводка + 6 операционных разделов как на скрине админа", () => {
+    const user = {
+      id: "u-p",
+      login: "zakup",
+      roles: [{ roleCode: "purchaser", scopeType: "global" as const, scopeId: "" }],
+    };
+    const links = buildCabinetNavEntries("operations", user, true);
+    expect(links.map((l) => l.key)).toEqual([
+      "ops-home",
+      "nakladnaya",
+      "trips",
+      "distribution",
+      "warehouseReturns",
+      "loadingAppend",
+      "loadingTrip",
+    ]);
+    expect(links.find((x) => x.key === "nakladnaya")?.label).toBe("Закупка товара");
+    expect(links.find((x) => x.key === "distribution")?.label).toBe("Погрузка на машину");
+    expect(links.find((x) => x.key === "reports")).toBeUndefined();
+    expect(links.find((x) => x.key === "archive")).toBeUndefined();
+    expect(links.find((x) => x.key === "purchaseByPurchaser")).toBeUndefined();
+  });
+
   it("аноним: бухгалтерия — сводка, отчёт и контрагенты (без /o)", () => {
     const links = buildCabinetNavEntries("accounting", null, false);
     expect(links).toHaveLength(3);

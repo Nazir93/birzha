@@ -11,6 +11,7 @@ import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
 import { ThemeToggle } from "./ThemeToggle.js";
+import { AdminPushNotificationsCard } from "./AdminPushNotificationsCard.js";
 
 export type CabinetShellAccent = "admin" | "operations" | "sales" | "accounting";
 
@@ -245,6 +246,7 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
           </div>
         </div>
         <div className="birzha-cabinet-topbar__actions">
+          <AdminPushNotificationsCard />
           <ThemeToggle />
           {showUser ? (
             <>

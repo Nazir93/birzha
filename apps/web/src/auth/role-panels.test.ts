@@ -185,17 +185,28 @@ describe("role-panels", () => {
     expect(isPurchaserScoped(null)).toBe(false);
   });
 
-  it("purchaser: без продаж, со сводкой своих закупок в сайдбаре", () => {
+  it("purchaser: сайдбар как у админа на операциях — 6 разделов, без отчётов/продаж/архива", () => {
     const u = userWithRoles("purchaser");
     expect(canAccessPanel(u, "assignSeller")).toBe(false);
     expect(canAccessPanel(u, "sellerDispatch")).toBe(false);
-    expect(canAccessPanel(u, "purchaseByPurchaser")).toBe(true);
+    expect(canAccessPanel(u, "reports")).toBe(false);
+    expect(canAccessPanel(u, "operations")).toBe(false);
+    expect(canAccessPanel(u, "archive")).toBe(false);
     expect(canAccessPanel(u, "nakladnaya")).toBe(true);
-    expect(canAccessPanel(u, "reports")).toBe(true);
-    const order = operationsPanelOrder(u);
-    expect(order).toContain("purchaseByPurchaser");
-    expect(order).not.toContain("assignSeller");
-    expect(order.indexOf("purchaseByPurchaser")).toBeGreaterThan(order.indexOf("nakladnaya"));
+    expect(canAccessPanel(u, "trips")).toBe(true);
+    expect(canAccessPanel(u, "distribution")).toBe(true);
+    expect(canAccessPanel(u, "warehouseReturns")).toBe(true);
+    expect(canAccessPanel(u, "loadingAppend")).toBe(true);
+    expect(canAccessPanel(u, "loadingTrip")).toBe(true);
+    expect(canAccessPanel(u, "purchaseByPurchaser")).toBe(true);
+    expect(operationsPanelOrder(u)).toEqual([
+      "nakladnaya",
+      "trips",
+      "distribution",
+      "warehouseReturns",
+      "loadingAppend",
+      "loadingTrip",
+    ]);
   });
 
   it("без глобальных ролей — только отчёты", () => {
@@ -243,13 +254,13 @@ describe("role-panels", () => {
     expect(canAccessPanel(userWithRoles("accountant"), "users")).toBe(false);
   });
 
-  it("purchaseByPurchaser — admin/manager/purchaser; в сайдбаре только у purchaser", () => {
+  it("purchaseByPurchaser — admin/manager/purchaser; в сайдбаре нет (сводка / подробнее)", () => {
     expect(canAccessPanel(userWithRoles("admin"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("manager"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("purchaser"), "purchaseByPurchaser")).toBe(true);
     expect(canAccessPanel(userWithRoles("warehouse"), "purchaseByPurchaser")).toBe(false);
     expect(adminSidebarPanelOrder(userWithRoles("admin"))).not.toContain("purchaseByPurchaser");
     expect(operationsPanelOrder(userWithRoles("manager"))).not.toContain("purchaseByPurchaser");
-    expect(operationsPanelOrder(userWithRoles("purchaser"))).toContain("purchaseByPurchaser");
+    expect(operationsPanelOrder(userWithRoles("purchaser"))).not.toContain("purchaseByPurchaser");
   });
 });

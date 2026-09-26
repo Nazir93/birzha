@@ -218,6 +218,18 @@ export function canWriteCounterpartyCatalog(user: AuthUser | null): boolean {
   return false;
 }
 
+const PURCHASER_SCOPED_PANELS = new Set<PanelId>([
+  "nakladnaya",
+  "trips",
+  "distribution",
+  "warehouseReturns",
+  "loadingAppend",
+  "loadingTrip",
+  /** Отчёт «Мои закупки» — со сводки / прямой URL, не в сайдбаре. */
+  "purchaseByPurchaser",
+  "loadingManifests",
+]);
+
 export function canAccessPanel(user: AuthUser, panel: PanelId): boolean {
   const codes = globalRoleCodes(user);
   if (codes.size === 0) {
@@ -225,6 +237,9 @@ export function canAccessPanel(user: AuthUser, panel: PanelId): boolean {
   }
   if (codes.has("admin") || codes.has("manager")) {
     return true;
+  }
+  if (isPurchaserScoped(user)) {
+    return PURCHASER_SCOPED_PANELS.has(panel);
   }
   const allowed = PANEL_ALLOWED_ROLES[panel];
   return allowed.some((c) => codes.has(c));
@@ -334,8 +349,17 @@ export function cabinetIdFromPathname(pathname: string): CabinetId | null {
  * Порядок вкладок в `/o` и в админке.
  * Сначала «Рейсы», затем «Погрузка» — рейс создаётся до привязки ПН.
  * У логиста «Отчёты» выносятся в начало.
+ * У scoped-закупщика — только операционные разделы как у админа на скрине (без отчётов/продаж/архива).
  */
 export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
+  const purchaserCore: PanelId[] = [
+    "nakladnaya",
+    "trips",
+    "distribution",
+    "warehouseReturns",
+    "loadingAppend",
+    "loadingTrip",
+  ];
   const base: PanelId[] = [
     "nakladnaya",
     "trips",
@@ -357,14 +381,10 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
   if (isSellerOnly(codes)) {
     return ["reports", "archive"];
   }
-  let order = base;
   if (isPurchaserScoped(user)) {
-    order = base.filter((p) => p !== "assignSeller");
-    const naklIdx = order.indexOf("nakladnaya");
-    if (naklIdx >= 0) {
-      order = [...order.slice(0, naklIdx + 1), "purchaseByPurchaser", ...order.slice(naklIdx + 1)];
-    }
+    return purchaserCore;
   }
+  let order = base;
   if (codes.has("logistics")) {
     const rest = order.filter((p) => p !== "reports");
     return ["reports", ...rest];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -7,14 +7,31 @@ import { pushNotificationsSupported, urlBase64ToUint8Array } from "../pwa/push-s
 
 type PushStatus = "loading" | "unsupported" | "disabled_server" | "denied" | "off" | "on" | "error";
 
+function BellIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3a5 5 0 00-5 5v2.2c0 .7-.2 1.4-.6 2L5.2 14.5A1 1 0 006 16h12a1 1 0 00.8-1.5L17.6 12.2c-.4-.6-.6-1.3-.6-2V8a5 5 0 00-5-5z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <path d="M10 17a2 2 0 004 0" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /**
- * Включение Web Push на устройстве админа/зама: продажи с рейса (калибр, кг, цена, продавец, время).
+ * Значок в шапке: Web Push о продажах с рейса (admin / manager).
  */
 export function AdminPushNotificationsCard() {
   const { user, meta } = useAuth();
   const isLeadership = user != null && (globalRoleCodes(user).has("admin") || globalRoleCodes(user).has("manager"));
   const serverEnabled = meta?.pushNotificationsApi === "enabled";
+  const panelId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
 
+  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<PushStatus>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +67,29 @@ export function AdminPushNotificationsCard() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onDoc = (e: MouseEvent) => {
+      const el = rootRef.current;
+      if (el && e.target instanceof Node && !el.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const enable = async () => {
     setBusy(true);
@@ -121,50 +161,90 @@ export function AdminPushNotificationsCard() {
     return null;
   }
 
+  const needsAttention = status === "off" || status === "denied" || status === "error";
+  const title =
+    status === "on"
+      ? "Уведомления о продажах включены"
+      : status === "off"
+        ? "Уведомления о продажах выключены"
+        : "Уведомления о продажах";
+
   return (
-    <section className="birzha-panel no-print" aria-label="Уведомления о продажах" style={{ marginTop: "0.75rem" }}>
-      <h3 style={{ margin: "0 0 0.35rem", fontSize: "1rem" }}>Уведомления о продажах</h3>
-      <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.65rem", lineHeight: 1.45 }}>
-        Push на это устройство: калибр, кг, цена, продавец и время по каждой продаже с рейса.
-      </p>
-      {status === "unsupported" ? (
-        <p className="birzha-ui-sm" role="status">
-          Браузер не поддерживает push. Добавьте сайт на главный экран (PWA) и откройте из ярлыка.
-        </p>
-      ) : null}
-      {status === "disabled_server" ? (
-        <p className="birzha-ui-sm" role="status">
-          На сервере ещё не настроены ключи push (VAPID).
-        </p>
-      ) : null}
-      {status === "denied" ? (
-        <p className="birzha-ui-sm" role="status">
-          Уведомления запрещены в настройках браузера / системы.
-        </p>
-      ) : null}
-      {status === "off" || status === "on" || status === "error" || status === "loading" ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-          {status !== "on" ? (
-            <button type="button" className="birzha-btn" disabled={busy || status === "loading"} onClick={() => void enable()}>
-              Включить уведомления
-            </button>
-          ) : (
-            <button type="button" className="birzha-btn birzha-btn--secondary" disabled={busy} onClick={() => void disable()}>
-              Выключить на этом устройстве
-            </button>
-          )}
-          {status === "on" ? (
-            <span className="birzha-ui-sm" style={{ fontWeight: 600 }}>
-              Включены
-            </span>
+    <div className="birzha-push-bell no-print" ref={rootRef}>
+      <button
+        type="button"
+        className={`birzha-push-bell__btn${needsAttention ? " birzha-push-bell__btn--attention" : ""}${open ? " birzha-push-bell__btn--open" : ""}`}
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-haspopup="dialog"
+        aria-label={title}
+        title={title}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <BellIcon />
+        {needsAttention ? <span className="birzha-push-bell__dot" aria-hidden /> : null}
+      </button>
+      {open ? (
+        <div
+          id={panelId}
+          className="birzha-push-bell__panel"
+          role="dialog"
+          aria-label="Уведомления о продажах"
+        >
+          <h3 className="birzha-push-bell__title">Уведомления о продажах</h3>
+          <p className="birzha-ui-sm birzha-text-muted birzha-push-bell__note">
+            Push на это устройство: калибр, кг, цена, продавец и время по каждой продаже с рейса.
+          </p>
+          {status === "unsupported" ? (
+            <p className="birzha-ui-sm" role="status">
+              Браузер не поддерживает push. Добавьте сайт на главный экран (PWA) и откройте из ярлыка.
+            </p>
+          ) : null}
+          {status === "disabled_server" ? (
+            <p className="birzha-ui-sm" role="status">
+              На сервере ещё не настроены ключи push (VAPID).
+            </p>
+          ) : null}
+          {status === "denied" ? (
+            <p className="birzha-ui-sm" role="status">
+              Уведомления запрещены в настройках браузера / системы.
+            </p>
+          ) : null}
+          {status === "off" || status === "on" || status === "error" || status === "loading" ? (
+            <div className="birzha-push-bell__actions">
+              {status !== "on" ? (
+                <button
+                  type="button"
+                  className="birzha-btn"
+                  disabled={busy || status === "loading"}
+                  onClick={() => void enable()}
+                >
+                  Включить уведомления
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="birzha-btn birzha-btn--secondary"
+                  disabled={busy}
+                  onClick={() => void disable()}
+                >
+                  Выключить на этом устройстве
+                </button>
+              )}
+              {status === "on" ? (
+                <span className="birzha-ui-sm" style={{ fontWeight: 600 }}>
+                  Включены
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          {message ? (
+            <p className="birzha-ui-sm birzha-push-bell__msg" role="status">
+              {message}
+            </p>
           ) : null}
         </div>
       ) : null}
-      {message ? (
-        <p className="birzha-ui-sm" style={{ margin: "0.5rem 0 0" }} role="status">
-          {message}
-        </p>
-      ) : null}
-    </section>
+    </div>
   );
 }
