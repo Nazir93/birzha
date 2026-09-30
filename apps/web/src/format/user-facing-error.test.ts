@@ -22,6 +22,13 @@ describe("humanizeErrorMessage", () => {
   it("переводит сырой код batch_not_found", () => {
     expect(humanizeErrorMessage(new Error("batch_not_found"))).toBe("Партия не найдена.");
   });
+
+  it("поясняет конфликт кода калибра", () => {
+    expect(humanizeErrorMessage(new Error('{"error":"product_grade_code_conflict","code":"Ом."}'))).toMatch(
+      /уже есть/i,
+    );
+    expect(humanizeErrorMessage(new Error("product_grade_code_conflict"))).toMatch(/уже есть/i);
+  });
 });
 
 describe("isLoadingManifestNotFoundError", () => {

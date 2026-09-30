@@ -23,6 +23,7 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
+import { humanizeErrorMessage } from "../format/user-facing-error.js";
 /**
  * Справочники админки: склады, калибры, направления логистики, тепличники и оптовики.
  */
@@ -351,7 +352,7 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
       invalidate();
     },
     onError: (e: Error) => {
-      setGradeFormError(e.message);
+      setGradeFormError(humanizeErrorMessage(e));
     },
   });
 

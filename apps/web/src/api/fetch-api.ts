@@ -1,3 +1,4 @@
+import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { combineAbortSignals } from "./abort-signal-utils.js";
 
 /**
@@ -92,14 +93,14 @@ function messageFromErrorBody(detail: string, status: number): string {
         return j.message.trim();
       }
       if (typeof j.error === "string" && j.error.trim()) {
-        return j.error.trim();
+        return humanizeErrorMessage(new Error(j.error.trim()));
       }
     } catch {
       /* ignore */
     }
   }
   if (trimmed) {
-    return trimmed;
+    return humanizeErrorMessage(new Error(trimmed));
   }
   if (status === 401) {
     return "Сессия истекла — войдите снова.";

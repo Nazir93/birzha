@@ -13,6 +13,9 @@ const ERROR_CODE_RU: Record<string, string> = {
   wholesaler_not_found: "Оптовик не найден — выберите другого из списка.",
   counterparty_not_found: "Контрагент не найден.",
   insufficient_stock: "Недостаточно товара в машине по выбранному калибру.",
+  product_grade_code_conflict:
+    "Такой код калибра у этого товара уже есть. Прокрутите список ниже — возможно, калибр уже добавлен. Для нового укажите другой код.",
+  warehouse_code_conflict: "Склад с таким кодом уже есть.",
 };
 
 function tryParseApiJson(text: string): string | null {

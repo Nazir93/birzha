@@ -547,14 +547,16 @@ export function defaultRouteForUser(user: AuthUser | null): string {
 
 /**
  * Куда направить после успешного входа. Если сохранённый URL (`from`) относится к **другому** кабинету,
- * чем «родной» для пользователя (`cabinetForUser`), ведём на домашний маршрут роли — иначе после смены
- * учётной записи (например PWA: выход продавца → вход админа) оставался бы открыт чужой кабинет (`/s` и т.п.).
+ * чем «родной» для пользователя (`cabinetForUser`), или это не кабинет (`/login`, `/`), ведём на домашний
+ * маршрут роли — иначе после смены учётки (выход продавца → вход админа) оставался бы открыт чужой
+ * кабинет (`/s`), а админ/менеджер туда пускаются по правам.
  */
 export function postLoginRedirectPath(user: AuthUser, fromPathname: string): string {
-  const normalized = (fromPathname || "").trim() || ops.reports;
-  const fromCabinet = cabinetIdFromPathname(normalized);
+  const normalized = (fromPathname || "").trim();
+  const pathOnly = normalized.split(/[?#]/, 1)[0] ?? "";
+  const fromCabinet = pathOnly ? cabinetIdFromPathname(pathOnly) : null;
   const homeCabinet = cabinetForUser(user);
-  if (fromCabinet !== null && fromCabinet !== homeCabinet) {
+  if (fromCabinet === null || fromCabinet !== homeCabinet) {
     return defaultRouteForUser(user);
   }
   return normalized;

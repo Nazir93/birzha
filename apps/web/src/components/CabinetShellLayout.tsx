@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import {
   buildCabinetNavEntries,
@@ -10,6 +10,7 @@ import {
 import type { CabinetId } from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import { useMatchMedia } from "../hooks/useMatchMedia.js";
+import { login as loginPath } from "../routes.js";
 import { ThemeToggle } from "./ThemeToggle.js";
 import { AdminPushNotificationsCard } from "./AdminPushNotificationsCard.js";
 
@@ -156,11 +157,18 @@ const mqMobileDrawer = "(max-width: 47.9375rem)";
 
 export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLayoutProps) {
   const { user, meta, logout, ready } = useAuth();
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const isMobile = useMatchMedia(mqMobileDrawer);
   const mobile = isMobile === true;
   const { pathname } = useLocation();
+
+  const handleLogout = () => {
+    void logout().finally(() => {
+      navigate(loginPath, { replace: true });
+    });
+  };
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -258,7 +266,7 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
                   <button
                     type="button"
                     className="birzha-cabinet-topbar__logout"
-                    onClick={() => void logout()}
+                    onClick={handleLogout}
                     aria-label="Выйти из системы"
                     title="Выйти"
                   >
@@ -332,7 +340,7 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
                         <button
                           type="button"
                           className="birzha-cabinet-drawer__footer-logout"
-                          onClick={() => void logout()}
+                          onClick={handleLogout}
                           aria-label="Выйти из системы"
                         >
                           <LogoutIcon size={18} />

@@ -9,10 +9,21 @@ import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { fieldStyle } from "../ui/styles.js";
 
+function fromPathAfterLogin(state: unknown): string {
+  if (!state || typeof state !== "object") {
+    return "";
+  }
+  const from = (state as { from?: { pathname?: string; search?: string } }).from;
+  if (!from || typeof from.pathname !== "string") {
+    return "";
+  }
+  return `${from.pathname}${typeof from.search === "string" ? from.search : ""}`;
+}
+
 export function LoginPage() {
   const { ready, meta, user, login, bootstrapError } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } } | undefined)?.from?.pathname ?? ops.reports;
+  const from = fromPathAfterLogin(location.state);
 
   const [loginField, setLoginField] = useState("");
   const [password, setPassword] = useState("");
@@ -40,7 +51,7 @@ export function LoginPage() {
   }
 
   if (meta?.requireApiAuth !== "enabled") {
-    return <Navigate to={from} replace />;
+    return <Navigate to={from || ops.reports} replace />;
   }
   if (user) {
     return <Navigate to={postLoginRedirectPath(user, from)} replace />;

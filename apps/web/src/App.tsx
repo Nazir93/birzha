@@ -14,6 +14,7 @@ import { LoginPage } from "./components/LoginPage.js";
 import { RequireApiAuthGate } from "./components/RequireApiAuthGate.js";
 import { RequireCabinet } from "./components/RequireCabinet.js";
 import { RequirePanel } from "./components/RequirePanel.js";
+import { RedirectHomeCabinetOnUserChange } from "./components/RedirectHomeCabinetOnUserChange.js";
 import { sharedOperationsCabinetRouteElements } from "./routing/shared-operations-routes.js";
 import { accounting, adminRoutes, legacyPathList, login, ops, prefix } from "./routes.js";
 import { LoadingScreen } from "./ui/LoadingIndicator.js";
@@ -80,6 +81,7 @@ export function App() {
 
   return (
     <main className={`app-shell${cabinetShell ? " app-shell--cabinet" : ""}`}>
+      <RedirectHomeCabinetOnUserChange />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path={login} element={<LoginPage />} />

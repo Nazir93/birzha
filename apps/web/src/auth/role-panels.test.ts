@@ -124,6 +124,9 @@ describe("role-panels", () => {
     expect(postLoginRedirectPath(userWithRoles("seller"), `${sales.reports}?trip=t1`)).toBe(`${sales.reports}?trip=t1`);
     expect(postLoginRedirectPath(userWithRoles("seller"), adminRoutes.reports)).toBe(sales.home);
     expect(postLoginRedirectPath(userWithRoles("warehouse"), ops.reports)).toBe(ops.reports);
+    expect(postLoginRedirectPath(userWithRoles("admin"), "/login")).toBe(adminRoutes.home);
+    expect(postLoginRedirectPath(userWithRoles("admin"), "")).toBe(adminRoutes.home);
+    expect(postLoginRedirectPath(userWithRoles("admin"), "/")).toBe(adminRoutes.home);
   });
 
   it("operationsPanelOrder: у logistics отчёты первые", () => {
