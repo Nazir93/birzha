@@ -17,6 +17,7 @@ import {
 } from "../format/trip-sales-channel.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { SellerSaleChannelPills } from "./SellerSaleChannelPills.js";
+import { SellerTripLoadingManifest } from "./SellerTripLoadingManifest.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function sumSalesByProductLine(rows: TripSalesByProductLineRow[]) {
@@ -130,6 +131,7 @@ export function FieldSellerTripReport({
 
   return (
     <div style={{ marginTop: "1rem" }} role="region" aria-label={`Отчёт ${report.trip.tripNumber}`}>
+      <SellerTripLoadingManifest report={report} batchById={batchById} defaultOpen />
       {report.shortage.totalGrams !== "0" && report.shortage.totalGrams !== "" ? (
         <p className="birzha-callout-info" style={{ margin: "0 0 1rem", fontSize: "0.92rem" }} role="status">
           Недостача по рейсу: <strong>{gramsToKgLabel(report.shortage.totalGrams)} кг</strong>

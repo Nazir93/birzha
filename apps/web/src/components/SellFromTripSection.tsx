@@ -45,6 +45,7 @@ import { parseSellFromTripForm, parseRecordTripShortageForm } from "../validatio
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { SellerTripSaleCorrections } from "./SellerTripSaleCorrections.js";
+import { SellerTripLoadingManifest } from "./SellerTripLoadingManifest.js";
 import { SellerWholesalerPicker } from "./SellerWholesalerPicker.js";
 import { BirzhaAlert } from "../ui/BirzhaAlert.js";
 import { FieldError } from "../ui/FieldError.js";
@@ -1020,6 +1021,14 @@ export function SellFromTripSection() {
         )}
       </SellerSellStep>
 
+      {selectedTripOpen && sellTripIdTrim && sellReportQuery.data ? (
+        <SellerTripLoadingManifest
+          nested
+          defaultOpen={false}
+          report={sellReportQuery.data}
+          batchById={batchByIdForSell}
+        />
+      ) : null}
       {selectedTripOpen && sellTripIdTrim ? (
         <SellerSellStep step={3} title="Калибр на рейсе" headingId={`${idPrefix}-caliber-h`}>
           {sellReportQuery.isFetching && (
