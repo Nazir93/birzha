@@ -3,9 +3,12 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import type {
   TripSaleAggregate,
   TripSaleAppend,
+  TripSaleDebtGroup,
+  TripSaleDebtListFilter,
   TripSaleLineRecord,
   TripSaleRepository,
 } from "../../application/ports/trip-sale-repository.port.js";
+import { buildSaleDebtGroupsFromLines, filterSaleDebtGroups } from "../../application/trip/sale-debt-groups.js";
 import { buildTripSaleAggregateFromRows } from "../../application/trip/trip-sale-aggregate.js";
 import type { DbClient } from "../../db/client.js";
 import { tripBatchSales } from "../../db/schema.js";
@@ -154,5 +157,15 @@ export class DrizzleTripSaleRepository implements TripSaleRepository {
         saleChannel: r.saleChannel === "wholesale" ? "wholesale" : "retail",
       })),
     );
+  }
+
+  async listDebtGroups(filter?: TripSaleDebtListFilter): Promise<TripSaleDebtGroup[]> {
+    const rows = await this.db.select().from(tripBatchSales);
+    return filterSaleDebtGroups(buildSaleDebtGroupsFromLines(rows.map(rowToLine)), filter);
+  }
+
+  async findDebtGroupBySaleId(saleId: string): Promise<TripSaleDebtGroup | null> {
+    const rows = await this.db.select().from(tripBatchSales).where(eq(tripBatchSales.saleId, saleId));
+    return buildSaleDebtGroupsFromLines(rows.map(rowToLine)).find((g) => g.saleId === saleId) ?? null;
   }
 }

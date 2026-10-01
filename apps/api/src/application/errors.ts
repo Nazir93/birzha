@@ -399,3 +399,48 @@ export class InsufficientStockForTripError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/** Сделка без долга или неизвестный sale_id. */
+export class SaleDebtNotFoundError extends Error {
+  readonly saleId: string;
+
+  constructor(saleId: string) {
+    super(`Долг по сделке не найден: ${saleId}`);
+    this.name = "SaleDebtNotFoundError";
+    this.saleId = saleId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class DebtPaymentNotFoundError extends Error {
+  readonly paymentId: string;
+
+  constructor(paymentId: string) {
+    super(`Оплата долга не найдена: ${paymentId}`);
+    this.name = "DebtPaymentNotFoundError";
+    this.paymentId = paymentId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class SupplierPaymentNotFoundError extends Error {
+  readonly paymentId: string;
+
+  constructor(paymentId: string) {
+    super(`Оплата поставщику не найдена: ${paymentId}`);
+    this.name = "SupplierPaymentNotFoundError";
+    this.paymentId = paymentId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class TripExpenseNotFoundError extends Error {
+  readonly expenseId: string;
+
+  constructor(expenseId: string) {
+    super(`Расход по рейсу не найден: ${expenseId}`);
+    this.name = "TripExpenseNotFoundError";
+    this.expenseId = expenseId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

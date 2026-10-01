@@ -20,12 +20,13 @@ import { tableStyle, thHead, thtd } from "../ui/styles.js";
  */
 export function AccountingTripsSummary() {
   const [tripsPage, setTripsPage] = useState(0);
+  const [status, setStatus] = useState<"open" | "closed" | "all">("open");
   const tripsPageOffset = tripsPage * WORK_LIST_PAGE_SIZE;
   const tripsQuery = useQuery(
     tripsPickerQueryOptions({
       limit: WORK_LIST_PAGE_SIZE,
       offset: tripsPageOffset,
-      status: "open",
+      status: status === "all" ? undefined : status,
       order: "tripNumber",
     }),
   );
@@ -55,9 +56,12 @@ export function AccountingTripsSummary() {
     let costSold = 0n;
     let costShort = 0n;
     let gross = 0n;
+    let expenses = 0n;
+    let net = 0n;
     let cash = 0n;
     let debt = 0n;
     let card = 0n;
+    let debtOut = 0n;
     let rows = 0;
     for (let i = 0; i < tripsPageSlice.length; i++) {
       const q = reportQueries[i];
@@ -71,12 +75,15 @@ export function AccountingTripsSummary() {
       costSold += BigInt(r.financials.costOfSoldKopecks || "0");
       costShort += BigInt(r.financials.costOfShortageKopecks || "0");
       gross += BigInt(r.financials.grossProfitKopecks || "0");
+      expenses += BigInt(r.financials.expensesKopecks || "0");
+      net += BigInt(r.financials.netProfitKopecks ?? r.financials.grossProfitKopecks ?? "0");
       cash += BigInt(r.sales.totalCashKopecks || "0");
       debt += BigInt(r.sales.totalDebtKopecks || "0");
       card += BigInt(r.sales.totalCardTransferKopecks || "0");
+      debtOut += BigInt(r.financials.debtOutstandingKopecks || "0");
       rows += 1;
     }
-    return { kg, packages, revenue, costSold, costShort, gross, cash, debt, card, rows };
+    return { kg, packages, revenue, costSold, costShort, gross, expenses, net, cash, debt, card, debtOut, rows };
   }, [tripsPageSlice, reportQueries]);
 
   if (tripsQuery.isPending) {
@@ -99,11 +106,81 @@ export function AccountingTripsSummary() {
         <span className="birzha-disclosure__title-stack">
           <span className="birzha-section-heading__eyebrow">Рейсы</span>
           <span id="acc-ledger-h" className="birzha-section-title birzha-section-title--sm">
-            Выручка, себестоимость и валовая прибыль
+            Выручка, себестоимость и прибыль
           </span>
         </span>
       }
     >
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginBottom: "0.65rem", alignItems: "center" }}>
+        {(["open", "closed", "all"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            className={status === s ? "birzha-btn" : "birzha-clean-ops-text-btn"}
+            onClick={() => {
+              setStatus(s);
+              setTripsPage(0);
+            }}
+          >
+            {s === "open" ? "Открытые" : s === "closed" ? "Закрытые" : "Все"}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="birzha-clean-ops-text-btn"
+          disabled={anyLoading || tripTotals.rows === 0}
+          onClick={() => {
+            const rows: string[][] = [
+              [
+                "№",
+                "Направление",
+                "Товар",
+                "Водитель",
+                "Статус",
+                "Продажа кг",
+                "ящ",
+                "Выручка",
+                "Валовая",
+                "Расходы",
+                "Чистая",
+                "Остаток долга",
+              ],
+            ];
+            for (let i = 0; i < tripsPageSlice.length; i++) {
+              const t = tripsPageSlice[i];
+              const q = reportQueries[i];
+              if (!t || !q?.data) {
+                continue;
+              }
+              const r = q.data;
+              rows.push([
+                t.tripNumber,
+                t.destinationName?.trim() || t.destinationCode?.trim() || "",
+                t.productGroup?.trim() || "Помидоры",
+                t.driverName?.trim() || "",
+                formatTripStatusLabel(t.status),
+                gramsToKgLabel(r.sales.totalGrams),
+                (r.sales.totalPackageCount ?? "0").trim() || "0",
+                kopecksToRubLabel(r.financials.revenueKopecks),
+                kopecksToRubLabel(r.financials.grossProfitKopecks),
+                kopecksToRubLabel(r.financials.expensesKopecks || "0"),
+                kopecksToRubLabel(r.financials.netProfitKopecks ?? r.financials.grossProfitKopecks),
+                kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0"),
+              ]);
+            }
+            const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+            const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "birzha-trips-summary.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          CSV страницы
+        </button>
+      </div>
       {anyLoading && (
         <p style={{ margin: "0 0 0.5rem" }} role="status" aria-live="polite">
           <LoadingIndicator size="sm" label="Загрузка отчётов по рейсам…" />
@@ -153,7 +230,16 @@ export function AccountingTripsSummary() {
                 Валовая, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                Расходы, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                Чистая, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Нал / карта / долг, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                Остаток долга, ₽
               </th>
               <th scope="col" style={thHead}>
                 Детали
@@ -183,7 +269,7 @@ export function AccountingTripsSummary() {
                 return (
                   <tr key={t.id}>
                     {tripMetaCells}
-                    <td colSpan={7} style={thtd}>
+                    <td colSpan={10} style={thtd}>
                       <ErrorAlert
                         className="birzha-alert--compact"
                         message={`Нет отчёта по рейсу ${t.tripNumber}.`}
@@ -201,7 +287,7 @@ export function AccountingTripsSummary() {
                 return (
                   <tr key={t.id}>
                     {tripMetaCells}
-                    <td colSpan={7} className="birzha-text-muted" style={thtd}>
+                    <td colSpan={10} className="birzha-text-muted" style={thtd}>
                       …
                     </td>
                     <td style={thtd}>
@@ -228,9 +314,18 @@ export function AccountingTripsSummary() {
                   <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
                     {kopecksToRubLabel(r.financials.grossProfitKopecks)}
                   </td>
+                  <td style={{ ...thtd, textAlign: "right" }}>
+                    {kopecksToRubLabel(r.financials.expensesKopecks || "0")}
+                  </td>
+                  <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                    {kopecksToRubLabel(r.financials.netProfitKopecks ?? r.financials.grossProfitKopecks)}
+                  </td>
                   <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
                     {kopecksToRubLabel(r.sales.totalCashKopecks)} / {kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} /{" "}
                     {kopecksToRubLabel(r.sales.totalDebtKopecks)}
+                  </td>
+                  <td style={{ ...thtd, textAlign: "right" }}>
+                    {kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0")}
                   </td>
                   <td style={thtd}>
                     <Link
@@ -256,10 +351,13 @@ export function AccountingTripsSummary() {
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costSold.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costShort.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.gross.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.expenses.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.net.toString())}</td>
                 <td className="birzha-text-muted birzha-text-muted--lg" style={{ ...thtd, textAlign: "right" }}>
                   {kopecksToRubLabel(tripTotals.cash.toString())} / {kopecksToRubLabel(tripTotals.card.toString())} /{" "}
                   {kopecksToRubLabel(tripTotals.debt.toString())}
                 </td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.debtOut.toString())}</td>
                 <td style={thtd} />
               </tr>
             )}

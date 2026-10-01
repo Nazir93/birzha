@@ -93,12 +93,14 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "purchaseByPurchaser")).toBeUndefined();
   });
 
-  it("аноним: бухгалтерия — сводка, отчёт и контрагенты (без /o)", () => {
+  it("аноним: бухгалтерия — сводка, отчёт, дебиторка, кредиторка и контрагенты (без /o)", () => {
     const links = buildCabinetNavEntries("accounting", null, false);
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(5);
     expect(links[0]).toEqual({ to: accounting.home, label: "Сводка", key: "acc-home" });
     expect(links[1]).toEqual({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
-    expect(links[2]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links[2]).toEqual({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
+    expect(links[3]).toEqual({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
+    expect(links[4]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
   });
 
@@ -112,17 +114,19 @@ describe("cabinet-nav", () => {
     expect(links.every((l) => l.to.startsWith(prefix.sales))).toBe(true);
   });
 
-  it("бухгалтерия: только сводка, отчёт и контрагенты (без операций /o)", () => {
+  it("бухгалтерия: сводка, отчёт, дебиторка, кредиторка и контрагенты (без операций /o)", () => {
     const user = {
       id: "u2",
       login: "acc",
       roles: [{ roleCode: "accountant", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("accounting", user, true);
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(5);
     expect(links[0]).toEqual({ to: accounting.home, label: "Сводка", key: "acc-home" });
     expect(links[1]).toEqual({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
-    expect(links[2]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links[2]).toEqual({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
+    expect(links[3]).toEqual({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
+    expect(links[4]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
   });
 

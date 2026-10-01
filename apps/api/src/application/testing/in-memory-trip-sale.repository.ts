@@ -1,9 +1,12 @@
 import type {
   TripSaleAggregate,
   TripSaleAppend,
+  TripSaleDebtGroup,
+  TripSaleDebtListFilter,
   TripSaleLineRecord,
   TripSaleRepository,
 } from "../ports/trip-sale-repository.port.js";
+import { buildSaleDebtGroupsFromLines, filterSaleDebtGroups } from "../trip/sale-debt-groups.js";
 import { buildTripSaleAggregateFromRows } from "../trip/trip-sale-aggregate.js";
 
 function appendToLine(row: TripSaleAppend): TripSaleLineRecord {
@@ -140,5 +143,13 @@ export class InMemoryTripSaleRepository implements TripSaleRepository {
         saleChannel: r.saleChannel,
       })),
     );
+  }
+
+  async listDebtGroups(filter?: TripSaleDebtListFilter): Promise<TripSaleDebtGroup[]> {
+    return filterSaleDebtGroups(buildSaleDebtGroupsFromLines(this.rows), filter);
+  }
+
+  async findDebtGroupBySaleId(saleId: string): Promise<TripSaleDebtGroup | null> {
+    return buildSaleDebtGroupsFromLines(this.rows).find((g) => g.saleId === saleId) ?? null;
   }
 }

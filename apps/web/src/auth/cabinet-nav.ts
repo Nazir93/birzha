@@ -62,6 +62,8 @@ export function buildCabinetNavEntries(
       return [
         { to: accounting.home, label: "Сводка", key: "acc-home" },
         { to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" },
+        { to: accounting.receivables, label: "Дебиторка", key: "acc-recv" },
+        { to: accounting.payables, label: "Кредиторка", key: "acc-pay" },
         { to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" },
       ];
     }
@@ -93,6 +95,8 @@ export function buildCabinetNavEntries(
   if (cabinet === "accounting") {
     out.push({ to: accounting.home, label: "Сводка", key: "acc-home" });
     out.push({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
+    out.push({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
+    out.push({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     return out;
   }

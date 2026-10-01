@@ -66,6 +66,7 @@ describe("GetTripReportUseCase", () => {
       {
         clientLabel: "",
         grams: 400n,
+        packageCount: 0n,
         revenueKopecks: 400n,
         cashKopecks: 400n,
         debtKopecks: 0n,
@@ -77,6 +78,10 @@ describe("GetTripReportUseCase", () => {
     expect(financials.costOfSoldKopecks).toBe(320n);
     expect(financials.costOfShortageKopecks).toBe(0n);
     expect(financials.grossProfitKopecks).toBe(80n);
+    expect(financials.debtPaidKopecks).toBe(0n);
+    expect(financials.debtOutstandingKopecks).toBe(0n);
+    expect(financials.expensesKopecks).toBe(0n);
+    expect(financials.netProfitKopecks).toBe(80n);
   });
 
   it("фильтр по recordedByUserId: только чужие строки отсекаются", async () => {

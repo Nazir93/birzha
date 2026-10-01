@@ -196,6 +196,7 @@ describe("Batch HTTP", () => {
       {
         clientLabel: "",
         grams: "50000",
+        packageCount: "0",
         revenueKopecks: "60000",
         cashKopecks: "60000",
         debtKopecks: "0",

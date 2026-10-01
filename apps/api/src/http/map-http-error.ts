@@ -2,6 +2,8 @@ import {
   InsufficientStockError,
   InvalidKgError,
   InvalidPackageTareError,
+  InvalidPaymentAmountError,
+  PaymentExceedsDebtError,
 } from "@birzha/domain";
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
@@ -11,6 +13,7 @@ import { gramsToKg } from "../application/units/mass.js";
 import {
   BatchNotFoundError,
   CounterpartyNotFoundError,
+  DebtPaymentNotFoundError,
   InsufficientStockForTripError,
   ProductGradeCodeConflictError,
   ProductGradeNotFoundError,
@@ -23,10 +26,14 @@ import {
   PurchaseDocumentNotFoundError,
   PurchaseLineTotalMismatchError,
   ResourceInUseError,
+  SaleDebtNotFoundError,
   SalePaymentSplitError,
   SeededResourceDeleteForbiddenError,
+  SupplierNotFoundError,
+  SupplierPaymentNotFoundError,
   TripArchiveDeleteRequiresClosedError,
   TripClosedError,
+  TripExpenseNotFoundError,
   TripNotEmptyError,
   TripNotFoundError,
   TripSellerCrossWarehouseLoadingError,
@@ -39,7 +46,6 @@ import {
   WarehouseNotFoundError,
   WarehouseWriteOffNotFoundError,
   WholesalerNotFoundError,
-  SupplierNotFoundError,
 } from "../application/errors.js";
 
 export function sendMappedError(reply: FastifyReply, error: unknown): FastifyReply {
@@ -245,6 +251,49 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
       batchId: error.batchId,
       availableGrams: error.availableGrams.toString(),
       requestedGrams: error.requestedGrams.toString(),
+    });
+  }
+  if (error instanceof SaleDebtNotFoundError) {
+    return reply.code(404).send({
+      error: "sale_debt_not_found",
+      saleId: error.saleId,
+      message: error.message,
+    });
+  }
+  if (error instanceof DebtPaymentNotFoundError) {
+    return reply.code(404).send({
+      error: "debt_payment_not_found",
+      paymentId: error.paymentId,
+      message: error.message,
+    });
+  }
+  if (error instanceof SupplierPaymentNotFoundError) {
+    return reply.code(404).send({
+      error: "supplier_payment_not_found",
+      paymentId: error.paymentId,
+      message: error.message,
+    });
+  }
+  if (error instanceof TripExpenseNotFoundError) {
+    return reply.code(404).send({
+      error: "trip_expense_not_found",
+      expenseId: error.expenseId,
+      message: error.message,
+    });
+  }
+  if (error instanceof PaymentExceedsDebtError) {
+    return reply.code(409).send({
+      error: "payment_exceeds_debt",
+      remainingKopecks: error.remainingKopecks.toString(),
+      requestedKopecks: error.requestedKopecks.toString(),
+      message: error.message,
+    });
+  }
+  if (error instanceof InvalidPaymentAmountError) {
+    return reply.code(400).send({
+      error: "invalid_payment_amount",
+      value: error.value,
+      message: error.message,
     });
   }
   if (error instanceof SalePaymentSplitError) {

@@ -8,6 +8,14 @@ export type TripFinancials = {
   costOfSoldKopecks: bigint;
   costOfShortageKopecks: bigint;
   grossProfitKopecks: bigint;
+  /** Оплаты долгов по сделкам рейса. */
+  debtPaidKopecks: bigint;
+  /** Остаток дебиторки по рейсу (долг продаж − оплаты). */
+  debtOutstandingKopecks: bigint;
+  /** Операционные расходы по рейсу (топливо и т.п.). */
+  expensesKopecks: bigint;
+  /** Валовая − расходы. */
+  netProfitKopecks: bigint;
 };
 
 /**
@@ -18,6 +26,10 @@ export function computeTripFinancials(
   sales: TripSaleAggregate,
   shortage: TripShortageAggregate,
   purchaseRubPerKgByBatchId: Map<string, number>,
+  extras?: {
+    debtPaidKopecks?: bigint;
+    expensesKopecks?: bigint;
+  },
 ): TripFinancials {
   let costOfSold = 0n;
   for (const line of sales.byBatch) {
@@ -36,10 +48,19 @@ export function computeTripFinancials(
     costOfShortage += revenueKopecksFromGramsAndPricePerKg(line.grams, rubPerKgToKopecksPerKg(rub));
   }
   const revenue = sales.totalRevenueKopecks;
+  const grossProfitKopecks = revenue - costOfSold - costOfShortage;
+  const debtPaidKopecks = extras?.debtPaidKopecks ?? 0n;
+  const debtOutstandingRaw = sales.totalDebtKopecks - debtPaidKopecks;
+  const debtOutstandingKopecks = debtOutstandingRaw > 0n ? debtOutstandingRaw : 0n;
+  const expensesKopecks = extras?.expensesKopecks ?? 0n;
   return {
     revenueKopecks: revenue,
     costOfSoldKopecks: costOfSold,
     costOfShortageKopecks: costOfShortage,
-    grossProfitKopecks: revenue - costOfSold - costOfShortage,
+    grossProfitKopecks,
+    debtPaidKopecks,
+    debtOutstandingKopecks,
+    expensesKopecks,
+    netProfitKopecks: grossProfitKopecks - expensesKopecks,
   };
 }

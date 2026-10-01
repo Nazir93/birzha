@@ -32,6 +32,7 @@ import { registerSupplierRoutes } from "./http/register-supplier-routes.js";
 import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.js";
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes.js";
+import { registerAccountingRoutes } from "./http/register-accounting-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { registerPushRoutes } from "./http/register-push-routes.js";
@@ -42,11 +43,20 @@ import { DrizzlePushSubscriptionRepository } from "./infrastructure/persistence/
 import { createWebPushSender } from "./infrastructure/push/web-push-sender.js";
 import { DrizzleBatchRepository } from "./infrastructure/persistence/drizzle-batch.repository.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "./infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
+import { DrizzleDebtPaymentRepository } from "./infrastructure/persistence/drizzle-debt-payment.repository.js";
 import { DrizzleTripRepository } from "./infrastructure/persistence/drizzle-trip.repository.js";
 import { DrizzleTripSaleRepository } from "./infrastructure/persistence/drizzle-trip-sale.repository.js";
 import { DrizzleTripShipmentRepository } from "./infrastructure/persistence/drizzle-trip-shipment.repository.js";
 import { DrizzleTripShortageRepository } from "./infrastructure/persistence/drizzle-trip-shortage.repository.js";
 import { DrizzleTripArchiveManifestCleanup } from "./infrastructure/persistence/drizzle-trip-archive-manifest-cleanup.js";
+import { InMemoryDebtPaymentRepository } from "./application/testing/in-memory-debt-payment.repository.js";
+import type { DebtPaymentRepository } from "./application/ports/debt-payment-repository.port.js";
+import type { TripExpenseRepository } from "./application/ports/trip-expense-repository.port.js";
+import { InMemoryTripExpenseRepository } from "./application/testing/in-memory-trip-expense.repository.js";
+import { DrizzleTripExpenseRepository } from "./infrastructure/persistence/drizzle-trip-expense.repository.js";
+import type { SupplierPaymentRepository } from "./application/ports/supplier-payment-repository.port.js";
+import { InMemorySupplierPaymentRepository } from "./application/testing/in-memory-supplier-payment.repository.js";
+import { DrizzleSupplierPaymentRepository } from "./infrastructure/persistence/drizzle-supplier-payment.repository.js";
 import { DrizzleWarehouseRepository } from "./infrastructure/persistence/drizzle-warehouse.repository.js";
 import { CreatePurchaseDocumentUseCase } from "./application/purchase/create-purchase-document.use-case.js";
 import { DeleteProductGradeUseCase } from "./application/purchase/delete-product-grade.use-case.js";
@@ -197,6 +207,27 @@ export async function buildApp(options: {
     supplierRepository = new DrizzleSupplierRepository(db);
   } else if (wholesalerRepository) {
     supplierRepository = new InMemorySupplierRepository();
+  }
+
+  let debtPaymentRepository: DebtPaymentRepository | null = null;
+  if (db) {
+    debtPaymentRepository = new DrizzleDebtPaymentRepository(db);
+  } else if (saleRepository && tripRepository) {
+    debtPaymentRepository = new InMemoryDebtPaymentRepository();
+  }
+
+  let supplierPaymentRepository: SupplierPaymentRepository | null = null;
+  if (db) {
+    supplierPaymentRepository = new DrizzleSupplierPaymentRepository(db);
+  } else if (saleRepository && tripRepository) {
+    supplierPaymentRepository = new InMemorySupplierPaymentRepository();
+  }
+
+  let tripExpenseRepository: TripExpenseRepository | null = null;
+  if (db) {
+    tripExpenseRepository = new DrizzleTripExpenseRepository(db);
+  } else if (saleRepository && tripRepository) {
+    tripExpenseRepository = new InMemoryTripExpenseRepository();
   }
 
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
@@ -475,6 +506,8 @@ export async function buildApp(options: {
       options.listAssignableFieldSellers ?? (db ? () => listGlobalSellerUsers(db) : undefined),
       db ? new DrizzleTripArchiveManifestCleanup(db) : undefined,
       db,
+      debtPaymentRepository,
+      tripExpenseRepository,
     );
     registerBatchRoutes(
       app,
@@ -494,6 +527,23 @@ export async function buildApp(options: {
       reverseWarehouseWriteOff,
       notifyAdminsOfTripSale,
     );
+    if (debtPaymentRepository) {
+      registerAccountingRoutes(
+        app,
+        {
+          sales: saleRepository,
+          trips: tripRepository,
+          debtPayments: debtPaymentRepository,
+          purchaseDocuments: purchaseDocumentRepository,
+          supplierPayments: supplierPaymentRepository,
+          tripExpenses: tripExpenseRepository,
+          shipments: shipmentRepository,
+          shortages: shortageRepository,
+          batches: batchRepository,
+        },
+        routeAuth,
+      );
+    }
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
       registerLoadingManifestRoutes(app, db, routeAuth, tripRepository ?? undefined);

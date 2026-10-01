@@ -12,6 +12,7 @@ import {
 } from "../format/aggregate-trip-shipment-loading.js";
 import { saleGrossGramsFromNet } from "../format/seller-gross-net.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
+import { AccountingTripExpensesBlock } from "./AccountingTripExpensesBlock.js";
 import {
   filterTripsAssignedToSellerForReports,
   isTripOpenForSellerWorkspace,
@@ -770,6 +771,32 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
                       </td>
                     </tr>
+                    {viewContext === "accounting" ? (
+                      <>
+                        <tr>
+                          <td style={thtd}>Оплачено долгов</td>
+                          <td style={thtd}>{kopecksToRubLabel(r.financials.debtPaidKopecks || "0")} ₽</td>
+                        </tr>
+                        <tr>
+                          <td style={thtd}>Остаток дебиторки по рейсу</td>
+                          <td style={thtd}>{kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0")} ₽</td>
+                        </tr>
+                        <tr>
+                          <td style={thtd}>Расходы по рейсу</td>
+                          <td style={thtd}>{kopecksToRubLabel(r.financials.expensesKopecks || "0")} ₽</td>
+                        </tr>
+                        <tr>
+                          <td style={thtd}>
+                            <strong>Чистая прибыль</strong>
+                          </td>
+                          <td style={thtd}>
+                            <strong>
+                              {kopecksToRubLabel(r.financials.netProfitKopecks ?? r.financials.grossProfitKopecks)} ₽
+                            </strong>
+                          </td>
+                        </tr>
+                      </>
+                    ) : null}
                   </>
                 ) : null}
                 <tr>
@@ -784,6 +811,10 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </table>
           </div>
           </BirzhaDisclosure>
+
+          {viewContext === "accounting" && tripId ? (
+            <AccountingTripExpensesBlock tripId={tripId} />
+          ) : null}
 
           <BirzhaDisclosure
             defaultOpen

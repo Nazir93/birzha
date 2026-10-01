@@ -205,12 +205,28 @@ export function canRecordWarehouseReturn(user: AuthUser | null): boolean {
 /** Создание/удаление в справочнике контрагентов — как `CATALOG_WRITE_ROLES` в API. */
 const COUNTERPARTY_WRITE_ROLES = new Set<string>(["admin", "manager", "accountant"]);
 
+/** Проводки бухгалтерии (оплаты долгов, кредиторка, расходы) — как `ACCOUNTING_ROLES` в API. */
+const ACCOUNTING_WRITE_ROLES = new Set<string>(["admin", "manager", "accountant"]);
+
 export function canWriteCounterpartyCatalog(user: AuthUser | null): boolean {
   if (!user) {
     return false;
   }
   const codes = globalRoleCodes(user);
   for (const r of COUNTERPARTY_WRITE_ROLES) {
+    if (codes.has(r)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function canWriteAccounting(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  for (const r of ACCOUNTING_WRITE_ROLES) {
     if (codes.has(r)) {
       return true;
     }

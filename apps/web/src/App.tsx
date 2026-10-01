@@ -22,6 +22,12 @@ import { LoadingScreen } from "./ui/LoadingIndicator.js";
 const AccountingCabinetHome = lazy(() =>
   import("./components/AccountingCabinetHome.js").then((m) => ({ default: m.AccountingCabinetHome })),
 );
+const AccountingReceivablesPanel = lazy(() =>
+  import("./components/AccountingReceivablesPanel.js").then((m) => ({ default: m.AccountingReceivablesPanel })),
+);
+const AccountingPayablesPanel = lazy(() =>
+  import("./components/AccountingPayablesPanel.js").then((m) => ({ default: m.AccountingPayablesPanel })),
+);
 const AdminCabinetHome = lazy(() =>
   import("./components/AdminCabinetHome.js").then((m) => ({ default: m.AdminCabinetHome })),
 );
@@ -229,6 +235,26 @@ export function App() {
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
                     <CounterpartiesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="receivables"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <AccountingReceivablesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="payables"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <AccountingPayablesPanel />
                   </section>
                 </RequirePanel>
               }

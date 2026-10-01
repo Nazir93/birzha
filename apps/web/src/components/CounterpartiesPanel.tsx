@@ -1,10 +1,13 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { counterpartiesFullListQueryOptions, queryRoots } from "../query/core-list-queries.js";
 import { canWriteCounterpartyCatalog } from "../auth/role-panels.js";
+import { kopecksToRubLabel } from "../format/money.js";
+import { accounting } from "../routes.js";
 import { AccountingSuppliersNakladnayaPanel } from "./AccountingSuppliersNakladnayaPanel.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -13,6 +16,12 @@ import { ErrorAlert, WarningAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, fieldStyle, tableStyleDense, thHeadDense, thtdDense } from "../ui/styles.js";
 
 type CounterpartiesTab = "clients" | "suppliers";
+
+type ReceivableRow = {
+  counterpartyId: string | null;
+  remainingKopecks: string;
+  status: "open" | "closed";
+};
 
 /**
  * Контрагенты бухгалтерии: клиенты (справочник продаж) и тепличники с закупочными накладными.
@@ -26,6 +35,27 @@ export function CounterpartiesPanel() {
   const [newName, setNewName] = useState("");
 
   const listQ = useQuery({ ...counterpartiesFullListQueryOptions(), enabled: enabled && tab === "clients" });
+
+  const recvQ = useQuery({
+    queryKey: ["accounting", "receivables", "all-for-cp"],
+    queryFn: async () => {
+      const res = await apiFetch("/api/accounting/receivables?status=open");
+      await assertOkResponse(res);
+      return (await res.json()) as { receivables: ReceivableRow[] };
+    },
+    enabled: enabled && tab === "clients",
+  });
+
+  const debtByCp = useMemo(() => {
+    const m = new Map<string, bigint>();
+    for (const r of recvQ.data?.receivables ?? []) {
+      if (!r.counterpartyId) {
+        continue;
+      }
+      m.set(r.counterpartyId, (m.get(r.counterpartyId) ?? 0n) + BigInt(r.remainingKopecks || "0"));
+    }
+    return m;
+  }, [recvQ.data]);
 
   const createM = useMutation({
     mutationFn: async () => {
@@ -94,6 +124,10 @@ export function CounterpartiesPanel() {
           </p>
         ) : (
           <>
+            <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem", maxWidth: "40rem" }}>
+              Остаток долга — открытая дебиторка. Провести оплату:{" "}
+              <Link to={accounting.receivables}>Дебиторка</Link>.
+            </p>
             {canWrite && !listQ.isPending ? (
               <BirzhaDisclosure
                 nested
@@ -144,6 +178,7 @@ export function CounterpartiesPanel() {
               title={<span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Список клиентов</span>}
             >
               {listQ.isError ? <WarningAlert title="Список">Список не загрузился.</WarningAlert> : null}
+              {recvQ.isError ? <WarningAlert title="Долги">Остатки долга не загрузились.</WarningAlert> : null}
               {listQ.isPending && <LoadingBlock label="Загрузка…" minHeight={72} skeleton skeletonRows={5} />}
 
               {createM.isError ? <ErrorAlert error={createM.error} title="Создание" /> : null}
@@ -159,6 +194,7 @@ export function CounterpartiesPanel() {
                     <thead>
                       <tr>
                         <th style={thHeadDense}>Название</th>
+                        <th style={{ ...thHeadDense, textAlign: "right" }}>Остаток долга, ₽</th>
                         {canWrite ? <th style={thHeadDense}> </th> : null}
                       </tr>
                     </thead>
@@ -166,30 +202,36 @@ export function CounterpartiesPanel() {
                       {listQ.data.counterparties
                         .slice()
                         .sort((a, b) => a.displayName.localeCompare(b.displayName, "ru"))
-                        .map((c) => (
-                          <tr key={c.id}>
-                            <th scope="row" style={thtdDense}>
-                              {c.displayName}
-                            </th>
-                            {canWrite ? (
-                              <td style={thtdDense}>
-                                <button
-                                  type="button"
-                                  className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-                                  style={{ fontSize: "0.85rem" }}
-                                  disabled={deleteM.isPending}
-                                  onClick={() => {
-                                    if (window.confirm(`Удалить «${c.displayName}»?`)) {
-                                      void deleteM.mutate(c.id);
-                                    }
-                                  }}
-                                >
-                                  Удалить
-                                </button>
+                        .map((c) => {
+                          const debt = debtByCp.get(c.id) ?? 0n;
+                          return (
+                            <tr key={c.id}>
+                              <th scope="row" style={thtdDense}>
+                                {c.displayName}
+                              </th>
+                              <td style={{ ...thtdDense, textAlign: "right", fontWeight: debt > 0n ? 600 : 400 }}>
+                                {debt > 0n ? kopecksToRubLabel(debt.toString()) : "—"}
                               </td>
-                            ) : null}
-                          </tr>
-                        ))}
+                              {canWrite ? (
+                                <td style={thtdDense}>
+                                  <button
+                                    type="button"
+                                    className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
+                                    style={{ fontSize: "0.85rem" }}
+                                    disabled={deleteM.isPending}
+                                    onClick={() => {
+                                      if (window.confirm(`Удалить «${c.displayName}»?`)) {
+                                        void deleteM.mutate(c.id);
+                                      }
+                                    }}
+                                  >
+                                    Удалить
+                                  </button>
+                                </td>
+                              ) : null}
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>

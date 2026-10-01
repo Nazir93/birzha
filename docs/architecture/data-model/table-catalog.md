@@ -466,6 +466,34 @@ HTTP и use case: **`README.md`** (таблица API). Концептуальн
 - `receivedByEmployeeId`
 - `comment`
 
+### Реализация (операционный учёт, PostgreSQL)
+
+Отдельной таблицы `receivables` нет: долг клиента берётся из строк продаж (`trip_batch_sales` с долгом), погашения — в `debt_payments`. Кредиторка тепличнику — сумма закупочной накладной минус `supplier_payments`. Расходы рейса — `trip_expenses`.
+
+#### `debt_payments`
+Поля (код: `apps/api/src/db/schema.ts`):
+- `id`, `sale_id`, `trip_id`, `counterparty_id`, `client_label`
+- `amount_kopecks`, `method` (`cash` | `card` | `bank`), `paid_at`, `comment`
+- `recorded_by_user_id`, `created_at`
+
+Индексы: `sale_id`, `trip_id`, `paid_at`.
+
+#### `supplier_payments`
+Поля:
+- `id`, `purchase_document_id`, `supplier_id`
+- `amount_kopecks`, `method`, `paid_at`, `comment`
+- `recorded_by_user_id`, `created_at`
+
+Индексы: `purchase_document_id`, `paid_at`.
+
+#### `trip_expenses`
+Поля:
+- `id`, `trip_id`, `category` (`fuel` | `road` | `driver` | `other`)
+- `amount_kopecks`, `expense_date`, `comment`
+- `recorded_by_user_id`, `created_at`
+
+Индексы: `trip_id`, `expense_date`.
+
 ## Списания, возвраты, инвентаризация
 
 ### `writeOffs`

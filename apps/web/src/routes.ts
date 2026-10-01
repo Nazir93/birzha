@@ -96,6 +96,8 @@ export const accounting = {
   home: prefix.accounting,
   reports: `${prefix.accounting}/reports`,
   counterparties: `${prefix.accounting}/counterparties`,
+  receivables: `${prefix.accounting}/receivables`,
+  payables: `${prefix.accounting}/payables`,
 } as const;
 
 /**

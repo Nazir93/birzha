@@ -21,6 +21,12 @@ const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as con
 /** POST/DELETE /warehouses, /product-grades — админ и зам. */
 const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
 
+/** Чтение и запись бухгалтерии (дебиторка, кредиторка, расходы). */
+const ACCOUNTING_ROLES = ["admin", "manager", "accountant"] as const;
+
+/** Сторно оплат / расходов — только admin. */
+const ACCOUNTING_ADMIN_DELETE_ROLES = ["admin"] as const;
+
 /** PUT /purchase-documents/:id/lines — правка строк до погрузки: руководство + закупщик. */
 const PURCHASE_DOCUMENT_LINES_WRITE_ROLES = ["admin", "manager", "purchaser"] as const;
 
@@ -67,6 +73,11 @@ export type BusinessRouteAuth = {
   catalogWrite: AuthPreHandler[];
   /** POST/DELETE /warehouses, /product-grades — admin и manager. */
   inventoryCatalogWrite: AuthPreHandler[];
+  /** GET/POST бухгалтерия — admin/manager/accountant. */
+  accountingRead: AuthPreHandler[];
+  accountingWrite: AuthPreHandler[];
+  /** DELETE оплат/расходов — только admin. */
+  accountingAdminDelete: AuthPreHandler[];
   /** PUT /purchase-documents/:id/lines — admin/manager/purchaser. */
   purchaseDocumentLinesWrite: AuthPreHandler[];
   /** Список и создание пользователей — admin и manager. */
@@ -90,6 +101,9 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   catalogRead: [],
   catalogWrite: [],
   inventoryCatalogWrite: [],
+  accountingRead: [],
+  accountingWrite: [],
+  accountingAdminDelete: [],
   purchaseDocumentLinesWrite: [],
   userManagement: [],
   purchasePurchaserReportRead: [],
@@ -130,6 +144,9 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
+    accountingRead: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
+    accountingWrite: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
+    accountingAdminDelete: [a, requireGlobalRoles(ACCOUNTING_ADMIN_DELETE_ROLES)],
     purchaseDocumentLinesWrite: [a, requireGlobalRoles(PURCHASE_DOCUMENT_LINES_WRITE_ROLES)],
     userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
     purchasePurchaserReportRead: [a, requireGlobalRoles(PURCHASE_PURCHASER_REPORT_ROLES)],

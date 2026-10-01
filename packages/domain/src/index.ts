@@ -18,4 +18,10 @@ export {
   tareGramsPerPackageForProductGroup,
 } from "./units/package-tare.js";
 export { Money, CurrencyMismatchError } from "./money/index.js";
+export {
+  InvalidPaymentAmountError,
+  Obligation,
+  type ObligationState,
+  PaymentExceedsDebtError,
+} from "./finance/index.js";
 export { Trip, tripDestinationMatchesManifest, type TripStatus } from "./trip/index.js";

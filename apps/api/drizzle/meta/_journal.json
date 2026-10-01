@@ -267,6 +267,27 @@
       "when": 1779000000000,
       "tag": "0037_trip_shortage_package_count",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1779100000000,
+      "tag": "0038_debt_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0039_supplier_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1779300000000,
+      "tag": "0040_trip_expenses",
+      "breakpoints": true
     }
   ]
 }

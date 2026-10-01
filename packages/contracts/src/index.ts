@@ -18,6 +18,22 @@ export type { CreateWholesalerBody } from "./wholesaler.js";
 export { createSupplierBodySchema } from "./supplier.js";
 export type { CreateSupplierBody } from "./supplier.js";
 export {
+  accountingPayablesQuerySchema,
+  accountingPeriodSummaryQuerySchema,
+  accountingReceivablesQuerySchema,
+  createDebtPaymentBodySchema,
+  createSupplierPaymentBodySchema,
+  createTripExpenseBodySchema,
+} from "./accounting.js";
+export type {
+  AccountingPayablesQuery,
+  AccountingPeriodSummaryQuery,
+  AccountingReceivablesQuery,
+  CreateDebtPaymentBody,
+  CreateSupplierPaymentBody,
+  CreateTripExpenseBody,
+} from "./accounting.js";
+export {
   createPurchaseDocumentBodySchema,
   purchaseDocumentLineInputSchema,
   replacePurchaseDocumentLinesBodySchema,

@@ -545,6 +545,10 @@ export type FinancialsBlock = {
   costOfSoldKopecks: string;
   costOfShortageKopecks: string;
   grossProfitKopecks: string;
+  debtPaidKopecks?: string;
+  debtOutstandingKopecks?: string;
+  expensesKopecks?: string;
+  netProfitKopecks?: string;
 };
 
 export type ShipmentReportResponse = {

@@ -68,6 +68,22 @@ export type TripSaleClientLine = {
   cardTransferKopecks: bigint;
 };
 
+/** Сделка с долгом (группа строк с одним `saleId`). */
+export type TripSaleDebtGroup = {
+  saleId: string;
+  tripId: string;
+  counterpartyId: string | null;
+  clientLabel: string | null;
+  debtKopecks: bigint;
+  firstRecordedAt: Date;
+};
+
+export type TripSaleDebtListFilter = {
+  counterpartyId?: string;
+  fromYmd?: string;
+  toYmd?: string;
+};
+
 export type TripSaleAggregate = {
   totalGrams: bigint;
   totalPackageCount: bigint;
@@ -107,4 +123,7 @@ export interface TripSaleRepository {
   deleteByBatchIds(batchIds: string[]): Promise<void>;
   /** Удаление всех строк журнала по рейсу (очистка архива). */
   deleteAllForTripId(tripId: string): Promise<void>;
+  /** Сделки с долгом > 0 для бухгалтерии. */
+  listDebtGroups(filter?: TripSaleDebtListFilter): Promise<TripSaleDebtGroup[]>;
+  findDebtGroupBySaleId(saleId: string): Promise<TripSaleDebtGroup | null>;
 }

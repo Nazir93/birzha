@@ -278,6 +278,82 @@ export const tripBatchSales = pgTable("trip_batch_sales", {
   recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
 });
 
+/**
+ * Оплаты долгов клиентов. Обязательство = сумма `debt_kopecks` строк `trip_batch_sales` с одним `sale_id`;
+ * оплаты проводит бухгалтерия (`accountingWrite` в `route-auth.ts`).
+ */
+export const debtPayments = pgTable(
+  "debt_payments",
+  {
+    id: text("id").primaryKey(),
+    saleId: text("sale_id").notNull(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    counterpartyId: text("counterparty_id").references(() => counterparties.id, { onDelete: "set null" }),
+    /** Снимок подписи клиента на момент оплаты (как в строке продажи). */
+    clientLabel: text("client_label"),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    /** cash | card | bank */
+    method: text("method").notNull(),
+    paidAt: date("paid_at", { mode: "date" }).notNull(),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("debt_payments_sale_id_idx").on(t.saleId),
+    index("debt_payments_trip_id_idx").on(t.tripId),
+    index("debt_payments_paid_at_idx").on(t.paidAt),
+  ],
+);
+
+/**
+ * Оплаты тепличникам по закупочной накладной. Сумма обязательства =
+ * сумма строк + extra_cost_kopecks документа.
+ */
+export const supplierPayments = pgTable(
+  "supplier_payments",
+  {
+    id: text("id").primaryKey(),
+    purchaseDocumentId: text("purchase_document_id")
+      .notNull()
+      .references(() => purchaseDocuments.id, { onDelete: "cascade" }),
+    supplierId: text("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    method: text("method").notNull(),
+    paidAt: date("paid_at", { mode: "date" }).notNull(),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("supplier_payments_document_id_idx").on(t.purchaseDocumentId),
+    index("supplier_payments_paid_at_idx").on(t.paidAt),
+  ],
+);
+
+/** Операционные расходы по рейсу (fuel|road|driver|other). */
+export const tripExpenses = pgTable(
+  "trip_expenses",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    expenseDate: date("expense_date", { mode: "date" }).notNull(),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("trip_expenses_trip_id_idx").on(t.tripId),
+    index("trip_expenses_expense_date_idx").on(t.expenseDate),
+  ],
+);
+
 /** Учётные записи; вход — JWT (`/auth/login`). См. `docs/architecture/data-model/table-catalog.md`. */
 export const users = pgTable("users", {
   id: text("id").primaryKey(),

@@ -166,6 +166,10 @@ export type TripFinancialsJson = {
   costOfSoldKopecks: string;
   costOfShortageKopecks: string;
   grossProfitKopecks: string;
+  debtPaidKopecks: string;
+  debtOutstandingKopecks: string;
+  expensesKopecks: string;
+  netProfitKopecks: string;
 };
 
 export function tripFinancialsToJson(f: TripFinancials): TripFinancialsJson {
@@ -174,5 +178,9 @@ export function tripFinancialsToJson(f: TripFinancials): TripFinancialsJson {
     costOfSoldKopecks: f.costOfSoldKopecks.toString(),
     costOfShortageKopecks: f.costOfShortageKopecks.toString(),
     grossProfitKopecks: f.grossProfitKopecks.toString(),
+    debtPaidKopecks: f.debtPaidKopecks.toString(),
+    debtOutstandingKopecks: f.debtOutstandingKopecks.toString(),
+    expensesKopecks: f.expensesKopecks.toString(),
+    netProfitKopecks: f.netProfitKopecks.toString(),
   };
 }
