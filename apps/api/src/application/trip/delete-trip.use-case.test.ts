@@ -66,7 +66,7 @@ describe("DeleteTripUseCase", () => {
       cardTransferKopecks: 0n,
       saleChannel: "retail",
     });
-    await shortages.append({ id: "shrt1", tripId: "t3", batchId: "b1", grams: 100n, reason: "test" });
+    await shortages.append({ id: "shrt1", tripId: "t3", batchId: "b1", grams: 100n, reason: "test", packageCount: null });
 
     const manifestCleanup = {
       deletedTripIds: [] as string[],

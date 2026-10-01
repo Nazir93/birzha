@@ -145,6 +145,7 @@ export function SellFromTripSection() {
 
   const [shortBatchId, setShortBatchId] = useState("");
   const [shortKg, setShortKg] = useState("");
+  const [shortPackages, setShortPackages] = useState("");
   const [shortReason, setShortReason] = useState("");
 
   const [sellerSaleFlash, setSellerSaleFlash] = useState<{
@@ -167,6 +168,7 @@ export function SellFromTripSection() {
     setSellerSaleFlash(null);
     setShortBatchId("");
     setShortKg("");
+    setShortPackages("");
     setShortReason("");
   }, [sellTripId]);
 
@@ -860,13 +862,20 @@ export function SellFromTripSection() {
 
   const shortage = useMutation({
     mutationFn: async () => {
-      const { batchId, body } = parseRecordTripShortageForm(shortBatchId, sellTripId, shortKg, shortReason);
+      const { batchId, body } = parseRecordTripShortageForm(
+        shortBatchId,
+        sellTripId,
+        shortKg,
+        shortReason,
+        shortPackages,
+      );
       await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/record-trip-shortage`, body);
     },
     onSuccess: () => {
       invalidateDomain();
       setShortBatchId("");
       setShortKg("");
+      setShortPackages("");
       setShortReason("");
     },
   });
@@ -1385,6 +1394,22 @@ export function SellFromTripSection() {
                 className={sellerFieldClass}
                 inputMode="decimal"
                 autoComplete="off"
+              />
+              <label
+                htmlFor={`${idPrefix}-short-packages`}
+                className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+              >
+                Ящики
+              </label>
+              <input
+                id={`${idPrefix}-short-packages`}
+                value={shortPackages}
+                onChange={(e) => setShortPackages(e.target.value)}
+                style={fieldStyle}
+                className={sellerFieldClass}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="если целые ящики"
               />
               <label
                 htmlFor={`${idPrefix}-short-reason`}

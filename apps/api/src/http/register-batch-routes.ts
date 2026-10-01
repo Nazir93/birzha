@@ -435,6 +435,7 @@ export function registerBatchRoutes(
         tripId: body.tripId,
         kg: body.kg,
         reason: body.reason,
+        packageCount: body.packageCount,
       });
       return reply.code(200).send({ ok: true });
     } catch (error) {

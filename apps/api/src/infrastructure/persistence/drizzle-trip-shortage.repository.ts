@@ -18,6 +18,7 @@ export class DrizzleTripShortageRepository implements TripShortageRepository {
       batchId: row.batchId,
       grams: row.grams,
       reason: row.reason,
+      packageCount: row.packageCount,
     });
   }
 
@@ -46,15 +47,22 @@ export class DrizzleTripShortageRepository implements TripShortageRepository {
 
   async aggregateByTripId(tripId: string): Promise<TripShortageAggregate> {
     const rows = await this.db.select().from(tripBatchShortages).where(eq(tripBatchShortages.tripId, tripId));
-    const byBatch = new Map<string, bigint>();
+    const byBatch = new Map<string, { grams: bigint; packageCount: bigint }>();
     let total = 0n;
+    let totalPkg = 0n;
     for (const r of rows) {
       total += r.grams;
-      byBatch.set(r.batchId, (byBatch.get(r.batchId) ?? 0n) + r.grams);
+      const pkg = r.packageCount ?? 0n;
+      totalPkg += pkg;
+      const prev = byBatch.get(r.batchId) ?? { grams: 0n, packageCount: 0n };
+      byBatch.set(r.batchId, {
+        grams: prev.grams + r.grams,
+        packageCount: prev.packageCount + pkg,
+      });
     }
     const lines = [...byBatch.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([batchId, grams]) => ({ batchId, grams }));
-    return { totalGrams: total, byBatch: lines };
+      .map(([batchId, v]) => ({ batchId, grams: v.grams, packageCount: v.packageCount }));
+    return { totalGrams: total, totalPackageCount: totalPkg, byBatch: lines };
   }
 }

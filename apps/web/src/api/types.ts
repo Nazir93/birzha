@@ -486,7 +486,9 @@ export type TripSaleLinesResponse = {
 
 export type LedgerBlock = {
   totalGrams: string;
-  byBatch: { batchId: string; grams: string }[];
+  /** Сумма ящиков по недостачам (если были указаны). */
+  totalPackageCount?: string;
+  byBatch: { batchId: string; grams: string; packageCount?: string }[];
 };
 
 /** Блок `shipment` в отчёте по рейсу: отгрузка с опциональным учётом ящиков. */

@@ -121,6 +121,14 @@ export function FieldSellerTripReport({
       {report.shortage.totalGrams !== "0" && report.shortage.totalGrams !== "" ? (
         <p className="birzha-callout-info" style={{ margin: "0 0 1rem", fontSize: "0.92rem" }} role="status">
           Недостача по рейсу: <strong>{gramsToKgLabel(report.shortage.totalGrams)} кг</strong>
+          {report.shortage.totalPackageCount &&
+          report.shortage.totalPackageCount !== "0" &&
+          report.shortage.totalPackageCount !== "" ? (
+            <>
+              {" "}
+              · <strong>{report.shortage.totalPackageCount} ящ</strong>
+            </>
+          ) : null}
         </p>
       ) : null}
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>

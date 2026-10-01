@@ -605,7 +605,14 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                 ) : null}
                 <tr>
                   <td style={thtd}>Недостача (фикс.)</td>
-                  <td style={thtd}>{gramsToKgLabel(r.shortage.totalGrams)} кг</td>
+                  <td style={thtd}>
+                    {gramsToKgLabel(r.shortage.totalGrams)} кг
+                    {r.shortage.totalPackageCount &&
+                    r.shortage.totalPackageCount !== "0" &&
+                    r.shortage.totalPackageCount !== ""
+                      ? ` · ${r.shortage.totalPackageCount} ящ`
+                      : ""}
+                  </td>
                 </tr>
               </tbody>
             </table>

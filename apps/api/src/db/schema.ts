@@ -237,6 +237,8 @@ export const tripBatchShortages = pgTable("trip_batch_shortages", {
     .notNull()
     .references(() => batches.id),
   grams: bigint("grams", { mode: "bigint" }).notNull(),
+  /** Ящики по недостаче (опционально; как у отгрузки/продажи). */
+  packageCount: bigint("package_count", { mode: "bigint" }),
   reason: text("reason").notNull(),
 });
 

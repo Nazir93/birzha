@@ -4,15 +4,18 @@ export type TripShortageAppend = {
   batchId: string;
   grams: bigint;
   reason: string;
+  packageCount: bigint | null;
 };
 
 export type TripShortageBatchLine = {
   batchId: string;
   grams: bigint;
+  packageCount: bigint;
 };
 
 export type TripShortageAggregate = {
   totalGrams: bigint;
+  totalPackageCount: bigint;
   byBatch: TripShortageBatchLine[];
 };
 

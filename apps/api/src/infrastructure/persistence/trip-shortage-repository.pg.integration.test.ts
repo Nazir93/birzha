@@ -61,6 +61,7 @@ describe.skipIf(!pgUrl)("DrizzleTripShortageRepository (PostgreSQL)", () => {
       batchId,
       grams: 10_000n,
       reason: "недостача 1",
+      packageCount: 2n,
     });
     await shortages.append({
       id: line2,
@@ -68,12 +69,14 @@ describe.skipIf(!pgUrl)("DrizzleTripShortageRepository (PostgreSQL)", () => {
       batchId,
       grams: 25_000n,
       reason: "недостача 2",
+      packageCount: null,
     });
 
     expect(await shortages.totalGramsForTripAndBatch(tripId, batchId)).toBe(35_000n);
 
     const agg = await shortages.aggregateByTripId(tripId);
     expect(agg.totalGrams).toBe(35_000n);
-    expect(agg.byBatch).toEqual([{ batchId, grams: 35_000n }]);
+    expect(agg.totalPackageCount).toBe(2n);
+    expect(agg.byBatch).toEqual([{ batchId, grams: 35_000n, packageCount: 2n }]);
   });
 });

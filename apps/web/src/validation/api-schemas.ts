@@ -278,13 +278,31 @@ export function parseUpdateTripSaleForm(input: {
   });
 }
 
-export function parseRecordTripShortageForm(batchIdRaw: string, tripIdRaw: string, kgRaw: string, reasonRaw: string) {
+export function parseRecordTripShortageForm(
+  batchIdRaw: string,
+  tripIdRaw: string,
+  kgRaw: string,
+  reasonRaw: string,
+  packagesRaw = "",
+) {
   return mapZod(() => {
     const batchId = batchIdParam.parse(batchIdRaw.trim());
     const tripId = batchIdParam.parse(tripIdRaw.trim());
     const kg = parseDecimalKg(kgRaw);
     const reason = reasonRaw.trim();
-    return { batchId, body: recordTripShortageBodySchema.parse({ tripId, kg, reason }) };
+    const pkgTrim = packagesRaw.trim();
+    let packageCount: number | undefined;
+    if (pkgTrim !== "") {
+      const pkg = linePackageCountFromNakladnayaString(pkgTrim);
+      if (pkg === null) {
+        throw new Error("Ящики: укажите целое число ≥ 0");
+      }
+      packageCount = pkg;
+    }
+    return {
+      batchId,
+      body: recordTripShortageBodySchema.parse({ tripId, kg, reason, packageCount }),
+    };
   });
 }
 

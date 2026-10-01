@@ -104,14 +104,24 @@ export function OperationsPanel() {
   const [shortBatchId, setShortBatchId] = useState("");
   const [shortTripId, setShortTripId] = useState("");
   const [shortKg, setShortKg] = useState("");
+  const [shortPackages, setShortPackages] = useState("");
   const [shortReason, setShortReason] = useState("");
 
   const shortage = useMutation({
     mutationFn: async () => {
-      const { batchId, body } = parseRecordTripShortageForm(shortBatchId, shortTripId, shortKg, shortReason);
+      const { batchId, body } = parseRecordTripShortageForm(
+        shortBatchId,
+        shortTripId,
+        shortKg,
+        shortReason,
+        shortPackages,
+      );
       await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/record-trip-shortage`, body);
     },
-    onSuccess: () => invalidateDomain(),
+    onSuccess: () => {
+      invalidateDomain();
+      setShortPackages("");
+    },
   });
 
   return (
@@ -251,6 +261,18 @@ export function OperationsPanel() {
           style={fieldStyle}
           inputMode="decimal"
           autoComplete="off"
+        />
+        <label htmlFor="op-in-short-packages" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
+          Ящики
+        </label>
+        <input
+          id="op-in-short-packages"
+          value={shortPackages}
+          onChange={(e) => setShortPackages(e.target.value)}
+          style={fieldStyle}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="если целые ящики"
         />
         <label htmlFor="op-in-short-reason" className="birzha-form-label birzha-form-label--block birzha-form-label--push-md">
           Причина *

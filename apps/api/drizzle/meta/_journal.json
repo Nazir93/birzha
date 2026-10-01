@@ -260,6 +260,13 @@
       "when": 1778900000000,
       "tag": "0036_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0037_trip_shortage_package_count",
+      "breakpoints": true
     }
   ]
 }

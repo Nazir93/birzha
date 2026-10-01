@@ -194,8 +194,10 @@ describe("recordTripShortageBodySchema", () => {
       tripId: "t1",
       kg: 0.5,
       reason: "порча",
+      packageCount: 3,
     });
     expect(r.reason).toBe("порча");
+    expect(r.packageCount).toBe(3);
   });
 
   it("отклоняет пустой reason", () => {

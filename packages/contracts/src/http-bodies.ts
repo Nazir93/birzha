@@ -98,6 +98,8 @@ export const recordTripShortageBodySchema = z.object({
   tripId: z.string().min(1),
   kg: z.number().finite().positive(),
   reason: z.string().min(1),
+  /** Ящики (опционально; для усушки без целых ящиков можно не указывать). */
+  packageCount: z.number().int().nonnegative().optional(),
 });
 
 /** POST /counterparties */

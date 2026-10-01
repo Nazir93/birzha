@@ -2,21 +2,25 @@ import type { TripFinancials } from "../application/trip/trip-financials.js";
 import type { TripSaleAggregate } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentAggregate } from "../application/ports/trip-shipment-repository.port.js";
 
-/** Агрегат недостачи (только масса по партиям). */
+/** Агрегат недостачи (масса и ящики по партиям). */
 export type LedgerAggregateJson = {
   totalGrams: string;
-  byBatch: { batchId: string; grams: string }[];
+  totalPackageCount: string;
+  byBatch: { batchId: string; grams: string; packageCount: string }[];
 };
 
 export function ledgerAggregateToJson(aggregate: {
   totalGrams: bigint;
-  byBatch: { batchId: string; grams: bigint }[];
+  totalPackageCount?: bigint;
+  byBatch: { batchId: string; grams: bigint; packageCount?: bigint }[];
 }): LedgerAggregateJson {
   return {
     totalGrams: aggregate.totalGrams.toString(),
+    totalPackageCount: (aggregate.totalPackageCount ?? 0n).toString(),
     byBatch: aggregate.byBatch.map((l) => ({
       batchId: l.batchId,
       grams: l.grams.toString(),
+      packageCount: (l.packageCount ?? 0n).toString(),
     })),
   };
 }

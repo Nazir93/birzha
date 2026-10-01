@@ -14,6 +14,7 @@ export type RecordTripShortageInput = {
   tripId: string;
   kg: number;
   reason: string;
+  packageCount?: number;
 };
 
 export type RecordTripShortageTransactionRunner = (
@@ -48,6 +49,8 @@ export class RecordTripShortageUseCase {
 
     const lineId = randomUUID();
     const reason = input.reason.trim();
+    const packageCount =
+      input.packageCount === undefined ? null : BigInt(Math.max(0, Math.trunc(input.packageCount)));
 
     const persist = async (batches: BatchRepository, shortageRepo: TripShortageRepository) => {
       const batch = await loadBatchOrThrow(batches, input.batchId);
@@ -59,6 +62,7 @@ export class RecordTripShortageUseCase {
         batchId: input.batchId,
         grams: requested,
         reason,
+        packageCount,
       });
     };
 
