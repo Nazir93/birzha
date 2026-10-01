@@ -7,11 +7,12 @@ import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { accounting, adminRoutes } from "../routes.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { fieldStyle } from "../ui/styles.js";
+import { dateFieldStyle } from "../ui/styles.js";
 
 function monthBounds(): { from: string; to: string } {
   const now = new Date();
@@ -104,13 +105,13 @@ export function AccountingCabinetHome() {
       </header>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem", alignItems: "end" }}>
-        <label className="birzha-form-label">
+        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
           С
-          <input type="date" style={fieldStyle} value={from} onChange={(e) => setFrom(e.target.value)} />
+          <BirzhaDateField aria-label="Дата с" value={from} onChange={setFrom} style={dateFieldStyle} />
         </label>
-        <label className="birzha-form-label">
+        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
           По
-          <input type="date" style={fieldStyle} value={to} onChange={(e) => setTo(e.target.value)} />
+          <BirzhaDateField aria-label="Дата по" value={to} onChange={setTo} style={dateFieldStyle} />
         </label>
       </div>
 

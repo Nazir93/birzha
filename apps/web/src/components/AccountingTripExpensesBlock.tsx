@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const CATEGORY_LABEL: Record<string, string> = {
   fuel: "Топливо",
@@ -125,7 +126,7 @@ export function AccountingTripExpensesBlock({ tripId }: { tripId: string }) {
           </label>
           <label className="birzha-form-label">
             Дата
-            <input type="date" style={fieldStyle} value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} />
+            <BirzhaDateField aria-label="Дата расхода" value={expenseDate} onChange={setExpenseDate} style={dateFieldStyle} />
           </label>
           <label className="birzha-form-label">
             Комментарий

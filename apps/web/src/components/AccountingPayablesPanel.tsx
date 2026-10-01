@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { btnClassSpaced, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
+import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 type PayableRow = {
   documentId: string;
@@ -183,7 +184,7 @@ export function AccountingPayablesPanel() {
             </label>
             <label className="birzha-form-label">
               Дата
-              <input type="date" style={fieldStyle} value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+              <BirzhaDateField aria-label="Дата оплаты" value={paidAt} onChange={setPaidAt} style={dateFieldStyle} />
             </label>
             <label className="birzha-form-label">
               Комментарий
