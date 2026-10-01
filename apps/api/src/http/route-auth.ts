@@ -27,8 +27,8 @@ const PURCHASE_DOCUMENT_LINES_WRITE_ROLES = ["admin", "manager", "purchaser"] as
 /** Оприходование на склад. */
 const RECEIVE_ROLES = ["admin", "manager", "warehouse"] as const;
 
-/** Отгрузка в рейс. */
-const SHIP_ROLES = ["admin", "manager", "warehouse", "logistics"] as const;
+/** Отгрузка в рейс и создание погрузочной накладной. */
+const SHIP_ROLES = ["admin", "manager", "warehouse", "logistics", "purchaser"] as const;
 
 /** Продажа с рейса. */
 const SELL_ROLES = ["admin", "manager", "seller"] as const;

@@ -345,6 +345,9 @@ export function AssignSellerPanel() {
                         Прод., кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
+                        Прод., ящ
+                      </th>
+                      <th scope="col" style={{ textAlign: "right" }}>
                         Погружено, кг
                       </th>
                       <th scope="col" style={{ textAlign: "right" }}>
@@ -390,6 +393,11 @@ export function AssignSellerPanel() {
                           </td>
                           <td style={{ ...thtd, textAlign: "right" }}>
                             {r && m ? gramsToKgLabel(m.soldKg.toString()) : "—"}
+                          </td>
+                          <td style={{ ...thtd, textAlign: "right" }}>
+                            {r
+                              ? formatPackageCountLabel(BigInt((r.sales.totalPackageCount ?? "0").trim() || "0"))
+                              : "—"}
                           </td>
                           <td style={{ ...thtd, textAlign: "right", fontWeight: m && m.netTransitKg > 0n ? 600 : undefined }}>
                             {r && m ? gramsToKgLabel(m.netTransitKg.toString()) : "—"}
@@ -457,7 +465,7 @@ export function AssignSellerPanel() {
                 <div className="birzha-assign-seller__detail-block">
                   <h4 className="birzha-assign-seller__detail-block-title">По калибру</h4>
                   <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                    <table style={{ ...tableStyle, minWidth: 680 }} aria-label="Продажи по калибру">
+                    <table style={{ ...tableStyle, minWidth: 760 }} aria-label="Продажи по калибру">
                       <thead>
                         <tr>
                           <th scope="col" style={thHead}>
@@ -465,6 +473,9 @@ export function AssignSellerPanel() {
                           </th>
                           <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                             Продано, кг
+                          </th>
+                          <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                            ящ
                           </th>
                           <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                             Выручка
@@ -483,7 +494,7 @@ export function AssignSellerPanel() {
                       <tbody>
                         {activeSalesByCaliber.length === 0 ? (
                           <tr>
-                            <td colSpan={6} style={thtd}>
+                            <td colSpan={7} style={thtd}>
                               Продаж по калибрам нет.
                             </td>
                           </tr>
@@ -492,6 +503,7 @@ export function AssignSellerPanel() {
                             <tr key={`${activeReport.trip.id}-${row.aggregateKey}`}>
                               <td style={thtd}>{row.lineLabel}</td>
                               <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams.toString())}</td>
+                              <td style={{ ...thtd, textAlign: "right" }}>{formatPackageCountLabel(row.packages)}</td>
                               <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
                               <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cash.toString())} ₽</td>
                               <td style={{ ...thtd, textAlign: "right" }}>
@@ -535,6 +547,9 @@ export function AssignSellerPanel() {
                               Кг
                             </th>
                             <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                              ящ
+                            </th>
+                            <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                               Выручка
                             </th>
                             <th scope="col" style={{ ...thHead, textAlign: "right" }}>
@@ -562,6 +577,9 @@ export function AssignSellerPanel() {
                               <tr key={`${label}-${idx}`}>
                                 <td style={thtd}>{label}</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams)}</td>
+                                <td style={{ ...thtd, textAlign: "right" }}>
+                                  {formatPackageCountLabel(BigInt((row.packageCount ?? "0").trim() || "0"))}
+                                </td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.cashKopecks)} ₽</td>
                                 <td style={{ ...thtd, textAlign: "right" }}>

@@ -7,6 +7,7 @@ import {
   type TripSalesByProductLineRow,
 } from "../format/aggregate-trip-sales-by-product-line.js";
 import { gramsToKgLabel, kopecksToRubLabelSafe } from "../format/money.js";
+import { formatPackageCountLabel } from "../format/seller-trip-metrics.js";
 import {
   formatTripSaleClientDisplayLabel,
   salesChannelTotals,
@@ -20,18 +21,20 @@ import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function sumSalesByProductLine(rows: TripSalesByProductLineRow[]) {
   let grams = 0n;
+  let packages = 0n;
   let revenue = 0n;
   let cash = 0n;
   let card = 0n;
   let debt = 0n;
   for (const row of rows) {
     grams += row.grams;
+    packages += row.packages;
     revenue += row.revenue;
     cash += row.cash;
     card += row.card;
     debt += row.debt;
   }
-  return { grams, revenue, cash, card, debt };
+  return { grams, packages, revenue, cash, card, debt };
 }
 
 function PaymentCells({
@@ -83,8 +86,14 @@ function ChannelSummaryStrip({ channel, sales }: { channel: SaleChannelFilter; s
     >
       <strong>{label}</strong>
       <span>
-        Продано: <strong>{gramsToKgLabel(t.grams)}</strong> кг · выручка{" "}
-        <strong>{kopecksToRubLabelSafe(t.revenueKopecks)} ₽</strong>
+        Продано: <strong>{gramsToKgLabel(t.grams)}</strong> кг
+        {t.packages > 0n ? (
+          <>
+            {" "}
+            · <strong>{formatPackageCountLabel(t.packages)}</strong> ящ
+          </>
+        ) : null}{" "}
+        · выручка <strong>{kopecksToRubLabelSafe(t.revenueKopecks)} ₽</strong>
       </span>
       <span className="birzha-text-muted birzha-ui-sm">
         Оплата: нал {kopecksToRubLabelSafe(t.cashKopecks)} ₽ · карта {kopecksToRubLabelSafe(t.cardTransferKopecks)} ₽ · долг{" "}
@@ -105,6 +114,9 @@ export function FieldSellerTripReport({
   const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const [channel, setChannel] = useState<SaleChannelFilter>("all");
   const { sales } = report;
+  const retailTotals = salesChannelTotals(sales, "retail");
+  const wholesaleTotals = salesChannelTotals(sales, "wholesale");
+  const allTotals = salesChannelTotals(sales, "all");
 
   const salesByProductLine = useMemo(
     () => aggregateTripSalesByProductLine(report, batchById, channel),
@@ -156,6 +168,9 @@ export function FieldSellerTripReport({
                   <th scope="col" style={thHead}>
                     кг
                   </th>
+                  <th scope="col" style={thHead}>
+                    ящ
+                  </th>
                   {payHead}
                 </tr>
               </thead>
@@ -165,6 +180,7 @@ export function FieldSellerTripReport({
                     Розница
                   </th>
                   <td style={thtd}>{gramsToKgLabel(sales.retailGrams)}</td>
+                  <td style={thtd}>{formatPackageCountLabel(retailTotals.packages)}</td>
                   <td style={thtd}>{kopecksToRubLabelSafe(sales.retailRevenueKopecks)} ₽</td>
                   <PaymentCells
                     cashKopecks={sales.retailCashKopecks}
@@ -177,6 +193,7 @@ export function FieldSellerTripReport({
                     Опт
                   </th>
                   <td style={thtd}>{gramsToKgLabel(sales.wholesaleGrams)}</td>
+                  <td style={thtd}>{formatPackageCountLabel(wholesaleTotals.packages)}</td>
                   <td style={thtd}>{kopecksToRubLabelSafe(sales.wholesaleRevenueKopecks)} ₽</td>
                   <PaymentCells
                     cashKopecks={sales.wholesaleCashKopecks}
@@ -189,6 +206,7 @@ export function FieldSellerTripReport({
                     Итого
                   </th>
                   <td style={thtd}>{gramsToKgLabel(sales.totalGrams)}</td>
+                  <td style={thtd}>{formatPackageCountLabel(allTotals.packages)}</td>
                   <td style={thtd}>{kopecksToRubLabelSafe(sales.totalRevenueKopecks)} ₽</td>
                   <PaymentCells
                     cashKopecks={sales.totalCashKopecks}
@@ -212,7 +230,7 @@ export function FieldSellerTripReport({
         />
       ) : (
         <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "1rem" }}>
-          <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Продано по калибрам">
+          <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Продано по калибрам">
             <thead>
               <tr>
                 <th scope="col" style={thHead}>
@@ -220,6 +238,9 @@ export function FieldSellerTripReport({
                 </th>
                 <th scope="col" style={thHead}>
                   кг
+                </th>
+                <th scope="col" style={thHead}>
+                  ящ
                 </th>
                 {payHead}
               </tr>
@@ -229,6 +250,7 @@ export function FieldSellerTripReport({
                 <tr key={row.aggregateKey}>
                   <td style={thtd}>{row.lineLabel}</td>
                   <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
+                  <td style={thtd}>{formatPackageCountLabel(row.packages)}</td>
                   <td style={thtd}>{kopecksToRubLabelSafe(row.revenue.toString())} ₽</td>
                   <PaymentCells cashKopecks={row.cash} cardKopecks={row.card} debtKopecks={row.debt} />
                 </tr>
@@ -240,6 +262,7 @@ export function FieldSellerTripReport({
                   Итого
                 </th>
                 <td style={thtd}>{gramsToKgLabel(caliberTotals.grams.toString())}</td>
+                <td style={thtd}>{formatPackageCountLabel(caliberTotals.packages)}</td>
                 <td style={thtd}>{kopecksToRubLabelSafe(caliberTotals.revenue.toString())} ₽</td>
                 <PaymentCells
                   cashKopecks={caliberTotals.cash}
@@ -261,7 +284,7 @@ export function FieldSellerTripReport({
             <BirzhaEmptyState compact title="Нет продаж по клиентам" />
           ) : (
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-              <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Кому продано">
+              <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Кому продано">
                 <thead>
                   <tr>
                     <th scope="col" style={thHead}>
@@ -269,6 +292,9 @@ export function FieldSellerTripReport({
                     </th>
                     <th scope="col" style={thHead}>
                       кг
+                    </th>
+                    <th scope="col" style={thHead}>
+                      ящ
                     </th>
                     {payHead}
                   </tr>
@@ -278,6 +304,7 @@ export function FieldSellerTripReport({
                     <tr key={`${row.clientLabel}-${idx}`}>
                       <td style={thtd}>{formatTripSaleClientDisplayLabel(row.clientLabel, channel)}</td>
                       <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
+                      <td style={thtd}>{formatPackageCountLabel(BigInt((row.packageCount ?? "0").trim() || "0"))}</td>
                       <td style={thtd}>{kopecksToRubLabelSafe(row.revenueKopecks)} ₽</td>
                       <PaymentCells
                         cashKopecks={row.cashKopecks}

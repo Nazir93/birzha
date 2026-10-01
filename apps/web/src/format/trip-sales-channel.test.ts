@@ -42,6 +42,7 @@ function sales(overrides: Partial<SalesBlock> = {}): SalesBlock {
       {
         batchId: "b1",
         grams: "100",
+        packageCount: "10",
         revenueKopecks: "10000",
         cashKopecks: "10000",
         debtKopecks: "0",
@@ -94,6 +95,7 @@ describe("trip-sales-channel", () => {
   it("salesChannelTotals по каналу", () => {
     const s = sales();
     expect(salesChannelTotals(s, "retail").grams).toBe("100");
+    expect(salesChannelTotals(s, "retail").packages).toBe(10n);
     expect(salesChannelTotals(s, "wholesale").revenueKopecks).toBe("5000");
   });
 

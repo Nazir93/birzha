@@ -61,6 +61,7 @@ export type TripSaleClientLine = {
   /** Пустая строка — продажи без подписи клиента. */
   clientLabel: string;
   grams: bigint;
+  packageCount: bigint;
   revenueKopecks: bigint;
   cashKopecks: bigint;
   debtKopecks: bigint;

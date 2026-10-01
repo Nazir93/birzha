@@ -161,6 +161,7 @@ describe("role-panels", () => {
     expect(canShipLoadingManifest(userWithRoles("admin"))).toBe(true);
     expect(canShipLoadingManifest(userWithRoles("warehouse"))).toBe(true);
     expect(canShipLoadingManifest(userWithRoles("logistics"))).toBe(true);
+    expect(canShipLoadingManifest(userWithRoles("purchaser"))).toBe(true);
     expect(canShipLoadingManifest(userWithRoles("seller"))).toBe(false);
     expect(canShipLoadingManifest(null)).toBe(false);
   });

@@ -528,6 +528,7 @@ export type SalesBlock = {
   byClient: {
     clientLabel: string;
     grams: string;
+    packageCount?: string;
     revenueKopecks: string;
     cashKopecks: string;
     debtKopecks: string;

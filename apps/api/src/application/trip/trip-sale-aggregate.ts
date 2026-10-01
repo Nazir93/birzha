@@ -28,6 +28,7 @@ type BatchMaps = {
 
 type ClientMaps = {
   grams: Map<string, bigint>;
+  packages: Map<string, bigint>;
   revenue: Map<string, bigint>;
   cash: Map<string, bigint>;
   debt: Map<string, bigint>;
@@ -48,6 +49,7 @@ function emptyBatchMaps(): BatchMaps {
 function emptyClientMaps(): ClientMaps {
   return {
     grams: new Map(),
+    packages: new Map(),
     revenue: new Map(),
     cash: new Map(),
     debt: new Map(),
@@ -66,6 +68,7 @@ function addToBatchMaps(maps: BatchMaps, batchId: string, r: TripSaleRowForAggre
 
 function addToClientMaps(maps: ClientMaps, clientKey: string, r: TripSaleRowForAggregate, card: bigint): void {
   maps.grams.set(clientKey, (maps.grams.get(clientKey) ?? 0n) + r.grams);
+  maps.packages.set(clientKey, (maps.packages.get(clientKey) ?? 0n) + (r.packageCount ?? 0n));
   maps.revenue.set(clientKey, (maps.revenue.get(clientKey) ?? 0n) + r.revenueKopecks);
   maps.cash.set(clientKey, (maps.cash.get(clientKey) ?? 0n) + r.cashKopecks);
   maps.debt.set(clientKey, (maps.debt.get(clientKey) ?? 0n) + r.debtKopecks);
@@ -108,6 +111,7 @@ function clientLinesFromMaps(maps: ClientMaps): TripSaleClientLine[] {
   return clientKeys.map((clientLabel) => ({
     clientLabel,
     grams: maps.grams.get(clientLabel) ?? 0n,
+    packageCount: maps.packages.get(clientLabel) ?? 0n,
     revenueKopecks: maps.revenue.get(clientLabel) ?? 0n,
     cashKopecks: maps.cash.get(clientLabel) ?? 0n,
     debtKopecks: maps.debt.get(clientLabel) ?? 0n,

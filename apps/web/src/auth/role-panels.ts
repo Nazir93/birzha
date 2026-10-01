@@ -157,7 +157,7 @@ export function canEditPurchaseDocumentLines(user: AuthUser | null): boolean {
 const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics", "purchaser"]);
 
 /** Привязка/отвязка ПН, отгрузка — как `ship` в API: admin, manager, warehouse, logistics. */
-const SHIP_LOADING_MANIFEST_ROLES = new Set<string>(["admin", "manager", "warehouse", "logistics"]);
+const SHIP_LOADING_MANIFEST_ROLES = new Set<string>(["admin", "manager", "warehouse", "logistics", "purchaser"]);
 
 /** Журнал «возврат на склад» POST/DELETE — как `batchCreate` в API. */
 const WAREHOUSE_RETURN_ROLES = new Set<string>(["admin", "manager", "purchaser", "warehouse"]);

@@ -50,6 +50,7 @@ export function AccountingTripsSummary() {
 
   const tripTotals = useMemo(() => {
     let kg = 0n;
+    let packages = 0n;
     let revenue = 0n;
     let costSold = 0n;
     let costShort = 0n;
@@ -65,6 +66,7 @@ export function AccountingTripsSummary() {
       }
       const r = q.data;
       kg += BigInt(r.sales.totalGrams || "0");
+      packages += BigInt((r.sales.totalPackageCount || "0").trim() || "0");
       revenue += BigInt(r.financials.revenueKopecks || "0");
       costSold += BigInt(r.financials.costOfSoldKopecks || "0");
       costShort += BigInt(r.financials.costOfShortageKopecks || "0");
@@ -74,7 +76,7 @@ export function AccountingTripsSummary() {
       card += BigInt(r.sales.totalCardTransferKopecks || "0");
       rows += 1;
     }
-    return { kg, revenue, costSold, costShort, gross, cash, debt, card, rows };
+    return { kg, packages, revenue, costSold, costShort, gross, cash, debt, card, rows };
   }, [tripsPageSlice, reportQueries]);
 
   if (tripsQuery.isPending) {
@@ -136,6 +138,9 @@ export function AccountingTripsSummary() {
                 Продажа, кг
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                ящ
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Выручка, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
@@ -178,7 +183,7 @@ export function AccountingTripsSummary() {
                 return (
                   <tr key={t.id}>
                     {tripMetaCells}
-                    <td colSpan={6} style={thtd}>
+                    <td colSpan={7} style={thtd}>
                       <ErrorAlert
                         className="birzha-alert--compact"
                         message={`Нет отчёта по рейсу ${t.tripNumber}.`}
@@ -196,7 +201,7 @@ export function AccountingTripsSummary() {
                 return (
                   <tr key={t.id}>
                     {tripMetaCells}
-                    <td colSpan={6} className="birzha-text-muted" style={thtd}>
+                    <td colSpan={7} className="birzha-text-muted" style={thtd}>
                       …
                     </td>
                     <td style={thtd}>
@@ -212,6 +217,11 @@ export function AccountingTripsSummary() {
                 <tr key={t.id}>
                   {tripMetaCells}
                   <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(r.sales.totalGrams)}</td>
+                  <td style={{ ...thtd, textAlign: "right" }}>
+                    {((r.sales.totalPackageCount ?? "0").trim() || "0") === "0"
+                      ? "—"
+                      : r.sales.totalPackageCount}
+                  </td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.revenueKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.costOfSoldKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.financials.costOfShortageKopecks)}</td>
@@ -239,6 +249,9 @@ export function AccountingTripsSummary() {
                   Итого на странице ({tripTotals.rows} рейс.)
                 </th>
                 <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(tripTotals.kg.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>
+                  {tripTotals.packages > 0n ? tripTotals.packages.toString() : "—"}
+                </td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.revenue.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costSold.toString())}</td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.costShort.toString())}</td>

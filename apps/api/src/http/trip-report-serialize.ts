@@ -115,6 +115,7 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     byClient: aggregate.byClient.map((l) => ({
       clientLabel: l.clientLabel,
       grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),
@@ -141,6 +142,7 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     retailByClient: aggregate.retailByClient.map((l) => ({
       clientLabel: l.clientLabel,
       grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),
@@ -149,6 +151,7 @@ export function saleLedgerAggregateToJson(aggregate: TripSaleAggregate): SaleLed
     wholesaleByClient: aggregate.wholesaleByClient.map((l) => ({
       clientLabel: l.clientLabel,
       grams: l.grams.toString(),
+      packageCount: l.packageCount.toString(),
       revenueKopecks: l.revenueKopecks.toString(),
       cashKopecks: l.cashKopecks.toString(),
       debtKopecks: l.debtKopecks.toString(),

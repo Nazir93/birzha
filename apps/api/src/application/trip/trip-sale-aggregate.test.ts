@@ -8,6 +8,7 @@ describe("buildTripSaleAggregateFromRows", () => {
       {
         batchId: "b1",
         grams: 100n,
+        packageCount: 4n,
         revenueKopecks: 1000n,
         cashKopecks: 600n,
         debtKopecks: 400n,
@@ -43,6 +44,7 @@ describe("buildTripSaleAggregateFromRows", () => {
     expect(agg.byClient.map((c) => c.clientLabel)).toEqual(["А", "Б", ""]);
     const a = agg.byClient.find((c) => c.clientLabel === "А")!;
     expect(a.grams).toBe(100n);
+    expect(a.packageCount).toBe(4n);
     const empty = agg.byClient.find((c) => c.clientLabel === "")!;
     expect(empty.grams).toBe(30n);
   });

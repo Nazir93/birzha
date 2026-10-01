@@ -27,16 +27,27 @@ export function salesClientLinesForChannel(sales: SalesBlock, channel: SaleChann
 
 export type SalesChannelTotals = {
   grams: string;
+  packages: bigint;
   revenueKopecks: string;
   cashKopecks: string;
   debtKopecks: string;
   cardTransferKopecks: string;
 };
 
+function sumLinePackages(lines: { packageCount?: string }[]): bigint {
+  let n = 0n;
+  for (const line of lines) {
+    const raw = (line.packageCount ?? "0").trim();
+    n += BigInt(raw === "" ? "0" : raw);
+  }
+  return n;
+}
+
 export function salesChannelTotals(sales: SalesBlock, channel: SaleChannelFilter): SalesChannelTotals {
   if (channel === "retail") {
     return {
       grams: sales.retailGrams,
+      packages: sumLinePackages(sales.retailByBatch ?? []),
       revenueKopecks: sales.retailRevenueKopecks,
       cashKopecks: sales.retailCashKopecks,
       debtKopecks: sales.retailDebtKopecks,
@@ -46,14 +57,17 @@ export function salesChannelTotals(sales: SalesBlock, channel: SaleChannelFilter
   if (channel === "wholesale") {
     return {
       grams: sales.wholesaleGrams,
+      packages: sumLinePackages(sales.wholesaleByBatch ?? []),
       revenueKopecks: sales.wholesaleRevenueKopecks,
       cashKopecks: sales.wholesaleCashKopecks,
       debtKopecks: sales.wholesaleDebtKopecks,
       cardTransferKopecks: sales.wholesaleCardTransferKopecks,
     };
   }
+  const fromTotal = BigInt((sales.totalPackageCount ?? "0").trim() || "0");
   return {
     grams: sales.totalGrams,
+    packages: fromTotal > 0n ? fromTotal : sumLinePackages(sales.byBatch),
     revenueKopecks: sales.totalRevenueKopecks,
     cashKopecks: sales.totalCashKopecks,
     debtKopecks: sales.totalDebtKopecks,

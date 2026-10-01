@@ -878,6 +878,9 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <th scope="col" style={thHead} title="Нетто (грамм продукта в продажах)">
                         Прод., нетто кг
                       </th>
+                      <th scope="col" style={thHead}>
+                        ящ
+                      </th>
                       {!fieldSellerSalesReport ? (
                         <th scope="col" style={thHead}>
                           Выручка
@@ -893,6 +896,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={`${row.clientLabel}-${idx}`}>
                         <td style={thtd}>{formatTripSaleClientDisplayLabel(row.clientLabel, "all")}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams)}</td>
+                        <td style={thtd}>{packageCountLabel(row.packageCount)}</td>
                         {!fieldSellerSalesReport ? (
                           <td style={thtd}>{kopecksToRubLabel(row.revenueKopecks)} ₽</td>
                         ) : null}
