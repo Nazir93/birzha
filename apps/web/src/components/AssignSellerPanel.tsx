@@ -181,10 +181,15 @@ export function AssignSellerPanel() {
 
   const activeReport = activeTripId ? reportByTripId.get(activeTripId) ?? null : null;
 
-  const activeSalesByCaliber = useMemo(
-    () => (activeReport ? aggregateTripSalesByProductLine(activeReport, batchById) : []),
-    [activeReport, batchById],
-  );
+  const activeSalesByCaliber = useMemo(() => {
+    if (!activeReport) {
+      return [];
+    }
+    if (reportBatchIds.length > 0 && batchesByIdsQuery.isPending) {
+      return [];
+    }
+    return aggregateTripSalesByProductLine(activeReport, batchById);
+  }, [activeReport, batchById, reportBatchIds.length, batchesByIdsQuery.isPending]);
 
   const closeTripSoldOutMut = useMutation({
     mutationFn: async (tripId: string) => {
@@ -484,7 +489,7 @@ export function AssignSellerPanel() {
                           </tr>
                         ) : (
                           activeSalesByCaliber.map((row) => (
-                            <tr key={`${activeReport.trip.id}-${row.lineLabel}`}>
+                            <tr key={`${activeReport.trip.id}-${row.aggregateKey}`}>
                               <td style={thtd}>{row.lineLabel}</td>
                               <td style={{ ...thtd, textAlign: "right" }}>{gramsToKgLabel(row.grams.toString())}</td>
                               <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>

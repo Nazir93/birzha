@@ -40,8 +40,8 @@ import {
   tripsFullListQueryOptions,
   wholesalersFullListQueryOptions,
 } from "../query/core-list-queries.js";
-import { kopecksToRubLabel } from "../format/money.js";
-import { parseSellFromTripForm } from "../validation/api-schemas.js";
+import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { parseSellFromTripForm, parseRecordTripShortageForm } from "../validation/api-schemas.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { SellerTripSaleCorrections } from "./SellerTripSaleCorrections.js";
@@ -143,6 +143,10 @@ export function SellFromTripSection() {
   /** Ключ выбранной плитки калибра (группа партий, как в погрузочной накладной). */
   const [sellCaliberKey, setSellCaliberKey] = useState<string | null>(null);
 
+  const [shortBatchId, setShortBatchId] = useState("");
+  const [shortKg, setShortKg] = useState("");
+  const [shortReason, setShortReason] = useState("");
+
   const [sellerSaleFlash, setSellerSaleFlash] = useState<{
     kg: string;
     grossKg?: string | null;
@@ -161,6 +165,9 @@ export function SellFromTripSection() {
 
   useEffect(() => {
     setSellerSaleFlash(null);
+    setShortBatchId("");
+    setShortKg("");
+    setShortReason("");
   }, [sellTripId]);
 
   useEffect(() => {
@@ -851,6 +858,28 @@ export function SellFromTripSection() {
     },
   });
 
+  const shortage = useMutation({
+    mutationFn: async () => {
+      const { batchId, body } = parseRecordTripShortageForm(shortBatchId, sellTripId, shortKg, shortReason);
+      await apiPostJson(`/api/batches/${encodeURIComponent(batchId)}/record-trip-shortage`, body);
+    },
+    onSuccess: () => {
+      invalidateDomain();
+      setShortBatchId("");
+      setShortKg("");
+      setShortReason("");
+    },
+  });
+
+  const shortageBatchOptions = useMemo(
+    () =>
+      sellerTripSellTiles.map((t) => ({
+        value: t.group.primaryBatchId,
+        label: `${t.headline} · остаток ${gramsToKgLabel(t.totalNetG.toString())} кг`,
+      })),
+    [sellerTripSellTiles],
+  );
+
   return (
     <BirzhaDisclosure
       id={scrollTargetId}
@@ -1308,6 +1337,89 @@ export function SellFromTripSection() {
           tripOpen={selectedTripOpen}
           sellableRows={sellableOnTripRows}
         />
+      ) : null}
+      {selectedTripOpen && sellTripIdTrim ? (
+        <BirzhaDisclosure
+          defaultOpen={false}
+          title={
+            <span className="birzha-disclosure__title-stack">
+              <span className="birzha-section-title birzha-section-title--sm" style={{ margin: 0 }}>
+                Потеря веса / недостача
+              </span>
+            </span>
+          }
+        >
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+            Усушка или пропавший вес с машины — спишется с остатка рейса и попадёт в отчёт админки как недостача.
+          </p>
+          {sellableOnTripRows.length === 0 ? (
+            <BirzhaEmptyState compact title="Нет остатка для недостачи" />
+          ) : (
+            <>
+              <label htmlFor={`${idPrefix}-short-batch`} className="birzha-form-label">
+                Калибр *
+              </label>
+              <BirzhaSelect
+                id={`${idPrefix}-short-batch`}
+                value={shortBatchId}
+                onChange={setShortBatchId}
+                style={{ ...fieldStyle, maxWidth: "100%" }}
+                disabled={sellBatchSelectDisabled}
+                placeholder="— выберите калибр —"
+                options={[
+                  { value: "", label: "— выберите калибр —" },
+                  ...shortageBatchOptions,
+                ]}
+              />
+              <label
+                htmlFor={`${idPrefix}-short-kg`}
+                className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+              >
+                кг *
+              </label>
+              <input
+                id={`${idPrefix}-short-kg`}
+                value={shortKg}
+                onChange={(e) => setShortKg(e.target.value)}
+                style={fieldStyle}
+                className={sellerFieldClass}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+              <label
+                htmlFor={`${idPrefix}-short-reason`}
+                className="birzha-form-label birzha-form-label--block birzha-form-label--push-md"
+              >
+                Причина *
+              </label>
+              <input
+                id={`${idPrefix}-short-reason`}
+                value={shortReason}
+                onChange={(e) => setShortReason(e.target.value)}
+                style={fieldStyle}
+                className={sellerFieldClass}
+                placeholder="например усушка"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="birzha-btn"
+                style={{ marginTop: "0.75rem" }}
+                disabled={shortage.isPending || !shortBatchId.trim()}
+                aria-busy={shortage.isPending || undefined}
+                onClick={() => shortage.mutate()}
+              >
+                {shortage.isPending ? "…" : "Зафиксировать недостачу"}
+              </button>
+              <FieldError error={shortage.error as Error | null} />
+              {shortage.isSuccess ? (
+                <p className="birzha-text-muted birzha-ui-sm" style={{ marginTop: "0.5rem" }} role="status">
+                  Недостача записана.
+                </p>
+              ) : null}
+            </>
+          )}
+        </BirzhaDisclosure>
       ) : null}
     </BirzhaDisclosure>
   );

@@ -118,6 +118,11 @@ export function FieldSellerTripReport({
 
   return (
     <div style={{ marginTop: "1rem" }} role="region" aria-label={`Отчёт ${report.trip.tripNumber}`}>
+      {report.shortage.totalGrams !== "0" && report.shortage.totalGrams !== "" ? (
+        <p className="birzha-callout-info" style={{ margin: "0 0 1rem", fontSize: "0.92rem" }} role="status">
+          Недостача по рейсу: <strong>{gramsToKgLabel(report.shortage.totalGrams)} кг</strong>
+        </p>
+      ) : null}
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
         Анализ продаж
       </h3>
@@ -213,7 +218,7 @@ export function FieldSellerTripReport({
             </thead>
             <tbody>
               {salesByProductLine.map((row) => (
-                <tr key={row.lineLabel}>
+                <tr key={row.aggregateKey}>
                   <td style={thtd}>{row.lineLabel}</td>
                   <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
                   <td style={thtd}>{kopecksToRubLabelSafe(row.revenue.toString())} ₽</td>

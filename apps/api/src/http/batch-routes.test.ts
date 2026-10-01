@@ -303,6 +303,65 @@ describe("Batch HTTP", () => {
     await app.close();
   });
 
+  it("POST record-trip-shortage: полевой seller — свой рейс 200, чужой 403", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const batches = new InMemoryBatchRepository();
+    const app = await buildApp({ env, db: null, batchRepository: batches });
+
+    app.addHook("onRequest", async (req) => {
+      const actor = req.headers["x-test-actor"];
+      if (typeof actor !== "string" || !actor) {
+        return;
+      }
+      const grant = { roleCode: "seller", scopeType: "global", scopeId: "" };
+      (req as { user?: { sub: string; login: string; roles: typeof grant[] } }).user = {
+        sub: actor,
+        login: actor,
+        roles: [grant],
+      };
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/batches",
+      payload: {
+        id: "sh-seller",
+        purchaseId: "p-1",
+        totalKg: 100,
+        pricePerKg: 1,
+        distribution: "on_hand",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: { id: "t-seller-own", tripNumber: "Ф-own", assignedSellerUserId: "seller-alice" },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/batches/sh-seller/ship-to-trip",
+      payload: { kg: 40, tripId: "t-seller-own" },
+    });
+
+    const forbidden = await app.inject({
+      method: "POST",
+      url: "/batches/sh-seller/record-trip-shortage",
+      headers: { "x-test-actor": "seller-bob" },
+      payload: { tripId: "t-seller-own", kg: 1, reason: "усушка" },
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const ok = await app.inject({
+      method: "POST",
+      url: "/batches/sh-seller/record-trip-shortage",
+      headers: { "x-test-actor": "seller-alice" },
+      payload: { tripId: "t-seller-own", kg: 2, reason: "усушка" },
+    });
+    expect(ok.statusCode).toBe(200);
+
+    await app.close();
+  });
+
   it("PATCH /batches/:batchId/allocation без PostgreSQL — 503", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const app = await buildApp({ env, db: null, batchRepository: new InMemoryBatchRepository() });

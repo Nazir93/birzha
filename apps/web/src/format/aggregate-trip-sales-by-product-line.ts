@@ -12,6 +12,8 @@ function bi(x: string | undefined): bigint {
 }
 
 export type TripSalesByProductLineRow = {
+  /** Стабильный ключ строки (товар+калибр или id партии, если справочник ещё не подгрузился). */
+  aggregateKey: string;
   lineLabel: string;
   productGroup: string | null;
   grams: bigint;
@@ -39,6 +41,7 @@ export function aggregateTripSalesByProductLine(
     let row = m.get(key);
     if (!row) {
       row = {
+        aggregateKey: key,
         lineLabel: salesCaliberLineLabel(b, key),
         productGroup: b?.nakladnaya?.productGroup?.trim() || null,
         grams: 0n,

@@ -92,6 +92,7 @@ describe("aggregateTripSalesByProductLine", () => {
     ]);
     const rows = aggregateTripSalesByProductLine(report, map);
     expect(rows).toHaveLength(1);
+    expect(rows[0]!.aggregateKey).toBe("помидоры::5");
     expect(rows[0]!.lineLabel).toBe("Помидоры · 5");
     expect(rows[0]!.grams).toBe(3000n);
     expect(rows[0]!.packages).toBe(6n);
@@ -189,5 +190,35 @@ describe("aggregateTripSalesByProductLine", () => {
     const wholesale = aggregateTripSalesByProductLine(report, map, "wholesale");
     expect(wholesale).toHaveLength(1);
     expect(wholesale[0]!.lineLabel).toBe("Огурцы · 3");
+  });
+
+  it("без справочника партий — отдельные ключи, не одна подпись на все строки", () => {
+    const report = minimalReport({
+      sales: {
+        ...minimalReport().sales,
+        byBatch: [
+          {
+            batchId: "b-ns",
+            grams: "39300",
+            revenueKopecks: "471600",
+            cashKopecks: "471600",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+          {
+            batchId: "b-5",
+            grams: "619100",
+            revenueKopecks: "11406300",
+            cashKopecks: "11406300",
+            debtKopecks: "0",
+            cardTransferKopecks: "0",
+          },
+        ],
+      },
+    });
+    const rows = aggregateTripSalesByProductLine(report, new Map());
+    expect(rows.map((r) => r.aggregateKey).sort()).toEqual(["id:b-5", "id:b-ns"]);
+    expect(new Set(rows.map((r) => r.lineLabel)).size).toBe(1);
+    expect(rows[0]!.lineLabel).toBe("Партия без данных накладной");
   });
 });

@@ -420,6 +420,16 @@ export function registerBatchRoutes(
     try {
       const params = z.object({ batchId: z.string().min(1) }).parse(req.params);
       const body = recordTripShortageBodySchema.parse(req.body);
+      const u = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+      if (u && isGlobalSellerOnly(u.roles)) {
+        const trip = await trips.findById(body.tripId);
+        if (!trip) {
+          return reply.code(404).send({ error: "trip_not_found", tripId: body.tripId });
+        }
+        if (!tripVisibleToFieldSeller(trip, u.sub)) {
+          return reply.code(403).send({ error: "forbidden" });
+        }
+      }
       await recordShortage.execute({
         batchId: params.batchId,
         tripId: body.tripId,

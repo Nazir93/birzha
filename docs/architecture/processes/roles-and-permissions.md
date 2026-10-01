@@ -86,7 +86,7 @@
 
 **Реализация в API (MVP, текущий код):** в таблицу `trip_batch_sales` пишется `recorded_by_user_id` (пользователь из JWT при `POST /batches/…/sell-from-trip` и `POST /sync` с `sell_from_trip`). Для учётной записи с **глобальной** ролью **только** `seller` (без `warehouse`, `logistics`, `manager` и т.д., см. `isGlobalSellerOnly` / `isFieldSellerOnly`) блоки **`sales`** и связанные **`financials`** в **`GET /api/trips/:tripId/shipment-report`** строятся только по таким строкам; **отгрузка в рейс** и **недостача** в отчёте — общие по рейсу. Дополнительно в том же ответе при этом фильтре отдаётся **`salesForTripStock`** — все продажи по рейсу в кг (для остатка «в машине» в форме продавца); остальные роли получают полный отчёт по продажам в одном блоке `sales`.
 
-**Веб (кабинет `/s`):** учётная запись с **только** полевой ролью `seller` (`isFieldSellerOnly`) видит «Продажа» (`/s`) и **«Отчёт по рейсу»** (`/s/reports`) по закреплённым за ней рейсам; пункт «Недостача по рейсу» (`/s/operations`) в боковом меню не показывается.
+**Веб (кабинет `/s`):** учётная запись с **только** полевой ролью `seller` (`isFieldSellerOnly`) видит «Продажа» (`/s`) и **«Отчёт по рейсу»** (`/s/reports`) по закреплённым за ней рейсам; пункт «Недостача по рейсу» (`/s/operations`) в боковом меню **не** показывается — недостача/потеря веса фиксируется блоком на экране продажи.
 
 **Веб (кабинет `/o`, закупщик):** роль **`purchaser`** без `admin`/`manager` (`isPurchaserScoped`) стартует со **сводки** `/o` (KPI и разрез по складам только по своим накладным). В сайдбаре — те же операционные разделы, что у админа: закупка, рейсы, погрузка, возврат на склад, догрузка, смена рейса. Создание/закрытие рейса — как у логиста (`tripWrite`: admin/manager/logistics/**purchaser**). Без отчётов/продаж/недостачи/архива/настроек. Отчёт «Мои закупки» — со сводки («Подробнее») или `/o/purchase-by-purchaser`.
 
@@ -101,7 +101,7 @@
 - **`POST /api/loading-manifests/:manifestId/detach-trip`** — открепить ПН от открытого рейса, вернуть массу на склад (те же ограничения). Те же роли `ship`.
 - **`GET /api/loading-manifests/:manifestId`** — в ответе `tripDetachLocked` / `tripDetachLockedReason` для UI.
 
-**Недостача по рейсу:** **`POST /api/batches/:batchId/record-trip-shortage`** — роли `admin`, `manager`, `warehouse`, `logistics`, `receiver` (`SHORTAGE_ROLES` в `route-auth.ts`).
+**Недостача по рейсу:** **`POST /api/batches/:batchId/record-trip-shortage`** — роли `admin`, `manager`, `warehouse`, `logistics`, `receiver`, **`seller`** (`SHORTAGE_ROLES` в `route-auth.ts`). У учётной записи с **только** полевой ролью `seller` (`isGlobalSellerOnly`) — только рейс, закреплённый за этим пользователем (иначе **403**), как у `sell-from-trip`.
 
 - руководитель видит агрегаты и детализацию по ролям и регионам
 

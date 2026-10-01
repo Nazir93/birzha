@@ -204,7 +204,15 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const batchRows = useMemo(() => (r ? buildTripBatchRows(r) : []), [r]);
 
-  const salesByProductLine = useMemo(() => (r ? aggregateTripSalesByProductLine(r, batchById) : []), [r, batchById]);
+  const salesByProductLine = useMemo(() => {
+    if (!r) {
+      return [];
+    }
+    if (reportBatchIds.length > 0 && batchesByIdsQuery.isPending) {
+      return [];
+    }
+    return aggregateTripSalesByProductLine(r, batchById);
+  }, [r, batchById, reportBatchIds.length, batchesByIdsQuery.isPending]);
 
   const loadingManifest = useMemo(
     () => (r ? aggregateTripShipmentByCaliber(r, batchById) : null),
@@ -815,7 +823,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                   </thead>
                   <tbody>
                     {salesByProductLine.map((row) => (
-                      <tr key={row.lineLabel}>
+                      <tr key={row.aggregateKey}>
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
                         <td style={thtd}>
