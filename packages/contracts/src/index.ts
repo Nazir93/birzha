@@ -20,19 +20,32 @@ export type { CreateSupplierBody } from "./supplier.js";
 export {
   accountingPayablesQuerySchema,
   accountingPeriodSummaryQuerySchema,
+  accountingPurchaserExpensesQuerySchema,
   accountingReceivablesQuerySchema,
   createDebtPaymentBodySchema,
+  createPurchaserExpenseBodySchema,
   createSupplierPaymentBodySchema,
   createTripExpenseBodySchema,
 } from "./accounting.js";
 export type {
   AccountingPayablesQuery,
   AccountingPeriodSummaryQuery,
+  AccountingPurchaserExpensesQuery,
   AccountingReceivablesQuery,
   CreateDebtPaymentBody,
+  CreatePurchaserExpenseBody,
   CreateSupplierPaymentBody,
   CreateTripExpenseBody,
 } from "./accounting.js";
+export {
+  createSellerFieldExpenseBodySchema,
+  sellerFieldExpenseCategorySchema,
+  sellerFieldExpensesQuerySchema,
+} from "./seller-field-expenses.js";
+export type {
+  CreateSellerFieldExpenseBody,
+  SellerFieldExpensesQuery,
+} from "./seller-field-expenses.js";
 export {
   createPurchaseDocumentBodySchema,
   purchaseDocumentLineInputSchema,

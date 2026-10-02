@@ -549,6 +549,8 @@ export type FinancialsBlock = {
   debtOutstandingKopecks?: string;
   expensesKopecks?: string;
   netProfitKopecks?: string;
+  fieldExpensesKopecks?: string;
+  cashToHandOverKopecks?: string;
 };
 
 export type ShipmentReportResponse = {

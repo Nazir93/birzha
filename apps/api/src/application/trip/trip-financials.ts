@@ -16,6 +16,10 @@ export type TripFinancials = {
   expensesKopecks: bigint;
   /** Валовая − расходы. */
   netProfitKopecks: bigint;
+  /** Полевые траты продавца с кассы. */
+  fieldExpensesKopecks: bigint;
+  /** Нал с продаж − полевые траты (к сдаче). */
+  cashToHandOverKopecks: bigint;
 };
 
 /**
@@ -29,6 +33,7 @@ export function computeTripFinancials(
   extras?: {
     debtPaidKopecks?: bigint;
     expensesKopecks?: bigint;
+    fieldExpensesKopecks?: bigint;
   },
 ): TripFinancials {
   let costOfSold = 0n;
@@ -53,6 +58,7 @@ export function computeTripFinancials(
   const debtOutstandingRaw = sales.totalDebtKopecks - debtPaidKopecks;
   const debtOutstandingKopecks = debtOutstandingRaw > 0n ? debtOutstandingRaw : 0n;
   const expensesKopecks = extras?.expensesKopecks ?? 0n;
+  const fieldExpensesKopecks = extras?.fieldExpensesKopecks ?? 0n;
   return {
     revenueKopecks: revenue,
     costOfSoldKopecks: costOfSold,
@@ -62,5 +68,7 @@ export function computeTripFinancials(
     debtOutstandingKopecks,
     expensesKopecks,
     netProfitKopecks: grossProfitKopecks - expensesKopecks,
+    fieldExpensesKopecks,
+    cashToHandOverKopecks: sales.totalCashKopecks - fieldExpensesKopecks,
   };
 }

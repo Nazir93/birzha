@@ -2,6 +2,7 @@ import { TripNotFoundError } from "../errors.js";
 import { loadBatchOrThrow } from "../load-batch.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../ports/debt-payment-repository.port.js";
+import type { SellerFieldExpenseRepository } from "../ports/seller-field-expense-repository.port.js";
 import type { TripExpenseRepository } from "../ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
@@ -19,6 +20,7 @@ export class GetTripReportUseCase {
     private readonly batches: BatchRepository,
     private readonly debtPayments?: DebtPaymentRepository | null,
     private readonly tripExpenses?: TripExpenseRepository | null,
+    private readonly sellerFieldExpenses?: SellerFieldExpenseRepository | null,
   ) {}
 
   /**
@@ -59,9 +61,13 @@ export class GetTripReportUseCase {
     const expensesKopecks = this.tripExpenses
       ? await this.tripExpenses.sumByTripId(tripId)
       : 0n;
+    const fieldExpensesKopecks = this.sellerFieldExpenses
+      ? await this.sellerFieldExpenses.sumByTripId(tripId)
+      : 0n;
     const financials = computeTripFinancials(sales, shortage, purchaseRubPerKgByBatchId, {
       debtPaidKopecks,
       expensesKopecks,
+      fieldExpensesKopecks,
     });
 
     return { trip, shipment, sales, salesForTripStock, shortage, financials };

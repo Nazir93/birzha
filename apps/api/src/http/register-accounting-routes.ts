@@ -2,8 +2,10 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   accountingPayablesQuerySchema,
   accountingPeriodSummaryQuerySchema,
+  accountingPurchaserExpensesQuerySchema,
   accountingReceivablesQuerySchema,
   createDebtPaymentBodySchema,
+  createPurchaserExpenseBodySchema,
   createSupplierPaymentBodySchema,
   createTripExpenseBodySchema,
 } from "@birzha/contracts";
@@ -13,15 +15,18 @@ import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { AccountingPayablesUseCase } from "../application/accounting/accounting-payables.use-case.js";
 import { AccountingReceivablesUseCase } from "../application/accounting/accounting-receivables.use-case.js";
 import { AccountingTripExpensesUseCase } from "../application/accounting/accounting-trip-expenses.use-case.js";
+import { PurchaserExpensesUseCase } from "../application/accounting/purchaser-expenses.use-case.js";
+import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../application/ports/debt-payment-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
+import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
+import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
 import type { SupplierPaymentRepository } from "../application/ports/supplier-payment-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../application/ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../application/ports/trip-shortage-repository.port.js";
-import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import { buildAccountingPeriodSummary } from "./accounting-period-summary.js";
 
 import { sendMappedError } from "./map-http-error.js";
@@ -46,6 +51,8 @@ export function registerAccountingRoutes(
     purchaseDocuments?: PurchaseDocumentRepository | null;
     supplierPayments?: SupplierPaymentRepository | null;
     tripExpenses?: TripExpenseRepository | null;
+    sellerFieldExpenses?: SellerFieldExpenseRepository | null;
+    purchaserExpenses?: PurchaserExpenseRepository | null;
     shipments?: TripShipmentRepository | null;
     shortages?: TripShortageRepository | null;
     batches?: BatchRepository | null;
@@ -61,6 +68,8 @@ export function registerAccountingRoutes(
     deps.tripExpenses != null
       ? new AccountingTripExpensesUseCase(deps.trips, deps.tripExpenses)
       : null;
+  const purchaserExpensesUc =
+    deps.purchaserExpenses != null ? new PurchaserExpensesUseCase(deps.purchaserExpenses) : null;
 
   app.get("/accounting/receivables", { ...withPreHandlers(routeAuth.accountingRead) }, async (req, reply) => {
     try {
@@ -350,6 +359,88 @@ export function registerAccountingRoutes(
     );
   }
 
+  if (purchaserExpensesUc) {
+    const pe = purchaserExpensesUc;
+
+    app.get(
+      "/accounting/purchaser-expenses",
+      { ...withPreHandlers(routeAuth.accountingRead) },
+      async (req, reply) => {
+        try {
+          const q = accountingPurchaserExpensesQuerySchema.parse(req.query);
+          const result = await pe.list({
+            fromYmd: q.from,
+            toYmd: q.to,
+            purchaserUserId: q.purchaserUserId,
+          });
+          return reply.send({
+            totalKopecks: result.totalKopecks.toString(),
+            salaryKopecks: result.salaryKopecks.toString(),
+            otherKopecks: result.otherKopecks.toString(),
+            expenses: result.expenses.map((e) => ({
+              id: e.id,
+              category: e.category,
+              amountKopecks: e.amountKopecks.toString(),
+              expenseDate: e.expenseDate.toISOString().slice(0, 10),
+              purchaserUserId: e.purchaserUserId,
+              purchaserLabel: e.purchaserLabel,
+              comment: e.comment,
+              recordedByUserId: e.recordedByUserId,
+              createdAt: e.createdAt.toISOString(),
+            })),
+          });
+        } catch (error) {
+          return sendMappedError(reply, error);
+        }
+      },
+    );
+
+    app.post(
+      "/accounting/purchaser-expenses",
+      { ...withPreHandlers(routeAuth.accountingWrite) },
+      async (req, reply) => {
+        try {
+          const body = createPurchaserExpenseBodySchema.parse(req.body);
+          const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+          const row = await pe.record({
+            expenseDate: parseYmdToUtcDate(body.expenseDate),
+            category: body.category,
+            amountKopecks: amountToBigInt(body.amountKopecks),
+            purchaserUserId: body.purchaserUserId,
+            purchaserLabel: body.purchaserLabel,
+            comment: body.comment,
+            recordedByUserId: user?.sub ?? null,
+          });
+          return reply.code(201).send({
+            id: row.id,
+            category: row.category,
+            amountKopecks: row.amountKopecks.toString(),
+            expenseDate: row.expenseDate.toISOString().slice(0, 10),
+            purchaserUserId: row.purchaserUserId,
+            purchaserLabel: row.purchaserLabel,
+            comment: row.comment,
+          });
+        } catch (error) {
+          return sendMappedError(reply, error);
+        }
+      },
+    );
+
+    app.delete(
+      "/accounting/purchaser-expenses/:expenseId",
+      { ...withPreHandlers(routeAuth.accountingAdminDelete) },
+      async (req, reply) => {
+        try {
+          const { expenseId } = z.object({ expenseId: z.string().min(1) }).parse(req.params);
+          await pe.delete(expenseId);
+          return reply.code(204).send();
+        } catch (error) {
+          return sendMappedError(reply, error);
+        }
+      },
+    );
+  }
+
   app.get(
     "/accounting/period-summary",
     { ...withPreHandlers(routeAuth.accountingRead) },
@@ -365,6 +456,8 @@ export function registerAccountingRoutes(
           purchaseDocuments: deps.purchaseDocuments ?? null,
           supplierPayments: deps.supplierPayments ?? null,
           tripExpenses: deps.tripExpenses ?? null,
+          sellerFieldExpenses: deps.sellerFieldExpenses ?? null,
+          purchaserExpenses: deps.purchaserExpenses ?? null,
           shipments: deps.shipments ?? null,
           shortages: deps.shortages ?? null,
           batches: deps.batches ?? null,

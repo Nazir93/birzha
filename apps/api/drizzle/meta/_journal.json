@@ -288,6 +288,20 @@
       "when": 1779300000000,
       "tag": "0040_trip_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0041_seller_field_expenses",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779500000000,
+      "tag": "0042_purchaser_expenses",
+      "breakpoints": true
     }
   ]
 }

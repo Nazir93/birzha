@@ -8,6 +8,7 @@ import { TripNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../application/ports/debt-payment-repository.port.js";
 import type { TripArchiveManifestCleanupPort } from "../application/ports/trip-archive-manifest-cleanup.port.js";
+import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
 import type { TripListFilter, TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
@@ -52,6 +53,7 @@ export function registerTripRoutes(
   db: DbClient | null = null,
   debtPayments: DebtPaymentRepository | null = null,
   tripExpenses: TripExpenseRepository | null = null,
+  sellerFieldExpenses: SellerFieldExpenseRepository | null = null,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const assignTripSeller = new AssignTripSellerUseCase(trips);
@@ -66,6 +68,7 @@ export function registerTripRoutes(
     batches,
     debtPayments,
     tripExpenses,
+    sellerFieldExpenses,
   );
   const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
 

@@ -29,6 +29,8 @@ import {
   SaleDebtNotFoundError,
   SalePaymentSplitError,
   SeededResourceDeleteForbiddenError,
+  PurchaserExpenseNotFoundError,
+  SellerFieldExpenseNotFoundError,
   SupplierNotFoundError,
   SupplierPaymentNotFoundError,
   TripArchiveDeleteRequiresClosedError,
@@ -277,6 +279,20 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
   if (error instanceof TripExpenseNotFoundError) {
     return reply.code(404).send({
       error: "trip_expense_not_found",
+      expenseId: error.expenseId,
+      message: error.message,
+    });
+  }
+  if (error instanceof SellerFieldExpenseNotFoundError) {
+    return reply.code(404).send({
+      error: "seller_field_expense_not_found",
+      expenseId: error.expenseId,
+      message: error.message,
+    });
+  }
+  if (error instanceof PurchaserExpenseNotFoundError) {
+    return reply.code(404).send({
+      error: "purchaser_expense_not_found",
       expenseId: error.expenseId,
       message: error.message,
     });

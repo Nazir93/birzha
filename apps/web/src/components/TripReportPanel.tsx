@@ -807,6 +807,31 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
                   </td>
                 </tr>
+                {viewContext === "sales" || viewContext === "accounting" ? (
+                  <>
+                    <tr>
+                      <td style={thtd}>Полевые траты (касса)</td>
+                      <td style={thtd}>{kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0")} ₽</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>
+                        <strong>К сдаче (нал − траты)</strong>
+                      </td>
+                      <td style={thtd}>
+                        <strong>
+                          {kopecksToRubLabel(
+                            r.financials.cashToHandOverKopecks ??
+                              (
+                                BigInt(r.sales.totalCashKopecks || "0") -
+                                BigInt(r.financials.fieldExpensesKopecks || "0")
+                              ).toString(),
+                          )}{" "}
+                          ₽
+                        </strong>
+                      </td>
+                    </tr>
+                  </>
+                ) : null}
               </tbody>
             </table>
           </div>

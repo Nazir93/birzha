@@ -33,6 +33,7 @@ import { registerCounterpartyRoutes } from "./http/register-counterparty-routes.
 import { registerLoadingManifestRoutes } from "./http/register-loading-manifest-routes.js";
 import { registerAdminSummaryRoutes } from "./http/register-admin-summary-routes.js";
 import { registerAccountingRoutes } from "./http/register-accounting-routes.js";
+import { registerSellerFieldExpenseRoutes } from "./http/register-seller-field-expense-routes.js";
 import { registerPurchaseDocumentRoutes } from "./http/register-purchase-document-routes.js";
 import { registerShipDestinationRoutes } from "./http/register-ship-destination-routes.js";
 import { registerPushRoutes } from "./http/register-push-routes.js";
@@ -54,6 +55,12 @@ import type { DebtPaymentRepository } from "./application/ports/debt-payment-rep
 import type { TripExpenseRepository } from "./application/ports/trip-expense-repository.port.js";
 import { InMemoryTripExpenseRepository } from "./application/testing/in-memory-trip-expense.repository.js";
 import { DrizzleTripExpenseRepository } from "./infrastructure/persistence/drizzle-trip-expense.repository.js";
+import type { PurchaserExpenseRepository } from "./application/ports/purchaser-expense-repository.port.js";
+import type { SellerFieldExpenseRepository } from "./application/ports/seller-field-expense-repository.port.js";
+import { InMemoryPurchaserExpenseRepository } from "./application/testing/in-memory-purchaser-expense.repository.js";
+import { InMemorySellerFieldExpenseRepository } from "./application/testing/in-memory-seller-field-expense.repository.js";
+import { DrizzlePurchaserExpenseRepository } from "./infrastructure/persistence/drizzle-purchaser-expense.repository.js";
+import { DrizzleSellerFieldExpenseRepository } from "./infrastructure/persistence/drizzle-seller-field-expense.repository.js";
 import type { SupplierPaymentRepository } from "./application/ports/supplier-payment-repository.port.js";
 import { InMemorySupplierPaymentRepository } from "./application/testing/in-memory-supplier-payment.repository.js";
 import { DrizzleSupplierPaymentRepository } from "./infrastructure/persistence/drizzle-supplier-payment.repository.js";
@@ -228,6 +235,20 @@ export async function buildApp(options: {
     tripExpenseRepository = new DrizzleTripExpenseRepository(db);
   } else if (saleRepository && tripRepository) {
     tripExpenseRepository = new InMemoryTripExpenseRepository();
+  }
+
+  let sellerFieldExpenseRepository: SellerFieldExpenseRepository | null = null;
+  if (db) {
+    sellerFieldExpenseRepository = new DrizzleSellerFieldExpenseRepository(db);
+  } else if (saleRepository && tripRepository) {
+    sellerFieldExpenseRepository = new InMemorySellerFieldExpenseRepository();
+  }
+
+  let purchaserExpenseRepository: PurchaserExpenseRepository | null = null;
+  if (db) {
+    purchaserExpenseRepository = new DrizzlePurchaserExpenseRepository(db);
+  } else if (saleRepository && tripRepository) {
+    purchaserExpenseRepository = new InMemoryPurchaserExpenseRepository();
   }
 
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
@@ -508,7 +529,19 @@ export async function buildApp(options: {
       db,
       debtPaymentRepository,
       tripExpenseRepository,
+      sellerFieldExpenseRepository,
     );
+    if (sellerFieldExpenseRepository) {
+      registerSellerFieldExpenseRoutes(
+        app,
+        {
+          trips: tripRepository,
+          sales: saleRepository,
+          expenses: sellerFieldExpenseRepository,
+        },
+        routeAuth,
+      );
+    }
     registerBatchRoutes(
       app,
       batchRepository,
@@ -537,6 +570,8 @@ export async function buildApp(options: {
           purchaseDocuments: purchaseDocumentRepository,
           supplierPayments: supplierPaymentRepository,
           tripExpenses: tripExpenseRepository,
+          sellerFieldExpenses: sellerFieldExpenseRepository,
+          purchaserExpenses: purchaserExpenseRepository,
           shipments: shipmentRepository,
           shortages: shortageRepository,
           batches: batchRepository,

@@ -66,3 +66,25 @@ export const accountingPeriodSummaryQuerySchema = z
   .refine((q) => q.from <= q.to, { message: "from не позже to", path: ["to"] });
 
 export type AccountingPeriodSummaryQuery = z.infer<typeof accountingPeriodSummaryQuerySchema>;
+
+/** GET /accounting/purchaser-expenses */
+export const accountingPurchaserExpensesQuerySchema = z
+  .object({
+    from: ymd.optional(),
+    to: ymd.optional(),
+    purchaserUserId: z.string().min(1).max(64).optional(),
+  })
+  .refine((q) => !q.from || !q.to || q.from <= q.to, { message: "from не позже to", path: ["to"] });
+
+/** POST /accounting/purchaser-expenses */
+export const createPurchaserExpenseBodySchema = z.object({
+  category: z.enum(["salary", "other"]),
+  amountKopecks: kopecksPositive,
+  expenseDate: ymd,
+  purchaserUserId: z.string().min(1).max(64).optional(),
+  purchaserLabel: z.string().min(1).max(120).optional(),
+  comment: z.string().max(500).optional(),
+});
+
+export type AccountingPurchaserExpensesQuery = z.infer<typeof accountingPurchaserExpensesQuerySchema>;
+export type CreatePurchaserExpenseBody = z.infer<typeof createPurchaserExpenseBodySchema>;

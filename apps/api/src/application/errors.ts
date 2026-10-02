@@ -444,3 +444,25 @@ export class TripExpenseNotFoundError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+export class SellerFieldExpenseNotFoundError extends Error {
+  readonly expenseId: string;
+
+  constructor(expenseId: string) {
+    super(`Полевая трата не найдена: ${expenseId}`);
+    this.name = "SellerFieldExpenseNotFoundError";
+    this.expenseId = expenseId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class PurchaserExpenseNotFoundError extends Error {
+  readonly expenseId: string;
+
+  constructor(expenseId: string) {
+    super(`Расход закупщика не найден: ${expenseId}`);
+    this.name = "PurchaserExpenseNotFoundError";
+    this.expenseId = expenseId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

@@ -88,6 +88,7 @@ export const adminRoutes = {
 export const sales = {
   home: prefix.sales,
   reports: `${prefix.sales}/reports`,
+  expenses: `${prefix.sales}/expenses`,
   operations: `${prefix.sales}/operations`,
   archive: `${prefix.sales}/archive`,
 } as const;
@@ -98,6 +99,7 @@ export const accounting = {
   counterparties: `${prefix.accounting}/counterparties`,
   receivables: `${prefix.accounting}/receivables`,
   payables: `${prefix.accounting}/payables`,
+  purchaserExpenses: `${prefix.accounting}/purchaser-expenses`,
 } as const;
 
 /**

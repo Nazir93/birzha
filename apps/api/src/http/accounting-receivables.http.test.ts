@@ -141,6 +141,85 @@ describe("Accounting receivables HTTP", () => {
     await app.close();
   });
 
+  it("расходы закупщиков и period-summary: тепличники / траты", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/purchase-documents",
+      payload: {
+        id: "acc-nakl-supplier",
+        documentNumber: "НФ-SUP",
+        docDate: "2026-10-03",
+        warehouseId: "wh-manas",
+        supplierName: "Тепличник А",
+        extraCostKopecks: 0,
+        lines: [
+          {
+            productGradeId: "pg-n5",
+            grossKg: 20,
+            pricePerKg: 100,
+            lineTotalKopecks: 200_000,
+          },
+        ],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+
+    let r = await app.inject({
+      method: "POST",
+      url: "/accounting/payables/acc-nakl-supplier/payments",
+      payload: { amountKopecks: 80_000, method: "cash", paidAt: "2026-10-04" },
+    });
+    expect(r.statusCode).toBe(201);
+
+    r = await app.inject({
+      method: "POST",
+      url: "/accounting/purchaser-expenses",
+      payload: {
+        category: "salary",
+        amountKopecks: 15_000,
+        expenseDate: "2026-10-05",
+        purchaserLabel: "Закупщик",
+      },
+    });
+    expect(r.statusCode, r.body).toBe(201);
+
+    r = await app.inject({
+      method: "GET",
+      url: "/accounting/purchaser-expenses?from=2026-10-01&to=2026-10-31",
+    });
+    expect(r.statusCode).toBe(200);
+    const pe = JSON.parse(r.body) as { totalKopecks: string; salaryKopecks: string };
+    expect(pe.totalKopecks).toBe("15000");
+    expect(pe.salaryKopecks).toBe("15000");
+
+    r = await app.inject({
+      method: "GET",
+      url: "/accounting/period-summary?from=2026-10-01&to=2026-10-31",
+    });
+    expect(r.statusCode).toBe(200);
+    const summary = JSON.parse(r.body) as {
+      purchaseTotalKopecks: string;
+      supplierPaidKopecks: string;
+      purchaserExpensesKopecks: string;
+      bySupplier: { supplierName: string; purchaseTotalKopecks: string; paidKopecks: string }[];
+    };
+    expect(summary.purchaseTotalKopecks).toBe("200000");
+    expect(summary.supplierPaidKopecks).toBe("80000");
+    expect(summary.purchaserExpensesKopecks).toBe("15000");
+    const tepl = summary.bySupplier.find((x) => x.supplierName === "Тепличник А");
+    expect(tepl?.purchaseTotalKopecks).toBe("200000");
+    expect(tepl?.paidKopecks).toBe("80000");
+
+    await app.close();
+  });
+
   it("кредиторка: оплата по закупочной накладной", async () => {
     const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
     const app = await buildApp({

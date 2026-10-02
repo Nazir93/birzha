@@ -62,6 +62,8 @@ export function AccountingTripsSummary() {
     let debt = 0n;
     let card = 0n;
     let debtOut = 0n;
+    let fieldExp = 0n;
+    let toHand = 0n;
     let rows = 0;
     for (let i = 0; i < tripsPageSlice.length; i++) {
       const q = reportQueries[i];
@@ -81,9 +83,30 @@ export function AccountingTripsSummary() {
       debt += BigInt(r.sales.totalDebtKopecks || "0");
       card += BigInt(r.sales.totalCardTransferKopecks || "0");
       debtOut += BigInt(r.financials.debtOutstandingKopecks || "0");
+      const fe = BigInt(r.financials.fieldExpensesKopecks || "0");
+      fieldExp += fe;
+      toHand += BigInt(
+        r.financials.cashToHandOverKopecks ?? (BigInt(r.sales.totalCashKopecks || "0") - fe).toString(),
+      );
       rows += 1;
     }
-    return { kg, packages, revenue, costSold, costShort, gross, expenses, net, cash, debt, card, debtOut, rows };
+    return {
+      kg,
+      packages,
+      revenue,
+      costSold,
+      costShort,
+      gross,
+      expenses,
+      net,
+      cash,
+      debt,
+      card,
+      debtOut,
+      fieldExp,
+      toHand,
+      rows,
+    };
   }, [tripsPageSlice, reportQueries]);
 
   if (tripsQuery.isPending) {
@@ -144,6 +167,8 @@ export function AccountingTripsSummary() {
                 "Расходы",
                 "Чистая",
                 "Остаток долга",
+                "Полевые траты",
+                "К сдаче",
               ],
             ];
             for (let i = 0; i < tripsPageSlice.length; i++) {
@@ -166,6 +191,13 @@ export function AccountingTripsSummary() {
                 kopecksToRubLabel(r.financials.expensesKopecks || "0"),
                 kopecksToRubLabel(r.financials.netProfitKopecks ?? r.financials.grossProfitKopecks),
                 kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0"),
+                kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0"),
+                kopecksToRubLabel(
+                  r.financials.cashToHandOverKopecks ??
+                    (
+                      BigInt(r.sales.totalCashKopecks || "0") - BigInt(r.financials.fieldExpensesKopecks || "0")
+                    ).toString(),
+                ),
               ]);
             }
             const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -240,6 +272,12 @@ export function AccountingTripsSummary() {
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
                 Остаток долга, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                Полевые траты, ₽
+              </th>
+              <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                К сдаче, ₽
               </th>
               <th scope="col" style={thHead}>
                 Детали
@@ -327,6 +365,18 @@ export function AccountingTripsSummary() {
                   <td style={{ ...thtd, textAlign: "right" }}>
                     {kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0")}
                   </td>
+                  <td style={{ ...thtd, textAlign: "right" }}>
+                    {kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0")}
+                  </td>
+                  <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                    {kopecksToRubLabel(
+                      r.financials.cashToHandOverKopecks ??
+                        (
+                          BigInt(r.sales.totalCashKopecks || "0") -
+                          BigInt(r.financials.fieldExpensesKopecks || "0")
+                        ).toString(),
+                    )}
+                  </td>
                   <td style={thtd}>
                     <Link
                       to={`${accounting.reports}?${new URLSearchParams({ trip: t.id }).toString()}`}
@@ -358,6 +408,8 @@ export function AccountingTripsSummary() {
                   {kopecksToRubLabel(tripTotals.debt.toString())}
                 </td>
                 <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.debtOut.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.fieldExp.toString())}</td>
+                <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(tripTotals.toHand.toString())}</td>
                 <td style={thtd} />
               </tr>
             )}

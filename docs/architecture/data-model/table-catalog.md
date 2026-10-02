@@ -494,6 +494,14 @@ HTTP и use case: **`README.md`** (таблица API). Концептуальн
 
 Индексы: `trip_id`, `expense_date`.
 
+#### `seller_field_expenses`
+Полевые траты продавца с кассы (отдельно от бухгалтерских `trip_expenses`):
+- `id`, `trip_id`, `expense_date`
+- `category` (`loader` | `lunch` | `pallets` | `rent` | `materials` | `other`)
+- `amount_kopecks`, `comment`, `recorded_by_user_id`, `created_at`
+
+Индексы: `trip_id`, `expense_date`, `(recorded_by_user_id, expense_date)`.
+
 ## Списания, возвраты, инвентаризация
 
 ### `writeOffs`

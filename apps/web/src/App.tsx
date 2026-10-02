@@ -28,6 +28,11 @@ const AccountingReceivablesPanel = lazy(() =>
 const AccountingPayablesPanel = lazy(() =>
   import("./components/AccountingPayablesPanel.js").then((m) => ({ default: m.AccountingPayablesPanel })),
 );
+const AccountingPurchaserExpensesPanel = lazy(() =>
+  import("./components/AccountingPurchaserExpensesPanel.js").then((m) => ({
+    default: m.AccountingPurchaserExpensesPanel,
+  })),
+);
 const AdminCabinetHome = lazy(() =>
   import("./components/AdminCabinetHome.js").then((m) => ({ default: m.AdminCabinetHome })),
 );
@@ -54,6 +59,9 @@ const SettingsDocumentsAdminPanel = lazy(() =>
 );
 const SellerCabinetHome = lazy(() =>
   import("./components/SellerCabinetHome.js").then((m) => ({ default: m.SellerCabinetHome })),
+);
+const SellerFieldExpensesPanel = lazy(() =>
+  import("./components/SellerFieldExpensesPanel.js").then((m) => ({ default: m.SellerFieldExpensesPanel })),
 );
 const SellerSalesOperationsRedirect = lazy(() =>
   import("./components/SellerSalesOperationsRedirect.js").then((m) => ({ default: m.SellerSalesOperationsRedirect })),
@@ -190,6 +198,16 @@ export function App() {
                 </RequirePanel>
               }
             />
+            <Route
+              path="expenses"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <SellerFieldExpensesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
             <Route path="operations" element={<SellerSalesOperationsRedirect />} />
             <Route
               path="archive"
@@ -255,6 +273,17 @@ export function App() {
                 <RequirePanel panel="reports">
                   <section className="birzha-card">
                     <AccountingPayablesPanel />
+                  </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="purchaser-expenses"
+              element={
+                <RequirePanel panel="reports">
+                  <section className="birzha-card">
+                    <h2 className="birzha-section-title">Расходы закупщиков</h2>
+                    <AccountingPurchaserExpensesPanel />
                   </section>
                 </RequirePanel>
               }

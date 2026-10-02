@@ -4,6 +4,8 @@ import { loadBatchOrThrow } from "../application/load-batch.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../application/ports/debt-payment-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
+import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
+import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
 import type { SupplierPaymentRepository } from "../application/ports/supplier-payment-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
@@ -19,8 +21,16 @@ function ymdUtc(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+type SupplierAgg = {
+  supplierKey: string;
+  supplierName: string;
+  purchaseTotal: bigint;
+  paidInPeriod: bigint;
+  remaining: bigint;
+};
+
 /**
- * Сводка за период для кабинета бухгалтера.
+ * Сводка за период для кабинета бухгалтера / кассира.
  * Продажи/себестоимость — по дате выезда рейса; расходы и оплаты — по своей дате.
  */
 export async function buildAccountingPeriodSummary(deps: {
@@ -32,6 +42,8 @@ export async function buildAccountingPeriodSummary(deps: {
   purchaseDocuments: PurchaseDocumentRepository | null;
   supplierPayments: SupplierPaymentRepository | null;
   tripExpenses: TripExpenseRepository | null;
+  sellerFieldExpenses: SellerFieldExpenseRepository | null;
+  purchaserExpenses: PurchaserExpenseRepository | null;
   shipments: unknown;
   shortages: TripShortageRepository | null;
   batches: BatchRepository | null;
@@ -45,7 +57,7 @@ export async function buildAccountingPeriodSummary(deps: {
   let costSold = 0n;
   let costShortage = 0n;
   let grossProfit = 0n;
-  let expenses = 0n;
+  let tripExpensesTotal = 0n;
   let debtPaidInPeriod = 0n;
 
   for (const trip of trips) {
@@ -88,10 +100,23 @@ export async function buildAccountingPeriodSummary(deps: {
       const rows = await deps.tripExpenses.listByTripId(trip.getId());
       for (const e of rows) {
         if (inPeriod(ymdUtc(e.expenseDate), fromYmd, toYmd)) {
-          expenses += e.amountKopecks;
+          tripExpensesTotal += e.amountKopecks;
         }
       }
     }
+  }
+
+  let sellerFieldExpensesTotal = 0n;
+  if (deps.sellerFieldExpenses) {
+    const rows = await deps.sellerFieldExpenses.list({ fromYmd, toYmd });
+    for (const e of rows) {
+      sellerFieldExpensesTotal += e.amountKopecks;
+    }
+  }
+
+  let purchaserExpensesTotal = 0n;
+  if (deps.purchaserExpenses) {
+    purchaserExpensesTotal = await deps.purchaserExpenses.sumInPeriod(fromYmd, toYmd);
   }
 
   const debtGroups = await deps.sales.listDebtGroups();
@@ -125,6 +150,25 @@ export async function buildAccountingPeriodSummary(deps: {
   let purchaseTotal = 0n;
   let supplierPaidInPeriod = 0n;
   let payablesOutstanding = 0n;
+  const bySupplierMap = new Map<string, SupplierAgg>();
+
+  function supplierBucket(supplierId: string | null, supplierName: string | null): SupplierAgg {
+    const name = (supplierName ?? "").trim() || "Без имени";
+    const key = (supplierId ?? "").trim() || `name:${name}`;
+    let row = bySupplierMap.get(key);
+    if (!row) {
+      row = {
+        supplierKey: key,
+        supplierName: name,
+        purchaseTotal: 0n,
+        paidInPeriod: 0n,
+        remaining: 0n,
+      };
+      bySupplierMap.set(key, row);
+    }
+    return row;
+  }
+
   if (deps.purchaseDocuments) {
     const summaries = await deps.purchaseDocuments.listSummaries();
     for (const s of summaries) {
@@ -138,8 +182,10 @@ export async function buildAccountingPeriodSummary(deps: {
         linesTotal += BigInt(line.lineTotalKopecks);
       }
       const total = linesTotal + BigInt(detail.extraCostKopecks);
+      const bucket = supplierBucket(detail.supplierId, detail.supplierName);
       if (inPeriod(day, fromYmd, toYmd)) {
         purchaseTotal += total;
+        bucket.purchaseTotal += total;
       }
       if (deps.supplierPayments) {
         const pays = await deps.supplierPayments.listByDocumentId(detail.id);
@@ -148,20 +194,35 @@ export async function buildAccountingPeriodSummary(deps: {
           const pd = ymdUtc(p.paidAt);
           if (inPeriod(pd, fromYmd, toYmd)) {
             supplierPaidInPeriod += p.amountKopecks;
+            bucket.paidInPeriod += p.amountKopecks;
           }
           if (pd <= toYmd) {
             paidToDate += p.amountKopecks;
           }
         }
         if (day <= toYmd && total > 0n) {
-          payablesOutstanding += Obligation.restore({
+          const rem = Obligation.restore({
             debtKopecks: total,
             paidKopecks: paidToDate,
           }).remainingKopecks();
+          payablesOutstanding += rem;
+          bucket.remaining += rem;
         }
       }
     }
   }
+
+  const operatingExpenses = tripExpensesTotal + sellerFieldExpensesTotal + purchaserExpensesTotal;
+  const bySupplier = [...bySupplierMap.values()]
+    .filter((r) => r.purchaseTotal > 0n || r.paidInPeriod > 0n || r.remaining > 0n)
+    .sort((a, b) => a.supplierName.localeCompare(b.supplierName, "ru"))
+    .map((r) => ({
+      supplierKey: r.supplierKey,
+      supplierName: r.supplierName,
+      purchaseTotalKopecks: r.purchaseTotal.toString(),
+      paidKopecks: r.paidInPeriod.toString(),
+      remainingKopecks: r.remaining.toString(),
+    }));
 
   return {
     from: fromYmd,
@@ -174,11 +235,17 @@ export async function buildAccountingPeriodSummary(deps: {
     costOfSoldKopecks: costSold.toString(),
     costOfShortageKopecks: costShortage.toString(),
     grossProfitKopecks: grossProfit.toString(),
-    expensesKopecks: expenses.toString(),
-    netProfitKopecks: (grossProfit - expenses).toString(),
+    /** Расходы по рейсу (топливо и т.п.) — для обратной совместимости. */
+    expensesKopecks: tripExpensesTotal.toString(),
+    tripExpensesKopecks: tripExpensesTotal.toString(),
+    sellerFieldExpensesKopecks: sellerFieldExpensesTotal.toString(),
+    purchaserExpensesKopecks: purchaserExpensesTotal.toString(),
+    operatingExpensesKopecks: operatingExpenses.toString(),
+    netProfitKopecks: (grossProfit - operatingExpenses).toString(),
     purchaseTotalKopecks: purchaseTotal.toString(),
     supplierPaidKopecks: supplierPaidInPeriod.toString(),
     receivablesOutstandingKopecks: receivablesOutstanding.toString(),
     payablesOutstandingKopecks: payablesOutstanding.toString(),
+    bySupplier,
   };
 }

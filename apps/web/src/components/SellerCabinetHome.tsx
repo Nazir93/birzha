@@ -24,17 +24,23 @@ export function SellerCabinetHome() {
           </h2>
           {fieldSellerOnly ? (
             <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "36rem" }}>
-              Шаг за шагом: тип сделки → рейс → калибр → количество → оплата. После выбора рейса видна погрузочная
-              (кг и ящики, без цен). Итоги — в меню «Отчёт по рейсу» и «Архив».
+              Шаг за шагом: тип сделки → рейс → калибр → количество → оплата. Траты с кассы (грузчик, обед, палеты) —
+              в «Траты / расчёт». Итоги — в «Отчёт по рейсу» и «Архив».
             </p>
           ) : null}
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Разделы кабинета продавца">
           {fieldSellerOnly ? (
-            <Link to={sales.reports} className="birzha-home-action">
-              <span>Итоги</span>
-              <strong>Отчёт по рейсу</strong>
-            </Link>
+            <>
+              <Link to={sales.reports} className="birzha-home-action">
+                <span>Итоги</span>
+                <strong>Отчёт по рейсу</strong>
+              </Link>
+              <Link to={sales.expenses} className="birzha-home-action">
+                <span>Касса</span>
+                <strong>Траты / расчёт</strong>
+              </Link>
+            </>
           ) : null}
           {!fieldSellerOnly && canOpsCabinet ? (
             <Link to={ops.operations} className="birzha-home-action">

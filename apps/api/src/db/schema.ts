@@ -354,6 +354,48 @@ export const tripExpenses = pgTable(
   ],
 );
 
+/** Полевые траты продавца с кассы (loader|lunch|pallets|rent|materials|other). */
+export const sellerFieldExpenses = pgTable(
+  "seller_field_expenses",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    expenseDate: date("expense_date", { mode: "date" }).notNull(),
+    category: text("category").notNull(),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("seller_field_expenses_trip_id_idx").on(t.tripId),
+    index("seller_field_expenses_expense_date_idx").on(t.expenseDate),
+    index("seller_field_expenses_user_date_idx").on(t.recordedByUserId, t.expenseDate),
+  ],
+);
+
+/** Расходы закупщиков (salary|other) — проводит бухгалтерия. */
+export const purchaserExpenses = pgTable(
+  "purchaser_expenses",
+  {
+    id: text("id").primaryKey(),
+    expenseDate: date("expense_date", { mode: "date" }).notNull(),
+    category: text("category").notNull(),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    purchaserUserId: text("purchaser_user_id").references(() => users.id, { onDelete: "set null" }),
+    purchaserLabel: text("purchaser_label"),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("purchaser_expenses_expense_date_idx").on(t.expenseDate),
+    index("purchaser_expenses_purchaser_user_id_idx").on(t.purchaserUserId),
+  ],
+);
+
 /** Учётные записи; вход — JWT (`/auth/login`). См. `docs/architecture/data-model/table-catalog.md`. */
 export const users = pgTable("users", {
   id: text("id").primaryKey(),

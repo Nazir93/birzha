@@ -95,22 +95,28 @@ describe("cabinet-nav", () => {
 
   it("аноним: бухгалтерия — сводка, отчёт, дебиторка, кредиторка и контрагенты (без /o)", () => {
     const links = buildCabinetNavEntries("accounting", null, false);
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
     expect(links[0]).toEqual({ to: accounting.home, label: "Сводка", key: "acc-home" });
     expect(links[1]).toEqual({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
     expect(links[2]).toEqual({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
     expect(links[3]).toEqual({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
-    expect(links[4]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links[4]).toEqual({
+      to: accounting.purchaserExpenses,
+      label: "Расходы закуп",
+      key: "acc-purch-exp",
+    });
+    expect(links[5]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
   });
 
-  it("аноним: продажи — сводка, отчёт, недостача и архив (без /o)", () => {
+  it("аноним: продажи — сводка, отчёт, траты, недостача и архив (без /o)", () => {
     const links = buildCabinetNavEntries("sales", null, false);
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(5);
     expect(links[0]).toEqual({ to: sales.home, label: "Сводка", key: "sales-home" });
     expect(links[1]).toEqual({ to: sales.reports, label: "Отчёты по рейсу", key: "reports" });
-    expect(links[2]?.to).toBe(sales.operations);
-    expect(links[3]?.to).toBe(sales.archive);
+    expect(links[2]).toEqual({ to: sales.expenses, label: "Траты / расчёт", key: "expenses" });
+    expect(links[3]?.to).toBe(sales.operations);
+    expect(links[4]?.to).toBe(sales.archive);
     expect(links.every((l) => l.to.startsWith(prefix.sales))).toBe(true);
   });
 
@@ -121,26 +127,32 @@ describe("cabinet-nav", () => {
       roles: [{ roleCode: "accountant", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("accounting", user, true);
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(6);
     expect(links[0]).toEqual({ to: accounting.home, label: "Сводка", key: "acc-home" });
     expect(links[1]).toEqual({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
     expect(links[2]).toEqual({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
     expect(links[3]).toEqual({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
-    expect(links[4]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links[4]).toEqual({
+      to: accounting.purchaserExpenses,
+      label: "Расходы закуп",
+      key: "acc-purch-exp",
+    });
+    expect(links[5]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
   });
 
-  it("продавец (только seller): кабинет /s — продажа, отчёт и архив", () => {
+  it("продавец (только seller): кабинет /s — продажа, отчёт, траты и архив", () => {
     const user = {
       id: "u1",
       login: "seller1",
       roles: [{ roleCode: "seller", scopeType: "global" as const, scopeId: "" }],
     };
     const links = buildCabinetNavEntries("sales", user, true);
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     expect(links[0]).toEqual({ to: sales.home, label: "Продажа", key: "sales-home" });
     expect(links[1]).toEqual({ to: sales.reports, label: "Отчёт по рейсу", key: "reports" });
-    expect(links[2]).toEqual({ to: sales.archive, label: "Архив", key: "archive" });
+    expect(links[2]).toEqual({ to: sales.expenses, label: "Траты / расчёт", key: "expenses" });
+    expect(links[3]).toEqual({ to: sales.archive, label: "Архив", key: "archive" });
   });
 
   it("seller + склад: на /s остаётся сводка и доступные подразделы", () => {

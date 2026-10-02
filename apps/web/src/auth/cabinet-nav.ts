@@ -64,6 +64,7 @@ export function buildCabinetNavEntries(
         { to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" },
         { to: accounting.receivables, label: "Дебиторка", key: "acc-recv" },
         { to: accounting.payables, label: "Кредиторка", key: "acc-pay" },
+        { to: accounting.purchaserExpenses, label: "Расходы закуп", key: "acc-purch-exp" },
         { to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" },
       ];
     }
@@ -71,6 +72,7 @@ export function buildCabinetNavEntries(
       return [
         { to: sales.home, label: "Сводка", key: "sales-home" },
         { to: sales.reports, label: "Отчёты по рейсу", key: "reports" },
+        { to: sales.expenses, label: "Траты / расчёт", key: "expenses" },
         { to: sales.operations, label: NAV_PANEL_LABELS.operations, key: "operations" },
         { to: sales.archive, label: NAV_PANEL_LABELS.archive, key: "archive" },
       ];
@@ -97,6 +99,7 @@ export function buildCabinetNavEntries(
     out.push({ to: accounting.reports, label: "Отчёт по рейсу", key: "acc-reports" });
     out.push({ to: accounting.receivables, label: "Дебиторка", key: "acc-recv" });
     out.push({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
+    out.push({ to: accounting.purchaserExpenses, label: "Расходы закуп", key: "acc-purch-exp" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
     return out;
   }
@@ -113,6 +116,9 @@ export function buildCabinetNavEntries(
             ? "Мои закупки"
             : NAV_PANEL_LABELS[p];
       out.push({ to, label, key: p });
+      if (cabinet === "sales" && p === "reports") {
+        out.push({ to: sales.expenses, label: "Траты / расчёт", key: "expenses" });
+      }
     }
   }
   if (cabinet === "admin" && user && authRestricted && canAccessCabinet(user, "accounting")) {
