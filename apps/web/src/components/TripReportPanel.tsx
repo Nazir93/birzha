@@ -29,7 +29,12 @@ import {
   buildTripBatchRows,
   reconcileBatchTotalsWithReport,
 } from "../format/trip-report-rows.js";
-import { canCreateTrip, canAccessPanel, isFieldSellerOnly, isPurchaserScoped } from "../auth/role-panels.js";
+import {
+  canAccessPanel,
+  canCloseOrDeleteTrip,
+  isFieldSellerOnly,
+  isPurchaserScoped,
+} from "../auth/role-panels.js";
 import { useAuth } from "../auth/auth-context.js";
 import {
   batchesByIdsQueryOptions,
@@ -78,7 +83,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
   const navigate = useNavigate();
   const { user } = useAuth();
   /** Без user (API без auth в dev) — ведём себя как при полном контуре. */
-  const canTripWrite = user == null || canCreateTrip(user);
+  const canCloseDeleteTrip = user == null || canCloseOrDeleteTrip(user);
   const showPurchaseByPurchaserLink =
     viewContext === "default" && (user == null || canAccessPanel(user, "purchaseByPurchaser"));
   const purchaseByPurchaserPath = adminAwarePathForPath(
@@ -240,7 +245,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
 
   const deleteTripMutation = useMutation({
     mutationFn: async (id: string) => {
-      await deleteTripById(id, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
+      await deleteTripById(id, "Недостаточно прав: удалить рейс может только admin.");
     },
     onSuccess: async () => {
       setTripId("", { replace: true });
@@ -265,7 +270,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
           return { closedTripId: null as string | null };
         }
       }
-      await closeTripById(tripId, "Недостаточно прав (нужна роль логиста, менеджера или администратора).");
+      await closeTripById(tripId, "Недостаточно прав: закрыть рейс может только admin.");
       return { closedTripId: tripId };
     },
     onSuccess: async (result) => {
@@ -420,7 +425,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               )}
             </p>
           ) : null}
-          {tripId && r && canDeleteTrip && canTripWrite && (
+          {tripId && r && canDeleteTrip && canCloseDeleteTrip && (
             <div style={{ marginTop: "0.5rem" }}>
               <button
                 type="button"
@@ -509,7 +514,7 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
               >
                 Печать
               </button>
-              {canTripWrite && r.trip.status === "open" ? (
+              {canCloseDeleteTrip && r.trip.status === "open" ? (
                 <button
                   type="button"
                   className="birzha-btn"

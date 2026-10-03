@@ -4,6 +4,7 @@ import { accounting, adminRoutes, ops, sales } from "../routes.js";
 import {
   canAccessCabinet,
   canAccessPanel,
+  canCloseOrDeleteTrip,
   canCreateTrip,
   canShipLoadingManifest,
   canManageInventoryCatalog,
@@ -155,6 +156,14 @@ describe("role-panels", () => {
     expect(canCreateTrip(userWithRoles("seller"))).toBe(false);
     expect(canCreateTrip(userWithRoles("accountant"))).toBe(false);
     expect(canCreateTrip(userWithRoles("warehouse"))).toBe(false);
+  });
+
+  it("canCloseOrDeleteTrip — только admin", () => {
+    expect(canCloseOrDeleteTrip(userWithRoles("admin"))).toBe(true);
+    expect(canCloseOrDeleteTrip(userWithRoles("manager"))).toBe(false);
+    expect(canCloseOrDeleteTrip(userWithRoles("logistics"))).toBe(false);
+    expect(canCloseOrDeleteTrip(userWithRoles("purchaser"))).toBe(false);
+    expect(canCloseOrDeleteTrip(userWithRoles("seller"))).toBe(false);
   });
 
   it("canShipLoadingManifest совпадает с ship на API", () => {

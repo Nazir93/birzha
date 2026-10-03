@@ -10,7 +10,7 @@ import {
   tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canCreateTrip } from "../auth/role-panels.js";
+import { canCloseOrDeleteTrip } from "../auth/role-panels.js";
 import {
   buildMassSegments,
   gradeTableRows,
@@ -51,7 +51,7 @@ export function AdminCabinetHome() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const showCloseTrip = canCreateTrip(user ?? null);
+  const showCloseTrip = canCloseOrDeleteTrip(user ?? null);
   const [summaryChartMode, setSummaryChartMode] = useState<DashboardSummaryChartMode>("mass");
   const [summaryPeriod, setSummaryPeriod] = useState<DashboardSummaryPeriod>("30d");
 
@@ -215,7 +215,7 @@ export function AdminCabinetHome() {
           return;
         }
       }
-      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+      await closeTripById(tripId, "Нет прав: закрытие рейса — только admin");
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryRoots.trips });

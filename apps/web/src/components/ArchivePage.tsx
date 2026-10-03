@@ -16,7 +16,7 @@ import type {
   WarehouseJson,
 } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canCreateTrip, canManageInventoryCatalog } from "../auth/role-panels.js";
+import { canCloseOrDeleteTrip, canManageInventoryCatalog } from "../auth/role-panels.js";
 import { isTripArchived } from "../format/archive.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import {
@@ -377,7 +377,7 @@ export function ArchivePage() {
 
   const canDeletePurchase = !salesMode && user != null && canManageInventoryCatalog(user);
   const canDeleteManifest = canDeletePurchase;
-  const canManageTrip = user != null && canCreateTrip(user);
+  const canManageTrip = user != null && canCloseOrDeleteTrip(user);
 
   const [tripsPage, setTripsPage] = useState(0);
   const [nakladPage, setNakladPage] = useState(0);
@@ -430,7 +430,9 @@ export function ArchivePage() {
     mutationFn: async (tripId: string) => {
       setPageError(null);
       setBusyTripId(tripId);
-      await deleteTripById(tripId, "Недостаточно прав на удаление рейса.", { fromArchive: true });
+      await deleteTripById(tripId, "Недостаточно прав: удалить рейс может только admin.", {
+        fromArchive: true,
+      });
     },
     onSuccess: async () => {
       await invalidateArchive();
@@ -443,10 +445,7 @@ export function ArchivePage() {
     mutationFn: async (tripId: string) => {
       setPageError(null);
       setBusyTripId(tripId);
-      await reopenTripById(
-        tripId,
-        "Недостаточно прав: открыть рейс снова могут admin, manager, logistics или purchaser.",
-      );
+      await reopenTripById(tripId, "Недостаточно прав: открыть рейс снова может только admin.");
     },
     onSuccess: async () => {
       await invalidateArchive();

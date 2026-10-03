@@ -252,7 +252,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.post("/trips/:tripId/close", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+  app.post("/trips/:tripId/close", { ...withPreHandlers(routeAuth.tripCloseDelete) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await closeTrip.execute(tripId);
@@ -262,7 +262,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.post("/trips/:tripId/reopen", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+  app.post("/trips/:tripId/reopen", { ...withPreHandlers(routeAuth.tripCloseDelete) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await reopenTrip.execute(tripId);
@@ -272,7 +272,7 @@ export function registerTripRoutes(
     }
   });
 
-  app.delete("/trips/:tripId", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+  app.delete("/trips/:tripId", { ...withPreHandlers(routeAuth.tripCloseDelete) }, async (req, reply) => {
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       const query = z.object({ fromArchive: z.enum(["1"]).optional() }).parse(req.query);

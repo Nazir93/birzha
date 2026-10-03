@@ -6,7 +6,7 @@ import { apiFetch, assertOkResponse, closeTripById } from "../api/fetch-api.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { hasGlobalRole } from "../auth/global-roles.js";
-import { canCreateTrip } from "../auth/role-panels.js";
+import { canCloseOrDeleteTrip } from "../auth/role-panels.js";
 import { aggregateTripSalesByProductLine } from "../format/aggregate-trip-sales-by-product-line.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
@@ -205,7 +205,7 @@ export function AssignSellerPanel() {
           return { closedTripId: null as string | null };
         }
       }
-      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+      await closeTripById(tripId, "Нет прав: закрытие рейса — только admin");
       return { closedTripId: tripId };
     },
     onSuccess: async (result) => {
@@ -445,7 +445,7 @@ export function AssignSellerPanel() {
                   >
                     {formatTripReportStatusLabel(activeReport)}
                   </span>
-                  {canCreateTrip(user ?? null) && activeReport.trip.status === "open" ? (
+                  {canCloseOrDeleteTrip(user ?? null) && activeReport.trip.status === "open" ? (
                     <button
                       type="button"
                       className="birzha-btn birzha-btn--inline birzha-ui-sm no-print"

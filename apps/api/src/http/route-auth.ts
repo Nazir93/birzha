@@ -9,8 +9,11 @@ const READ_ROLES = MVP_ROLE_CODES;
 /** Отчёт по рейсу — все роли MVP (в т.ч. бухгалтер). */
 const REPORT_READ_ROLES = MVP_ROLE_CODES;
 
-/** Создание/закрытие рейса — логист + руководство + закупщик. */
+/** Создание/правка шапки рейса — логист + руководство + закупщик. */
 const TRIP_WRITE_ROLES = ["admin", "manager", "logistics", "purchaser"] as const;
+
+/** Закрытие / повторное открытие / удаление рейса — только admin. */
+const TRIP_CLOSE_DELETE_ROLES = ["admin"] as const;
 
 /** Закрепить рейс за продавцом: узкое право без создания/закрытия рейсов. */
 const TRIP_ASSIGN_SELLER_ROLES = ["admin", "manager", "logistics"] as const;
@@ -66,6 +69,8 @@ export type BusinessRouteAuth = {
   dataRead: AuthPreHandler[];
   tripReportRead: AuthPreHandler[];
   tripWrite: AuthPreHandler[];
+  /** POST close/reopen, DELETE trip — только admin. */
+  tripCloseDelete: AuthPreHandler[];
   tripAssignSeller: AuthPreHandler[];
   batchCreate: AuthPreHandler[];
   receive: AuthPreHandler[];
@@ -98,6 +103,7 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   dataRead: [],
   tripReportRead: [],
   tripWrite: [],
+  tripCloseDelete: [],
   tripAssignSeller: [],
   batchCreate: [],
   receive: [],
@@ -143,6 +149,7 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     dataRead: [a, requireGlobalRoles(READ_ROLES)],
     tripReportRead: [a, requireGlobalRoles(REPORT_READ_ROLES)],
     tripWrite: [a, requireGlobalRoles(TRIP_WRITE_ROLES)],
+    tripCloseDelete: [a, requireGlobalRoles(TRIP_CLOSE_DELETE_ROLES)],
     tripAssignSeller: [a, requireGlobalRoles(TRIP_ASSIGN_SELLER_ROLES)],
     batchCreate: [a, requireGlobalRoles(BATCH_CREATE_ROLES)],
     receive: [a, requireGlobalRoles(RECEIVE_ROLES)],

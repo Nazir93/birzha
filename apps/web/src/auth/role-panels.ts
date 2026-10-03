@@ -153,8 +153,11 @@ export function canEditPurchaseDocumentLines(user: AuthUser | null): boolean {
   return codes.has("admin") || codes.has("manager") || codes.has("purchaser");
 }
 
-/** Создание/удаление рейса — как `TRIP_WRITE` в API: admin, manager, logistics, purchaser. */
+/** Создание/правка шапки рейса — как `TRIP_WRITE` в API: admin, manager, logistics, purchaser. */
 const TRIP_WRITE_ROLES = new Set<string>(["admin", "manager", "logistics", "purchaser"]);
+
+/** Закрытие / повторное открытие / удаление рейса — как `tripCloseDelete` в API: только admin. */
+const TRIP_CLOSE_DELETE_ROLES = new Set<string>(["admin"]);
 
 /** Привязка/отвязка ПН, отгрузка — как `ship` в API: admin, manager, warehouse, logistics. */
 const SHIP_LOADING_MANIFEST_ROLES = new Set<string>(["admin", "manager", "warehouse", "logistics", "purchaser"]);
@@ -168,6 +171,20 @@ export function canCreateTrip(user: AuthUser | null): boolean {
   }
   const codes = globalRoleCodes(user);
   for (const r of TRIP_WRITE_ROLES) {
+    if (codes.has(r)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Закрыть, открыть снова или удалить рейс — только admin. */
+export function canCloseOrDeleteTrip(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  for (const r of TRIP_CLOSE_DELETE_ROLES) {
     if (codes.has(r)) {
       return true;
     }

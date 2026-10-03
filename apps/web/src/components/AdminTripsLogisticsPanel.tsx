@@ -25,7 +25,7 @@ import {
 import { loadingManifestTripDetachLockMessage } from "../format/loading-manifest-trip-detach-lock.js";
 import type { LoadingManifestTripDetachLockCode } from "../format/loading-manifest-trip-detach-lock.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
+import { canCloseOrDeleteTrip, canCreateTrip, canShipLoadingManifest } from "../auth/role-panels.js";
 import { adminAwarePathForPath, adminRoutes, ops } from "../routes.js";
 import { tripListOperationsHref } from "../format/trip-list-operations-href.js";
 import {
@@ -54,6 +54,7 @@ export function AdminTripsLogisticsPanel() {
   const { meta, user } = useAuth();
   const queryClient = useQueryClient();
   const canWriteTrips = canCreateTrip(user);
+  const canCloseDeleteTrip = canCloseOrDeleteTrip(user);
   const canDetachManifest = canShipLoadingManifest(user);
   const tripsApiEnabled = meta?.tripsApi === "enabled";
 
@@ -272,7 +273,7 @@ export function AdminTripsLogisticsPanel() {
   const deleteTrip = useMutation({
     mutationFn: async (tripId: string) => {
       setTripError(null);
-      await deleteTripById(tripId, "Нет прав на удаление рейса");
+      await deleteTripById(tripId, "Нет прав: удалить рейс может только admin");
     },
     onSuccess: () => {
       invalidateTrips();
@@ -297,7 +298,7 @@ export function AdminTripsLogisticsPanel() {
           return;
         }
       }
-      await closeTripById(tripId, "Нет прав: закрытие рейса — роли admin, manager, logistics");
+      await closeTripById(tripId, "Нет прав: закрытие рейса — только admin");
     },
     onSuccess: () => {
       invalidateTrips();
@@ -577,7 +578,7 @@ export function AdminTripsLogisticsPanel() {
                         </Link>
                       </td>
                       <td>
-                        {canWriteTrips ? (
+                        {canCloseDeleteTrip ? (
                           <div className="birzha-clean-ops-row-actions">
                             {t.status === "open" ? (
                               <button
