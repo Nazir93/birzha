@@ -13,6 +13,7 @@ import { sales } from "../routes.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { SellerMoneySendsPanel } from "./SellerMoneySendsPanel.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -156,14 +157,16 @@ export function SellerFieldExpensesPanel() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", marginBottom: "0.85rem", alignItems: "end" }}>
         <label className="birzha-form-label" style={{ margin: 0, minWidth: "14rem", flex: "1 1 14rem" }}>
           Рейс
-          <select style={fieldStyle} value={tripId} onChange={(e) => setTripId(e.target.value)}>
-            <option value="">Все свои (только сверка)</option>
-            {tripsForSelect.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-              </option>
-            ))}
-          </select>
+          <BirzhaSelect
+            aria-label="Рейс"
+            style={fieldStyle}
+            value={tripId}
+            onChange={setTripId}
+            options={[
+              { value: "", label: "Все свои (только сверка)" },
+              ...tripsForSelect.map((t) => ({ value: t.id, label: formatTripSelectLabel(t) })),
+            ]}
+          />
         </label>
         <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
           С
@@ -251,14 +254,20 @@ export function SellerFieldExpensesPanel() {
         </label>
         <label className="birzha-form-label">
           Категория
-          <select style={fieldStyle} value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
-            <option value="loader">Грузчик</option>
-            <option value="lunch">Обед</option>
-            <option value="pallets">Палеты</option>
-            <option value="rent">Аренда</option>
-            <option value="materials">Материал</option>
-            <option value="other">Прочее</option>
-          </select>
+          <BirzhaSelect
+            aria-label="Категория"
+            style={fieldStyle}
+            value={category}
+            onChange={(v) => setCategory(v as typeof category)}
+            options={[
+              { value: "loader", label: "Грузчик" },
+              { value: "lunch", label: "Обед" },
+              { value: "pallets", label: "Палеты" },
+              { value: "rent", label: "Аренда" },
+              { value: "materials", label: "Материал" },
+              { value: "other", label: "Прочее" },
+            ]}
+          />
         </label>
         <label className="birzha-form-label">
           Сумма, ₽

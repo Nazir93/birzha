@@ -7,6 +7,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -113,12 +114,18 @@ export function AccountingTripExpensesBlock({ tripId }: { tripId: string }) {
         <div style={{ display: "grid", gap: "0.4rem", marginTop: "0.75rem", maxWidth: "22rem" }}>
           <label className="birzha-form-label">
             Категория
-            <select style={fieldStyle} value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
-              <option value="fuel">Топливо</option>
-              <option value="road">Дорога</option>
-              <option value="driver">Водитель</option>
-              <option value="other">Прочее</option>
-            </select>
+            <BirzhaSelect
+              aria-label="Категория"
+              style={fieldStyle}
+              value={category}
+              onChange={(v) => setCategory(v as typeof category)}
+              options={[
+                { value: "fuel", label: "Топливо" },
+                { value: "road", label: "Дорога" },
+                { value: "driver", label: "Водитель" },
+                { value: "other", label: "Прочее" },
+              ]}
+            />
           </label>
           <label className="birzha-form-label">
             Сумма, ₽

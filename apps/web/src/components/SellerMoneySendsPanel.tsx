@@ -10,6 +10,7 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -117,14 +118,16 @@ export function SellerMoneySendsPanel() {
         </label>
         <label className="birzha-form-label" style={{ margin: 0, minWidth: "12rem" }}>
           Рейс (необязательно)
-          <select style={fieldStyle} value={tripId} onChange={(e) => setTripId(e.target.value)}>
-            <option value="">Все / без рейса</option>
-            {tripsForSelect.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatTripSelectLabel(t)}
-              </option>
-            ))}
-          </select>
+          <BirzhaSelect
+            aria-label="Рейс"
+            style={fieldStyle}
+            value={tripId}
+            onChange={setTripId}
+            options={[
+              { value: "", label: "Все / без рейса" },
+              ...tripsForSelect.map((t) => ({ value: t.id, label: formatTripSelectLabel(t) })),
+            ]}
+          />
         </label>
       </div>
 

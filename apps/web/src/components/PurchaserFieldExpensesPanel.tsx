@@ -6,6 +6,7 @@ import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js"
 import { kopecksToRubLabel } from "../format/money.js";
 import { loadingManifestsPagedQueryOptions } from "../query/core-list-queries.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -139,19 +140,20 @@ export function PurchaserFieldExpensesPanel() {
       >
         <label className="birzha-form-label" style={{ gridColumn: "1 / -1" }}>
           Погрузочная накладная *
-          <select
+          <BirzhaSelect
+            aria-label="Погрузочная накладная"
             value={loadingManifestId}
-            onChange={(e) => setLoadingManifestId(e.target.value)}
+            onChange={setLoadingManifestId}
             style={fieldStyle}
-            required
-          >
-            <option value="">— выберите ПН —</option>
-            {(manifestsQ.data?.loadingManifests ?? []).map((m) => (
-              <option key={m.id} value={m.id}>
-                {formatLoadingManifestDisplayName(m)}
-              </option>
-            ))}
-          </select>
+            placeholder="— выберите ПН —"
+            options={[
+              { value: "", label: "— выберите ПН —" },
+              ...(manifestsQ.data?.loadingManifests ?? []).map((m) => ({
+                value: m.id,
+                label: formatLoadingManifestDisplayName(m),
+              })),
+            ]}
+          />
         </label>
         <label className="birzha-form-label">
           Дата
@@ -164,17 +166,19 @@ export function PurchaserFieldExpensesPanel() {
         </label>
         <label className="birzha-form-label">
           Категория
-          <select
+          <BirzhaSelect
+            aria-label="Категория"
             value={category}
-            onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
+            onChange={(v) => setCategory(v as ExpenseCategory)}
             style={fieldStyle}
-          >
-            <option value="loading">Погрузка</option>
-            <option value="lunch">Обед</option>
-            <option value="foam">Пенопласт</option>
-            <option value="fuel">Заправка</option>
-            <option value="other">Прочее</option>
-          </select>
+            options={[
+              { value: "loading", label: "Погрузка" },
+              { value: "lunch", label: "Обед" },
+              { value: "foam", label: "Пенопласт" },
+              { value: "fuel", label: "Заправка" },
+              { value: "other", label: "Прочее" },
+            ]}
+          />
         </label>
         <label className="birzha-form-label">
           Сумма, ₽

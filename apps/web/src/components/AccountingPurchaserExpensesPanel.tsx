@@ -6,6 +6,7 @@ import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
@@ -141,14 +142,16 @@ export function AccountingPurchaserExpensesPanel() {
           </label>
           <label className="birzha-form-label">
             Категория
-            <select
+            <BirzhaSelect
+              aria-label="Категория"
               value={category}
-              onChange={(e) => setCategory(e.target.value as "salary" | "other")}
+              onChange={(v) => setCategory(v as "salary" | "other")}
               style={fieldStyle}
-            >
-              <option value="salary">Зарплата</option>
-              <option value="other">Прочее</option>
-            </select>
+              options={[
+                { value: "salary", label: "Зарплата" },
+                { value: "other", label: "Прочее" },
+              ]}
+            />
           </label>
           <label className="birzha-form-label">
             Закупщик (имя)
