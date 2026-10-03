@@ -15,6 +15,7 @@ export type PanelId =
   | "reports"
   | "nakladnaya"
   | "purchaseByPurchaser"
+  | "purchaserExpenses"
   | "distribution"
   | "warehouseReturns"
   | "loadingAppend"
@@ -33,6 +34,7 @@ export type PanelId =
 export const NAV_PANEL_LABELS: Record<PanelId, string> = {
   nakladnaya: "Закупка товара",
   purchaseByPurchaser: "Закупки по закупщикам",
+  purchaserExpenses: "Расходы",
   distribution: "Погрузка на машину",
   warehouseReturns: "Возврат на склад",
   loadingAppend: "Догрузка",
@@ -56,6 +58,8 @@ const PANEL_ALLOWED_ROLES: Record<PanelId, readonly string[]> = {
   nakladnaya: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   /** Сводка закупщик × склад — руководство; закупщик видит только свои. */
   purchaseByPurchaser: ["admin", "manager", "purchaser"],
+  /** Расходы закупщика на ПН. */
+  purchaserExpenses: ["admin", "manager", "purchaser"],
   distribution: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   warehouseReturns: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
   loadingAppend: ["admin", "manager", "purchaser", "warehouse", "logistics", "receiver"],
@@ -258,6 +262,7 @@ const PURCHASER_SCOPED_PANELS = new Set<PanelId>([
   "warehouseReturns",
   "loadingAppend",
   "loadingTrip",
+  "purchaserExpenses",
   /** Отчёт «Мои закупки» — со сводки / прямой URL, не в сайдбаре. */
   "purchaseByPurchaser",
   "loadingManifests",
@@ -389,6 +394,7 @@ export function operationsPanelOrder(user: AuthUser | null): PanelId[] {
     "nakladnaya",
     "trips",
     "distribution",
+    "purchaserExpenses",
     "warehouseReturns",
     "loadingAppend",
     "loadingTrip",
@@ -489,6 +495,18 @@ export function hrefForPanelInCabinet(
     }
     if (currentCabinet === "operations") {
       return ops.purchaseByPurchaser;
+    }
+    return null;
+  }
+  if (panel === "purchaserExpenses") {
+    if (!canAccessPanel(user, "purchaserExpenses")) {
+      return null;
+    }
+    if (!canAccessCabinet(user, currentCabinet)) {
+      return null;
+    }
+    if (currentCabinet === "operations" || currentCabinet === "admin") {
+      return ops.expenses;
     }
     return null;
   }

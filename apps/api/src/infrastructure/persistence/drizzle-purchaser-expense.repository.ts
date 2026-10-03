@@ -10,8 +10,17 @@ import type {
 import type { DbClient } from "../../db/client.js";
 import { purchaserExpenses } from "../../db/schema.js";
 
+const CATEGORIES = new Set<PurchaserExpenseCategory>([
+  "salary",
+  "loading",
+  "lunch",
+  "foam",
+  "fuel",
+  "other",
+]);
+
 function asCategory(raw: string): PurchaserExpenseCategory {
-  return raw === "salary" ? "salary" : "other";
+  return CATEGORIES.has(raw as PurchaserExpenseCategory) ? (raw as PurchaserExpenseCategory) : "other";
 }
 
 function parseYmdUtc(ymd: string): Date {
@@ -26,6 +35,7 @@ function rowToRecord(r: typeof purchaserExpenses.$inferSelect): PurchaserExpense
     amountKopecks: r.amountKopecks,
     purchaserUserId: r.purchaserUserId,
     purchaserLabel: r.purchaserLabel,
+    loadingManifestId: r.loadingManifestId,
     comment: r.comment,
     recordedByUserId: r.recordedByUserId,
     createdAt: r.createdAt,
@@ -43,6 +53,7 @@ export class DrizzlePurchaserExpenseRepository implements PurchaserExpenseReposi
       amountKopecks: row.amountKopecks,
       purchaserUserId: row.purchaserUserId?.trim() || null,
       purchaserLabel: row.purchaserLabel?.trim() || null,
+      loadingManifestId: row.loadingManifestId?.trim() || null,
       comment: row.comment?.trim() || null,
       recordedByUserId: row.recordedByUserId?.trim() || null,
       createdAt: row.createdAt ?? new Date(),
@@ -63,6 +74,9 @@ export class DrizzlePurchaserExpenseRepository implements PurchaserExpenseReposi
     const parts = [];
     if (filter.purchaserUserId) {
       parts.push(eq(purchaserExpenses.purchaserUserId, filter.purchaserUserId));
+    }
+    if (filter.loadingManifestId) {
+      parts.push(eq(purchaserExpenses.loadingManifestId, filter.loadingManifestId));
     }
     if (filter.fromYmd) {
       parts.push(gte(purchaserExpenses.expenseDate, parseYmdUtc(filter.fromYmd)));

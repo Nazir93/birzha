@@ -17,6 +17,7 @@ function toRecord(row: PurchaserExpenseAppend): PurchaserExpenseRecord {
     amountKopecks: row.amountKopecks,
     purchaserUserId: row.purchaserUserId ?? null,
     purchaserLabel: row.purchaserLabel ?? null,
+    loadingManifestId: row.loadingManifestId ?? null,
     comment: row.comment ?? null,
     recordedByUserId: row.recordedByUserId ?? null,
     createdAt: row.createdAt ?? new Date(),
@@ -45,6 +46,9 @@ export class InMemoryPurchaserExpenseRepository implements PurchaserExpenseRepos
     return this.rows
       .filter((r) => {
         if (filter.purchaserUserId && (r.purchaserUserId ?? "") !== filter.purchaserUserId) {
+          return false;
+        }
+        if (filter.loadingManifestId && (r.loadingManifestId ?? "") !== filter.loadingManifestId) {
           return false;
         }
         const day = ymd(r.expenseDate);

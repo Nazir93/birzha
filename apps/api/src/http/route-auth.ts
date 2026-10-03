@@ -27,8 +27,14 @@ const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
 /** Чтение и запись бухгалтерии (дебиторка, кредиторка, расходы). */
 const ACCOUNTING_ROLES = ["admin", "manager", "accountant"] as const;
 
+/** Расходы закупщика (в т.ч. на ПН) — бухгалтер + закупщик. */
+const PURCHASER_EXPENSE_ROLES = ["admin", "manager", "accountant", "purchaser"] as const;
+
 /** Полевые траты продавца с кассы — seller + руководство/бухгалтер. */
 const SELLER_FIELD_EXPENSE_ROLES = ["admin", "manager", "accountant", "seller"] as const;
+
+/** Отправка денег продавцом — seller + руководство/бухгалтер. */
+const SELLER_MONEY_SEND_ROLES = ["admin", "manager", "accountant", "seller"] as const;
 
 /** Сторно оплат / расходов — только admin. */
 const ACCOUNTING_ADMIN_DELETE_ROLES = ["admin"] as const;
@@ -86,9 +92,15 @@ export type BusinessRouteAuth = {
   accountingWrite: AuthPreHandler[];
   /** DELETE оплат/расходов — только admin. */
   accountingAdminDelete: AuthPreHandler[];
+  /** Расходы закупщика — purchaser + admin/manager/accountant. */
+  purchaserExpenseRead: AuthPreHandler[];
+  purchaserExpenseWrite: AuthPreHandler[];
   /** Полевые траты продавца — seller (свой рейс) + admin/manager/accountant. */
   sellerFieldExpenseRead: AuthPreHandler[];
   sellerFieldExpenseWrite: AuthPreHandler[];
+  /** Отправка денег продавцом. */
+  sellerMoneySendRead: AuthPreHandler[];
+  sellerMoneySendWrite: AuthPreHandler[];
   /** PUT /purchase-documents/:id/lines — admin/manager/purchaser. */
   purchaseDocumentLinesWrite: AuthPreHandler[];
   /** Список и создание пользователей — admin и manager. */
@@ -116,8 +128,12 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   accountingRead: [],
   accountingWrite: [],
   accountingAdminDelete: [],
+  purchaserExpenseRead: [],
+  purchaserExpenseWrite: [],
   sellerFieldExpenseRead: [],
   sellerFieldExpenseWrite: [],
+  sellerMoneySendRead: [],
+  sellerMoneySendWrite: [],
   purchaseDocumentLinesWrite: [],
   userManagement: [],
   purchasePurchaserReportRead: [],
@@ -162,8 +178,12 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     accountingRead: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
     accountingWrite: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
     accountingAdminDelete: [a, requireGlobalRoles(ACCOUNTING_ADMIN_DELETE_ROLES)],
+    purchaserExpenseRead: [a, requireGlobalRoles(PURCHASER_EXPENSE_ROLES)],
+    purchaserExpenseWrite: [a, requireGlobalRoles(PURCHASER_EXPENSE_ROLES)],
     sellerFieldExpenseRead: [a, requireGlobalRoles(SELLER_FIELD_EXPENSE_ROLES)],
     sellerFieldExpenseWrite: [a, requireGlobalRoles(SELLER_FIELD_EXPENSE_ROLES)],
+    sellerMoneySendRead: [a, requireGlobalRoles(SELLER_MONEY_SEND_ROLES)],
+    sellerMoneySendWrite: [a, requireGlobalRoles(SELLER_MONEY_SEND_ROLES)],
     purchaseDocumentLinesWrite: [a, requireGlobalRoles(PURCHASE_DOCUMENT_LINES_WRITE_ROLES)],
     userManagement: [a, requireGlobalRoles(USER_MANAGEMENT_ROLES)],
     purchasePurchaserReportRead: [a, requireGlobalRoles(PURCHASE_PURCHASER_REPORT_ROLES)],

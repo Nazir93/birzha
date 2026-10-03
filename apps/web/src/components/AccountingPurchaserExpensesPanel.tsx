@@ -12,6 +12,10 @@ import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } 
 
 const CATEGORY_LABEL: Record<string, string> = {
   salary: "Зарплата",
+  loading: "Погрузка",
+  lunch: "Обед",
+  foam: "Пенопласт",
+  fuel: "Заправка",
   other: "Прочее",
 };
 
@@ -21,6 +25,7 @@ type ExpenseRow = {
   amountKopecks: string;
   expenseDate: string;
   purchaserLabel: string | null;
+  loadingManifestId?: string | null;
   comment: string | null;
 };
 
@@ -90,7 +95,8 @@ export function AccountingPurchaserExpensesPanel() {
   return (
     <div>
       <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: 0, maxWidth: "40rem" }}>
-        Зарплата закупщиков и прочие их расходы. Отдельно от оплат тепличникам и трат продавца с кассы.
+        Зарплата (здесь) и полевые расходы закупщика с ПН (погрузка, обед, пенопласт, заправка) — из кабинета
+        закупщика. Отдельно от оплат тепличникам и трат продавца.
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem", alignItems: "end" }}>

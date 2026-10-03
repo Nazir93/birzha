@@ -57,10 +57,14 @@ import { InMemoryTripExpenseRepository } from "./application/testing/in-memory-t
 import { DrizzleTripExpenseRepository } from "./infrastructure/persistence/drizzle-trip-expense.repository.js";
 import type { PurchaserExpenseRepository } from "./application/ports/purchaser-expense-repository.port.js";
 import type { SellerFieldExpenseRepository } from "./application/ports/seller-field-expense-repository.port.js";
+import type { SellerMoneySendRepository } from "./application/ports/seller-money-send-repository.port.js";
 import { InMemoryPurchaserExpenseRepository } from "./application/testing/in-memory-purchaser-expense.repository.js";
 import { InMemorySellerFieldExpenseRepository } from "./application/testing/in-memory-seller-field-expense.repository.js";
+import { InMemorySellerMoneySendRepository } from "./application/testing/in-memory-seller-money-send.repository.js";
 import { DrizzlePurchaserExpenseRepository } from "./infrastructure/persistence/drizzle-purchaser-expense.repository.js";
 import { DrizzleSellerFieldExpenseRepository } from "./infrastructure/persistence/drizzle-seller-field-expense.repository.js";
+import { DrizzleSellerMoneySendRepository } from "./infrastructure/persistence/drizzle-seller-money-send.repository.js";
+import { registerSellerMoneySendRoutes } from "./http/register-seller-money-send-routes.js";
 import type { SupplierPaymentRepository } from "./application/ports/supplier-payment-repository.port.js";
 import { InMemorySupplierPaymentRepository } from "./application/testing/in-memory-supplier-payment.repository.js";
 import { DrizzleSupplierPaymentRepository } from "./infrastructure/persistence/drizzle-supplier-payment.repository.js";
@@ -249,6 +253,13 @@ export async function buildApp(options: {
     purchaserExpenseRepository = new DrizzlePurchaserExpenseRepository(db);
   } else if (saleRepository && tripRepository) {
     purchaserExpenseRepository = new InMemoryPurchaserExpenseRepository();
+  }
+
+  let sellerMoneySendRepository: SellerMoneySendRepository | null = null;
+  if (db) {
+    sellerMoneySendRepository = new DrizzleSellerMoneySendRepository(db);
+  } else if (saleRepository && tripRepository) {
+    sellerMoneySendRepository = new InMemorySellerMoneySendRepository();
   }
 
   const runShipInTransaction: ShipToTripTransactionRunner | undefined = db
@@ -542,6 +553,13 @@ export async function buildApp(options: {
         routeAuth,
       );
     }
+    if (sellerMoneySendRepository && tripRepository) {
+      registerSellerMoneySendRoutes(
+        app,
+        { trips: tripRepository, sends: sellerMoneySendRepository },
+        routeAuth,
+      );
+    }
     registerBatchRoutes(
       app,
       batchRepository,
@@ -572,6 +590,7 @@ export async function buildApp(options: {
           tripExpenses: tripExpenseRepository,
           sellerFieldExpenses: sellerFieldExpenseRepository,
           purchaserExpenses: purchaserExpenseRepository,
+          sellerMoneySends: sellerMoneySendRepository,
           shipments: shipmentRepository,
           shortages: shortageRepository,
           batches: batchRepository,

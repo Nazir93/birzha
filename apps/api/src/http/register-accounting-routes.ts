@@ -11,6 +11,7 @@ import {
 } from "@birzha/contracts";
 import { z } from "zod";
 
+import { globalRoleCodes } from "../auth/global-roles.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { AccountingPayablesUseCase } from "../application/accounting/accounting-payables.use-case.js";
 import { AccountingReceivablesUseCase } from "../application/accounting/accounting-receivables.use-case.js";
@@ -21,6 +22,7 @@ import type { DebtPaymentRepository } from "../application/ports/debt-payment-re
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
 import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
 import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
+import type { SellerMoneySendRepository } from "../application/ports/seller-money-send-repository.port.js";
 import type { SupplierPaymentRepository } from "../application/ports/supplier-payment-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
@@ -53,6 +55,7 @@ export function registerAccountingRoutes(
     tripExpenses?: TripExpenseRepository | null;
     sellerFieldExpenses?: SellerFieldExpenseRepository | null;
     purchaserExpenses?: PurchaserExpenseRepository | null;
+    sellerMoneySends?: SellerMoneySendRepository | null;
     shipments?: TripShipmentRepository | null;
     shortages?: TripShortageRepository | null;
     batches?: BatchRepository | null;
@@ -364,14 +367,25 @@ export function registerAccountingRoutes(
 
     app.get(
       "/accounting/purchaser-expenses",
-      { ...withPreHandlers(routeAuth.accountingRead) },
+      { ...withPreHandlers(routeAuth.purchaserExpenseRead) },
       async (req, reply) => {
         try {
           const q = accountingPurchaserExpensesQuerySchema.parse(req.query);
+          const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+          const codes = user ? globalRoleCodes(user) : [];
+          const scopedPurchaser =
+            user &&
+            codes.includes("purchaser") &&
+            !codes.includes("admin") &&
+            !codes.includes("manager") &&
+            !codes.includes("accountant")
+              ? user.sub
+              : undefined;
           const result = await pe.list({
             fromYmd: q.from,
             toYmd: q.to,
-            purchaserUserId: q.purchaserUserId,
+            purchaserUserId: scopedPurchaser ?? q.purchaserUserId,
+            loadingManifestId: q.loadingManifestId,
           });
           return reply.send({
             totalKopecks: result.totalKopecks.toString(),
@@ -384,6 +398,7 @@ export function registerAccountingRoutes(
               expenseDate: e.expenseDate.toISOString().slice(0, 10),
               purchaserUserId: e.purchaserUserId,
               purchaserLabel: e.purchaserLabel,
+              loadingManifestId: e.loadingManifestId,
               comment: e.comment,
               recordedByUserId: e.recordedByUserId,
               createdAt: e.createdAt.toISOString(),
@@ -397,19 +412,27 @@ export function registerAccountingRoutes(
 
     app.post(
       "/accounting/purchaser-expenses",
-      { ...withPreHandlers(routeAuth.accountingWrite) },
+      { ...withPreHandlers(routeAuth.purchaserExpenseWrite) },
       async (req, reply) => {
         try {
           const body = createPurchaserExpenseBodySchema.parse(req.body);
           const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+          const codes = user ? globalRoleCodes(user) : [];
+          const isPurchaserOnly =
+            codes.includes("purchaser") &&
+            !codes.includes("admin") &&
+            !codes.includes("manager") &&
+            !codes.includes("accountant");
           const row = await pe.record({
             expenseDate: parseYmdToUtcDate(body.expenseDate),
             category: body.category,
             amountKopecks: amountToBigInt(body.amountKopecks),
-            purchaserUserId: body.purchaserUserId,
+            purchaserUserId: isPurchaserOnly ? user!.sub : (body.purchaserUserId ?? user?.sub ?? null),
             purchaserLabel: body.purchaserLabel,
+            loadingManifestId: body.loadingManifestId,
             comment: body.comment,
             recordedByUserId: user?.sub ?? null,
+            requireLoadingManifest: isPurchaserOnly,
           });
           return reply.code(201).send({
             id: row.id,
@@ -418,6 +441,7 @@ export function registerAccountingRoutes(
             expenseDate: row.expenseDate.toISOString().slice(0, 10),
             purchaserUserId: row.purchaserUserId,
             purchaserLabel: row.purchaserLabel,
+            loadingManifestId: row.loadingManifestId,
             comment: row.comment,
           });
         } catch (error) {
@@ -458,6 +482,7 @@ export function registerAccountingRoutes(
           tripExpenses: deps.tripExpenses ?? null,
           sellerFieldExpenses: deps.sellerFieldExpenses ?? null,
           purchaserExpenses: deps.purchaserExpenses ?? null,
+          sellerMoneySends: deps.sellerMoneySends ?? null,
           shipments: deps.shipments ?? null,
           shortages: deps.shortages ?? null,
           batches: deps.batches ?? null,

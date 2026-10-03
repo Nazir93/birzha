@@ -302,6 +302,13 @@
       "when": 1779500000000,
       "tag": "0042_purchaser_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779600000000,
+      "tag": "0043_purchaser_expense_manifest_and_seller_money_sends",
+      "breakpoints": true
     }
   ]
 }

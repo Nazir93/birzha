@@ -17,10 +17,12 @@ describe("PurchaserExpensesUseCase", () => {
     });
     await uc.record({
       expenseDate: new Date("2026-10-06T00:00:00.000Z"),
-      category: "other",
+      category: "fuel",
       amountKopecks: 25_000n,
       purchaserLabel: "Иван",
+      loadingManifestId: "lm-1",
       comment: "бензин",
+      requireLoadingManifest: true,
     });
 
     const listed = await uc.list({ fromYmd: "2026-10-01", toYmd: "2026-10-31" });

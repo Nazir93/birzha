@@ -31,6 +31,7 @@ import {
   SeededResourceDeleteForbiddenError,
   PurchaserExpenseNotFoundError,
   SellerFieldExpenseNotFoundError,
+  SellerMoneySendNotFoundError,
   SupplierNotFoundError,
   SupplierPaymentNotFoundError,
   TripArchiveDeleteRequiresClosedError,
@@ -294,6 +295,13 @@ export function sendMappedError(reply: FastifyReply, error: unknown): FastifyRep
     return reply.code(404).send({
       error: "purchaser_expense_not_found",
       expenseId: error.expenseId,
+      message: error.message,
+    });
+  }
+  if (error instanceof SellerMoneySendNotFoundError) {
+    return reply.code(404).send({
+      error: "seller_money_send_not_found",
+      sendId: error.sendId,
       message: error.message,
     });
   }

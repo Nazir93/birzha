@@ -47,6 +47,7 @@ type PeriodSummary = {
   tripExpensesKopecks?: string;
   sellerFieldExpensesKopecks?: string;
   purchaserExpensesKopecks?: string;
+  sellerMoneySendsKopecks?: string;
   operatingExpensesKopecks?: string;
   netProfitKopecks: string;
   purchaseTotalKopecks: string;
@@ -81,6 +82,7 @@ export function AccountingCabinetHome() {
   const tripExp = s?.tripExpensesKopecks ?? s?.expensesKopecks ?? "0";
   const sellerExp = s?.sellerFieldExpensesKopecks ?? "0";
   const purchaserExp = s?.purchaserExpensesKopecks ?? "0";
+  const sellerSends = s?.sellerMoneySendsKopecks ?? "0";
   const operating = s?.operatingExpensesKopecks ?? tripExp;
 
   return (
@@ -195,6 +197,13 @@ export function AccountingCabinetHome() {
                 {kopecksToRubLabel(sellerExp)}
               </div>
               <div className="birzha-text-muted birzha-ui-sm">полевые траты с кассы</div>
+            </div>
+            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+              <div className="birzha-kpi-tile__label">Отправки продавцов</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+                {kopecksToRubLabel(sellerSends)}
+              </div>
+              <div className="birzha-text-muted birzha-ui-sm">кому / сколько / дата</div>
             </div>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium">
               <div className="birzha-kpi-tile__label">Расходы по рейсу</div>

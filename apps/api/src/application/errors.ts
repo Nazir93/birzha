@@ -466,3 +466,14 @@ export class PurchaserExpenseNotFoundError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+export class SellerMoneySendNotFoundError extends Error {
+  readonly sendId: string;
+
+  constructor(sendId: string) {
+    super(`Отправка денег не найдена: ${sendId}`);
+    this.name = "SellerMoneySendNotFoundError";
+    this.sendId = sendId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

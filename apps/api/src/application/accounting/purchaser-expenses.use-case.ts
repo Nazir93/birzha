@@ -11,7 +11,12 @@ import type {
 export class PurchaserExpensesUseCase {
   constructor(private readonly expenses: PurchaserExpenseRepository) {}
 
-  async list(filter: { fromYmd?: string; toYmd?: string; purchaserUserId?: string }) {
+  async list(filter: {
+    fromYmd?: string;
+    toYmd?: string;
+    purchaserUserId?: string;
+    loadingManifestId?: string;
+  }) {
     const rows = await this.expenses.list(filter);
     let totalKopecks = 0n;
     let salaryKopecks = 0n;
@@ -33,11 +38,18 @@ export class PurchaserExpensesUseCase {
     amountKopecks: bigint;
     purchaserUserId?: string | null;
     purchaserLabel?: string | null;
+    loadingManifestId?: string | null;
     comment?: string | null;
     recordedByUserId?: string | null;
+    /** В кабинете закупщика расход всегда на ПН. */
+    requireLoadingManifest?: boolean;
   }): Promise<PurchaserExpenseRecord> {
     if (input.amountKopecks <= 0n) {
       throw new InvalidPaymentAmountError(input.amountKopecks);
+    }
+    const manifestId = input.loadingManifestId?.trim() || null;
+    if (input.requireLoadingManifest && !manifestId) {
+      throw new Error("Укажите погрузочную накладную для расхода закупщика");
     }
     const id = randomUUID();
     await this.expenses.append({
@@ -47,6 +59,7 @@ export class PurchaserExpensesUseCase {
       amountKopecks: input.amountKopecks,
       purchaserUserId: input.purchaserUserId,
       purchaserLabel: input.purchaserLabel,
+      loadingManifestId: manifestId,
       comment: input.comment,
       recordedByUserId: input.recordedByUserId,
     });

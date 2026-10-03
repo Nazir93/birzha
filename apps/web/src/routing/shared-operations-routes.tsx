@@ -49,6 +49,11 @@ const PurchaseByPurchaserReportPanel = lazy(() =>
 const PurchaserCabinetHome = lazy(() =>
   import("../components/PurchaserCabinetHome.js").then((m) => ({ default: m.PurchaserCabinetHome })),
 );
+const PurchaserFieldExpensesPanel = lazy(() =>
+  import("../components/PurchaserFieldExpensesPanel.js").then((m) => ({
+    default: m.PurchaserFieldExpensesPanel,
+  })),
+);
 
 function OperationsCabinetIndex() {
   const { user } = useAuth();
@@ -99,6 +104,17 @@ export function sharedOperationsCabinetRouteElements(defaultIndex: "reports" | "
           <RequirePanel panel="purchaseByPurchaser">
             <section className="birzha-card">
               <PurchaseByPurchaserReportPanel />
+            </section>
+          </RequirePanel>
+        }
+      />
+      <Route
+        path="expenses"
+        element={
+          <RequirePanel panel="purchaserExpenses">
+            <section className="birzha-card">
+              <h2 className="birzha-section-title">Расходы закупщика</h2>
+              <PurchaserFieldExpensesPanel />
             </section>
           </RequirePanel>
         }

@@ -213,10 +213,12 @@ describe("role-panels", () => {
     expect(canAccessPanel(u, "loadingAppend")).toBe(true);
     expect(canAccessPanel(u, "loadingTrip")).toBe(true);
     expect(canAccessPanel(u, "purchaseByPurchaser")).toBe(true);
+    expect(canAccessPanel(u, "purchaserExpenses")).toBe(true);
     expect(operationsPanelOrder(u)).toEqual([
       "nakladnaya",
       "trips",
       "distribution",
+      "purchaserExpenses",
       "warehouseReturns",
       "loadingAppend",
       "loadingTrip",

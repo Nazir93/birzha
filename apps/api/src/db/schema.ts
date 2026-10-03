@@ -386,6 +386,9 @@ export const purchaserExpenses = pgTable(
     amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
     purchaserUserId: text("purchaser_user_id").references(() => users.id, { onDelete: "set null" }),
     purchaserLabel: text("purchaser_label"),
+    loadingManifestId: text("loading_manifest_id").references(() => loadingManifests.id, {
+      onDelete: "set null",
+    }),
     comment: text("comment"),
     recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
@@ -393,6 +396,27 @@ export const purchaserExpenses = pgTable(
   (t) => [
     index("purchaser_expenses_expense_date_idx").on(t.expenseDate),
     index("purchaser_expenses_purchaser_user_id_idx").on(t.purchaserUserId),
+    index("purchaser_expenses_loading_manifest_id_idx").on(t.loadingManifestId),
+  ],
+);
+
+/** Отправка денег продавцом (кому / сумма / дата) — контроль в бухгалтерии. */
+export const sellerMoneySends = pgTable(
+  "seller_money_sends",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id").references(() => trips.id, { onDelete: "set null" }),
+    sendDate: date("send_date", { mode: "date" }).notNull(),
+    amountKopecks: bigint("amount_kopecks", { mode: "bigint" }).notNull(),
+    recipient: text("recipient").notNull(),
+    comment: text("comment"),
+    recordedByUserId: text("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("seller_money_sends_send_date_idx").on(t.sendDate),
+    index("seller_money_sends_trip_id_idx").on(t.tripId),
+    index("seller_money_sends_recorded_by_user_id_idx").on(t.recordedByUserId),
   ],
 );
 

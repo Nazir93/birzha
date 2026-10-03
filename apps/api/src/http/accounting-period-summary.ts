@@ -6,6 +6,7 @@ import type { DebtPaymentRepository } from "../application/ports/debt-payment-re
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
 import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
 import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
+import type { SellerMoneySendRepository } from "../application/ports/seller-money-send-repository.port.js";
 import type { SupplierPaymentRepository } from "../application/ports/supplier-payment-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
@@ -44,6 +45,7 @@ export async function buildAccountingPeriodSummary(deps: {
   tripExpenses: TripExpenseRepository | null;
   sellerFieldExpenses: SellerFieldExpenseRepository | null;
   purchaserExpenses: PurchaserExpenseRepository | null;
+  sellerMoneySends: SellerMoneySendRepository | null;
   shipments: unknown;
   shortages: TripShortageRepository | null;
   batches: BatchRepository | null;
@@ -117,6 +119,11 @@ export async function buildAccountingPeriodSummary(deps: {
   let purchaserExpensesTotal = 0n;
   if (deps.purchaserExpenses) {
     purchaserExpensesTotal = await deps.purchaserExpenses.sumInPeriod(fromYmd, toYmd);
+  }
+
+  let sellerMoneySendsTotal = 0n;
+  if (deps.sellerMoneySends) {
+    sellerMoneySendsTotal = await deps.sellerMoneySends.sumInPeriod(fromYmd, toYmd);
   }
 
   const debtGroups = await deps.sales.listDebtGroups();
@@ -212,7 +219,8 @@ export async function buildAccountingPeriodSummary(deps: {
     }
   }
 
-  const operatingExpenses = tripExpensesTotal + sellerFieldExpensesTotal + purchaserExpensesTotal;
+  const operatingExpenses =
+    tripExpensesTotal + sellerFieldExpensesTotal + purchaserExpensesTotal + sellerMoneySendsTotal;
   const bySupplier = [...bySupplierMap.values()]
     .filter((r) => r.purchaseTotal > 0n || r.paidInPeriod > 0n || r.remaining > 0n)
     .sort((a, b) => a.supplierName.localeCompare(b.supplierName, "ru"))
@@ -240,6 +248,7 @@ export async function buildAccountingPeriodSummary(deps: {
     tripExpensesKopecks: tripExpensesTotal.toString(),
     sellerFieldExpensesKopecks: sellerFieldExpensesTotal.toString(),
     purchaserExpensesKopecks: purchaserExpensesTotal.toString(),
+    sellerMoneySendsKopecks: sellerMoneySendsTotal.toString(),
     operatingExpensesKopecks: operatingExpenses.toString(),
     netProfitKopecks: (grossProfit - operatingExpenses).toString(),
     purchaseTotalKopecks: purchaseTotal.toString(),

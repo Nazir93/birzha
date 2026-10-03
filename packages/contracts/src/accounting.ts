@@ -73,18 +73,50 @@ export const accountingPurchaserExpensesQuerySchema = z
     from: ymd.optional(),
     to: ymd.optional(),
     purchaserUserId: z.string().min(1).max(64).optional(),
+    loadingManifestId: z.string().min(1).max(64).optional(),
   })
   .refine((q) => !q.from || !q.to || q.from <= q.to, { message: "from не позже to", path: ["to"] });
 
+export const purchaserExpenseCategorySchema = z.enum([
+  "salary",
+  "loading",
+  "lunch",
+  "foam",
+  "fuel",
+  "other",
+]);
+
 /** POST /accounting/purchaser-expenses */
 export const createPurchaserExpenseBodySchema = z.object({
-  category: z.enum(["salary", "other"]),
+  category: purchaserExpenseCategorySchema,
   amountKopecks: kopecksPositive,
   expenseDate: ymd,
   purchaserUserId: z.string().min(1).max(64).optional(),
   purchaserLabel: z.string().min(1).max(120).optional(),
+  loadingManifestId: z.string().min(1).max(64).optional(),
   comment: z.string().max(500).optional(),
 });
 
 export type AccountingPurchaserExpensesQuery = z.infer<typeof accountingPurchaserExpensesQuerySchema>;
 export type CreatePurchaserExpenseBody = z.infer<typeof createPurchaserExpenseBodySchema>;
+
+/** GET /seller-money-sends */
+export const sellerMoneySendsQuerySchema = z
+  .object({
+    from: ymd.optional(),
+    to: ymd.optional(),
+    tripId: z.string().min(1).max(64).optional(),
+  })
+  .refine((q) => !q.from || !q.to || q.from <= q.to, { message: "from не позже to", path: ["to"] });
+
+/** POST /seller-money-sends */
+export const createSellerMoneySendBodySchema = z.object({
+  amountKopecks: kopecksPositive,
+  sendDate: ymd,
+  recipient: z.string().min(1).max(200),
+  tripId: z.string().min(1).max(64).optional(),
+  comment: z.string().max(500).optional(),
+});
+
+export type SellerMoneySendsQuery = z.infer<typeof sellerMoneySendsQuerySchema>;
+export type CreateSellerMoneySendBody = z.infer<typeof createSellerMoneySendBodySchema>;

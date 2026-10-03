@@ -59,6 +59,8 @@ export const ops = {
   ...sharedOpsPaths(prefix.operations),
   /** Зеркало отчёта закупщик × склад для manager / purchaser (кабинет `/a` им закрыт). */
   purchaseByPurchaser: `${prefix.operations}/purchase-by-purchaser`,
+  /** Расходы закупщика на ПН. */
+  expenses: `${prefix.operations}/expenses`,
 } as const;
 
 /** Справочники (склады, калибры) и meta — узкий круг. */

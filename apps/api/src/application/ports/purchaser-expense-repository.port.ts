@@ -1,4 +1,10 @@
-export type PurchaserExpenseCategory = "salary" | "other";
+export type PurchaserExpenseCategory =
+  | "salary"
+  | "loading"
+  | "lunch"
+  | "foam"
+  | "fuel"
+  | "other";
 
 export type PurchaserExpenseRecord = {
   id: string;
@@ -7,6 +13,7 @@ export type PurchaserExpenseRecord = {
   amountKopecks: bigint;
   purchaserUserId: string | null;
   purchaserLabel: string | null;
+  loadingManifestId: string | null;
   comment: string | null;
   recordedByUserId: string | null;
   createdAt: Date;
@@ -19,6 +26,7 @@ export type PurchaserExpenseAppend = {
   amountKopecks: bigint;
   purchaserUserId?: string | null;
   purchaserLabel?: string | null;
+  loadingManifestId?: string | null;
   comment?: string | null;
   recordedByUserId?: string | null;
   createdAt?: Date;
@@ -28,6 +36,7 @@ export type PurchaserExpenseListFilter = {
   fromYmd?: string;
   toYmd?: string;
   purchaserUserId?: string;
+  loadingManifestId?: string;
 };
 
 export interface PurchaserExpenseRepository {

@@ -129,6 +129,9 @@ export function PurchaserCabinetHome() {
               <Link to={ops.distribution} className="birzha-home-action">
                 <strong>Погрузка</strong>
               </Link>
+              <Link to={ops.expenses} className="birzha-home-action">
+                <strong>Расходы</strong>
+              </Link>
               <Link to={ops.warehouseReturns} className="birzha-home-action">
                 <strong>Возврат</strong>
               </Link>

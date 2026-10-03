@@ -11,6 +11,7 @@ import { kopecksToRubLabel } from "../format/money.js";
 import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { sales } from "../routes.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { SellerMoneySendsPanel } from "./SellerMoneySendsPanel.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
@@ -322,6 +323,8 @@ export function SellerFieldExpensesPanel() {
       <p className="birzha-ui-sm" style={{ marginTop: "1rem" }}>
         <Link to={sales.reports}>Отчёт по рейсу</Link> — нал, траты и «к сдаче» по машине.
       </p>
+
+      <SellerMoneySendsPanel />
     </div>
   );
 }
