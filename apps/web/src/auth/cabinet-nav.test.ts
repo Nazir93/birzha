@@ -70,7 +70,7 @@ describe("cabinet-nav", () => {
     expect(links.find((x) => x.key === "jump-accounting")?.to).toBe(accounting.home);
   });
 
-  it("purchaser: сводка + 6 операционных разделов как на скрине админа", () => {
+  it("purchaser: сводка + операционные разделы (в т.ч. расходы)", () => {
     const user = {
       id: "u-p",
       login: "zakup",
@@ -82,6 +82,7 @@ describe("cabinet-nav", () => {
       "nakladnaya",
       "trips",
       "distribution",
+      "purchaserExpenses",
       "warehouseReturns",
       "loadingAppend",
       "loadingTrip",
