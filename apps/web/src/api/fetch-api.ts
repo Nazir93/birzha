@@ -266,6 +266,20 @@ export async function closeTripById(tripId: string, messageOn403: string): Promi
   await assertOkResponse(res, url);
 }
 
+/** `POST /api/trips/:id/reopen` — вернуть закрытый рейс в работу. */
+export async function reopenTripById(tripId: string, messageOn403: string): Promise<void> {
+  const url = `/api/trips/${encodeURIComponent(tripId)}/reopen`;
+  const res = await apiFetch(url, {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: "{}",
+  });
+  if (res.status === 403) {
+    throw new Error(messageOn403);
+  }
+  await assertOkResponse(res, url);
+}
+
 /**
  * `DELETE /api/trips/:id` — права и конфликт 409 (рейс с движениями).
  */

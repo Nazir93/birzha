@@ -19,6 +19,7 @@ import { CloseTripUseCase } from "../application/trip/close-trip.use-case.js";
 import { CreateTripUseCase } from "../application/trip/create-trip.use-case.js";
 import { DeleteTripUseCase } from "../application/trip/delete-trip.use-case.js";
 import { GetTripReportUseCase } from "../application/trip/get-trip-report.use-case.js";
+import { ReopenTripUseCase } from "../application/trip/reopen-trip.use-case.js";
 import { UpdateTripHeaderUseCase } from "../application/trip/update-trip-header.use-case.js";
 import { computeTripTransitDigest } from "../application/trip/trip-transit-digest.js";
 
@@ -58,6 +59,7 @@ export function registerTripRoutes(
   const createTrip = new CreateTripUseCase(trips);
   const assignTripSeller = new AssignTripSellerUseCase(trips);
   const closeTrip = new CloseTripUseCase(trips);
+  const reopenTrip = new ReopenTripUseCase(trips);
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages, manifestCleanup);
   const updateTripHeader = new UpdateTripHeaderUseCase(trips);
   const tripReport = new GetTripReportUseCase(
@@ -254,6 +256,16 @@ export function registerTripRoutes(
     try {
       const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
       await closeTrip.execute(tripId);
+      return reply.code(200).send({ ok: true });
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
+
+  app.post("/trips/:tripId/reopen", { ...withPreHandlers(routeAuth.tripWrite) }, async (req, reply) => {
+    try {
+      const { tripId } = z.object({ tripId: z.string().min(1) }).parse(req.params);
+      await reopenTrip.execute(tripId);
       return reply.code(200).send({ ok: true });
     } catch (error) {
       return sendMappedError(reply, error);

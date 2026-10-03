@@ -139,6 +139,11 @@ export class Trip {
     this.status = "closed";
   }
 
+  /** Вернуть закрытый рейс в работу (продажи, отгрузки). */
+  reopen(): void {
+    this.status = "open";
+  }
+
   static restore(config: {
     id: string;
     tripNumber: string;

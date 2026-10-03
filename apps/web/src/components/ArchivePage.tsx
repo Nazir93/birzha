@@ -2,7 +2,12 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
-import { apiDeleteOr403, deleteLoadingManifestById, deleteTripById } from "../api/fetch-api.js";
+import {
+  apiDeleteOr403,
+  deleteLoadingManifestById,
+  deleteTripById,
+  reopenTripById,
+} from "../api/fetch-api.js";
 import type {
   LoadingManifestSummary,
   PurchaseDocumentSummary,
@@ -292,8 +297,9 @@ function TripsArchiveTable({
   reportByTripId,
   reportLoadingTripIds,
   startIndex,
-  canDelete,
-  deletingId,
+  canManageTrip,
+  busyTripId,
+  onReopen,
   onDelete,
 }: {
   trips: readonly TripJson[];
@@ -301,12 +307,13 @@ function TripsArchiveTable({
   reportByTripId: ReadonlyMap<string, ShipmentReportResponse>;
   reportLoadingTripIds: ReadonlySet<string>;
   startIndex: number;
-  canDelete: boolean;
-  deletingId: string | null;
+  canManageTrip: boolean;
+  busyTripId: string | null;
+  onReopen: (trip: TripJson) => void;
   onDelete: (trip: TripJson) => void;
 }) {
-  const headers = canDelete
-    ? ["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", "", ""]
+  const headers = canManageTrip
+    ? ["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", "", "", ""]
     : ["№", "Дата выезда", "№ рейса", "Статус", "Продано", "Выручка", "ТС / водитель", ""];
   return (
     <ArchiveDataTable
@@ -329,16 +336,27 @@ function TripsArchiveTable({
             Все продажи
           </Link>,
         ];
-        if (canDelete) {
+        if (canManageTrip) {
+          cells.push(
+            <button
+              key="reopen"
+              type="button"
+              className="birzha-btn birzha-btn--secondary birzha-btn--inline birzha-ui-sm"
+              disabled={busyTripId != null}
+              onClick={() => onReopen(t)}
+            >
+              {busyTripId === t.id ? "…" : "Открыть снова"}
+            </button>,
+          );
           cells.push(
             <button
               key="delete"
               type="button"
               className="birzha-btn-danger-outline birzha-btn-danger-outline--compact"
-              disabled={deletingId != null}
+              disabled={busyTripId != null}
               onClick={() => onDelete(t)}
             >
-              {deletingId === t.id ? "…" : "Удалить"}
+              {busyTripId === t.id ? "…" : "Удалить"}
             </button>,
           );
         }
@@ -359,7 +377,7 @@ export function ArchivePage() {
 
   const canDeletePurchase = !salesMode && user != null && canManageInventoryCatalog(user);
   const canDeleteManifest = canDeletePurchase;
-  const canDeleteTrip = user != null && canCreateTrip(user);
+  const canManageTrip = user != null && canCreateTrip(user);
 
   const [tripsPage, setTripsPage] = useState(0);
   const [nakladPage, setNakladPage] = useState(0);
@@ -368,7 +386,7 @@ export function ArchivePage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [deletingPurchaseId, setDeletingPurchaseId] = useState<string | null>(null);
   const [deletingManifestId, setDeletingManifestId] = useState<string | null>(null);
-  const [deletingTripId, setDeletingTripId] = useState<string | null>(null);
+  const [busyTripId, setBusyTripId] = useState<string | null>(null);
   const nakladSearchDebounced = useDebouncedValue(nakladSearch.trim(), 280);
 
   const invalidateArchive = useCallback(async () => {
@@ -411,14 +429,30 @@ export function ArchivePage() {
   const deleteTrip = useMutation({
     mutationFn: async (tripId: string) => {
       setPageError(null);
-      setDeletingTripId(tripId);
+      setBusyTripId(tripId);
       await deleteTripById(tripId, "Недостаточно прав на удаление рейса.", { fromArchive: true });
     },
     onSuccess: async () => {
       await invalidateArchive();
     },
     onError: (e: unknown) => setPageError(humanizeErrorMessage(e)),
-    onSettled: () => setDeletingTripId(null),
+    onSettled: () => setBusyTripId(null),
+  });
+
+  const reopenTrip = useMutation({
+    mutationFn: async (tripId: string) => {
+      setPageError(null);
+      setBusyTripId(tripId);
+      await reopenTripById(
+        tripId,
+        "Недостаточно прав: открыть рейс снова могут admin, manager, logistics или purchaser.",
+      );
+    },
+    onSuccess: async () => {
+      await invalidateArchive();
+    },
+    onError: (e: unknown) => setPageError(humanizeErrorMessage(e)),
+    onSettled: () => setBusyTripId(null),
   });
 
   useEffect(() => {
@@ -631,8 +665,17 @@ export function ArchivePage() {
               reportByTripId={reportByTripId}
               reportLoadingTripIds={reportLoadingTripIds}
               startIndex={tripsPage * PAGE_SIZE + 1}
-              canDelete={canDeleteTrip}
-              deletingId={deletingTripId}
+              canManageTrip={canManageTrip}
+              busyTripId={busyTripId}
+              onReopen={(trip) => {
+                if (
+                  window.confirm(
+                    `Открыть рейс «${trip.tripNumber}» снова? Он уйдёт из архива, продавец сможет продолжить продажи.`,
+                  )
+                ) {
+                  void reopenTrip.mutate(trip.id);
+                }
+              }}
               onDelete={(trip) => {
                 if (
                   window.confirm(

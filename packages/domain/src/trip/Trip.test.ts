@@ -16,6 +16,14 @@ describe("Trip", () => {
     expect(t.canAcceptShipments()).toBe(false);
   });
 
+  it("reopen снова открывает закрытый рейс", () => {
+    const t = Trip.create({ id: "t-2b", tripNumber: "Ф-02b" });
+    t.close();
+    t.reopen();
+    expect(t.getStatus()).toBe("open");
+    expect(t.canAcceptShipments()).toBe(true);
+  });
+
   it("restore восстанавливает статус", () => {
     const t = Trip.restore({
       id: "t-3",

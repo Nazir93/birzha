@@ -274,6 +274,16 @@ describe("Trip HTTP", () => {
     const body = JSON.parse(res.body) as { error: string };
     expect(body.error).toBe("trip_closed");
 
+    res = await app.inject({ method: "POST", url: "/trips/t-closed/reopen", payload: {} });
+    expect(res.statusCode).toBe(200);
+
+    res = await app.inject({
+      method: "POST",
+      url: "/batches/b-close/ship-to-trip",
+      payload: { kg: 10, tripId: "t-closed" },
+    });
+    expect(res.statusCode).toBe(200);
+
     await app.close();
   });
 
