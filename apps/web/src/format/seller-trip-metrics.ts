@@ -37,6 +37,23 @@ export function formatPackageCountLabel(count: bigint): string {
   return count.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
 }
 
+export function gramsToDashboardKg(grams: bigint): number {
+  return Number(grams) / 1000;
+}
+
+export function sumSellerSettlementFromReports(reports: readonly ShipmentReportResponse[]): {
+  fieldExpensesKopecks: bigint;
+  cashToHandOverKopecks: bigint;
+} {
+  let fieldExpensesKopecks = 0n;
+  let cashToHandOverKopecks = 0n;
+  for (const r of reports) {
+    fieldExpensesKopecks += BigInt(r.financials.fieldExpensesKopecks?.trim() || "0");
+    cashToHandOverKopecks += BigInt(r.financials.cashToHandOverKopecks?.trim() || "0");
+  }
+  return { fieldExpensesKopecks, cashToHandOverKopecks };
+}
+
 export function aggregateSellerShipmentReports(reports: readonly ShipmentReportResponse[]): SellerShipmentTotals {
   let shipped = 0n;
   let sold = 0n;

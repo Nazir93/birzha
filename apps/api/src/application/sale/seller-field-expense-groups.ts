@@ -1,3 +1,4 @@
+import { calendarYmdFromDate } from "../../format/calendar-date.js";
 import type { SellerFieldExpenseRecord } from "../ports/seller-field-expense-repository.port.js";
 
 export type SellerFieldExpenseGroupMode = "day" | "week" | "month";
@@ -12,7 +13,7 @@ export type SellerFieldExpenseGroup = {
 };
 
 function ymdFromDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return calendarYmdFromDate(d);
 }
 
 /** ISO week key: YYYY-Www (UTC). */

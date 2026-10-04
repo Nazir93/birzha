@@ -12,16 +12,13 @@ import { SellerFieldExpensesUseCase } from "../application/sale/seller-field-exp
 import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import type { TripSaleRepository } from "../application/ports/trip-sale-repository.port.js";
+import { calendarYmdFromDate, parseCalendarYmdUtcNoon } from "../format/calendar-date.js";
 
 import { sendMappedError } from "./map-http-error.js";
 import type { BusinessRouteAuth } from "./route-auth.js";
 import { withPreHandlers } from "./route-auth.js";
 
 type JwtRequestUser = { sub: string; login: string; roles: AuthRoleGrant[] };
-
-function parseYmdToUtcDate(ymd: string): Date {
-  return new Date(`${ymd}T00:00:00.000Z`);
-}
 
 function amountToBigInt(v: string | number): bigint {
   return BigInt(typeof v === "number" ? v : v);
@@ -67,7 +64,7 @@ export function registerSellerFieldExpenseRoutes(
         expenses: result.expenses.map((e) => ({
           id: e.id,
           tripId: e.tripId,
-          expenseDate: e.expenseDate.toISOString().slice(0, 10),
+          expenseDate: calendarYmdFromDate(e.expenseDate),
           category: e.category,
           amountKopecks: e.amountKopecks.toString(),
           comment: e.comment,
@@ -107,7 +104,7 @@ export function registerSellerFieldExpenseRoutes(
       }
       const row = await uc.record({
         tripId: body.tripId,
-        expenseDate: parseYmdToUtcDate(body.expenseDate),
+        expenseDate: parseCalendarYmdUtcNoon(body.expenseDate),
         category: body.category,
         amountKopecks: amountToBigInt(body.amountKopecks),
         comment: body.comment,
@@ -116,7 +113,7 @@ export function registerSellerFieldExpenseRoutes(
       return reply.code(201).send({
         id: row.id,
         tripId: row.tripId,
-        expenseDate: row.expenseDate.toISOString().slice(0, 10),
+        expenseDate: calendarYmdFromDate(row.expenseDate),
         category: row.category,
         amountKopecks: row.amountKopecks.toString(),
         comment: row.comment,

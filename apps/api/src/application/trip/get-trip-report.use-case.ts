@@ -61,15 +61,16 @@ export class GetTripReportUseCase {
     const expensesKopecks = this.tripExpenses
       ? await this.tripExpenses.sumByTripId(tripId)
       : 0n;
-    const fieldExpensesKopecks = this.sellerFieldExpenses
-      ? await this.sellerFieldExpenses.sumByTripId(tripId)
-      : 0n;
+    const fieldExpenseRows = this.sellerFieldExpenses
+      ? await this.sellerFieldExpenses.list({ tripId })
+      : [];
+    const fieldExpensesKopecks = fieldExpenseRows.reduce((acc, row) => acc + row.amountKopecks, 0n);
     const financials = computeTripFinancials(sales, shortage, purchaseRubPerKgByBatchId, {
       debtPaidKopecks,
       expensesKopecks,
       fieldExpensesKopecks,
     });
 
-    return { trip, shipment, sales, salesForTripStock, shortage, financials };
+    return { trip, shipment, sales, salesForTripStock, shortage, financials, fieldExpenses: fieldExpenseRows };
   }
 }

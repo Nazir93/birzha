@@ -46,7 +46,7 @@ describe("GetTripReportUseCase", () => {
       saleChannel: "retail",
     });
 
-    const { trip, shipment, sales: saleAgg, shortage, financials } = await new GetTripReportUseCase(
+    const { trip, shipment, sales: saleAgg, shortage, financials, fieldExpenses } = await new GetTripReportUseCase(
       trips,
       shipments,
       sales,
@@ -78,6 +78,7 @@ describe("GetTripReportUseCase", () => {
     expect(financials.costOfSoldKopecks).toBe(320n);
     expect(financials.costOfShortageKopecks).toBe(0n);
     expect(financials.grossProfitKopecks).toBe(80n);
+    expect(fieldExpenses).toEqual([]);
     expect(financials.debtPaidKopecks).toBe(0n);
     expect(financials.debtOutstandingKopecks).toBe(0n);
     expect(financials.expensesKopecks).toBe(0n);

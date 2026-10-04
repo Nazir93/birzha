@@ -1,5 +1,6 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
+import { calendarYmdFromDate, parseCalendarYmdUtcNoon } from "../../format/calendar-date.js";
 import type {
   SellerFieldExpenseAppend,
   SellerFieldExpenseCategory,
@@ -24,15 +25,11 @@ function asCategory(raw: string): SellerFieldExpenseCategory {
   return "other";
 }
 
-function parseYmdUtc(ymd: string): Date {
-  return new Date(`${ymd}T00:00:00.000Z`);
-}
-
 function rowToRecord(r: typeof sellerFieldExpenses.$inferSelect): SellerFieldExpenseRecord {
   return {
     id: r.id,
     tripId: r.tripId,
-    expenseDate: r.expenseDate,
+    expenseDate: parseCalendarYmdUtcNoon(calendarYmdFromDate(r.expenseDate)),
     category: asCategory(r.category),
     amountKopecks: r.amountKopecks,
     comment: r.comment,
@@ -48,7 +45,7 @@ export class DrizzleSellerFieldExpenseRepository implements SellerFieldExpenseRe
     await this.db.insert(sellerFieldExpenses).values({
       id: row.id,
       tripId: row.tripId,
-      expenseDate: row.expenseDate,
+      expenseDate: parseCalendarYmdUtcNoon(calendarYmdFromDate(row.expenseDate)),
       category: row.category,
       amountKopecks: row.amountKopecks,
       comment: row.comment?.trim() || null,
@@ -76,10 +73,10 @@ export class DrizzleSellerFieldExpenseRepository implements SellerFieldExpenseRe
       parts.push(eq(sellerFieldExpenses.recordedByUserId, filter.recordedByUserId));
     }
     if (filter.fromYmd) {
-      parts.push(gte(sellerFieldExpenses.expenseDate, parseYmdUtc(filter.fromYmd)));
+      parts.push(sql`${sellerFieldExpenses.expenseDate} >= CAST(${filter.fromYmd} AS date)`);
     }
     if (filter.toYmd) {
-      parts.push(lte(sellerFieldExpenses.expenseDate, parseYmdUtc(filter.toYmd)));
+      parts.push(sql`${sellerFieldExpenses.expenseDate} <= CAST(${filter.toYmd} AS date)`);
     }
     const rows = await this.db
       .select()

@@ -21,6 +21,7 @@ import { sortTripsByTripNumberAsc } from "../format/trip-sort.js";
 import { formatTripReportStatusLabel, formatTripSelectLabel, tripReportShowsSoldOut } from "../format/trip-label.js";
 import { tripBatchRowsToCsv } from "../format/csv.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
 import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
 import { formatTripSaleClientDisplayLabel } from "../format/trip-sales-channel.js";
 import {
@@ -812,34 +813,74 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     {kopecksToRubLabel(r.sales.totalDebtKopecks)} ₽
                   </td>
                 </tr>
-                {viewContext === "sales" || viewContext === "accounting" ? (
-                  <>
-                    <tr>
-                      <td style={thtd}>Полевые траты (касса)</td>
-                      <td style={thtd}>{kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0")} ₽</td>
-                    </tr>
-                    <tr>
-                      <td style={thtd}>
-                        <strong>К сдаче (нал − траты)</strong>
-                      </td>
-                      <td style={thtd}>
-                        <strong>
-                          {kopecksToRubLabel(
-                            r.financials.cashToHandOverKopecks ??
-                              (
-                                BigInt(r.sales.totalCashKopecks || "0") -
-                                BigInt(r.financials.fieldExpensesKopecks || "0")
-                              ).toString(),
-                          )}{" "}
-                          ₽
-                        </strong>
-                      </td>
-                    </tr>
-                  </>
-                ) : null}
+                <tr>
+                  <td style={thtd}>Полевые траты (касса)</td>
+                  <td style={thtd}>{kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0")} ₽</td>
+                </tr>
+                <tr>
+                  <td style={thtd}>
+                    <strong>К сдаче (нал − траты)</strong>
+                  </td>
+                  <td style={thtd}>
+                    <strong>
+                      {kopecksToRubLabel(
+                        r.financials.cashToHandOverKopecks ??
+                          (
+                            BigInt(r.sales.totalCashKopecks || "0") -
+                            BigInt(r.financials.fieldExpensesKopecks || "0")
+                          ).toString(),
+                      )}{" "}
+                      ₽
+                    </strong>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
+          </BirzhaDisclosure>
+
+          <BirzhaDisclosure
+            defaultOpen
+            title={
+              <h3 id="trip-report-field-expenses" style={{ fontSize: "0.95rem", margin: 0 }}>
+                Траты с кассы
+              </h3>
+            }
+          >
+            {(r.fieldExpenses ?? []).length === 0 ? (
+              <BirzhaEmptyState compact title="Трат по этому рейсу нет" />
+            ) : (
+              <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                <table style={{ ...tableStyle, minWidth: 520 }} aria-labelledby="trip-report-field-expenses">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={thHead}>
+                        Дата
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Категория
+                      </th>
+                      <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                        Сумма
+                      </th>
+                      <th scope="col" style={thHead}>
+                        Комментарий
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(r.fieldExpenses ?? []).map((e) => (
+                      <tr key={e.id}>
+                        <td style={thtd}>{formatPurchaseDocDateRu(e.expenseDate)}</td>
+                        <td style={thtd}>{sellerFieldExpenseCategoryLabel(e.category)}</td>
+                        <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(e.amountKopecks)} ₽</td>
+                        <td style={thtd}>{e.comment?.trim() ? e.comment : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </BirzhaDisclosure>
 
           {viewContext === "accounting" && tripId ? (

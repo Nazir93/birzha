@@ -1,6 +1,7 @@
 import type { TripFinancials } from "../application/trip/trip-financials.js";
 import type { TripSaleAggregate } from "../application/ports/trip-sale-repository.port.js";
 import type { TripShipmentAggregate } from "../application/ports/trip-shipment-repository.port.js";
+import { calendarYmdFromDate } from "../format/calendar-date.js";
 
 /** Агрегат недостачи (масса и ящики по партиям). */
 export type LedgerAggregateJson = {
@@ -173,6 +174,35 @@ export type TripFinancialsJson = {
   fieldExpensesKopecks: string;
   cashToHandOverKopecks: string;
 };
+
+export type SellerFieldExpenseJson = {
+  id: string;
+  tripId: string;
+  expenseDate: string;
+  category: string;
+  amountKopecks: string;
+  comment: string | null;
+};
+
+export function sellerFieldExpensesToJson(
+  rows: Array<{
+    id: string;
+    tripId: string;
+    expenseDate: Date;
+    category: string;
+    amountKopecks: bigint;
+    comment: string | null;
+  }>,
+): SellerFieldExpenseJson[] {
+  return rows.map((e) => ({
+    id: e.id,
+    tripId: e.tripId,
+    expenseDate: calendarYmdFromDate(e.expenseDate),
+    category: e.category,
+    amountKopecks: e.amountKopecks.toString(),
+    comment: e.comment,
+  }));
+}
 
 export function tripFinancialsToJson(f: TripFinancials): TripFinancialsJson {
   return {

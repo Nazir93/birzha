@@ -48,6 +48,7 @@ export const queryRoots = {
   stockBalances: ["stock-balances"] as const,
   warehouseWriteOffsLedger: ["warehouse-write-offs-ledger"] as const,
   shipmentReport: ["shipment-report"] as const,
+  sellerFieldExpenses: ["seller-field-expenses"] as const,
   tripSaleLines: ["trip-sale-lines"] as const,
 } as const;
 

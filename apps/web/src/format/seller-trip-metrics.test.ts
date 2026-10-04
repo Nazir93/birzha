@@ -6,6 +6,8 @@ import {
   aggregateSellerShipmentReports,
   clientSalePaymentLabelRu,
   filterTripsWithoutAssignedSeller,
+  gramsToDashboardKg,
+  sumSellerSettlementFromReports,
   tripLedgerMetrics,
 } from "./seller-trip-metrics.js";
 
@@ -79,6 +81,27 @@ describe("tripLedgerMetrics", () => {
     expect(m.revenueK).toBe(40000n);
     expect(m.cashK).toBe(25000n);
     expect(m.debtK).toBe(15000n);
+  });
+});
+
+describe("sumSellerSettlementFromReports", () => {
+  it("складывает траты и сдачу по рейсам", () => {
+    const a = minimalReport("t1", "Ф-1");
+    a.financials.fieldExpensesKopecks = "1000";
+    a.financials.cashToHandOverKopecks = "24000";
+    const b = minimalReport("t2", "Ф-2");
+    b.financials.fieldExpensesKopecks = "500";
+    b.financials.cashToHandOverKopecks = "100";
+    expect(sumSellerSettlementFromReports([a, b])).toEqual({
+      fieldExpensesKopecks: 1500n,
+      cashToHandOverKopecks: 24100n,
+    });
+  });
+});
+
+describe("gramsToDashboardKg", () => {
+  it("переводит граммы в килограммы", () => {
+    expect(gramsToDashboardKg(1500n)).toBe(1.5);
   });
 });
 

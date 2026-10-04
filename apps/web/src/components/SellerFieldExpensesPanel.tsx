@@ -1,35 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
-import {
-  accountingMonthBounds,
-  readAccountingPeriodParams,
-} from "../format/accounting-period.js";
+import { readAccountingPeriodParams } from "../format/accounting-period.js";
 import { filterTripsAssignedToSellerForReports, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
+import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
+import { queryRoots, tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { sales } from "../routes.js";
-import { BirzhaDateField } from "./BirzhaCalendarFields.js";
+import { BirzhaDateField, formatYmd } from "./BirzhaCalendarFields.js";
 import { SellerMoneySendsPanel } from "./SellerMoneySendsPanel.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  loader: "Грузчик",
-  lunch: "Обед",
-  pallets: "Палеты",
-  rent: "Аренда",
-  materials: "Материал",
-  other: "Прочее",
-};
 
 const CATEGORY_OPTIONS = [
   { value: "loader", label: "Грузчик" },
@@ -73,8 +62,18 @@ type GroupRow = {
   count: number;
 };
 
-function todayYmd(): string {
-  return new Date().toISOString().slice(0, 10);
+function localTodayYmd(): string {
+  const n = new Date();
+  return formatYmd(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+function localMonthBounds(): { from: string; to: string } {
+  const n = new Date();
+  const last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
+  return {
+    from: formatYmd(n.getFullYear(), n.getMonth(), 1),
+    to: formatYmd(n.getFullYear(), n.getMonth(), last),
+  };
 }
 
 function matchesKind(category: string, kind: SellerFieldExpenseKind): boolean {
@@ -97,13 +96,13 @@ export function SellerFieldExpensesPanel({
   const qc = useQueryClient();
   const fieldOnly = Boolean(user && isFieldSellerOnly(user));
   const [searchParams] = useSearchParams();
-  const defaults = useMemo(() => accountingMonthBounds(), []);
+  const defaults = useMemo(() => localMonthBounds(), []);
   const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
   const [tripId, setTripId] = useState("");
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [group, setGroup] = useState<"day" | "week" | "month">("day");
-  const [expenseDate, setExpenseDate] = useState(todayYmd);
+  const [expenseDate, setExpenseDate] = useState(localTodayYmd);
   const categoryOptions = useMemo(() => {
     if (kind === "rent") {
       return CATEGORY_OPTIONS.filter((c) => c.value === "rent");
@@ -128,8 +127,17 @@ export function SellerFieldExpensesPanel({
     return list.filter(isTripOpenForSellerWorkspace);
   }, [tripsQ.data, fieldOnly, user]);
 
+  useEffect(() => {
+    if (tripId) {
+      return;
+    }
+    if (tripsForSelect.length === 1) {
+      setTripId(tripsForSelect[0]!.id);
+    }
+  }, [tripsForSelect, tripId]);
+
   const listQ = useQuery({
-    queryKey: ["seller-field-expenses", tripId, from, to, group],
+    queryKey: [...queryRoots.sellerFieldExpenses, tripId, from, to, group],
     queryFn: async () => {
       const params = new URLSearchParams({ from, to, group });
       if (tripId) {
@@ -165,11 +173,15 @@ export function SellerFieldExpensesPanel({
     onSuccess: async () => {
       setAmountRub("");
       setComment("");
-      await qc.invalidateQueries({ queryKey: ["seller-field-expenses"] });
-      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
-      if (tripId) {
-        await qc.invalidateQueries({ queryKey: ["shipment-report", tripId] });
+      if (expenseDate < from) {
+        setFrom(expenseDate);
       }
+      if (expenseDate > to) {
+        setTo(expenseDate);
+      }
+      await qc.invalidateQueries({ queryKey: queryRoots.sellerFieldExpenses });
+      await qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
     },
   });
 
@@ -179,11 +191,9 @@ export function SellerFieldExpensesPanel({
       await assertOkResponse(res);
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["seller-field-expenses"] });
+      await qc.invalidateQueries({ queryKey: queryRoots.sellerFieldExpenses });
+      await qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
-      if (tripId) {
-        await qc.invalidateQueries({ queryKey: ["shipment-report", tripId] });
-      }
     },
   });
 
@@ -320,6 +330,55 @@ export function SellerFieldExpensesPanel({
         </div>
       ) : null}
 
+      <h3 style={{ margin: "0 0 0.45rem", fontSize: "1rem" }}>
+        Записанные траты
+        {visibleExpenses.length > 0 ? ` (${visibleExpenses.length})` : ""}
+      </h3>
+      {visibleExpenses.length === 0 && listQ.data ? (
+        <BirzhaEmptyState compact title={kind === "rent" ? "Аренды за период нет" : "Трат за период нет"} />
+      ) : null}
+      {visibleExpenses.length > 0 ? (
+        <div className="birzha-table-scroll" style={{ marginBottom: "1.1rem" }}>
+          <table style={{ ...tableStyle, minWidth: 640 }} aria-label="Список трат">
+            <thead>
+              <tr>
+                <th style={thHead}>Дата</th>
+                <th style={thHead}>Рейс</th>
+                <th style={thHead}>Категория</th>
+                <th style={{ ...thHead, textAlign: "right" }}>Сумма</th>
+                <th style={thHead}>Комментарий</th>
+                <th style={thHead} />
+              </tr>
+            </thead>
+            <tbody>
+              {visibleExpenses.map((e) => (
+                <tr key={e.id}>
+                  <td style={thtd}>{e.expenseDate}</td>
+                  <td style={thtd}>{tripLabelById.get(e.tripId) ?? e.tripId}</td>
+                  <td style={thtd}>{sellerFieldExpenseCategoryLabel(e.category)}</td>
+                  <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(e.amountKopecks)} ₽</td>
+                  <td style={thtd}>{e.comment ?? "—"}</td>
+                  <td style={thtd}>
+                    <button
+                      type="button"
+                      className="birzha-clean-ops-text-btn"
+                      disabled={delM.isPending}
+                      onClick={() => {
+                        if (window.confirm("Удалить трату?")) {
+                          void delM.mutate(e.id);
+                        }
+                      }}
+                    >
+                      Удалить
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       <div style={{ display: "grid", gap: "0.45rem", marginBottom: "1rem", maxWidth: "22rem" }}>
         <strong style={{ fontSize: "0.95rem" }}>Новая трата</strong>
         <label className="birzha-form-label">
@@ -345,6 +404,11 @@ export function SellerFieldExpensesPanel({
           <input style={fieldStyle} value={comment} onChange={(e) => setComment(e.target.value)} />
         </label>
         {addM.isError ? <ErrorAlert error={addM.error} title="Трата" /> : null}
+        {addM.isSuccess ? (
+          <p className="birzha-ui-sm" style={{ margin: 0 }} role="status">
+            Трата записана — она в списке выше и в отчёте по рейсу.
+          </p>
+        ) : null}
         <button type="button" className={btnClassSpaced} disabled={addM.isPending || !tripId} onClick={() => addM.mutate()}>
           Добавить
         </button>
@@ -355,54 +419,9 @@ export function SellerFieldExpensesPanel({
         ) : null}
       </div>
 
-      {visibleExpenses.length === 0 && listQ.data ? (
-        <BirzhaEmptyState compact title={kind === "rent" ? "Аренды за период нет" : "Трат за период нет"} />
-      ) : null}
-      {visibleExpenses.length > 0 ? (
-        <div className="birzha-table-scroll">
-          <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Список трат">
-            <thead>
-              <tr>
-                <th style={thHead}>Дата</th>
-                {kind !== "all" ? <th style={thHead}>Рейс</th> : null}
-                <th style={thHead}>Категория</th>
-                <th style={{ ...thHead, textAlign: "right" }}>Сумма</th>
-                <th style={thHead}>Комментарий</th>
-                <th style={thHead} />
-              </tr>
-            </thead>
-            <tbody>
-              {visibleExpenses.map((e) => (
-                <tr key={e.id}>
-                  <td style={thtd}>{e.expenseDate}</td>
-                  {kind !== "all" ? <td style={thtd}>{tripLabelById.get(e.tripId) ?? e.tripId}</td> : null}
-                  <td style={thtd}>{CATEGORY_LABEL[e.category] ?? e.category}</td>
-                  <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(e.amountKopecks)}</td>
-                  <td style={thtd}>{e.comment ?? "—"}</td>
-                  <td style={thtd}>
-                    <button
-                      type="button"
-                      className="birzha-clean-ops-text-btn"
-                      disabled={delM.isPending}
-                      onClick={() => {
-                        if (window.confirm("Удалить трату?")) {
-                          void delM.mutate(e.id);
-                        }
-                      }}
-                    >
-                      Удалить
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
       {kind === "all" ? (
         <p className="birzha-ui-sm" style={{ marginTop: "1rem" }}>
-          <Link to={sales.reports}>Отчёт по рейсу</Link> — нал, траты и «к сдаче» по машине.
+          <Link to={sales.reports}>Отчёт по рейсу</Link> — нал, каждая трата и «к сдаче» по машине.
         </p>
       ) : null}
 

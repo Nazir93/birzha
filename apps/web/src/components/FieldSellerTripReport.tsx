@@ -7,6 +7,8 @@ import {
   type TripSalesByProductLineRow,
 } from "../format/aggregate-trip-sales-by-product-line.js";
 import { gramsToKgLabel, kopecksToRubLabelSafe } from "../format/money.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
 import { formatPackageCountLabel } from "../format/seller-trip-metrics.js";
 import {
   formatTripSaleClientDisplayLabel,
@@ -146,6 +148,51 @@ export function FieldSellerTripReport({
           ) : null}
         </p>
       ) : null}
+
+      <h3 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.95rem" }}>
+        Траты с кассы
+      </h3>
+      <p className="birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
+        Итого траты{" "}
+        <strong>{kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽</strong>
+        {" · "}к сдаче{" "}
+        <strong>{kopecksToRubLabelSafe(report.financials.cashToHandOverKopecks)} ₽</strong>
+      </p>
+      {(report.fieldExpenses ?? []).length === 0 ? (
+        <BirzhaEmptyState compact title="Трат по рейсу нет" />
+      ) : (
+        <div className="birzha-table-scroll" style={{ marginBottom: "1rem" }}>
+          <table style={{ ...tableStyle, minWidth: 480 }} aria-label="Траты с кассы">
+            <thead>
+              <tr>
+                <th scope="col" style={thHead}>
+                  Дата
+                </th>
+                <th scope="col" style={thHead}>
+                  Категория
+                </th>
+                <th scope="col" style={{ ...thHead, textAlign: "right" }}>
+                  Сумма
+                </th>
+                <th scope="col" style={thHead}>
+                  Комментарий
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(report.fieldExpenses ?? []).map((e) => (
+                <tr key={e.id}>
+                  <td style={thtd}>{formatPurchaseDocDateRu(e.expenseDate)}</td>
+                  <td style={thtd}>{sellerFieldExpenseCategoryLabel(e.category)}</td>
+                  <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabelSafe(e.amountKopecks)} ₽</td>
+                  <td style={thtd}>{e.comment?.trim() ? e.comment : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
         Анализ продаж
       </h3>

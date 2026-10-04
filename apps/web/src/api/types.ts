@@ -553,6 +553,15 @@ export type FinancialsBlock = {
   cashToHandOverKopecks?: string;
 };
 
+export type TripFieldExpenseRow = {
+  id: string;
+  tripId: string;
+  expenseDate: string;
+  category: string;
+  amountKopecks: string;
+  comment: string | null;
+};
+
 export type ShipmentReportResponse = {
   trip: TripJson;
   shipment: ShipmentLedgerBlock;
@@ -564,4 +573,5 @@ export type ShipmentReportResponse = {
   salesForTripStock?: SalesBlock;
   shortage: LedgerBlock;
   financials: FinancialsBlock;
+  fieldExpenses?: TripFieldExpenseRow[];
 };

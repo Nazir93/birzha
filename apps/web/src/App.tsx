@@ -241,9 +241,7 @@ export function App() {
               index
               element={
                 <RequirePanel panel="reports">
-                  <section className="birzha-card">
-                    <SellerCabinetHome />
-                  </section>
+                  <SellerCabinetHome />
                 </RequirePanel>
               }
             />

@@ -30,6 +30,7 @@ import type { DbClient } from "../db/client.js";
 import {
   ledgerAggregateToJson,
   saleLedgerAggregateToJson,
+  sellerFieldExpensesToJson,
   shipmentLedgerToJson,
   tripFinancialsToJson,
 } from "./trip-report-serialize.js";
@@ -167,8 +168,15 @@ export function registerTripRoutes(
         return reply.code(403).send({ error: "forbidden" });
       }
       const onlySales = u && isGlobalSellerOnly(u.roles) ? u.sub : undefined;
-      const { trip, shipment, sales: saleAgg, salesForTripStock, shortage: shortageAgg, financials } =
-        await tripReport.execute(tripId, onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined);
+      const {
+        trip,
+        shipment,
+        sales: saleAgg,
+        salesForTripStock,
+        shortage: shortageAgg,
+        financials,
+        fieldExpenses,
+      } = await tripReport.execute(tripId, onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined);
       const destNames = await shipDestinationDisplayNamesByCodes(db, [trip.getDestinationCode()]);
       return reply.send({
         trip: tripToJson(trip, null, {
@@ -179,6 +187,7 @@ export function registerTripRoutes(
         ...(salesForTripStock ? { salesForTripStock: saleLedgerAggregateToJson(salesForTripStock) } : {}),
         shortage: ledgerAggregateToJson(shortageAgg),
         financials: tripFinancialsToJson(financials),
+        fieldExpenses: sellerFieldExpensesToJson(fieldExpenses),
       });
     } catch (error) {
       return sendMappedError(reply, error);

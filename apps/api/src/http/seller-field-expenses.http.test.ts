@@ -76,9 +76,18 @@ describe("Seller field expenses HTTP", () => {
     expect(r.statusCode).toBe(200);
     const report = JSON.parse(r.body) as {
       financials: { fieldExpensesKopecks: string; cashToHandOverKopecks: string };
+      fieldExpenses: { category: string; amountKopecks: string; comment: string | null; expenseDate: string }[];
     };
     expect(report.financials.fieldExpensesKopecks).toBe("5000");
     expect(report.financials.cashToHandOverKopecks).toBe("15000");
+    expect(report.fieldExpenses).toEqual([
+      expect.objectContaining({
+        category: "loader",
+        amountKopecks: "5000",
+        comment: "грузчик",
+        expenseDate: "2026-10-01",
+      }),
+    ]);
 
     await app.close();
   });
