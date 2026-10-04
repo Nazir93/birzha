@@ -102,6 +102,12 @@ export const accounting = {
   receivables: `${prefix.accounting}/receivables`,
   payables: `${prefix.accounting}/payables`,
   purchaserExpenses: `${prefix.accounting}/purchaser-expenses`,
+  sales: `${prefix.accounting}/sales`,
+  sellerExpenses: `${prefix.accounting}/seller-expenses`,
+  sellerSends: `${prefix.accounting}/seller-sends`,
+  tripExpenses: `${prefix.accounting}/trip-expenses`,
+  rent: `${prefix.accounting}/rent`,
+  profit: `${prefix.accounting}/profit`,
 } as const;
 
 /**

@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import type {
   TripExpenseAppend,
@@ -8,6 +8,10 @@ import type {
 } from "../../application/ports/trip-expense-repository.port.js";
 import type { DbClient } from "../../db/client.js";
 import { tripExpenses } from "../../db/schema.js";
+
+function parseYmdUtc(ymd: string): Date {
+  return new Date(`${ymd}T00:00:00.000Z`);
+}
 
 function asCategory(raw: string): TripExpenseCategory {
   if (raw === "fuel" || raw === "road" || raw === "driver" || raw === "other") {
@@ -60,6 +64,17 @@ export class DrizzleTripExpenseRepository implements TripExpenseRepository {
       .select()
       .from(tripExpenses)
       .where(eq(tripExpenses.tripId, tripId))
+      .orderBy(desc(tripExpenses.expenseDate), desc(tripExpenses.createdAt));
+    return rows.map(rowToRecord);
+  }
+
+  async listInPeriod(fromYmd: string, toYmd: string): Promise<TripExpenseRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(tripExpenses)
+      .where(
+        and(gte(tripExpenses.expenseDate, parseYmdUtc(fromYmd)), lte(tripExpenses.expenseDate, parseYmdUtc(toYmd))),
+      )
       .orderBy(desc(tripExpenses.expenseDate), desc(tripExpenses.createdAt));
     return rows.map(rowToRecord);
   }

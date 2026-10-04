@@ -27,5 +27,6 @@ export interface TripExpenseRepository {
   findById(id: string): Promise<TripExpenseRecord | null>;
   deleteById(id: string): Promise<void>;
   listByTripId(tripId: string): Promise<TripExpenseRecord[]>;
+  listInPeriod(fromYmd: string, toYmd: string): Promise<TripExpenseRecord[]>;
   sumByTripId(tripId: string): Promise<bigint>;
 }

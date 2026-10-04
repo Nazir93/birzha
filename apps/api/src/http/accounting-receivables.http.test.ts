@@ -138,6 +138,71 @@ describe("Accounting receivables HTTP", () => {
     const summary = JSON.parse(r.body) as { expensesKopecks: string };
     expect(summary.expensesKopecks).toBe("50000");
 
+    r = await app.inject({
+      method: "GET",
+      url: "/accounting/trip-expenses?from=2026-10-01&to=2026-10-31",
+    });
+    expect(r.statusCode).toBe(200);
+    const tripExp = JSON.parse(r.body) as { totalKopecks: string; expenses: { category: string }[] };
+    expect(tripExp.totalKopecks).toBe("50000");
+    expect(tripExp.expenses).toHaveLength(1);
+
+    await app.close();
+  });
+
+  it("period-summary отделяет аренду от полевых трат продавца", async () => {
+    const env = loadEnv({ DATABASE_URL: undefined, NODE_ENV: "test" });
+    const app = await buildApp({
+      env,
+      db: null,
+      batchRepository: new InMemoryBatchRepository(),
+    });
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: {
+        id: "acc-t-rent",
+        tripNumber: "Ф-RENT",
+        departedAt: "2026-10-05T08:00:00.000Z",
+      },
+    });
+    let r = await app.inject({
+      method: "POST",
+      url: "/seller-field-expenses",
+      payload: {
+        tripId: "acc-t-rent",
+        expenseDate: "2026-10-06",
+        category: "lunch",
+        amountKopecks: 10_000,
+      },
+    });
+    expect(r.statusCode, r.body).toBe(201);
+    r = await app.inject({
+      method: "POST",
+      url: "/seller-field-expenses",
+      payload: {
+        tripId: "acc-t-rent",
+        expenseDate: "2026-10-06",
+        category: "rent",
+        amountKopecks: 50_000,
+      },
+    });
+    expect(r.statusCode, r.body).toBe(201);
+
+    r = await app.inject({
+      method: "GET",
+      url: "/accounting/period-summary?from=2026-10-01&to=2026-10-31",
+    });
+    expect(r.statusCode).toBe(200);
+    const summary = JSON.parse(r.body) as {
+      sellerFieldExpensesKopecks: string;
+      sellerRentExpensesKopecks: string;
+      operatingExpensesKopecks: string;
+    };
+    expect(summary.sellerFieldExpensesKopecks).toBe("10000");
+    expect(summary.sellerRentExpensesKopecks).toBe("50000");
+    expect(summary.operatingExpensesKopecks).toBe("60000");
+
     await app.close();
   });
 

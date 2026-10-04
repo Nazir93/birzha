@@ -1,36 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
+import { accountingMonthBounds, accountingPathWithPeriod } from "../format/accounting-period.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
-import { AccountingPurchaserExpensesPanel } from "./AccountingPurchaserExpensesPanel.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
-import { AccountingTripsSummary } from "./AccountingTripsSummary.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
-import { dateFieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
-
-function monthBounds(): { from: string; to: string } {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
-  const from = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const to = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
-  return { from, to };
-}
-
-type SupplierRow = {
-  supplierKey: string;
-  supplierName: string;
-  purchaseTotalKopecks: string;
-  paidKopecks: string;
-  remainingKopecks: string;
-};
+import { dateFieldStyle } from "../ui/styles.js";
 
 type PeriodSummary = {
   from: string;
@@ -48,14 +30,33 @@ type PeriodSummary = {
   sellerFieldExpensesKopecks?: string;
   purchaserExpensesKopecks?: string;
   sellerMoneySendsKopecks?: string;
+  sellerRentExpensesKopecks?: string;
   operatingExpensesKopecks?: string;
   netProfitKopecks: string;
   purchaseTotalKopecks: string;
   supplierPaidKopecks: string;
   receivablesOutstandingKopecks: string;
   payablesOutstandingKopecks: string;
-  bySupplier?: SupplierRow[];
 };
+
+function KpiLink({
+  to,
+  extraClass,
+  children,
+}: {
+  to: string;
+  extraClass?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--link${extraClass ? ` ${extraClass}` : ""}`}
+    >
+      {children}
+    </Link>
+  );
+}
 
 /**
  * Главная бухкабинета: деньги с продаж → тепличники → расходы → остатки.
@@ -63,7 +64,7 @@ type PeriodSummary = {
 export function AccountingCabinetHome() {
   const { user } = useAuth();
   const canGoToAdminPanel = user ? canAccessCabinet(user, "admin") : false;
-  const defaults = useMemo(() => monthBounds(), []);
+  const defaults = useMemo(() => accountingMonthBounds(), []);
   const [from, setFrom] = useState(defaults.from);
   const [to, setTo] = useState(defaults.to);
 
@@ -81,9 +82,11 @@ export function AccountingCabinetHome() {
   const s = periodQ.data;
   const tripExp = s?.tripExpensesKopecks ?? s?.expensesKopecks ?? "0";
   const sellerExp = s?.sellerFieldExpensesKopecks ?? "0";
+  const rentExp = s?.sellerRentExpensesKopecks ?? "0";
   const purchaserExp = s?.purchaserExpensesKopecks ?? "0";
   const sellerSends = s?.sellerMoneySendsKopecks ?? "0";
   const operating = s?.operatingExpensesKopecks ?? tripExp;
+  const href = (path: string) => accountingPathWithPeriod(path, from, to);
 
   return (
     <section className="birzha-home-premium birzha-section-shell" aria-labelledby="acc-home-h">
@@ -94,20 +97,19 @@ export function AccountingCabinetHome() {
             Касса и сверка
           </h2>
           <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: "0.35rem", maxWidth: "42rem" }}>
-            Закуп у тепличников → отгрузка в регионы → деньги с продаж сюда → кассир отдаёт тепличникам и учитывает
-            расходы закупщиков и продавцов.
+            Нажмите на окно — внутри список и запись по этой статье. Закуп у тепличников → продажи сюда → расходы.
           </p>
         </div>
         <nav className="birzha-home-actions no-print" aria-label="Быстрые действия бухгалтерии">
-          <Link to={accounting.payables} className="birzha-home-action">
+          <Link to={href(accounting.payables)} className="birzha-home-action">
             <span>Тепличники</span>
             <strong>Выдать деньги</strong>
           </Link>
-          <Link to={accounting.purchaserExpenses} className="birzha-home-action">
+          <Link to={href(accounting.purchaserExpenses)} className="birzha-home-action">
             <span>Закупщики</span>
             <strong>Их расходы</strong>
           </Link>
-          <Link to={accounting.receivables} className="birzha-home-action">
+          <Link to={href(accounting.receivables)} className="birzha-home-action">
             <span>Клиенты</span>
             <strong>Долги</strong>
           </Link>
@@ -143,8 +145,11 @@ export function AccountingCabinetHome() {
       {periodQ.isError ? <ErrorAlert error={periodQ.error} title="Сводка за период" /> : null}
       {s ? (
         <>
+          <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.65rem" }}>
+            Каждое окно открывает свой раздел.
+          </p>
           <div className="birzha-kpi-grid birzha-kpi-grid--wide" style={{ marginBottom: "1.25rem" }}>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <KpiLink to={href(accounting.sales)}>
               <div className="birzha-kpi-tile__label">Пришло с продаж</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.revenueTotalKopecks)}
@@ -153,8 +158,8 @@ export function AccountingCabinetHome() {
                 нал {kopecksToRubLabel(s.revenueCashKopecks)} · карта {kopecksToRubLabel(s.revenueCardKopecks)} · долг{" "}
                 {kopecksToRubLabel(s.revenueDebtKopecks)}
               </div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            </KpiLink>
+            <KpiLink to={href(accounting.payables)}>
               <div className="birzha-kpi-tile__label">Купили у тепличников</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.purchaseTotalKopecks)}
@@ -162,17 +167,15 @@ export function AccountingCabinetHome() {
               <div className="birzha-text-muted birzha-ui-sm">
                 отдали за период {kopecksToRubLabel(s.supplierPaidKopecks)}
               </div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
+            </KpiLink>
+            <KpiLink to={href(accounting.payables)} extraClass="birzha-kpi-tile--amber">
               <div className="birzha-kpi-tile__label">Ещё должны тепличникам</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.payablesOutstandingKopecks)}
               </div>
-              <div className="birzha-text-muted birzha-ui-sm">
-                <Link to={accounting.payables}>Выдать по накладным →</Link>
-              </div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
+              <div className="birzha-text-muted birzha-ui-sm">выдать по накладным</div>
+            </KpiLink>
+            <KpiLink to={href(accounting.receivables)} extraClass="birzha-kpi-tile--amber">
               <div className="birzha-kpi-tile__label">Долги клиентов</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.receivablesOutstandingKopecks)}
@@ -180,39 +183,46 @@ export function AccountingCabinetHome() {
               <div className="birzha-text-muted birzha-ui-sm">
                 погашено за период {kopecksToRubLabel(s.debtPaidKopecks)}
               </div>
-            </div>
+            </KpiLink>
           </div>
 
           <div className="birzha-kpi-grid birzha-kpi-grid--wide" style={{ marginBottom: "1.25rem" }}>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <KpiLink to={href(accounting.purchaserExpenses)}>
               <div className="birzha-kpi-tile__label">Расходы закупщиков</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(purchaserExp)}
               </div>
               <div className="birzha-text-muted birzha-ui-sm">зарплата и прочее</div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            </KpiLink>
+            <KpiLink to={href(accounting.sellerExpenses)}>
               <div className="birzha-kpi-tile__label">Расходы продавцов</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(sellerExp)}
               </div>
-              <div className="birzha-text-muted birzha-ui-sm">полевые траты с кассы</div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+              <div className="birzha-text-muted birzha-ui-sm">грузчик, обед, палеты</div>
+            </KpiLink>
+            <KpiLink to={href(accounting.rent)}>
+              <div className="birzha-kpi-tile__label">Аренда</div>
+              <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+                {kopecksToRubLabel(rentExp)}
+              </div>
+              <div className="birzha-text-muted birzha-ui-sm">отдельно от полевых трат</div>
+            </KpiLink>
+            <KpiLink to={href(accounting.sellerSends)}>
               <div className="birzha-kpi-tile__label">Отправки продавцов</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(sellerSends)}
               </div>
               <div className="birzha-text-muted birzha-ui-sm">кому / сколько / дата</div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            </KpiLink>
+            <KpiLink to={href(accounting.tripExpenses)}>
               <div className="birzha-kpi-tile__label">Расходы по рейсу</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(tripExp)}
               </div>
               <div className="birzha-text-muted birzha-ui-sm">топливо, дорога, водитель</div>
-            </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            </KpiLink>
+            <KpiLink to={href(accounting.profit)}>
               <div className="birzha-kpi-tile__label">Валовая / чистая</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.grossProfitKopecks)} / {kopecksToRubLabel(s.netProfitKopecks)}
@@ -220,53 +230,12 @@ export function AccountingCabinetHome() {
               <div className="birzha-text-muted birzha-ui-sm">
                 все расходы {kopecksToRubLabel(operating)} · себ. {kopecksToRubLabel(s.costOfSoldKopecks)}
               </div>
-            </div>
+            </KpiLink>
           </div>
-
-          {s.bySupplier && s.bySupplier.length > 0 ? (
-            <div style={{ marginBottom: "1.5rem" }}>
-              <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>Тепличники за период</h3>
-              <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.5rem" }}>
-                Сколько купили, сколько уже отдали, сколько ещё должны — по каждому.
-              </p>
-              <div className="birzha-table-scroll">
-                <table style={{ ...tableStyle, minWidth: 480 }} aria-label="Тепличники за период">
-                  <thead>
-                    <tr>
-                      <th style={thHead}>Тепличник</th>
-                      <th style={{ ...thHead, textAlign: "right" }}>Купили</th>
-                      <th style={{ ...thHead, textAlign: "right" }}>Отдали</th>
-                      <th style={{ ...thHead, textAlign: "right" }}>Осталось</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {s.bySupplier.map((row) => (
-                      <tr key={row.supplierKey}>
-                        <td style={thtd}>{row.supplierName}</td>
-                        <td style={{ ...thtd, textAlign: "right" }}>
-                          {kopecksToRubLabel(row.purchaseTotalKopecks)}
-                        </td>
-                        <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.paidKopecks)}</td>
-                        <td style={{ ...thtd, textAlign: "right" }}>
-                          {kopecksToRubLabel(row.remainingKopecks)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
         </>
       ) : null}
 
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>Расходы закупщиков</h3>
-        <AccountingPurchaserExpensesPanel />
-      </div>
-
       <AccountingStockBalances />
-      <AccountingTripsSummary />
     </section>
   );
 }

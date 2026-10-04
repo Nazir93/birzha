@@ -109,12 +109,17 @@ export async function buildAccountingPeriodSummary(deps: {
   }
 
   let sellerFieldExpensesTotal = 0n;
+  let sellerRentExpensesTotal = 0n;
   if (deps.sellerFieldExpenses) {
     const rows = await deps.sellerFieldExpenses.list({ fromYmd, toYmd });
     for (const e of rows) {
       sellerFieldExpensesTotal += e.amountKopecks;
+      if (e.category === "rent") {
+        sellerRentExpensesTotal += e.amountKopecks;
+      }
     }
   }
+  const sellerFieldWithoutRent = sellerFieldExpensesTotal - sellerRentExpensesTotal;
 
   let purchaserExpensesTotal = 0n;
   if (deps.purchaserExpenses) {
@@ -246,7 +251,8 @@ export async function buildAccountingPeriodSummary(deps: {
     /** Расходы по рейсу (топливо и т.п.) — для обратной совместимости. */
     expensesKopecks: tripExpensesTotal.toString(),
     tripExpensesKopecks: tripExpensesTotal.toString(),
-    sellerFieldExpensesKopecks: sellerFieldExpensesTotal.toString(),
+    sellerFieldExpensesKopecks: sellerFieldWithoutRent.toString(),
+    sellerRentExpensesKopecks: sellerRentExpensesTotal.toString(),
     purchaserExpensesKopecks: purchaserExpensesTotal.toString(),
     sellerMoneySendsKopecks: sellerMoneySendsTotal.toString(),
     operatingExpensesKopecks: operatingExpenses.toString(),

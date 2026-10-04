@@ -33,6 +33,26 @@ const AccountingPurchaserExpensesPanel = lazy(() =>
     default: m.AccountingPurchaserExpensesPanel,
   })),
 );
+const AccountingSalesPeriodPanel = lazy(() =>
+  import("./components/AccountingSalesPeriodPanel.js").then((m) => ({ default: m.AccountingSalesPeriodPanel })),
+);
+const AccountingProfitPeriodPanel = lazy(() =>
+  import("./components/AccountingProfitPeriodPanel.js").then((m) => ({ default: m.AccountingProfitPeriodPanel })),
+);
+const AccountingTripExpensesPeriodPanel = lazy(() =>
+  import("./components/AccountingTripExpensesPeriodPanel.js").then((m) => ({
+    default: m.AccountingTripExpensesPeriodPanel,
+  })),
+);
+const AccountingSellerExpensesPage = lazy(() =>
+  import("./components/AccountingCabinetKpiPages.js").then((m) => ({ default: m.AccountingSellerExpensesPage })),
+);
+const AccountingRentPage = lazy(() =>
+  import("./components/AccountingCabinetKpiPages.js").then((m) => ({ default: m.AccountingRentPage })),
+);
+const AccountingSellerSendsPage = lazy(() =>
+  import("./components/AccountingCabinetKpiPages.js").then((m) => ({ default: m.AccountingSellerSendsPage })),
+);
 const AdminCabinetHome = lazy(() =>
   import("./components/AdminCabinetHome.js").then((m) => ({ default: m.AdminCabinetHome })),
 );
@@ -285,6 +305,54 @@ export function App() {
                     <h2 className="birzha-section-title">Расходы закупщиков</h2>
                     <AccountingPurchaserExpensesPanel />
                   </section>
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="sales"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingSalesPeriodPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="seller-expenses"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingSellerExpensesPage />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="seller-sends"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingSellerSendsPage />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="trip-expenses"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingTripExpensesPeriodPanel />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="rent"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingRentPage />
+                </RequirePanel>
+              }
+            />
+            <Route
+              path="profit"
+              element={
+                <RequirePanel panel="reports">
+                  <AccountingProfitPeriodPanel />
                 </RequirePanel>
               }
             />

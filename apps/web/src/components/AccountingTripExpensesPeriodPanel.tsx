@@ -5,38 +5,42 @@ import { useSearchParams } from "react-router-dom";
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
+import {
+  accountingMonthBounds,
+  readAccountingPeriodParams,
+} from "../format/accounting-period.js";
+import { formatTripSelectLabel } from "../format/trip-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { accountingMonthBounds, readAccountingPeriodParams } from "../format/accounting-period.js";
+import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { AccountingSectionBack } from "./AccountingSectionBack.js";
+import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { btnClassSpaced, dateFieldStyle, fieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const CATEGORY_LABEL: Record<string, string> = {
-  salary: "Зарплата",
-  loading: "Погрузка",
-  lunch: "Обед",
-  foam: "Пенопласт",
-  fuel: "Заправка",
+  fuel: "Топливо",
+  road: "Дорога",
+  driver: "Водитель",
   other: "Прочее",
 };
 
 type ExpenseRow = {
   id: string;
+  tripId: string;
+  tripNumber: string;
   category: string;
   amountKopecks: string;
   expenseDate: string;
-  purchaserLabel: string | null;
-  loadingManifestId?: string | null;
   comment: string | null;
 };
 
 /**
- * Расходы закупщиков: зарплата и прочее — проводит бухгалтерия.
+ * Все расходы по рейсам за период (топливо, дорога, водитель).
  */
-export function AccountingPurchaserExpensesPanel() {
+export function AccountingTripExpensesPeriodPanel() {
   const { user } = useAuth();
   const canWrite = canWriteAccounting(user);
   const qc = useQueryClient();
@@ -45,56 +49,56 @@ export function AccountingPurchaserExpensesPanel() {
   const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [category, setCategory] = useState<"salary" | "other">("salary");
+  const [tripId, setTripId] = useState("");
+  const [category, setCategory] = useState<"fuel" | "road" | "driver" | "other">("fuel");
   const [amountRub, setAmountRub] = useState("");
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [purchaserLabel, setPurchaserLabel] = useState("");
   const [comment, setComment] = useState("");
 
+  const tripsQ = useQuery(tripsFullListQueryOptions());
+  const trips = tripsQ.data?.trips ?? [];
+
   const listQ = useQuery({
-    queryKey: ["accounting", "purchaser-expenses", from, to],
+    queryKey: ["accounting", "trip-expenses-period", from, to],
     queryFn: async () => {
       const res = await apiFetch(
-        `/api/accounting/purchaser-expenses?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        `/api/accounting/trip-expenses?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
       );
       await assertOkResponse(res);
-      return (await res.json()) as {
-        totalKopecks: string;
-        salaryKopecks: string;
-        otherKopecks: string;
-        expenses: ExpenseRow[];
-      };
+      return (await res.json()) as { totalKopecks: string; expenses: ExpenseRow[] };
     },
   });
 
   const addM = useMutation({
     mutationFn: async () => {
+      if (!tripId) {
+        throw new Error("Выберите рейс");
+      }
       const rub = Number(amountRub.replace(",", "."));
       if (!Number.isFinite(rub) || rub <= 0) {
         throw new Error("Введите сумму расхода в рублях");
       }
-      await apiPostJson("/api/accounting/purchaser-expenses", {
+      await apiPostJson(`/api/accounting/trips/${encodeURIComponent(tripId)}/expenses`, {
         category,
         amountKopecks: Math.round(rub * 100),
         expenseDate,
-        purchaserLabel: purchaserLabel.trim() || undefined,
         comment: comment.trim() || undefined,
       });
     },
     onSuccess: async () => {
       setAmountRub("");
       setComment("");
-      await qc.invalidateQueries({ queryKey: ["accounting", "purchaser-expenses"] });
+      await qc.invalidateQueries({ queryKey: ["accounting", "trip-expenses-period"] });
       await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
     },
   });
 
   return (
-    <div>
+    <section className="birzha-card">
       <AccountingSectionBack />
-      <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: 0, maxWidth: "40rem" }}>
-        Зарплата (здесь) и полевые расходы закупщика с ПН (погрузка, обед, пенопласт, заправка) — из кабинета
-        закупщика. Отдельно от оплат тепличникам и трат продавца.
+      <h2 className="birzha-section-title">Расходы по рейсу</h2>
+      <p className="birzha-ui-sm birzha-section-note" style={{ marginTop: 0, maxWidth: "42rem" }}>
+        Топливо, дорога, водитель — по всем рейсам за выбранные даты.
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem", alignItems: "end" }}>
@@ -108,87 +112,73 @@ export function AccountingPurchaserExpensesPanel() {
         </label>
       </div>
 
-      {listQ.isPending ? <LoadingBlock label="Расходы закупщиков…" minHeight={48} skeleton skeletonRows={2} /> : null}
-      {listQ.isError ? <ErrorAlert error={listQ.error} title="Расходы закупщиков" /> : null}
+      {listQ.isPending ? <LoadingBlock label="Расходы…" minHeight={48} skeleton skeletonRows={3} /> : null}
+      {listQ.isError ? <ErrorAlert error={listQ.error} title="Расходы по рейсу" /> : null}
       {listQ.data ? (
         <p className="birzha-ui-sm" style={{ margin: "0 0 0.75rem" }}>
           Итого: <strong>{kopecksToRubLabel(listQ.data.totalKopecks)} ₽</strong>
-          {" · "}
-          зарплата {kopecksToRubLabel(listQ.data.salaryKopecks)} · прочее{" "}
-          {kopecksToRubLabel(listQ.data.otherKopecks)}
         </p>
       ) : null}
 
       {canWrite ? (
-        <form
-          className="birzha-form-grid"
-          style={{ marginBottom: "1rem", maxWidth: "36rem" }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            addM.mutate();
-          }}
-        >
+        <div style={{ display: "grid", gap: "0.45rem", marginBottom: "1rem", maxWidth: "24rem" }}>
+          <strong style={{ fontSize: "0.95rem" }}>Новый расход</strong>
           <label className="birzha-form-label">
-            Дата
-            <BirzhaDateField
-              aria-label="Дата расхода"
-              value={expenseDate}
-              onChange={setExpenseDate}
-              style={dateFieldStyle}
+            Рейс
+            <BirzhaSelect
+              aria-label="Рейс"
+              style={fieldStyle}
+              value={tripId}
+              onChange={setTripId}
+              placeholder="— выберите рейс —"
+              options={[
+                { value: "", label: "— выберите рейс —" },
+                ...trips.map((t) => ({ value: t.id, label: formatTripSelectLabel(t) })),
+              ]}
             />
           </label>
           <label className="birzha-form-label">
             Категория
             <BirzhaSelect
               aria-label="Категория"
-              value={category}
-              onChange={(v) => setCategory(v as "salary" | "other")}
               style={fieldStyle}
+              value={category}
+              onChange={(v) => setCategory(v as typeof category)}
               options={[
-                { value: "salary", label: "Зарплата" },
+                { value: "fuel", label: "Топливо" },
+                { value: "road", label: "Дорога" },
+                { value: "driver", label: "Водитель" },
                 { value: "other", label: "Прочее" },
               ]}
             />
           </label>
           <label className="birzha-form-label">
-            Закупщик (имя)
-            <input
-              value={purchaserLabel}
-              onChange={(e) => setPurchaserLabel(e.target.value)}
-              style={fieldStyle}
-              placeholder="Необязательно"
-            />
+            Дата
+            <BirzhaDateField aria-label="Дата расхода" value={expenseDate} onChange={setExpenseDate} style={dateFieldStyle} />
           </label>
           <label className="birzha-form-label">
             Сумма, ₽
-            <input
-              value={amountRub}
-              onChange={(e) => setAmountRub(e.target.value)}
-              style={fieldStyle}
-              inputMode="decimal"
-              required
-            />
+            <input style={fieldStyle} value={amountRub} onChange={(e) => setAmountRub(e.target.value)} />
           </label>
-          <label className="birzha-form-label" style={{ gridColumn: "1 / -1" }}>
+          <label className="birzha-form-label">
             Комментарий
-            <input value={comment} onChange={(e) => setComment(e.target.value)} style={fieldStyle} />
+            <input style={fieldStyle} value={comment} onChange={(e) => setComment(e.target.value)} />
           </label>
-          <div>
-            <button type="submit" className={btnClassSpaced} disabled={addM.isPending}>
-              {addM.isPending ? "Сохранение…" : "Добавить расход"}
-            </button>
-          </div>
-          {addM.isError ? <ErrorAlert error={addM.error} title="Не удалось сохранить" /> : null}
-        </form>
+          {addM.isError ? <ErrorAlert error={addM.error} title="Расход" /> : null}
+          <button type="button" className={btnClassSpaced} disabled={addM.isPending} onClick={() => addM.mutate()}>
+            Добавить
+          </button>
+        </div>
       ) : null}
 
+      {listQ.data?.expenses.length === 0 ? <BirzhaEmptyState compact title="Расходов за период нет" /> : null}
       {listQ.data && listQ.data.expenses.length > 0 ? (
         <div className="birzha-table-scroll">
-          <table style={{ ...tableStyle, minWidth: 520 }} aria-label="Расходы закупщиков">
+          <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Расходы по рейсам">
             <thead>
               <tr>
                 <th style={thHead}>Дата</th>
-                <th style={thHead}>Закупщик</th>
+                <th style={thHead}>Рейс</th>
                 <th style={thHead}>Категория</th>
                 <th style={{ ...thHead, textAlign: "right" }}>Сумма</th>
                 <th style={thHead}>Комментарий</th>
@@ -198,19 +188,16 @@ export function AccountingPurchaserExpensesPanel() {
               {listQ.data.expenses.map((e) => (
                 <tr key={e.id}>
                   <td style={thtd}>{e.expenseDate}</td>
-                  <td style={thtd}>{e.purchaserLabel || "—"}</td>
+                  <td style={thtd}>{e.tripNumber}</td>
                   <td style={thtd}>{CATEGORY_LABEL[e.category] ?? e.category}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(e.amountKopecks)}</td>
-                  <td style={thtd}>{e.comment || "—"}</td>
+                  <td style={thtd}>{e.comment ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
-      {listQ.data && listQ.data.expenses.length === 0 ? (
-        <p className="birzha-text-muted birzha-ui-sm">За период расходов нет.</p>
-      ) : null}
-    </div>
+    </section>
   );
 }

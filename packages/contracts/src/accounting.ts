@@ -67,6 +67,11 @@ export const accountingPeriodSummaryQuerySchema = z
 
 export type AccountingPeriodSummaryQuery = z.infer<typeof accountingPeriodSummaryQuerySchema>;
 
+/** GET /accounting/trip-expenses */
+export const accountingTripExpensesQuerySchema = accountingPeriodSummaryQuerySchema;
+
+export type AccountingTripExpensesQuery = z.infer<typeof accountingTripExpensesQuerySchema>;
+
 /** GET /accounting/purchaser-expenses */
 export const accountingPurchaserExpensesQuerySchema = z
   .object({

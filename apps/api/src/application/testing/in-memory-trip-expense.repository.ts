@@ -42,6 +42,16 @@ export class InMemoryTripExpenseRepository implements TripExpenseRepository {
       .sort((a, b) => b.expenseDate.getTime() - a.expenseDate.getTime());
   }
 
+  async listInPeriod(fromYmd: string, toYmd: string): Promise<TripExpenseRecord[]> {
+    return this.rows
+      .filter((r) => {
+        const day = r.expenseDate.toISOString().slice(0, 10);
+        return day >= fromYmd && day <= toYmd;
+      })
+      .slice()
+      .sort((a, b) => b.expenseDate.getTime() - a.expenseDate.getTime());
+  }
+
   async sumByTripId(tripId: string): Promise<bigint> {
     let s = 0n;
     for (const r of this.rows) {

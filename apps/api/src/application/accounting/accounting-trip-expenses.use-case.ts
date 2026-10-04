@@ -21,6 +21,28 @@ export class AccountingTripExpensesUseCase {
     return { tripId, tripNumber: trip.getTripNumber(), totalKopecks, expenses: rows };
   }
 
+  async listPeriod(fromYmd: string, toYmd: string) {
+    const rows = await this.expenses.listInPeriod(fromYmd, toYmd);
+    const tripNumberById = new Map<string, string>();
+    for (const row of rows) {
+      if (tripNumberById.has(row.tripId)) {
+        continue;
+      }
+      const trip = await this.trips.findById(row.tripId);
+      tripNumberById.set(row.tripId, trip ? trip.getTripNumber() : row.tripId);
+    }
+    const totalKopecks = rows.reduce((a, r) => a + r.amountKopecks, 0n);
+    return {
+      fromYmd,
+      toYmd,
+      totalKopecks,
+      expenses: rows.map((e) => ({
+        ...e,
+        tripNumber: tripNumberById.get(e.tripId) ?? e.tripId,
+      })),
+    };
+  }
+
   async record(input: {
     tripId: string;
     category: TripExpenseCategory;

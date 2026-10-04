@@ -4,6 +4,7 @@ import {
   accountingPeriodSummaryQuerySchema,
   accountingPurchaserExpensesQuerySchema,
   accountingReceivablesQuerySchema,
+  accountingTripExpensesQuerySchema,
   createDebtPaymentBodySchema,
   createPurchaserExpenseBodySchema,
   createSupplierPaymentBodySchema,
@@ -296,6 +297,34 @@ export function registerAccountingRoutes(
 
   if (tripExpensesUc) {
     const exp = tripExpensesUc;
+    app.get(
+      "/accounting/trip-expenses",
+      { ...withPreHandlers(routeAuth.accountingRead) },
+      async (req, reply) => {
+        try {
+          const q = accountingTripExpensesQuerySchema.parse(req.query);
+          const result = await exp.listPeriod(q.from, q.to);
+          return reply.send({
+            from: result.fromYmd,
+            to: result.toYmd,
+            totalKopecks: result.totalKopecks.toString(),
+            expenses: result.expenses.map((e) => ({
+              id: e.id,
+              tripId: e.tripId,
+              tripNumber: e.tripNumber,
+              category: e.category,
+              amountKopecks: e.amountKopecks.toString(),
+              expenseDate: e.expenseDate.toISOString().slice(0, 10),
+              comment: e.comment,
+              recordedByUserId: e.recordedByUserId,
+              createdAt: e.createdAt.toISOString(),
+            })),
+          });
+        } catch (error) {
+          return sendMappedError(reply, error);
+        }
+      },
+    );
     app.get(
       "/accounting/trips/:tripId/expenses",
       { ...withPreHandlers(routeAuth.accountingRead) },

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
+import { AccountingSectionBack } from "./AccountingSectionBack.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
@@ -105,6 +106,7 @@ export function AccountingReceivablesPanel() {
 
   return (
     <section aria-labelledby="acc-recv-h">
+      <AccountingSectionBack />
       <h2 id="acc-recv-h" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
         Дебиторка клиентов
       </h2>

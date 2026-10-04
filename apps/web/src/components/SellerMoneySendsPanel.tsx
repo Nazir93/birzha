@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { filterTripsAssignedToSellerForReports, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
+import { accountingMonthBounds, readAccountingPeriodParams } from "../format/accounting-period.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { tripsFullListQueryOptions } from "../query/core-list-queries.js";
@@ -28,25 +30,15 @@ function todayYmd(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function monthBounds(): { from: string; to: string } {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
-  const from = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const to = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
-  return { from, to };
-}
-
-/**
- * Отправка денег продавцом: кому, сколько, дата — видно в сводке бухгалтерии.
- */
-export function SellerMoneySendsPanel() {
+export function SellerMoneySendsPanel({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const fieldOnly = Boolean(user && isFieldSellerOnly(user));
-  const defaults = useMemo(() => monthBounds(), []);
-  const [from, setFrom] = useState(defaults.from);
-  const [to, setTo] = useState(defaults.to);
+  const [searchParams] = useSearchParams();
+  const defaults = useMemo(() => accountingMonthBounds(), []);
+  const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
   const [tripId, setTripId] = useState("");
   const [sendDate, setSendDate] = useState(todayYmd);
   const [recipient, setRecipient] = useState("");
@@ -101,7 +93,7 @@ export function SellerMoneySendsPanel() {
   });
 
   return (
-    <div style={{ marginTop: "1.75rem" }}>
+    <div style={{ marginTop: compact ? 0 : "1.75rem" }}>
       <h3 style={{ fontSize: "1rem", margin: "0 0 0.35rem" }}>Отправка денег</h3>
       <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.75rem", maxWidth: "40rem" }}>
         Сколько отправили, кому и когда. Суммы попадают в сводку бухгалтерии для контроля.

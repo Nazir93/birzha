@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
+import {
+  accountingMonthBounds,
+  readAccountingPeriodParams,
+} from "../format/accounting-period.js";
 import { filterTripsAssignedToSellerForReports, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
 import { kopecksToRubLabel } from "../format/money.js";
@@ -25,6 +29,24 @@ const CATEGORY_LABEL: Record<string, string> = {
   rent: "Аренда",
   materials: "Материал",
   other: "Прочее",
+};
+
+const CATEGORY_OPTIONS = [
+  { value: "loader", label: "Грузчик" },
+  { value: "lunch", label: "Обед" },
+  { value: "pallets", label: "Палеты" },
+  { value: "rent", label: "Аренда" },
+  { value: "materials", label: "Материал" },
+  { value: "other", label: "Прочее" },
+] as const;
+
+export type SellerFieldExpenseKind = "all" | "field" | "rent";
+
+export type SellerFieldExpensesPanelProps = {
+  kind?: SellerFieldExpenseKind;
+  showMoneySends?: boolean;
+  heading?: string;
+  note?: string;
 };
 
 type ExpenseRow = {
@@ -55,26 +77,45 @@ function todayYmd(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function monthBounds(): { from: string; to: string } {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth();
-  const from = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const to = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
-  return { from, to };
+function matchesKind(category: string, kind: SellerFieldExpenseKind): boolean {
+  if (kind === "rent") {
+    return category === "rent";
+  }
+  if (kind === "field") {
+    return category !== "rent";
+  }
+  return true;
 }
 
-export function SellerFieldExpensesPanel() {
+export function SellerFieldExpensesPanel({
+  kind = "all",
+  showMoneySends = true,
+  heading,
+  note,
+}: SellerFieldExpensesPanelProps = {}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const fieldOnly = Boolean(user && isFieldSellerOnly(user));
-  const defaults = useMemo(() => monthBounds(), []);
+  const [searchParams] = useSearchParams();
+  const defaults = useMemo(() => accountingMonthBounds(), []);
+  const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
   const [tripId, setTripId] = useState("");
-  const [from, setFrom] = useState(defaults.from);
-  const [to, setTo] = useState(defaults.to);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
   const [group, setGroup] = useState<"day" | "week" | "month">("day");
   const [expenseDate, setExpenseDate] = useState(todayYmd);
-  const [category, setCategory] = useState<"loader" | "lunch" | "pallets" | "rent" | "materials" | "other">("loader");
+  const categoryOptions = useMemo(() => {
+    if (kind === "rent") {
+      return CATEGORY_OPTIONS.filter((c) => c.value === "rent");
+    }
+    if (kind === "field") {
+      return CATEGORY_OPTIONS.filter((c) => c.value !== "rent");
+    }
+    return [...CATEGORY_OPTIONS];
+  }, [kind]);
+  const [category, setCategory] = useState<"loader" | "lunch" | "pallets" | "rent" | "materials" | "other">(
+    kind === "rent" ? "rent" : "loader",
+  );
   const [amountRub, setAmountRub] = useState("");
   const [comment, setComment] = useState("");
 
@@ -125,6 +166,7 @@ export function SellerFieldExpensesPanel() {
       setAmountRub("");
       setComment("");
       await qc.invalidateQueries({ queryKey: ["seller-field-expenses"] });
+      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
       if (tripId) {
         await qc.invalidateQueries({ queryKey: ["shipment-report", tripId] });
       }
@@ -138,6 +180,7 @@ export function SellerFieldExpensesPanel() {
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["seller-field-expenses"] });
+      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
       if (tripId) {
         await qc.invalidateQueries({ queryKey: ["shipment-report", tripId] });
       }
@@ -145,13 +188,36 @@ export function SellerFieldExpensesPanel() {
   });
 
   const s = listQ.data?.settlement;
+  const visibleExpenses = useMemo(
+    () => (listQ.data?.expenses ?? []).filter((e) => matchesKind(e.category, kind)),
+    [listQ.data?.expenses, kind],
+  );
+  const visibleTotalKopecks = useMemo(
+    () => visibleExpenses.reduce((acc, e) => acc + BigInt(e.amountKopecks || "0"), 0n).toString(),
+    [visibleExpenses],
+  );
+  const tripLabelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tripsQ.data?.trips ?? []) {
+      map.set(t.id, formatTripSelectLabel(t));
+    }
+    return map;
+  }, [tripsQ.data?.trips]);
+  const title =
+    heading ?? (kind === "rent" ? "Аренда" : kind === "field" ? "Расходы продавцов" : "Траты / расчёт");
+  const description =
+    note ??
+    (kind === "rent"
+      ? "Аренда точек и помещений — отдельно от грузчика, обеда и палет."
+      : kind === "field"
+        ? "Полевые траты с кассы: грузчик, обед, палеты, аренда точки сюда не входит."
+        : "Траты с кассы по рейсу и дате: грузчик, обед, палеты, аренда. К сдаче = нал − траты.");
 
   return (
-    <div role="region" aria-label="Траты и расчёт">
-      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>Траты / расчёт</h2>
+    <div role="region" aria-label={title}>
+      <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>{title}</h2>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem", maxWidth: "40rem" }}>
-        Траты с кассы по рейсу и дате: грузчик, обед, палеты, аренда. К сдаче = нал − траты. Сверка по дням, неделям и
-        месяцам.
+        {description}
       </p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.65rem", marginBottom: "0.85rem", alignItems: "end" }}>
@@ -163,7 +229,7 @@ export function SellerFieldExpensesPanel() {
             value={tripId}
             onChange={setTripId}
             options={[
-              { value: "", label: "Все свои (только сверка)" },
+              { value: "", label: fieldOnly ? "Все свои (только сверка)" : "Все рейсы (список)" },
               ...tripsForSelect.map((t) => ({ value: t.id, label: formatTripSelectLabel(t) })),
             ]}
           />
@@ -178,23 +244,31 @@ export function SellerFieldExpensesPanel() {
         </label>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginBottom: "0.85rem" }}>
-        {(["day", "week", "month"] as const).map((g) => (
-          <button
-            key={g}
-            type="button"
-            className={group === g ? "birzha-btn" : "birzha-clean-ops-text-btn"}
-            onClick={() => setGroup(g)}
-          >
-            {g === "day" ? "Дни" : g === "week" ? "Недели" : "Месяцы"}
-          </button>
-        ))}
-      </div>
+      {kind === "all" ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginBottom: "0.85rem" }}>
+          {(["day", "week", "month"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              className={group === g ? "birzha-btn" : "birzha-clean-ops-text-btn"}
+              onClick={() => setGroup(g)}
+            >
+              {g === "day" ? "Дни" : g === "week" ? "Недели" : "Месяцы"}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {listQ.isPending ? <LoadingBlock label="Сверка…" minHeight={64} skeleton skeletonRows={3} /> : null}
       {listQ.isError ? <ErrorAlert error={listQ.error} title="Траты" /> : null}
 
-      {s ? (
+      {kind !== "all" && listQ.data ? (
+        <p className="birzha-ui-sm" style={{ margin: "0 0 0.75rem" }}>
+          Итого: <strong>{kopecksToRubLabel(visibleTotalKopecks)} ₽</strong>
+        </p>
+      ) : null}
+
+      {kind === "all" && s ? (
         <div className="birzha-kpi-grid" style={{ marginBottom: "1rem" }}>
           <div className="birzha-kpi-tile">
             <div className="birzha-kpi-tile__label">Нал</div>
@@ -221,7 +295,7 @@ export function SellerFieldExpensesPanel() {
         </div>
       ) : null}
 
-      {listQ.data && listQ.data.groups.length > 0 ? (
+      {kind === "all" && listQ.data && listQ.data.groups.length > 0 ? (
         <div className="birzha-table-scroll" style={{ marginBottom: "1rem" }}>
           <table style={{ ...tableStyle, minWidth: 420 }} aria-label="Сводка по периодам">
             <thead>
@@ -259,14 +333,7 @@ export function SellerFieldExpensesPanel() {
             style={fieldStyle}
             value={category}
             onChange={(v) => setCategory(v as typeof category)}
-            options={[
-              { value: "loader", label: "Грузчик" },
-              { value: "lunch", label: "Обед" },
-              { value: "pallets", label: "Палеты" },
-              { value: "rent", label: "Аренда" },
-              { value: "materials", label: "Материал" },
-              { value: "other", label: "Прочее" },
-            ]}
+            options={[...categoryOptions]}
           />
         </label>
         <label className="birzha-form-label">
@@ -288,13 +355,16 @@ export function SellerFieldExpensesPanel() {
         ) : null}
       </div>
 
-      {listQ.data?.expenses.length === 0 ? <BirzhaEmptyState compact title="Трат за период нет" /> : null}
-      {listQ.data && listQ.data.expenses.length > 0 ? (
+      {visibleExpenses.length === 0 && listQ.data ? (
+        <BirzhaEmptyState compact title={kind === "rent" ? "Аренды за период нет" : "Трат за период нет"} />
+      ) : null}
+      {visibleExpenses.length > 0 ? (
         <div className="birzha-table-scroll">
           <table style={{ ...tableStyle, minWidth: 560 }} aria-label="Список трат">
             <thead>
               <tr>
                 <th style={thHead}>Дата</th>
+                {kind !== "all" ? <th style={thHead}>Рейс</th> : null}
                 <th style={thHead}>Категория</th>
                 <th style={{ ...thHead, textAlign: "right" }}>Сумма</th>
                 <th style={thHead}>Комментарий</th>
@@ -302,9 +372,10 @@ export function SellerFieldExpensesPanel() {
               </tr>
             </thead>
             <tbody>
-              {listQ.data.expenses.map((e) => (
+              {visibleExpenses.map((e) => (
                 <tr key={e.id}>
                   <td style={thtd}>{e.expenseDate}</td>
+                  {kind !== "all" ? <td style={thtd}>{tripLabelById.get(e.tripId) ?? e.tripId}</td> : null}
                   <td style={thtd}>{CATEGORY_LABEL[e.category] ?? e.category}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(e.amountKopecks)}</td>
                   <td style={thtd}>{e.comment ?? "—"}</td>
@@ -329,11 +400,13 @@ export function SellerFieldExpensesPanel() {
         </div>
       ) : null}
 
-      <p className="birzha-ui-sm" style={{ marginTop: "1rem" }}>
-        <Link to={sales.reports}>Отчёт по рейсу</Link> — нал, траты и «к сдаче» по машине.
-      </p>
+      {kind === "all" ? (
+        <p className="birzha-ui-sm" style={{ marginTop: "1rem" }}>
+          <Link to={sales.reports}>Отчёт по рейсу</Link> — нал, траты и «к сдаче» по машине.
+        </p>
+      ) : null}
 
-      <SellerMoneySendsPanel />
+      {showMoneySends ? <SellerMoneySendsPanel /> : null}
     </div>
   );
 }

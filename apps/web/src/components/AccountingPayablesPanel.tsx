@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
+import {
+  accountingMonthBounds,
+  readAccountingPeriodParams,
+} from "../format/accounting-period.js";
+import { AccountingSectionBack } from "./AccountingSectionBack.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
@@ -42,12 +48,39 @@ export function AccountingPayablesPanel() {
   const { user } = useAuth();
   const canWrite = canWriteAccounting(user);
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const defaults = useMemo(() => accountingMonthBounds(), []);
+  const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
   const [status, setStatus] = useState<"open" | "closed" | "all">("open");
   const [payDocId, setPayDocId] = useState<string | null>(null);
   const [amountRub, setAmountRub] = useState("");
   const [method, setMethod] = useState<"cash" | "card" | "bank">("cash");
   const [paidAt, setPaidAt] = useState(todayYmd());
   const [comment, setComment] = useState("");
+
+  const periodQ = useQuery({
+    queryKey: ["accounting", "period-summary", from, to],
+    queryFn: async () => {
+      const res = await apiFetch(
+        `/api/accounting/period-summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      );
+      await assertOkResponse(res);
+      return (await res.json()) as {
+        purchaseTotalKopecks: string;
+        supplierPaidKopecks: string;
+        payablesOutstandingKopecks: string;
+        bySupplier?: {
+          supplierKey: string;
+          supplierName: string;
+          purchaseTotalKopecks: string;
+          paidKopecks: string;
+          remainingKopecks: string;
+        }[];
+      };
+    },
+  });
 
   const listQ = useQuery({
     queryKey: ["accounting", "payables", status],
@@ -79,6 +112,7 @@ export function AccountingPayablesPanel() {
       setAmountRub("");
       setComment("");
       await qc.invalidateQueries({ queryKey: ["accounting", "payables"] });
+      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
     },
   });
 
@@ -86,12 +120,72 @@ export function AccountingPayablesPanel() {
 
   return (
     <section aria-labelledby="acc-pay-h">
+      <AccountingSectionBack />
       <h2 id="acc-pay-h" style={{ margin: "0 0 0.5rem", fontSize: "1.1rem" }}>
-        Кредиторка тепличникам
+        Тепличники
       </h2>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem", maxWidth: "40rem" }}>
-        Долг по закупочным накладным (сумма строк + доп. расходы). Оплату проводит бухгалтер.
+        Сколько купили, сколько отдали, сколько ещё должны — и оплата по накладным.
       </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.85rem", alignItems: "end" }}>
+        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
+          С
+          <BirzhaDateField aria-label="Дата с" value={from} onChange={setFrom} style={dateFieldStyle} />
+        </label>
+        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
+          По
+          <BirzhaDateField aria-label="Дата по" value={to} onChange={setTo} style={dateFieldStyle} />
+        </label>
+      </div>
+      {periodQ.data ? (
+        <div className="birzha-kpi-grid birzha-kpi-grid--wide" style={{ marginBottom: "1rem" }}>
+          <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <div className="birzha-kpi-tile__label">Купили за период</div>
+            <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+              {kopecksToRubLabel(periodQ.data.purchaseTotalKopecks)}
+            </div>
+          </div>
+          <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <div className="birzha-kpi-tile__label">Отдали за период</div>
+            <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+              {kopecksToRubLabel(periodQ.data.supplierPaidKopecks)}
+            </div>
+          </div>
+          <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
+            <div className="birzha-kpi-tile__label">Ещё должны</div>
+            <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
+              {kopecksToRubLabel(periodQ.data.payablesOutstandingKopecks)}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {periodQ.data?.bySupplier && periodQ.data.bySupplier.length > 0 ? (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <h3 style={{ fontSize: "1rem", margin: "0 0 0.5rem" }}>По тепличникам за период</h3>
+          <div className="birzha-table-scroll">
+            <table style={{ ...tableStyle, minWidth: 480 }} aria-label="Тепличники за период">
+              <thead>
+                <tr>
+                  <th style={thHead}>Тепличник</th>
+                  <th style={{ ...thHead, textAlign: "right" }}>Купили</th>
+                  <th style={{ ...thHead, textAlign: "right" }}>Отдали</th>
+                  <th style={{ ...thHead, textAlign: "right" }}>Осталось</th>
+                </tr>
+              </thead>
+              <tbody>
+                {periodQ.data.bySupplier.map((row) => (
+                  <tr key={row.supplierKey}>
+                    <td style={thtd}>{row.supplierName}</td>
+                    <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.purchaseTotalKopecks)}</td>
+                    <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.paidKopecks)}</td>
+                    <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.remainingKopecks)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
         {(["open", "closed", "all"] as const).map((s) => (
           <button
