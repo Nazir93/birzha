@@ -1,4 +1,3 @@
-import { saleGrossGramsFromNet } from "./seller-gross-net.js";
 import type { TripBatchTableRow } from "./trip-report-rows.js";
 
 /** Экранирование поля для CSV (разделитель `;`, Excel RU). */
@@ -13,8 +12,6 @@ export type TripBatchCsvOptions = {
   tripNumber: string;
   /** Накладная · товар · калибр (если задано — в CSV только человекочитаемые колонки). */
   batchCaption?: (batchId: string) => string;
-  /** Товар партии — для тары брутто (огурцы 400 г, помидоры 500 г). */
-  productGroupForBatch?: (batchId: string) => string | null | undefined;
 };
 
 /**
@@ -30,7 +27,6 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
     "Отгружено_г",
     "Отгружено_ящ",
     "Продано_нетто_г",
-    "Продано_брутто_г",
     "Продано_ящ",
     "Недостача_г",
     "Остаток_в_пути_г",
@@ -42,17 +38,11 @@ export function tripBatchRowsToCsv(rows: TripBatchTableRow[], options: TripBatch
   lines.push(header.join(";"));
   for (const row of rows) {
     const cap = options.batchCaption?.(row.batchId) ?? "";
-    const soldGross = saleGrossGramsFromNet(
-      row.soldG,
-      row.soldPackages,
-      options.productGroupForBatch?.(row.batchId),
-    );
     const cells = [
       ...(options.batchCaption ? [escapeCsvField(cap)] : [escapeCsvField(cap || "—")]),
       row.shippedG.toString(),
       row.shippedPackages.toString(),
       row.soldG.toString(),
-      soldGross.toString(),
       row.soldPackages.toString(),
       row.shortageG.toString(),
       row.netTransitG.toString(),

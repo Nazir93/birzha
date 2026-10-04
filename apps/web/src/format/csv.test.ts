@@ -36,10 +36,9 @@ describe("tripBatchRowsToCsv", () => {
     expect(csv).toContain("Рейс;Т-1");
     expect(csv).not.toContain("b-1");
     expect(csv).toContain("Продано_нетто_г");
-    expect(csv).toContain("Продано_брутто_г");
+    expect(csv).not.toContain("Продано_брутто_г");
     expect(csv).toContain("Продано_ящ");
-    // отгр.г;отгр.ящ;прод.нетто;прод.брутто (0+500×1);прод.ящ
-    expect(csv).toContain("1000;2;0;500;1");
+    expect(csv).toContain("1000;2;0;1");
   });
 
   it("добавляет колонку Товар_калибр при batchCaption", () => {
@@ -60,7 +59,6 @@ describe("tripBatchRowsToCsv", () => {
     ];
     const csv = tripBatchRowsToCsv(rows, {
       tripNumber: "Т-1",
-      tripId: "tid",
       batchCaption: () => "№ 12 · Помидоры · 6+",
     });
     expect(csv).toContain("Товар_калибр");

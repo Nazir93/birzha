@@ -10,7 +10,6 @@ import {
   aggregateTripShipmentByCaliber,
   averagePurchaseRubPerKgLabel,
 } from "../format/aggregate-trip-shipment-loading.js";
-import { saleGrossGramsFromNet } from "../format/seller-gross-net.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
 import { AccountingTripExpensesBlock } from "./AccountingTripExpensesBlock.js";
 import {
@@ -220,6 +219,24 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     return aggregateTripSalesByProductLine(r, batchById);
   }, [r, batchById, reportBatchIds.length, batchesByIdsQuery.isPending]);
 
+  const salesByProductLineTotals = useMemo(() => {
+    let grams = 0n;
+    let packages = 0n;
+    let revenue = 0n;
+    let cash = 0n;
+    let card = 0n;
+    let debt = 0n;
+    for (const row of salesByProductLine) {
+      grams += row.grams;
+      packages += row.packages;
+      revenue += row.revenue;
+      cash += row.cash;
+      card += row.card;
+      debt += row.debt;
+    }
+    return { grams, packages, revenue, cash, card, debt };
+  }, [salesByProductLine]);
+
   const loadingManifest = useMemo(
     () => (r ? aggregateTripShipmentByCaliber(r, batchById) : null),
     [r, batchById],
@@ -316,7 +333,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
     const csv = tripBatchRowsToCsv(batchRows, {
       tripNumber: r.trip.tripNumber,
       batchCaption: (batchId) => formatBatchPartyCaption(batchById.get(batchId), batchId),
-      productGroupForBatch: (batchId) => batchById.get(batchId)?.nakladnaya?.productGroup,
     });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -572,22 +588,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     <tr>
                       <td style={thtd}>Продажи, нетто</td>
                       <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)} кг</td>
-                    </tr>
-                    <tr>
-                      <td style={thtd}>Продажи, брутто</td>
-                      <td style={thtd}>
-                        {(() => {
-                          let gross = 0n;
-                          for (const line of r.sales.byBatch) {
-                            const net = BigInt(line.grams || "0");
-                            const pkgs = BigInt((line.packageCount ?? "0").trim() || "0");
-                            const pg = batchById.get(line.batchId)?.nakladnaya?.productGroup;
-                            gross += saleGrossGramsFromNet(net, pkgs, pg);
-                          }
-                          return gramsToKgLabel(gross.toString());
-                        })()}{" "}
-                        кг
-                      </td>
                     </tr>
                     <tr>
                       <td style={thtd}>Продажи, ящики</td>
@@ -868,9 +868,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         Нетто, кг
                       </th>
                       <th scope="col" style={thHead}>
-                        Брутто, кг
-                      </th>
-                      <th scope="col" style={thHead}>
                         Ящ.
                       </th>
                       {!fieldSellerSalesReport ? (
@@ -894,11 +891,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       <tr key={row.aggregateKey}>
                         <td style={thtd}>{row.lineLabel}</td>
                         <td style={thtd}>{gramsToKgLabel(row.grams.toString())}</td>
-                        <td style={thtd}>
-                          {gramsToKgLabel(
-                            saleGrossGramsFromNet(row.grams, row.packages, row.productGroup).toString(),
-                          )}
-                        </td>
                         <td style={thtd}>{packageCountLabel(row.packages)}</td>
                         {!fieldSellerSalesReport ? (
                           <td style={thtd}>{kopecksToRubLabel(row.revenue.toString())} ₽</td>
@@ -909,6 +901,21 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="birzha-table-subtotal-row">
+                      <th scope="row" style={thtd}>
+                        Итого
+                      </th>
+                      <td style={thtd}>{gramsToKgLabel(salesByProductLineTotals.grams.toString())}</td>
+                      <td style={thtd}>{packageCountLabel(salesByProductLineTotals.packages)}</td>
+                      {!fieldSellerSalesReport ? (
+                        <td style={thtd}>{kopecksToRubLabel(salesByProductLineTotals.revenue.toString())} ₽</td>
+                      ) : null}
+                      <td style={thtd}>{kopecksToRubLabel(salesByProductLineTotals.cash.toString())} ₽</td>
+                      <td style={thtd}>{kopecksToRubLabel(salesByProductLineTotals.card.toString())} ₽</td>
+                      <td style={thtd}>{kopecksToRubLabel(salesByProductLineTotals.debt.toString())} ₽</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}
@@ -968,6 +975,22 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="birzha-table-subtotal-row">
+                      <th scope="row" style={thtd}>
+                        Итого
+                      </th>
+                      <td style={thtd}>{gramsToKgLabel(r.sales.totalGrams)}</td>
+                      <td style={thtd}>{packageCountLabel(r.sales.totalPackageCount)}</td>
+                      {!fieldSellerSalesReport ? (
+                        <td style={thtd}>{kopecksToRubLabel(r.sales.totalRevenueKopecks)} ₽</td>
+                      ) : null}
+                      <td style={thtd}>
+                        {kopecksToRubLabel(r.sales.totalCashKopecks)} / {kopecksToRubLabel(r.sales.totalCardTransferKopecks || "0")} /{" "}
+                        {kopecksToRubLabel(r.sales.totalDebtKopecks)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </BirzhaDisclosure>
@@ -1023,9 +1046,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                           Прод., нетто кг
                         </th>
                         <th scope="col" style={thHead}>
-                          Прод., брутто кг
-                        </th>
-                        <th scope="col" style={thHead}>
                           Прод., ящ.
                         </th>
                       </>
@@ -1062,15 +1082,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       {!hideSalesAndMoney ? (
                         <>
                           <td style={thtd}>{gramsToKgLabel(row.soldG.toString())}</td>
-                          <td style={thtd}>
-                            {gramsToKgLabel(
-                              saleGrossGramsFromNet(
-                                row.soldG,
-                                row.soldPackages,
-                                batchMeta?.nakladnaya?.productGroup,
-                              ).toString(),
-                            )}
-                          </td>
                           <td style={thtd}>{packageCountLabel(row.soldPackages)}</td>
                         </>
                       ) : null}
@@ -1107,22 +1118,6 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                     {!hideSalesAndMoney ? (
                       <>
                         <td style={thtd}>{gramsToKgLabel(batchAgg.soldG.toString())}</td>
-                        <td style={thtd}>
-                          {gramsToKgLabel(
-                            batchRows
-                              .reduce(
-                                (s, row) =>
-                                  s +
-                                  saleGrossGramsFromNet(
-                                    row.soldG,
-                                    row.soldPackages,
-                                    batchById.get(row.batchId)?.nakladnaya?.productGroup,
-                                  ),
-                                0n,
-                              )
-                              .toString(),
-                          )}
-                        </td>
                         <td style={thtd}>{packageCountLabel(batchAgg.soldPackages)}</td>
                       </>
                     ) : null}

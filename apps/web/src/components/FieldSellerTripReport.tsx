@@ -125,6 +125,7 @@ export function FieldSellerTripReport({
   );
   const clientLines = useMemo(() => salesClientLinesForChannel(sales, channel), [sales, channel]);
   const caliberTotals = sumSalesByProductLine(salesByProductLine);
+  const clientTotals = salesChannelTotals(sales, channel);
 
   const hasWholesale = sales.wholesaleGrams !== "0" && sales.wholesaleGrams !== "";
   const hasRetail = sales.retailGrams !== "0" && sales.retailGrams !== "";
@@ -316,6 +317,21 @@ export function FieldSellerTripReport({
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="birzha-table-subtotal-row">
+                    <th scope="row" style={thtd}>
+                      Итого
+                    </th>
+                    <td style={thtd}>{gramsToKgLabel(clientTotals.grams)}</td>
+                    <td style={thtd}>{formatPackageCountLabel(clientTotals.packages)}</td>
+                    <td style={thtd}>{kopecksToRubLabelSafe(clientTotals.revenueKopecks)} ₽</td>
+                    <PaymentCells
+                      cashKopecks={clientTotals.cashKopecks}
+                      cardKopecks={clientTotals.cardTransferKopecks}
+                      debtKopecks={clientTotals.debtKopecks}
+                    />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           )}
