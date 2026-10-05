@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 
 import { apiPostJsonOr403 } from "../api/fetch-api.js";
 import type { SupplierJson } from "../api/types.js";
-import { formatSupplierLabel } from "../format/supplier-label.js";
 import { queryRoots, suppliersFullListQueryOptions } from "../query/core-list-queries.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { fieldStyle, selectFieldStyle } from "../ui/styles.js";
@@ -97,10 +96,7 @@ export function PurchaseSupplierPicker({
           placeholder="— выберите из справочника —"
           options={[
             { value: "", label: "— выберите из справочника —" },
-            ...active.map((s) => ({
-              value: s.id,
-              label: formatSupplierLabel(s.name, s.sortOrder),
-            })),
+            ...active.map((s) => ({ value: s.id, label: s.name })),
           ]}
         />
       </label>
@@ -109,7 +105,7 @@ export function PurchaseSupplierPicker({
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-          placeholder="Или новый тепличник — имя (номер назначится сам)"
+          placeholder="Или новый тепличник — имя"
           autoComplete="off"
           aria-label="Новый тепличник"
         />

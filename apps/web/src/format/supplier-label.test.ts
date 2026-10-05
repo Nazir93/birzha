@@ -1,25 +1,46 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSupplierLabel, formatSupplierNumber } from "./supplier-label.js";
+import {
+  formatSupplierPurchaseLabel,
+  formatSupplierPurchaseNumber,
+  suggestNextSupplierPurchaseNumber,
+} from "./supplier-label.js";
 
-describe("formatSupplierNumber", () => {
+describe("formatSupplierPurchaseNumber", () => {
   it("паддит до двух цифр", () => {
-    expect(formatSupplierNumber(1)).toBe("01");
-    expect(formatSupplierNumber(12)).toBe("12");
-  });
-
-  it("пустая строка без номера", () => {
-    expect(formatSupplierNumber(0)).toBe("");
-    expect(formatSupplierNumber(null)).toBe("");
+    expect(formatSupplierPurchaseNumber(1)).toBe("01");
+    expect(formatSupplierPurchaseNumber(12)).toBe("12");
   });
 });
 
-describe("formatSupplierLabel", () => {
-  it("склеивает номер и имя", () => {
-    expect(formatSupplierLabel("Дадай пр", 5)).toBe("05 · Дадай пр");
+describe("formatSupplierPurchaseLabel", () => {
+  it("склеивает номер накладной и имя", () => {
+    expect(formatSupplierPurchaseLabel("01", "Мурад")).toBe("01 · Мурад");
+    expect(formatSupplierPurchaseLabel("3 · старое", "Мурад")).toBe("03 · Мурад");
   });
 
-  it("без номера — только имя", () => {
-    expect(formatSupplierLabel("Москва", 0)).toBe("Москва");
+  it("без цифр в номере — имя", () => {
+    expect(formatSupplierPurchaseLabel("Мурад · 01.01.2026", "Мурад")).toBe("Мурад");
+  });
+});
+
+describe("suggestNextSupplierPurchaseNumber", () => {
+  it("отдельный счётчик на каждого тепличника", () => {
+    const docs = [
+      { documentNumber: "01", supplierId: "s-murad", supplierName: "Мурад" },
+      { documentNumber: "02", supplierId: "s-murad", supplierName: "Мурад" },
+      { documentNumber: "01", supplierId: "s-umar", supplierName: "Умар" },
+    ];
+    expect(suggestNextSupplierPurchaseNumber(docs, "s-murad")).toBe("03");
+    expect(suggestNextSupplierPurchaseNumber(docs, "s-umar")).toBe("02");
+    expect(suggestNextSupplierPurchaseNumber(docs, "s-new", "Новый")).toBe("01");
+  });
+
+  it("старые накладные без цифры увеличивают счётчик", () => {
+    const docs = [
+      { documentNumber: "Мурад · 01.01.2026", supplierId: "s1", supplierName: "Мурад" },
+      { documentNumber: "Мурад · 02.01.2026", supplierId: "s1", supplierName: "Мурад" },
+    ];
+    expect(suggestNextSupplierPurchaseNumber(docs, "s1")).toBe("03");
   });
 });

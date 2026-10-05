@@ -1,18 +1,67 @@
-/** Порядковый № тепличника (01, 02, …) — как номер рейса. */
-export function formatSupplierNumber(sortOrder: number | null | undefined): string {
-  if (sortOrder == null || !Number.isFinite(sortOrder) || sortOrder <= 0) {
+/**
+ * Порядковый № закупки по тепличнику (01, 02, …) — как номер рейса по городу:
+ * у каждого тепличника свой счётчик.
+ */
+
+export function formatSupplierPurchaseNumber(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) {
     return "";
   }
-  const n = Math.trunc(sortOrder);
-  return n < 10 ? `0${n}` : String(n);
+  const v = Math.trunc(n);
+  return v < 10 ? `0${v}` : String(v);
 }
 
-/** Подпись: «01 · Дадай пр» или просто имя, если номера нет. */
-export function formatSupplierLabel(
-  name: string | null | undefined,
-  sortOrder?: number | null,
+/** Подпись для списка/расчёта: «01 · Мурад» или просто имя, если номера нет. */
+export function formatSupplierPurchaseLabel(
+  documentNumber: string | null | undefined,
+  supplierName: string | null | undefined,
 ): string {
-  const label = (name ?? "").trim() || "—";
-  const num = formatSupplierNumber(sortOrder);
-  return num ? `${num} · ${label}` : label;
+  const name = (supplierName ?? "").trim() || "—";
+  const doc = (documentNumber ?? "").trim();
+  const m = /^(\d+)/.exec(doc);
+  if (!m) {
+    return name === "—" && doc ? doc : name;
+  }
+  const num = formatSupplierPurchaseNumber(Number.parseInt(m[1]!, 10));
+  return num ? `${num} · ${name}` : name;
+}
+
+/**
+ * Следующий порядковый номер накладной для выбранного тепличника
+ * (аналог `suggestNextTripNumber` по городу).
+ */
+export function suggestNextSupplierPurchaseNumber(
+  docs: readonly {
+    documentNumber: string;
+    supplierId?: string | null;
+    supplierName?: string | null;
+  }[],
+  supplierId?: string | null,
+  supplierName?: string | null,
+): string {
+  const sid = supplierId?.trim() || "";
+  const name = (supplierName ?? "").trim().toLowerCase();
+  if (!sid && !name) {
+    return "";
+  }
+  const scoped = docs.filter((d) => {
+    if (sid) {
+      return (d.supplierId?.trim() || "") === sid;
+    }
+    return (d.supplierName?.trim().toLowerCase() || "") === name;
+  });
+  let maxNum = 0;
+  for (const d of scoped) {
+    const m = /^(\d+)/.exec(d.documentNumber.trim());
+    if (!m) {
+      continue;
+    }
+    const n = Number.parseInt(m[1]!, 10);
+    if (Number.isFinite(n) && n > maxNum) {
+      maxNum = n;
+    }
+  }
+  /** Старые накладные без цифры в номере тоже считаем «разами». */
+  const max = Math.max(maxNum, scoped.length);
+  return formatSupplierPurchaseNumber(max + 1);
 }

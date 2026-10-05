@@ -13,14 +13,13 @@ import type { PurchaseDocumentLineDetail } from "../api/types.js";
 import {
   purchaseDocumentDetailQueryOptions,
   productGradesFullListQueryOptions,
-  suppliersFullListQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canEditPurchaseDocumentLines } from "../auth/role-panels.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
-import { formatSupplierLabel } from "../format/supplier-label.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import {
   groupProductGradesByProduct,
   productGroupOptionsFromGradeGroups,
@@ -112,11 +111,6 @@ export function PurchaseNakladnayaDetailSection() {
 
   const warehousesQ = useQuery({
     ...warehousesFullListQueryOptions(),
-    enabled: enabled && Boolean(id),
-  });
-
-  const suppliersQ = useQuery({
-    ...suppliersFullListQueryOptions(),
     enabled: enabled && Boolean(id),
   });
 
@@ -228,14 +222,8 @@ export function PurchaseNakladnayaDetailSection() {
   }, [gradeOptionGroups, docProductGroup]);
 
   const supplierHeading = useMemo(() => {
-    const name = docQ.data?.supplierName?.trim() || "";
-    const sid = docQ.data?.supplierId?.trim();
-    const sort = sid
-      ? suppliersQ.data?.suppliers.find((s) => s.id === sid)?.sortOrder
-      : undefined;
-    const labeled = formatSupplierLabel(name || null, sort);
-    return labeled !== "—" ? labeled : docQ.data?.documentNumber ?? "";
-  }, [docQ.data?.supplierName, docQ.data?.supplierId, docQ.data?.documentNumber, suppliersQ.data?.suppliers]);
+    return formatSupplierPurchaseLabel(docQ.data?.documentNumber, docQ.data?.supplierName);
+  }, [docQ.data?.documentNumber, docQ.data?.supplierName]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

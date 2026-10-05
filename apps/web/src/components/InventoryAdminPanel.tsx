@@ -23,7 +23,6 @@ import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { fieldStyle, tableStyle, thHeadDense, thtdDense } from "../ui/styles.js";
-import { formatSupplierLabel } from "../format/supplier-label.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 /**
  * Справочники админки: склады, калибры, направления логистики, тепличники и оптовики.
@@ -594,10 +593,10 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                 value={newSupplierOrder}
                 onChange={(e) => setNewSupplierOrder(e.target.value)}
                 style={{ ...fieldStyle, width: "100%", minWidth: 0 }}
-                placeholder="№ (пусто = авто)"
+                placeholder="Порядок"
                 inputMode="numeric"
                 autoComplete="off"
-                aria-label="Порядковый номер тепличника"
+                aria-label="Порядок сортировки тепличника"
               />
               <button
                 type="button"
@@ -625,8 +624,8 @@ export function InventoryAdminPanel({ embedded = false }: InventoryAdminPanelPro
                       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "ru"))
                       .map((r) => (
                         <tr key={r.id}>
-                          <td style={thtdDense}>{formatSupplierLabel(r.name, r.sortOrder)}</td>
-                          <td style={thtdDense}>{r.sortOrder > 0 ? r.sortOrder : "—"}</td>
+                          <td style={thtdDense}>{r.name}</td>
+                          <td style={thtdDense}>{r.sortOrder}</td>
                           <td style={thtdDense}>{r.isActive ? "да" : "нет"}</td>
                           <td style={thtdDense}>
                             {r.isActive ? (

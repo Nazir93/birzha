@@ -361,6 +361,11 @@ export function parseCreatePurchaseDocumentForm(input: {
   warehouseId: string;
   supplierName: string;
   supplierId?: string;
+  /**
+   * Порядковый № закупки по этому тепличнику (01, 02…), как номер рейса по городу.
+   * Если пусто — запасной вариант: имя · дата.
+   */
+  documentNumber?: string;
   purchaserUserId: string;
   extraCostKopecks: string;
   lines: Array<{
@@ -455,8 +460,9 @@ export function parseCreatePurchaseDocumentForm(input: {
       throw new Error("Выберите закупщика");
     }
 
+    const seq = input.documentNumber?.trim() ?? "";
     const payload: Record<string, unknown> = {
-      documentNumber: documentNumberFromSupplierName(sup, input.docDate.trim()),
+      documentNumber: seq || documentNumberFromSupplierName(sup, input.docDate.trim()),
       docDate: input.docDate.trim(),
       warehouseId: input.warehouseId.trim(),
       extraCostKopecks,

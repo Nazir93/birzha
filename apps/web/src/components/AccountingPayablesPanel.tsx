@@ -12,8 +12,7 @@ import {
   accountingMonthBounds,
   readAccountingPeriodParams,
 } from "../format/accounting-period.js";
-import { formatSupplierLabel } from "../format/supplier-label.js";
-import { suppliersFullListQueryOptions } from "../query/core-list-queries.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import { AccountingSectionBack } from "./AccountingSectionBack.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -93,21 +92,6 @@ export function AccountingPayablesPanel() {
       return (await res.json()) as { payables: PayableRow[] };
     },
   });
-
-  const suppliersQ = useQuery(suppliersFullListQueryOptions());
-  const supplierSortById = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const s of suppliersQ.data?.suppliers ?? []) {
-      m.set(s.id, s.sortOrder);
-    }
-    return m;
-  }, [suppliersQ.data?.suppliers]);
-
-  function supplierLabel(supplierId: string | null | undefined, supplierName: string | null | undefined): string {
-    const sort =
-      supplierId && supplierSortById.has(supplierId) ? supplierSortById.get(supplierId) : undefined;
-    return formatSupplierLabel(supplierName, sort);
-  }
 
   const payM = useMutation({
     mutationFn: async () => {
@@ -197,12 +181,7 @@ export function AccountingPayablesPanel() {
               <tbody>
                 {periodQ.data.bySupplier.map((row) => (
                   <tr key={row.supplierKey}>
-                    <td style={thtd}>
-                      {supplierLabel(
-                        row.supplierKey.startsWith("name:") ? null : row.supplierKey,
-                        row.supplierName,
-                      )}
-                    </td>
+                    <td style={thtd}>{row.supplierName}</td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.purchaseTotalKopecks)}</td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.paidKopecks)}</td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.remainingKopecks)}</td>
@@ -232,7 +211,7 @@ export function AccountingPayablesPanel() {
             downloadCsv("birzha-payables.csv", [
               ["Тепличник", "Накладная", "Дата", "Сумма", "Оплачено", "Остаток", "Статус"],
               ...rows.map((r) => [
-                supplierLabel(r.supplierId, r.supplierName),
+                formatSupplierPurchaseLabel(r.documentNumber, r.supplierName),
                 r.documentNumber,
                 r.docDate,
                 kopecksToRubLabel(r.totalKopecks),
@@ -266,7 +245,7 @@ export function AccountingPayablesPanel() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.documentId}>
-                  <td style={thtd}>{supplierLabel(r.supplierId, r.supplierName)}</td>
+                  <td style={thtd}>{formatSupplierPurchaseLabel(r.documentNumber, r.supplierName)}</td>
                   <td style={thtd}>{r.documentNumber}</td>
                   <td style={thtd}>{r.docDate}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.totalKopecks)}</td>
@@ -297,7 +276,10 @@ export function AccountingPayablesPanel() {
                 style={fieldStyle}
                 value={
                   selectedPayable
-                    ? supplierLabel(selectedPayable.supplierId, selectedPayable.supplierName)
+                    ? formatSupplierPurchaseLabel(
+                        selectedPayable.documentNumber,
+                        selectedPayable.supplierName,
+                      )
                     : "—"
                 }
                 readOnly

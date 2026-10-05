@@ -67,6 +67,30 @@ describe("parseCreatePurchaseDocumentForm", () => {
     expect(body.lines[0]?.packageCount).toBe(2);
   });
 
+  it("принимает порядковый № закупки у тепличника", () => {
+    const body = parseCreatePurchaseDocumentForm({
+      docDate: "2026-04-16",
+      warehouseId: "wh-manas",
+      supplierName: "Мурад",
+      supplierId: "s-murad",
+      documentNumber: "03",
+      purchaserUserId: "u-purchaser",
+      extraCostKopecks: "0",
+      lines: [
+        {
+          productGradeId: "pg-n5",
+          productGroup: "Помидоры",
+          grossKg: "10",
+          packageCount: "2",
+          pricePerKg: "50",
+          lineTotalKopecks: "45000",
+        },
+      ],
+    });
+    expect(body.documentNumber).toBe("03");
+    expect(body.supplierId).toBe("s-murad");
+  });
+
   it("огурцы: тара 0,4 кг (брутто 10 − 0,4×2 = 9,2 → 46000 при 50 ₽/кг)", () => {
     const body = parseCreatePurchaseDocumentForm({
       docDate: "2026-04-16",

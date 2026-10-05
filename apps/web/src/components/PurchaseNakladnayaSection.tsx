@@ -28,6 +28,10 @@ import {
 } from "../format/product-grade-groups.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import {
+  formatSupplierPurchaseLabel,
+  suggestNextSupplierPurchaseNumber,
+} from "../format/supplier-label.js";
+import {
   nakladnayaLineSumFieldFromGrossKgPrice,
   nakladnayaNetFromGrossHint,
   nakladnayaNetKgFieldFromGross,
@@ -112,10 +116,21 @@ export function PurchaseNakladnayaSection() {
     enabled,
   });
 
+  /** Все накладные — для счётчика № по тепличнику (как рейсы по городу). */
+  const allDocsForNumberQ = useQuery({
+    ...purchaseDocumentsPagedQueryOptions({
+      limit: 500,
+      offset: 0,
+      scope: "all",
+    }),
+    enabled,
+  });
+
   const [docDate, setDocDate] = useState(todayIsoDate);
   const [warehouseId, setWarehouseId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
   const [purchaserUserId, setPurchaserUserId] = useState("");
   /** Товар накладной: один на все строки (калибры только этого товара). */
   const [docProductGroup, setDocProductGroup] = useState("");
@@ -139,15 +154,41 @@ export function PurchaseNakladnayaSection() {
 
   const suppliersCatalogEnabled = meta?.suppliersCatalogApi === "enabled";
 
+  const suggestedDocumentNumber = useMemo(() => {
+    if (!supplierId.trim() && !supplierName.trim()) {
+      return "";
+    }
+    return suggestNextSupplierPurchaseNumber(
+      allDocsForNumberQ.data?.purchaseDocuments ?? [],
+      supplierId,
+      supplierName,
+    );
+  }, [allDocsForNumberQ.data?.purchaseDocuments, supplierId, supplierName]);
+
+  useEffect(() => {
+    if (!supplierId.trim() && !supplierName.trim()) {
+      setDocumentNumber("");
+      return;
+    }
+    if (suggestedDocumentNumber) {
+      setDocumentNumber(suggestedDocumentNumber);
+    }
+  }, [supplierId, supplierName, suggestedDocumentNumber]);
+
   const submit = useMutation({
     mutationFn: async () => {
       setFormError(null);
       setLastOk(null);
+      const num = documentNumber.trim() || suggestedDocumentNumber;
+      if (!num) {
+        throw new Error("Укажите порядковый номер закупки у тепличника");
+      }
       const body = parseCreatePurchaseDocumentForm({
         docDate,
         warehouseId,
         supplierName,
         supplierId,
+        documentNumber: num,
         purchaserUserId,
         extraCostKopecks,
         lines: lines.map((l) => ({ ...l, productGroup: docProductGroup })),
@@ -162,6 +203,7 @@ export function PurchaseNakladnayaSection() {
       setWarehouseId("");
       setSupplierId("");
       setSupplierName("");
+      setDocumentNumber("");
       setPurchaserUserId(user?.id && (purchasersQ.data?.purchasers ?? []).some((p) => p.id === user.id) ? user.id : "");
       setDocProductGroup("");
       setExtraCostKopecks("0");
@@ -401,6 +443,20 @@ export function PurchaseNakladnayaSection() {
           onSupplierNameChange={setSupplierName}
           enabled={suppliersCatalogEnabled}
         />
+        <label className="birzha-form-label" htmlFor="nakl-doc-number">
+          № у тепличника *
+          <input
+            id="nakl-doc-number"
+            value={documentNumber}
+            onChange={(e) => setDocumentNumber(e.target.value)}
+            style={fieldStyle}
+            className="birzha-clean-ops-field"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder={suggestedDocumentNumber || "01"}
+            aria-label="Порядковый номер закупки у тепличника"
+          />
+        </label>
         <label className="birzha-form-label" htmlFor="nakl-doc-date">
           Дата *
           <BirzhaDateField
@@ -767,7 +823,7 @@ function PurchaseNakladnayaDocTable({
               <tr key={d.id}>
                 <td>
                   <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
-                    {d.documentNumber}
+                    {formatSupplierPurchaseLabel(d.documentNumber, d.supplierName)}
                   </Link>
                 </td>
                 <td className="birzha-data-table__emph">{formatPurchaseDocDateRu(d.docDate)}</td>
