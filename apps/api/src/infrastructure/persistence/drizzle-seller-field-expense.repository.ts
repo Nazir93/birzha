@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { calendarYmdFromDate, parseCalendarYmdUtcNoon } from "../../format/calendar-date.js";
 import type {
@@ -65,9 +65,14 @@ export class DrizzleSellerFieldExpenseRepository implements SellerFieldExpenseRe
   }
 
   async list(filter: SellerFieldExpenseListFilter): Promise<SellerFieldExpenseRecord[]> {
+    if (filter.tripIds && filter.tripIds.length === 0) {
+      return [];
+    }
     const parts = [];
     if (filter.tripId) {
       parts.push(eq(sellerFieldExpenses.tripId, filter.tripId));
+    } else if (filter.tripIds && filter.tripIds.length > 0) {
+      parts.push(inArray(sellerFieldExpenses.tripId, [...filter.tripIds]));
     }
     if (filter.recordedByUserId) {
       parts.push(eq(sellerFieldExpenses.recordedByUserId, filter.recordedByUserId));

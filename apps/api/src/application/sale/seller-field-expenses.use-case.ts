@@ -63,13 +63,18 @@ export class SellerFieldExpensesUseCase {
 
   async list(filter: {
     tripId?: string;
+    tripIds?: readonly string[];
     fromYmd?: string;
     toYmd?: string;
+    /** Только свои строки продаж для сверки наличных (полевой продавец). */
+    salesRecordedByUserId?: string;
+    /** Устар.: фильтр трат по автору — для продавца не использовать, траты рейса общие. */
     recordedByUserId?: string;
     group: SellerFieldExpenseGroupMode;
   }) {
     const expenses = await this.expenses.list({
       tripId: filter.tripId,
+      tripIds: filter.tripIds,
       fromYmd: filter.fromYmd,
       toYmd: filter.toYmd,
       recordedByUserId: filter.recordedByUserId,
@@ -82,13 +87,15 @@ export class SellerFieldExpensesUseCase {
 
     const tripIds = filter.tripId
       ? [filter.tripId]
-      : [...new Set(expenses.map((e) => e.tripId))];
+      : filter.tripIds
+        ? [...filter.tripIds]
+        : [...new Set(expenses.map((e) => e.tripId))];
     let cash = 0n;
     let card = 0n;
     let debt = 0n;
     const sellerFilter =
-      filter.recordedByUserId != null && filter.recordedByUserId !== ""
-        ? { onlyRecordedByUserId: filter.recordedByUserId }
+      filter.salesRecordedByUserId != null && filter.salesRecordedByUserId !== ""
+        ? { onlyRecordedByUserId: filter.salesRecordedByUserId }
         : undefined;
     for (const tripId of tripIds) {
       const lines = await this.sales.listLinesByTripId(tripId, sellerFilter);

@@ -211,7 +211,7 @@ export function AccountingCabinetHome() {
               <div className="birzha-kpi-tile__hint birzha-ui-sm">грузчик, обед, палеты</div>
             </KpiLink>
             <KpiLink to={href(accounting.rent)} extraClass="birzha-kpi-tile--amber">
-              <div className="birzha-kpi-tile__label">Аренда</div>
+              <div className="birzha-kpi-tile__label">Аренда / бронь</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(rentExp)}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">отдельно от полевых</div>
             </KpiLink>
@@ -265,7 +265,7 @@ export function AccountingCabinetHome() {
             </Link>
             <Link to={href(accounting.rent)} className="birzha-home-action">
               <span>Помещение</span>
-              <strong>Аренда</strong>
+              <strong>Аренда / бронь</strong>
             </Link>
             <Link to={href(accounting.profit)} className="birzha-home-action">
               <span>Итог</span>

@@ -30,6 +30,8 @@ export type SellerFieldExpenseAppend = {
 
 export type SellerFieldExpenseListFilter = {
   tripId?: string;
+  /** Несколько рейсов (закреплённых за продавцом). Пустой массив — ничего не вернуть. */
+  tripIds?: readonly string[];
   fromYmd?: string;
   toYmd?: string;
   recordedByUserId?: string;

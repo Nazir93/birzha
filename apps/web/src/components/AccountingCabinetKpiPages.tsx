@@ -10,7 +10,7 @@ export function AccountingSellerExpensesPage() {
         kind="field"
         showMoneySends={false}
         heading="Расходы продавцов"
-        note="Грузчик, обед, палеты, материал. Аренда — отдельное окно на сводке."
+        note="Грузчик, обед, палеты, материал. Аренда / бронь — отдельное окно; обе суммы списываются с кассы выбранного рейса."
       />
     </section>
   );
@@ -23,8 +23,8 @@ export function AccountingRentPage() {
       <SellerFieldExpensesPanel
         kind="rent"
         showMoneySends={false}
-        heading="Аренда"
-        note="Только траты категории «Аренда». Список и запись за выбранный период."
+        heading="Аренда / бронь"
+        note="Выберите рейс — сумма вычитается из кассы этого рейса. У продавца та же запись видна в «Тратах» и в отчёте."
       />
     </section>
   );

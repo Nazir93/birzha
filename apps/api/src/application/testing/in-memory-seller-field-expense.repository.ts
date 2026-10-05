@@ -41,9 +41,15 @@ export class InMemorySellerFieldExpenseRepository implements SellerFieldExpenseR
   }
 
   async list(filter: SellerFieldExpenseListFilter): Promise<SellerFieldExpenseRecord[]> {
+    if (filter.tripIds && filter.tripIds.length === 0) {
+      return [];
+    }
     return this.rows
       .filter((r) => {
         if (filter.tripId && r.tripId !== filter.tripId) {
+          return false;
+        }
+        if (filter.tripIds && !filter.tripIds.includes(r.tripId)) {
           return false;
         }
         if (filter.recordedByUserId && (r.recordedByUserId ?? "") !== filter.recordedByUserId) {

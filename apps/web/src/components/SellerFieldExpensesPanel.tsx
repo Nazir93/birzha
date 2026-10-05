@@ -24,7 +24,7 @@ const CATEGORY_OPTIONS = [
   { value: "loader", label: "Грузчик" },
   { value: "lunch", label: "Обед" },
   { value: "pallets", label: "Палеты" },
-  { value: "rent", label: "Аренда" },
+  { value: "rent", label: "Аренда / бронь" },
   { value: "materials", label: "Материал" },
   { value: "other", label: "Прочее" },
 ] as const;
@@ -218,10 +218,10 @@ export function SellerFieldExpensesPanel({
   const description =
     note ??
     (kind === "rent"
-      ? "Аренда точек и помещений — отдельно от грузчика, обеда и палет."
+      ? "Аренда и бронь точки — списываются с кассы выбранного рейса (к сдаче = нал − все траты рейса)."
       : kind === "field"
-        ? "Полевые траты с кассы: грузчик, обед, палеты, аренда точки сюда не входит."
-        : "Траты с кассы по рейсу и дате: грузчик, обед, палеты, аренда. К сдаче = нал − траты.");
+        ? "Полевые траты с кассы: грузчик, обед, палеты. Аренда / бронь — отдельное окно на сводке бухгалтера, но тоже с рейса."
+        : "Траты с кассы по выбранному рейсу: грузчик, обед, палеты, аренда/бронь. Все траты рейса видны продавцу и вычитаются из «к сдаче».");
 
   return (
     <div role="region" aria-label={title}>
@@ -375,6 +375,17 @@ export function SellerFieldExpensesPanel({
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="birzha-table-subtotal-row">
+                <th scope="row" style={{ ...thtd, fontWeight: 700 }} colSpan={3}>
+                  Итого
+                </th>
+                <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                  {kopecksToRubLabel(visibleTotalKopecks)} ₽
+                </td>
+                <td style={thtd} colSpan={2} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       ) : null}

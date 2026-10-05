@@ -878,6 +878,17 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="birzha-table-subtotal-row">
+                      <th scope="row" style={{ ...thtd, fontWeight: 700 }} colSpan={2}>
+                        Итого
+                      </th>
+                      <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                        {kopecksToRubLabel(r.financials.fieldExpensesKopecks || "0")} ₽
+                      </td>
+                      <td style={thtd} />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}

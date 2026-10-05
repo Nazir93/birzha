@@ -229,6 +229,14 @@ export function SellerCabinetHome() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row" colSpan={3}>
+                          Итого
+                        </th>
+                        <td>{kopecksToRubLabel(settlement.fieldExpensesKopecks.toString())} ₽</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}

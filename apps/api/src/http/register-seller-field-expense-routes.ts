@@ -43,21 +43,29 @@ export function registerSellerFieldExpenseRoutes(
     try {
       const q = sellerFieldExpensesQuerySchema.parse(req.query);
       const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
-      let recordedByUserId: string | undefined;
+      let tripIds: string[] | undefined;
+      let salesRecordedByUserId: string | undefined;
       if (user && isGlobalSellerOnly(user.roles)) {
-        recordedByUserId = user.sub;
+        salesRecordedByUserId = user.sub;
         if (q.tripId) {
           const trip = await deps.trips.findById(q.tripId);
           if (!trip || !tripVisibleToFieldSeller(trip, user.sub)) {
             return reply.code(403).send({ error: "forbidden" });
           }
+        } else {
+          const assigned = await deps.trips.list({
+            assignedSellerUserId: user.sub,
+            limit: 500,
+          });
+          tripIds = assigned.map((t) => t.getId());
         }
       }
       const result = await uc.list({
         tripId: q.tripId,
+        tripIds,
         fromYmd: q.from,
         toYmd: q.to,
-        recordedByUserId,
+        salesRecordedByUserId,
         group: q.group,
       });
       return reply.send({

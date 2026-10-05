@@ -189,6 +189,17 @@ export function FieldSellerTripReport({
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="birzha-table-subtotal-row">
+                <th scope="row" style={{ ...thtd, fontWeight: 700 }} colSpan={2}>
+                  Итого
+                </th>
+                <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                  {kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽
+                </td>
+                <td style={thtd} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
