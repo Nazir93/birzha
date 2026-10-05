@@ -13,12 +13,14 @@ import type { PurchaseDocumentLineDetail } from "../api/types.js";
 import {
   purchaseDocumentDetailQueryOptions,
   productGradesFullListQueryOptions,
+  suppliersFullListQueryOptions,
   warehousesFullListQueryOptions,
 } from "../query/core-list-queries.js";
 import { refreshPurchaseAndBatchLists } from "../query/domain-list-refresh.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canEditPurchaseDocumentLines } from "../auth/role-panels.js";
 import { productGradeOptionLabel } from "../format/batch-label.js";
+import { formatSupplierLabel } from "../format/supplier-label.js";
 import {
   groupProductGradesByProduct,
   productGroupOptionsFromGradeGroups,
@@ -110,6 +112,11 @@ export function PurchaseNakladnayaDetailSection() {
 
   const warehousesQ = useQuery({
     ...warehousesFullListQueryOptions(),
+    enabled: enabled && Boolean(id),
+  });
+
+  const suppliersQ = useQuery({
+    ...suppliersFullListQueryOptions(),
     enabled: enabled && Boolean(id),
   });
 
@@ -219,6 +226,16 @@ export function PurchaseNakladnayaDetailSection() {
       label: productGradeOptionLabel(g.code, g.displayName),
     }));
   }, [gradeOptionGroups, docProductGroup]);
+
+  const supplierHeading = useMemo(() => {
+    const name = docQ.data?.supplierName?.trim() || "";
+    const sid = docQ.data?.supplierId?.trim();
+    const sort = sid
+      ? suppliersQ.data?.suppliers.find((s) => s.id === sid)?.sortOrder
+      : undefined;
+    const labeled = formatSupplierLabel(name || null, sort);
+    return labeled !== "—" ? labeled : docQ.data?.documentNumber ?? "";
+  }, [docQ.data?.supplierName, docQ.data?.supplierId, docQ.data?.documentNumber, suppliersQ.data?.suppliers]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -349,7 +366,7 @@ export function PurchaseNakladnayaDetailSection() {
         defaultOpen
         title={
           <h3 id="nakl-detail-heading" style={{ margin: 0, fontSize: "1rem" }}>
-            Накладная · <strong>{doc.supplierName?.trim() || doc.documentNumber}</strong>
+            Накладная · <strong>{supplierHeading || doc.documentNumber}</strong>
             <span className="birzha-text-muted birzha-ui-sm" style={{ marginLeft: "0.5rem", fontWeight: 500 }}>
               {formatPurchaseDocDateRu(doc.docDate)}
             </span>

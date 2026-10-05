@@ -43,11 +43,25 @@ export class InMemorySupplierRepository implements SupplierRepository {
     return out;
   }
 
-  async create(name: string, sortOrder = 0): Promise<SupplierRecord> {
+  async nextSortOrder(): Promise<number> {
+    let max = 0;
+    for (const r of this.rows.values()) {
+      if (r.sortOrder > max) {
+        max = r.sortOrder;
+      }
+    }
+    return max + 1;
+  }
+
+  async create(name: string, sortOrder?: number): Promise<SupplierRecord> {
     const id = randomUUID();
     const n = name.trim();
-    this.rows.set(id, { name: n, sortOrder, isActive: true });
-    return { id, name: n, sortOrder, isActive: true };
+    const order =
+      sortOrder != null && Number.isFinite(sortOrder) && sortOrder > 0
+        ? Math.trunc(sortOrder)
+        : await this.nextSortOrder();
+    this.rows.set(id, { name: n, sortOrder: order, isActive: true });
+    return { id, name: n, sortOrder: order, isActive: true };
   }
 
   async setActive(id: string, isActive: boolean): Promise<void> {

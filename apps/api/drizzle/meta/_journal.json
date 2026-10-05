@@ -309,6 +309,13 @@
       "when": 1779600000000,
       "tag": "0043_purchaser_expense_manifest_and_seller_money_sends",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779700000000,
+      "tag": "0044_supplier_sort_order_backfill",
+      "breakpoints": true
     }
   ]
 }

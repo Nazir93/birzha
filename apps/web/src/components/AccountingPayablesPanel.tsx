@@ -7,10 +7,13 @@ import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canWriteAccounting } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
+import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import {
   accountingMonthBounds,
   readAccountingPeriodParams,
 } from "../format/accounting-period.js";
+import { formatSupplierLabel } from "../format/supplier-label.js";
+import { suppliersFullListQueryOptions } from "../query/core-list-queries.js";
 import { AccountingSectionBack } from "./AccountingSectionBack.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -91,6 +94,21 @@ export function AccountingPayablesPanel() {
     },
   });
 
+  const suppliersQ = useQuery(suppliersFullListQueryOptions());
+  const supplierSortById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of suppliersQ.data?.suppliers ?? []) {
+      m.set(s.id, s.sortOrder);
+    }
+    return m;
+  }, [suppliersQ.data?.suppliers]);
+
+  function supplierLabel(supplierId: string | null | undefined, supplierName: string | null | undefined): string {
+    const sort =
+      supplierId && supplierSortById.has(supplierId) ? supplierSortById.get(supplierId) : undefined;
+    return formatSupplierLabel(supplierName, sort);
+  }
+
   const payM = useMutation({
     mutationFn: async () => {
       if (!payDocId) {
@@ -117,6 +135,10 @@ export function AccountingPayablesPanel() {
   });
 
   const rows = listQ.data?.payables ?? [];
+  const selectedPayable = useMemo(
+    () => (payDocId ? rows.find((r) => r.documentId === payDocId) ?? null : null),
+    [payDocId, rows],
+  );
 
   return (
     <section aria-labelledby="acc-pay-h">
@@ -175,7 +197,12 @@ export function AccountingPayablesPanel() {
               <tbody>
                 {periodQ.data.bySupplier.map((row) => (
                   <tr key={row.supplierKey}>
-                    <td style={thtd}>{row.supplierName}</td>
+                    <td style={thtd}>
+                      {supplierLabel(
+                        row.supplierKey.startsWith("name:") ? null : row.supplierKey,
+                        row.supplierName,
+                      )}
+                    </td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.purchaseTotalKopecks)}</td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.paidKopecks)}</td>
                     <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(row.remainingKopecks)}</td>
@@ -205,7 +232,7 @@ export function AccountingPayablesPanel() {
             downloadCsv("birzha-payables.csv", [
               ["Тепличник", "Накладная", "Дата", "Сумма", "Оплачено", "Остаток", "Статус"],
               ...rows.map((r) => [
-                r.supplierName ?? "",
+                supplierLabel(r.supplierId, r.supplierName),
                 r.documentNumber,
                 r.docDate,
                 kopecksToRubLabel(r.totalKopecks),
@@ -239,7 +266,7 @@ export function AccountingPayablesPanel() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.documentId}>
-                  <td style={thtd}>{r.supplierName ?? "—"}</td>
+                  <td style={thtd}>{supplierLabel(r.supplierId, r.supplierName)}</td>
                   <td style={thtd}>{r.documentNumber}</td>
                   <td style={thtd}>{r.docDate}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.totalKopecks)}</td>
@@ -264,6 +291,42 @@ export function AccountingPayablesPanel() {
         <div className="birzha-callout-info" style={{ marginTop: "1rem", padding: "0.75rem" }}>
           <strong>Оплата тепличнику</strong>
           <div style={{ display: "grid", gap: "0.45rem", marginTop: "0.5rem", maxWidth: "22rem" }}>
+            <label className="birzha-form-label">
+              Тепличник
+              <input
+                style={fieldStyle}
+                value={
+                  selectedPayable
+                    ? supplierLabel(selectedPayable.supplierId, selectedPayable.supplierName)
+                    : "—"
+                }
+                readOnly
+                aria-label="Тепличник"
+              />
+            </label>
+            <label className="birzha-form-label">
+              Накладная
+              <input
+                style={fieldStyle}
+                value={
+                  selectedPayable
+                    ? `${selectedPayable.documentNumber}${
+                        selectedPayable.docDate
+                          ? ` · ${formatPurchaseDocDateRu(selectedPayable.docDate)}`
+                          : ""
+                      }`
+                    : "—"
+                }
+                readOnly
+                aria-label="Накладная"
+              />
+            </label>
+            {selectedPayable ? (
+              <p className="birzha-ui-sm" style={{ margin: 0 }}>
+                Остаток по накладной:{" "}
+                <strong>{kopecksToRubLabel(selectedPayable.remainingKopecks)} ₽</strong>
+              </p>
+            ) : null}
             <label className="birzha-form-label">
               Сумма, ₽
               <input style={fieldStyle} value={amountRub} onChange={(e) => setAmountRub(e.target.value)} />

@@ -27,7 +27,7 @@ export function registerSupplierRoutes(
       if (existing) {
         return reply.code(201).send({ supplier: existing });
       }
-      const s = await suppliers.create(body.name, body.sortOrder ?? 0);
+      const s = await suppliers.create(body.name, body.sortOrder);
       return reply.code(201).send({ supplier: s });
     } catch (error) {
       return sendMappedError(reply, error);

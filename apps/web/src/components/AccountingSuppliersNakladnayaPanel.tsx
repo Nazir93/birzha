@@ -7,7 +7,11 @@ import { useAuth } from "../auth/auth-context.js";
 import { groupPurchaseDocumentsBySupplier } from "../format/accounting-supplier-purchase-docs.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { purchaseDocumentsPagedQueryOptions } from "../query/core-list-queries.js";
+import { formatSupplierLabel } from "../format/supplier-label.js";
+import {
+  purchaseDocumentsPagedQueryOptions,
+  suppliersFullListQueryOptions,
+} from "../query/core-list-queries.js";
 import { accounting } from "../routes.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -50,6 +54,18 @@ export function AccountingSuppliersNakladnayaPanel() {
     },
     enabled: purchaseApiEnabled,
   });
+
+  const suppliersQ = useQuery({
+    ...suppliersFullListQueryOptions(),
+    enabled: purchaseApiEnabled,
+  });
+  const supplierSortById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of suppliersQ.data?.suppliers ?? []) {
+      m.set(s.id, s.sortOrder);
+    }
+    return m;
+  }, [suppliersQ.data?.suppliers]);
 
   const payByDoc = useMemo(() => {
     const m = new Map<string, PayableRow>();
@@ -126,7 +142,12 @@ export function AccountingSuppliersNakladnayaPanel() {
             defaultOpen={groups.length <= 3}
             title={
               <span style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem 1rem", alignItems: "baseline" }}>
-                <strong style={{ fontSize: "0.98rem" }}>{g.supplierName}</strong>
+                <strong style={{ fontSize: "0.98rem" }}>
+                  {formatSupplierLabel(
+                    g.supplierName,
+                    g.supplierId ? supplierSortById.get(g.supplierId) : undefined,
+                  )}
+                </strong>
                 <span className="birzha-text-muted birzha-ui-sm">
                   {g.documents.length} накл. · {g.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг ·{" "}
                   {kopecksToRubLabel(g.totalKopecks.toString())} ₽ · остаток{" "}
@@ -138,7 +159,10 @@ export function AccountingSuppliersNakladnayaPanel() {
             <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
               <table
                 style={{ ...tableStyle, minWidth: 860 }}
-                aria-label={`Накладные тепличника ${g.supplierName}`}
+                aria-label={`Накладные тепличника ${formatSupplierLabel(
+                  g.supplierName,
+                  g.supplierId ? supplierSortById.get(g.supplierId) : undefined,
+                )}`}
               >
                 <thead>
                   <tr>

@@ -56,16 +56,28 @@ export class DrizzleSupplierRepository implements SupplierRepository {
     }));
   }
 
-  async create(name: string, sortOrder = 0): Promise<SupplierRecord> {
+  async nextSortOrder(): Promise<number> {
+    const rows = await this.db
+      .select({ m: sql<number>`coalesce(max(${suppliers.sortOrder}), 0)` })
+      .from(suppliers);
+    const max = Number(rows[0]?.m ?? 0);
+    return (Number.isFinite(max) ? max : 0) + 1;
+  }
+
+  async create(name: string, sortOrder?: number): Promise<SupplierRecord> {
     const id = randomUUID();
     const n = name.trim();
+    const order =
+      sortOrder != null && Number.isFinite(sortOrder) && sortOrder > 0
+        ? Math.trunc(sortOrder)
+        : await this.nextSortOrder();
     await this.db.insert(suppliers).values({
       id,
       name: n,
-      sortOrder,
+      sortOrder: order,
       isActive: true,
     });
-    return { id, name: n, sortOrder, isActive: true };
+    return { id, name: n, sortOrder: order, isActive: true };
   }
 
   async setActive(id: string, isActive: boolean): Promise<void> {
