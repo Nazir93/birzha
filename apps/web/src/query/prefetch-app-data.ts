@@ -14,16 +14,20 @@ function fireAndForget(p: Promise<unknown>): void {
 }
 
 export type PrefetchCoreListsOptions = {
+  /** Только admin/manager — иначе GET /admin/dashboard-summary даёт 403. */
+  prefetchAdminDashboard?: boolean;
   prefetchPurchaseDocuments?: boolean;
   prefetchCounterparties?: boolean;
   prefetchWholesalers?: boolean;
 };
 
 /** Прогревает лёгкие справочники и сводку; тяжёлые списки — по экранам с пагинацией. */
-export function prefetchCoreLists(queryClient: QueryClient, _opts?: PrefetchCoreListsOptions): void {
+export function prefetchCoreLists(queryClient: QueryClient, opts?: PrefetchCoreListsOptions): void {
   const stale = QUERY_STALE_LISTS_MS;
 
-  fireAndForget(queryClient.prefetchQuery({ ...adminDashboardSummaryQueryOptions(), staleTime: stale }));
+  if (opts?.prefetchAdminDashboard) {
+    fireAndForget(queryClient.prefetchQuery({ ...adminDashboardSummaryQueryOptions(), staleTime: stale }));
+  }
   fireAndForget(queryClient.prefetchQuery({ ...warehousesFullListQueryOptions(), staleTime: stale }));
   fireAndForget(queryClient.prefetchQuery({ ...productGradesFullListQueryOptions(), staleTime: stale }));
 }

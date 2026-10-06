@@ -36,6 +36,23 @@ describe("apiFetch", () => {
     }
   });
 
+  it("при 401 на /auth/login не сбрасывает сессию", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    setStoredApiToken("still-valid");
+    const listener = vi.fn();
+    const off = onApiUnauthorized(listener);
+
+    try {
+      await apiFetch("/api/auth/login", { method: "POST" });
+      expect(getStoredApiToken()).toBe("still-valid");
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      off();
+    }
+  });
+
   it("assertOkResponse не бросает при 200", async () => {
     const res = new Response(null, { status: 200 });
     await expect(assertOkResponse(res)).resolves.toBeUndefined();

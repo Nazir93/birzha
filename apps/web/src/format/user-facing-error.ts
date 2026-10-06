@@ -16,6 +16,9 @@ const ERROR_CODE_RU: Record<string, string> = {
   product_grade_code_conflict:
     "Такой код калибра у этого товара уже есть. Прокрутите список ниже — возможно, калибр уже добавлен. Для нового укажите другой код.",
   warehouse_code_conflict: "Склад с таким кодом уже есть.",
+  invalid_credentials: "Неверный логин или пароль.",
+  too_many_attempts: "Слишком много попыток входа. Подождите около 15 минут и попробуйте снова.",
+  auth_unavailable: "Сервер входа временно недоступен. Попробуйте чуть позже.",
 };
 
 function tryParseApiJson(text: string): string | null {

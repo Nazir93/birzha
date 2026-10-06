@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { apiFetch, onApiUnauthorized, setStoredApiToken } from "../api/fetch-api.js";
+import { cabinetForUser } from "./role-panels.js";
 import { prefetchCoreLists } from "../query/prefetch-app-data.js";
 
 export type ApiMeta = {
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     prefetchCoreLists(queryClient, {
+      prefetchAdminDashboard: cabinetForUser(state.user) === "admin",
       prefetchPurchaseDocuments: state.meta.purchaseDocumentsApi === "enabled",
       prefetchCounterparties: state.meta.counterpartyCatalogApi === "enabled",
       prefetchWholesalers: state.meta.wholesalersCatalogApi === "enabled",
@@ -187,6 +189,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const j = JSON.parse(t) as { error?: string };
           if (j.error === "invalid_credentials") {
             msg = "Неверный логин или пароль";
+          } else if (j.error === "too_many_attempts") {
+            msg = "Слишком много попыток входа. Подождите около 15 минут или введите пароль заново позже.";
+          } else if (j.error === "auth_unavailable") {
+            msg = "Сервер входа временно недоступен. Попробуйте чуть позже.";
           }
         } catch {
           /* use msg as is */
@@ -198,8 +204,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((s) => ({ ...s, user: data.user }));
       await queryClient.invalidateQueries();
       prefetchCoreLists(queryClient, {
+        prefetchAdminDashboard: cabinetForUser(data.user) === "admin",
         prefetchPurchaseDocuments: state.meta?.purchaseDocumentsApi === "enabled",
         prefetchCounterparties: state.meta?.counterpartyCatalogApi === "enabled",
+        prefetchWholesalers: state.meta?.wholesalersCatalogApi === "enabled",
       });
     },
     [queryClient, state.meta],

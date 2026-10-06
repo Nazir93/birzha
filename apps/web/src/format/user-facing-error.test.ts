@@ -29,6 +29,11 @@ describe("humanizeErrorMessage", () => {
     );
     expect(humanizeErrorMessage(new Error("product_grade_code_conflict"))).toMatch(/уже есть/i);
   });
+
+  it("поясняет блокировку входа", () => {
+    expect(humanizeErrorMessage(new Error('{"error":"too_many_attempts"}'))).toMatch(/15 минут/i);
+    expect(humanizeErrorMessage(new Error("invalid_credentials"))).toMatch(/логин или пароль/i);
+  });
 });
 
 describe("isLoadingManifestNotFoundError", () => {

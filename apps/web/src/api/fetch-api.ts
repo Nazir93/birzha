@@ -73,7 +73,17 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
     headers,
     signal,
   });
-  if (res.status === 401) {
+  /** Неверный пароль на /auth/login — не «сессия истекла», иначе сбрасываем валидный Bearer. */
+  const requestUrl =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.pathname
+        : input instanceof Request
+          ? input.url
+          : "";
+  const isLoginAttempt = requestUrl.includes("/auth/login");
+  if (res.status === 401 && !isLoginAttempt) {
     setStoredApiToken(null);
     notifyUnauthorized();
   }
