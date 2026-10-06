@@ -19,6 +19,10 @@ describe("formatSupplierPurchaseLabel", () => {
     expect(formatSupplierPurchaseLabel("3 · старое", "Мурад")).toBe("03 · Мурад");
   });
 
+  it("добавляет дату документа", () => {
+    expect(formatSupplierPurchaseLabel("01", "Джамал", "2026-10-06")).toBe("01 · Джамал · 06.10.2026");
+  });
+
   it("без цифр в номере — номер накладной как есть", () => {
     expect(formatSupplierPurchaseLabel("Мурад · 01.01.2026", "Мурад")).toBe("Мурад · 01.01.2026");
   });

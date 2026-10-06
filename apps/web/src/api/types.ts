@@ -23,6 +23,8 @@ export type BatchListItem = {
     linePackageCount?: number | null;
     /** Тепличник с закупочной накладной. */
     supplierName?: string | null;
+    /** Дата закупочной накладной YYYY-MM-DD. */
+    docDate?: string | null;
   };
   /** Кг в журнале «возврат на склад» (история; погрузку не блокирует). */
   qualityRejectWrittenOffKg?: number;

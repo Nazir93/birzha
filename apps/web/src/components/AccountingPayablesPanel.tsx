@@ -211,7 +211,7 @@ export function AccountingPayablesPanel() {
             downloadCsv("birzha-payables.csv", [
               ["Тепличник", "Накладная", "Дата", "Сумма", "Оплачено", "Остаток", "Статус"],
               ...rows.map((r) => [
-                formatSupplierPurchaseLabel(r.documentNumber, r.supplierName),
+                formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate),
                 r.documentNumber,
                 r.docDate,
                 kopecksToRubLabel(r.totalKopecks),
@@ -245,7 +245,7 @@ export function AccountingPayablesPanel() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.documentId}>
-                  <td style={thtd}>{formatSupplierPurchaseLabel(r.documentNumber, r.supplierName)}</td>
+                  <td style={thtd}>{formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate)}</td>
                   <td style={thtd}>{r.documentNumber}</td>
                   <td style={thtd}>{r.docDate}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.totalKopecks)}</td>
@@ -279,6 +279,7 @@ export function AccountingPayablesPanel() {
                     ? formatSupplierPurchaseLabel(
                         selectedPayable.documentNumber,
                         selectedPayable.supplierName,
+                        selectedPayable.docDate,
                       )
                     : "—"
                 }

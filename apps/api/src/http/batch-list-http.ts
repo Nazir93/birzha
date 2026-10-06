@@ -18,7 +18,15 @@ type LineMeta = {
   documentNumber: string | null;
   linePackageCount: number | null;
   supplierName: string | null;
+  docDate: string | null;
 };
+
+function formatPgDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 /** Склад для группировки в «Распределении»: из накладной, иначе с колонки партий (всё, что пришло с приёмов). */
 function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["nakladnaya"] | undefined {
@@ -42,6 +50,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
       documentNumber: null,
       linePackageCount: null,
       supplierName: null,
+      docDate: null,
     };
   }
   if (!m) {
@@ -55,6 +64,7 @@ function mergeNakladnyaForList(m: LineMeta | undefined, b: Batch): BatchJson["na
     documentNumber: m.documentNumber,
     linePackageCount: m.linePackageCount,
     supplierName: m.supplierName,
+    docDate: m.docDate,
   };
 }
 
@@ -92,6 +102,7 @@ export async function listBatchesForHttp(
       documentNumber: purchaseDocuments.documentNumber,
       linePackageCount: purchaseDocumentLines.packageCount,
       supplierName: purchaseDocuments.supplierName,
+      docDate: purchaseDocuments.docDate,
     })
     .from(purchaseDocumentLines)
     .leftJoin(productGrades, eq(purchaseDocumentLines.productGradeId, productGrades.id))
@@ -108,6 +119,7 @@ export async function listBatchesForHttp(
       documentNumber: string | null;
       linePackageCount: number | null;
       supplierName: string | null;
+      docDate: string | null;
     }
   >();
   for (const r of rows) {
@@ -120,6 +132,7 @@ export async function listBatchesForHttp(
       documentNumber: r.documentNumber,
       linePackageCount: pk != null ? Number(pk) : null,
       supplierName: r.supplierName,
+      docDate: r.docDate ? formatPgDate(r.docDate) : null,
     });
   }
 

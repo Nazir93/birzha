@@ -178,7 +178,7 @@ export function AccountingSuppliersNakladnayaPanel() {
                     return (
                       <tr key={d.id}>
                         <th scope="row" style={thtd}>
-                          <strong>{formatSupplierPurchaseLabel(d.documentNumber, d.supplierName)}</strong>
+                          <strong>{formatSupplierPurchaseLabel(d.documentNumber, d.supplierName, d.docDate)}</strong>
                         </th>
                         <td style={thtd}>{formatPurchaseDocDateRu(d.docDate)}</td>
                         <td style={thtd}>{d.warehouseName?.trim() || "—"}</td>

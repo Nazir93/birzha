@@ -29,6 +29,8 @@ export type BatchJson = {
     linePackageCount: number | null;
     /** Тепличник (снимок с закупочной накладной). */
     supplierName: string | null;
+    /** Дата закупочной накладной YYYY-MM-DD. */
+    docDate: string | null;
   };
   /** Присвоение качества / направления (PostgreSQL); при in-memory API может отсутствовать. */
   allocation?: {

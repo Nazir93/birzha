@@ -823,7 +823,7 @@ function PurchaseNakladnayaDocTable({
               <tr key={d.id}>
                 <td>
                   <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 600 }}>
-                    {formatSupplierPurchaseLabel(d.documentNumber, d.supplierName)}
+                    {formatSupplierPurchaseLabel(d.documentNumber, d.supplierName, d.docDate)}
                   </Link>
                 </td>
                 <td className="birzha-data-table__emph">{formatPurchaseDocDateRu(d.docDate)}</td>

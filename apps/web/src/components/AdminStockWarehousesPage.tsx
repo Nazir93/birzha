@@ -405,7 +405,11 @@ export function AdminStockWarehousesPage() {
                                   to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
                                   style={{ fontWeight: 600 }}
                                 >
-                                  {formatSupplierPurchaseLabel(row.documentNumber, row.supplierName)}
+                                  {formatSupplierPurchaseLabel(
+                                    row.documentNumber,
+                                    row.supplierName,
+                                    row.docDate,
+                                  )}
                                 </Link>
                               </td>
                               <td style={thtdDense}>{row.lineCount}</td>

@@ -6,6 +6,8 @@ export type WarehouseDocumentStockRow = {
   documentNumber: string;
   /** Тепличник с закупочной накладной (для подписи «01 · Имя»). */
   supplierName: string | null;
+  /** Дата накладной YYYY-MM-DD. */
+  docDate: string | null;
   lineCount: number;
   /** Физический остаток onWarehouse (возвраты журнала не вычитаются). */
   onWarehouseKg: number;
@@ -72,11 +74,13 @@ export function aggregateWarehouseDocumentsFromBatches(
     }
     const documentNumber = (batch.nakladnaya?.documentNumber ?? "").trim() || documentId;
     const supplierName = (batch.nakladnaya?.supplierName ?? "").trim() || null;
+    const docDate = (batch.nakladnaya?.docDate ?? "").trim() || null;
     const returnedKg = batchReturnedKg(batch);
     const prev = map.get(documentId) ?? {
       documentId,
       documentNumber,
       supplierName,
+      docDate,
       lineCount: 0,
       onWarehouseKg: 0,
       availableForLoadingKg: 0,
@@ -91,6 +95,9 @@ export function aggregateWarehouseDocumentsFromBatches(
     }
     if (!prev.documentNumber && documentNumber) {
       prev.documentNumber = documentNumber;
+    }
+    if (!prev.docDate && docDate) {
+      prev.docDate = docDate;
     }
     prev.lineCount += 1;
     prev.onWarehouseKg += batch.onWarehouseKg ?? 0;

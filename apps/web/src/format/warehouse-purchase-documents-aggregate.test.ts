@@ -137,6 +137,7 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
             productGroup: null,
             documentNumber: "01",
             supplierName: "Джамал",
+            docDate: "2026-10-06",
           },
         }),
       ],
@@ -145,6 +146,7 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.documentNumber).toBe("01");
     expect(rows[0]?.supplierName).toBe("Джамал");
+    expect(rows[0]?.docDate).toBe("2026-10-06");
   });
 
   it("учитывает списания с остатка даже без кг на складе", () => {

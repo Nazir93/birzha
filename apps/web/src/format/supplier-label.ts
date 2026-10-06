@@ -3,6 +3,8 @@
  * у каждого тепличника свой счётчик.
  */
 
+import { formatPurchaseDocDateRu } from "./purchase-doc-date.js";
+
 export function formatSupplierPurchaseNumber(n: number): string {
   if (!Number.isFinite(n) || n <= 0) {
     return "";
@@ -11,13 +13,19 @@ export function formatSupplierPurchaseNumber(n: number): string {
   return v < 10 ? `0${v}` : String(v);
 }
 
-/** Подпись для списка/расчёта: «01 · Мурад» или номер накладной как есть (старый формат). */
+/**
+ * Подпись: «01 · Мурад · 06.10.2026» (новый формат) или номер накладной как есть (старый).
+ * Дата — опционально; для старых «Имя · дата» в `documentNumber` дата уже внутри.
+ */
 export function formatSupplierPurchaseLabel(
   documentNumber: string | null | undefined,
   supplierName: string | null | undefined,
+  docDate?: string | null,
 ): string {
   const name = (supplierName ?? "").trim();
   const doc = (documentNumber ?? "").trim();
+  const dateRu = docDate?.trim() ? formatPurchaseDocDateRu(docDate.trim()) : "";
+  const datePart = dateRu && dateRu !== "—" ? dateRu : "";
   const m = /^(\d+)/.exec(doc);
   if (!m) {
     return doc || name || "—";
@@ -26,7 +34,14 @@ export function formatSupplierPurchaseLabel(
   if (!num) {
     return doc || name || "—";
   }
-  return name ? `${num} · ${name}` : num;
+  const parts = [num];
+  if (name) {
+    parts.push(name);
+  }
+  if (datePart) {
+    parts.push(datePart);
+  }
+  return parts.join(" · ");
 }
 
 /**
