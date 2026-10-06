@@ -15,6 +15,7 @@ import {
 } from "../query/core-list-queries.js";
 import { adminRoutes, purchaseNakladnayaDocumentPathForPath } from "../routes.js";
 import { batchAvailableForLoadingKg } from "../format/batch-available-for-loading.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import {
   aggregateWarehouseDocumentsFromBatches,
   batchHasStockActivity,
@@ -404,7 +405,7 @@ export function AdminStockWarehousesPage() {
                                   to={purchaseNakladnayaDocumentPathForPath(pathname, row.documentId)}
                                   style={{ fontWeight: 600 }}
                                 >
-                                  {row.documentNumber}
+                                  {formatSupplierPurchaseLabel(row.documentNumber, row.supplierName)}
                                 </Link>
                               </td>
                               <td style={thtdDense}>{row.lineCount}</td>

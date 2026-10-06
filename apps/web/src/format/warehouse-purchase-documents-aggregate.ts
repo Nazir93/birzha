@@ -4,6 +4,8 @@ import { batchAvailableForLoadingKg, batchQualityRejectReturnKg } from "./batch-
 export type WarehouseDocumentStockRow = {
   documentId: string;
   documentNumber: string;
+  /** Тепличник с закупочной накладной (для подписи «01 · Имя»). */
+  supplierName: string | null;
   lineCount: number;
   /** Физический остаток onWarehouse (возвраты журнала не вычитаются). */
   onWarehouseKg: number;
@@ -69,10 +71,12 @@ export function aggregateWarehouseDocumentsFromBatches(
       continue;
     }
     const documentNumber = (batch.nakladnaya?.documentNumber ?? "").trim() || documentId;
+    const supplierName = (batch.nakladnaya?.supplierName ?? "").trim() || null;
     const returnedKg = batchReturnedKg(batch);
     const prev = map.get(documentId) ?? {
       documentId,
       documentNumber,
+      supplierName,
       lineCount: 0,
       onWarehouseKg: 0,
       availableForLoadingKg: 0,
@@ -82,6 +86,12 @@ export function aggregateWarehouseDocumentsFromBatches(
       returnedKg: 0,
       writtenOffKg: 0,
     };
+    if (!prev.supplierName && supplierName) {
+      prev.supplierName = supplierName;
+    }
+    if (!prev.documentNumber && documentNumber) {
+      prev.documentNumber = documentNumber;
+    }
     prev.lineCount += 1;
     prev.onWarehouseKg += batch.onWarehouseKg ?? 0;
     prev.availableForLoadingKg += batchAvailableForLoadingKg(batch);
@@ -104,7 +114,11 @@ export function aggregateWarehouseDocumentsFromBatches(
 
   const q = options?.search?.trim().toLowerCase();
   if (q) {
-    rows = rows.filter((row) => row.documentNumber.toLowerCase().includes(q));
+    rows = rows.filter(
+      (row) =>
+        row.documentNumber.toLowerCase().includes(q) ||
+        (row.supplierName?.toLowerCase().includes(q) ?? false),
+    );
   }
   return rows;
 }

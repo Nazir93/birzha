@@ -19,8 +19,12 @@ describe("formatSupplierPurchaseLabel", () => {
     expect(formatSupplierPurchaseLabel("3 · старое", "Мурад")).toBe("03 · Мурад");
   });
 
-  it("без цифр в номере — имя", () => {
-    expect(formatSupplierPurchaseLabel("Мурад · 01.01.2026", "Мурад")).toBe("Мурад");
+  it("без цифр в номере — номер накладной как есть", () => {
+    expect(formatSupplierPurchaseLabel("Мурад · 01.01.2026", "Мурад")).toBe("Мурад · 01.01.2026");
+  });
+
+  it("только номер без имени", () => {
+    expect(formatSupplierPurchaseLabel("01", null)).toBe("01");
   });
 });
 

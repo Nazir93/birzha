@@ -11,19 +11,22 @@ export function formatSupplierPurchaseNumber(n: number): string {
   return v < 10 ? `0${v}` : String(v);
 }
 
-/** Подпись для списка/расчёта: «01 · Мурад» или просто имя, если номера нет. */
+/** Подпись для списка/расчёта: «01 · Мурад» или номер накладной как есть (старый формат). */
 export function formatSupplierPurchaseLabel(
   documentNumber: string | null | undefined,
   supplierName: string | null | undefined,
 ): string {
-  const name = (supplierName ?? "").trim() || "—";
+  const name = (supplierName ?? "").trim();
   const doc = (documentNumber ?? "").trim();
   const m = /^(\d+)/.exec(doc);
   if (!m) {
-    return name === "—" && doc ? doc : name;
+    return doc || name || "—";
   }
   const num = formatSupplierPurchaseNumber(Number.parseInt(m[1]!, 10));
-  return num ? `${num} · ${name}` : name;
+  if (!num) {
+    return doc || name || "—";
+  }
+  return name ? `${num} · ${name}` : num;
 }
 
 /**

@@ -89,6 +89,7 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
     expect(rows).toHaveLength(2);
     const docA = rows.find((r) => r.documentId === "doc-a");
     expect(docA?.documentNumber).toBe("НФ-100");
+    expect(docA?.supplierName).toBeNull();
     expect(docA?.lineCount).toBe(2);
     expect(docA?.onWarehouseKg).toBe(140);
     expect(docA?.inTransitKg).toBe(10);
@@ -122,6 +123,28 @@ describe("aggregateWarehouseDocumentsFromBatches", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.documentNumber).toBe("НФ-200");
+  });
+
+  it("хранит тепличника и ищет по имени", () => {
+    const rows = aggregateWarehouseDocumentsFromBatches(
+      [
+        batch({
+          id: "b1",
+          nakladnaya: {
+            documentId: "doc-a",
+            warehouseId: "wh-1",
+            productGradeCode: "N5",
+            productGroup: null,
+            documentNumber: "01",
+            supplierName: "Джамал",
+          },
+        }),
+      ],
+      { search: "джамал" },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.documentNumber).toBe("01");
+    expect(rows[0]?.supplierName).toBe("Джамал");
   });
 
   it("учитывает списания с остатка даже без кг на складе", () => {
