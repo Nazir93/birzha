@@ -45,7 +45,7 @@ export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
           <div
             className="birzha-mass-strip__seg birzha-mass-strip__seg--tr"
             style={{ flex: `${transitKg}` }}
-            title={`Погружено: ${transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг (${pTr}%)`}
+            title={`В рейсе: ${transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг (${pTr}%)`}
           />
         ) : null}
         {soldKg > 0 ? (
@@ -62,7 +62,7 @@ export function MassBalanceStrip({ warehouseKg, transitKg, soldKg }: Props) {
           <strong>{warehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг ({pWh}%)
         </li>
         <li>
-          <span className="birzha-mass-strip__dot birzha-mass-strip__dot--tr" /> Погружено:{" "}
+          <span className="birzha-mass-strip__dot birzha-mass-strip__dot--tr" /> В рейсе:{" "}
           <strong>{transitKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг ({pTr}%)
         </li>
         <li>

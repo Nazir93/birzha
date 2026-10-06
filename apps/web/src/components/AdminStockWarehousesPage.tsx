@@ -391,7 +391,7 @@ export function AdminStockWarehousesPage() {
                             <th style={thHeadDense}>Строк</th>
                             <th style={thHeadDense}>На складе, кг</th>
                             <th style={thHeadDense}>На складе, ящ.</th>
-                            <th style={thHeadDense}>Погружено, кг</th>
+                            <th style={thHeadDense}>В рейсе, кг</th>
                             <th style={thHeadDense}>Продано, кг</th>
                             <th style={thHeadDense}>Возвращено, кг</th>
                           </tr>
@@ -485,7 +485,7 @@ export function AdminStockWarehousesPage() {
                           <th style={thHeadDense}>Вид</th>
                           <th style={thHeadDense}>На складе, кг</th>
                           <th style={thHeadDense}>На складе, ящ.</th>
-                          <th style={thHeadDense}>Погружено, кг</th>
+                          <th style={thHeadDense}>В рейсе, кг</th>
                           <th style={thHeadDense}>Продано, кг</th>
                           <th style={thHeadDense}>Возвращено, кг</th>
                         </tr>

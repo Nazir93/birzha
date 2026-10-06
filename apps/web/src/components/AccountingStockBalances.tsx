@@ -54,13 +54,13 @@ export function AccountingStockBalances() {
           </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
-          <div className="birzha-kpi-tile__label">Погружено, кг</div>
+          <div className="birzha-kpi-tile__label">В рейсе, кг</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {totals.inTransitKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}
           </div>
         </div>
         <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber">
-          <div className="birzha-kpi-tile__label">Оценка погруженного, ₽</div>
+          <div className="birzha-kpi-tile__label">Оценка в рейсе, ₽</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {kopecksToRubLabel(totals.valueTransitKopecks)}
           </div>
@@ -80,7 +80,7 @@ export function AccountingStockBalances() {
                 Оценка остатка, ₽
               </th>
               <th scope="col" style={{ ...thHead, textAlign: "right" }}>
-                Погружено, кг
+                В рейсе, кг
               </th>
             </tr>
           </thead>
