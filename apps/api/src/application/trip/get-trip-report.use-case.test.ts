@@ -2,6 +2,7 @@ import { Batch, Trip } from "@birzha/domain";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
+import { InMemoryDebtPaymentRepository } from "../testing/in-memory-debt-payment.repository.js";
 import { InMemoryTripRepository } from "../testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "../testing/in-memory-trip-sale.repository.js";
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
@@ -83,6 +84,73 @@ describe("GetTripReportUseCase", () => {
     expect(financials.debtOutstandingKopecks).toBe(0n);
     expect(financials.expensesKopecks).toBe(0n);
     expect(financials.netProfitKopecks).toBe(80n);
+  });
+
+  it("долг и оплаты: debtReceivables и остаток в financials", async () => {
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const batches = new InMemoryBatchRepository();
+    const debtPayments = new InMemoryDebtPaymentRepository();
+    await batches.save(
+      Batch.create({
+        id: "b-d",
+        purchaseId: "p-d",
+        totalKg: 50,
+        pricePerKg: 10,
+        distribution: "on_hand",
+      }),
+    );
+    await trips.save(Trip.create({ id: "t-d", tripNumber: "Ф-D" }));
+    await shipments.append({
+      id: "sh-d",
+      tripId: "t-d",
+      batchId: "b-d",
+      grams: 10_000n,
+      packageCount: null,
+    });
+    await sales.append({
+      id: "sl-d",
+      tripId: "t-d",
+      batchId: "b-d",
+      saleId: "sale-d1",
+      grams: 5_000n,
+      pricePerKgKopecks: 2_000n,
+      revenueKopecks: 10_000n,
+      cashKopecks: 0n,
+      debtKopecks: 10_000n,
+      cardTransferKopecks: 0n,
+      saleChannel: "retail",
+      clientLabel: "ИП Долг",
+    });
+    await debtPayments.append({
+      id: "pay-1",
+      saleId: "sale-d1",
+      tripId: "t-d",
+      amountKopecks: 4_000n,
+      method: "cash",
+      paidAt: new Date("2026-10-02T00:00:00.000Z"),
+      clientLabel: "ИП Долг",
+    });
+
+    const { debtReceivables, financials } = await new GetTripReportUseCase(
+      trips,
+      shipments,
+      sales,
+      shortages,
+      batches,
+      debtPayments,
+    ).execute("t-d");
+
+    expect(debtReceivables).toHaveLength(1);
+    expect(debtReceivables[0]!.saleId).toBe("sale-d1");
+    expect(debtReceivables[0]!.debtKopecks).toBe(10_000n);
+    expect(debtReceivables[0]!.paidKopecks).toBe(4_000n);
+    expect(debtReceivables[0]!.remainingKopecks).toBe(6_000n);
+    expect(debtReceivables[0]!.status).toBe("open");
+    expect(financials.debtPaidKopecks).toBe(4_000n);
+    expect(financials.debtOutstandingKopecks).toBe(6_000n);
   });
 
   it("фильтр по recordedByUserId: только чужие строки отсекаются", async () => {

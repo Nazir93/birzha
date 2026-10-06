@@ -20,7 +20,7 @@ export function registerWholesalerRoutes(
     }
   });
 
-  app.post("/wholesalers", { ...withPreHandlers(routeAuth.inventoryCatalogWrite) }, async (req, reply) => {
+  app.post("/wholesalers", { ...withPreHandlers(routeAuth.wholesalerCreate) }, async (req, reply) => {
     try {
       const body = createWholesalerBodySchema.parse(req.body);
       const w = await wholesalers.create(body.name, body.sortOrder ?? 0);

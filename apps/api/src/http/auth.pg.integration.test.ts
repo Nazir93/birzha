@@ -377,6 +377,30 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     });
     expect(sellerCounterparty.statusCode).toBe(403);
 
+    const sellerWholesaler = await app.inject({
+      method: "POST",
+      url: "/wholesalers",
+      headers: { authorization: `Bearer ${sellerTok}` },
+      payload: { name: `Опт seller ${randomUUID().slice(0, 6)}` },
+    });
+    expect(sellerWholesaler.statusCode).toBe(201);
+    const createdWholesaler = JSON.parse(sellerWholesaler.body) as { wholesaler: { id: string } };
+
+    const warehouseWholesaler = await app.inject({
+      method: "POST",
+      url: "/wholesalers",
+      headers: { authorization: `Bearer ${purchaserTok}` },
+      payload: { name: `Опт purchaser forbidden ${Date.now()}` },
+    });
+    expect(warehouseWholesaler.statusCode).toBe(403);
+
+    const sellerDeleteWholesaler = await app.inject({
+      method: "DELETE",
+      url: `/wholesalers/${createdWholesaler.wholesaler.id}`,
+      headers: { authorization: `Bearer ${sellerTok}` },
+    });
+    expect(sellerDeleteWholesaler.statusCode).toBe(403);
+
     await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, purchaser.id));
     await db.delete(schema.users).where(eq(schema.users.id, purchaser.id));
     await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, accountant.id));

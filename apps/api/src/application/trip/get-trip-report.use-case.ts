@@ -1,3 +1,5 @@
+import { Obligation } from "@birzha/domain";
+
 import { TripNotFoundError } from "../errors.js";
 import { loadBatchOrThrow } from "../load-batch.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
@@ -5,11 +7,42 @@ import type { DebtPaymentRepository } from "../ports/debt-payment-repository.por
 import type { SellerFieldExpenseRepository } from "../ports/seller-field-expense-repository.port.js";
 import type { TripExpenseRepository } from "../ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
-import type { TripSaleRepository } from "../ports/trip-sale-repository.port.js";
+import type { TripSaleDebtGroup, TripSaleRepository } from "../ports/trip-sale-repository.port.js";
 import type { TripShipmentRepository } from "../ports/trip-shipment-repository.port.js";
 import type { TripShortageRepository } from "../ports/trip-shortage-repository.port.js";
 
+import { buildSaleDebtGroupsFromLines } from "./sale-debt-groups.js";
 import { computeTripFinancials } from "./trip-financials.js";
+
+export type TripDebtReceivableRow = {
+  saleId: string;
+  clientLabel: string | null;
+  debtKopecks: bigint;
+  paidKopecks: bigint;
+  remainingKopecks: bigint;
+  status: "open" | "closed";
+  soldAt: Date;
+};
+
+function buildDebtReceivableRows(
+  groups: TripSaleDebtGroup[],
+  paidMap: Map<string, bigint>,
+): TripDebtReceivableRow[] {
+  return groups.map((g) => {
+    const paid = paidMap.get(g.saleId) ?? 0n;
+    const obl = Obligation.restore({ debtKopecks: g.debtKopecks, paidKopecks: paid });
+    const remaining = obl.remainingKopecks();
+    return {
+      saleId: g.saleId,
+      clientLabel: g.clientLabel,
+      debtKopecks: g.debtKopecks,
+      paidKopecks: paid,
+      remainingKopecks: remaining,
+      status: (remaining === 0n ? "closed" : "open") as "open" | "closed",
+      soldAt: g.firstRecordedAt,
+    };
+  });
+}
 
 export class GetTripReportUseCase {
   constructor(
@@ -55,9 +88,19 @@ export class GetTripReportUseCase {
       const batch = await loadBatchOrThrow(this.batches, id);
       purchaseRubPerKgByBatchId.set(id, batch.getPricePerKg());
     }
-    const debtPaidKopecks = this.debtPayments
-      ? await this.debtPayments.sumPaidByTripId(tripId)
-      : 0n;
+
+    const debtLines = await this.sales.listLinesByTripId(
+      tripId,
+      uid ? { onlyRecordedByUserId: uid } : undefined,
+    );
+    const debtGroups = buildSaleDebtGroupsFromLines(debtLines);
+    const paidMap =
+      this.debtPayments && debtGroups.length > 0
+        ? await this.debtPayments.sumPaidBySaleIds(debtGroups.map((g) => g.saleId))
+        : new Map<string, bigint>();
+    const debtReceivables = buildDebtReceivableRows(debtGroups, paidMap);
+    const debtPaidKopecks = debtReceivables.reduce((acc, row) => acc + row.paidKopecks, 0n);
+
     const expensesKopecks = this.tripExpenses
       ? await this.tripExpenses.sumByTripId(tripId)
       : 0n;
@@ -71,6 +114,15 @@ export class GetTripReportUseCase {
       fieldExpensesKopecks,
     });
 
-    return { trip, shipment, sales, salesForTripStock, shortage, financials, fieldExpenses: fieldExpenseRows };
+    return {
+      trip,
+      shipment,
+      sales,
+      salesForTripStock,
+      shortage,
+      financials,
+      fieldExpenses: fieldExpenseRows,
+      debtReceivables,
+    };
   }
 }

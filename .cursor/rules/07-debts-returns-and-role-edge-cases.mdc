@@ -10,7 +10,7 @@ alwaysApply: false
 
 ## Долги и частичные оплаты
 
-- **Зафиксировано:** оплату долга клиента и тепличнику проводят только **`admin` / `manager` / `accountant`** (`accountingWrite`). Продавец продаёт в долг, но не гасит дебиторку.
+- **Зафиксировано (заказчик):** оплату долга **клиента** проводят **`admin` / `manager` / `accountant` / `seller`** (`receivablePaymentWrite`). Продавец гасит дебиторку в отчёте по закреплённому рейсу. Оплату тепличнику — только **`admin` / `manager` / `accountant`** (`accountingWrite`).
 - Частичные оплаты — отдельные платежи (`debt_payments` / `supplier_payments`); остаток = долг − сумма платежей (домен `Obligation`).
 - Матрица и риски: `docs/architecture/processes/roles-and-permissions.md`, `risks-and-guardrails.md`.
 

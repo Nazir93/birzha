@@ -62,6 +62,10 @@ export const accountingPeriodSummaryQuerySchema = z
   .object({
     from: ymd,
     to: ymd,
+    /** Регион (код направления рейса). */
+    destinationCode: z.string().min(1).max(64).optional(),
+    /** Конкретный рейс. */
+    tripId: z.string().min(1).max(64).optional(),
   })
   .refine((q) => q.from <= q.to, { message: "from не позже to", path: ["to"] });
 

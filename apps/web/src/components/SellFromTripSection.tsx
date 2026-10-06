@@ -545,9 +545,9 @@ export function SellFromTripSection() {
       }
       if (!wholesaleBuyerId.trim()) {
         if (wholesalersQ.isSuccess && activeWholesalers.length === 0) {
-          return "Нет активных оптовиков — администратор должен добавить их в справочнике (Инвентарь)";
+          return "Нет активных оптовиков — добавьте нового в поле «Оптовик»";
         }
-        return "Выберите оптовика из списка";
+        return "Выберите оптовика из списка или добавьте нового";
       }
     }
     if (saleChannel === "retail" && (paymentKind === "debt" || paymentKind === "mixed")) {

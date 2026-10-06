@@ -14,10 +14,12 @@ import { z } from "zod";
 
 import { globalRoleCodes } from "../auth/global-roles.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
+import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
 import { AccountingPayablesUseCase } from "../application/accounting/accounting-payables.use-case.js";
 import { AccountingReceivablesUseCase } from "../application/accounting/accounting-receivables.use-case.js";
 import { AccountingTripExpensesUseCase } from "../application/accounting/accounting-trip-expenses.use-case.js";
 import { PurchaserExpensesUseCase } from "../application/accounting/purchaser-expenses.use-case.js";
+import { SaleDebtNotFoundError } from "../application/errors.js";
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../application/ports/debt-payment-repository.port.js";
 import type { PurchaseDocumentRepository } from "../application/ports/purchase-document-repository.port.js";
@@ -146,12 +148,22 @@ export function registerAccountingRoutes(
 
   app.post(
     "/accounting/receivables/:saleId/payments",
-    { ...withPreHandlers(routeAuth.accountingWrite) },
+    { ...withPreHandlers(routeAuth.receivablePaymentWrite) },
     async (req, reply) => {
       try {
         const { saleId } = z.object({ saleId: z.string().min(1) }).parse(req.params);
         const body = createDebtPaymentBodySchema.parse(req.body);
         const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
+        if (user && isGlobalSellerOnly(user.roles)) {
+          const group = await deps.sales.findDebtGroupBySaleId(saleId);
+          if (!group) {
+            throw new SaleDebtNotFoundError(saleId);
+          }
+          const trip = await deps.trips.findById(group.tripId);
+          if (!trip || !tripVisibleToFieldSeller(trip, user.sub)) {
+            return reply.code(403).send({ error: "forbidden" });
+          }
+        }
         const result = await receivables.recordPayment({
           saleId,
           amountKopecks: amountToBigInt(body.amountKopecks),
@@ -503,6 +515,8 @@ export function registerAccountingRoutes(
         const summary = await buildAccountingPeriodSummary({
           fromYmd: q.from,
           toYmd: q.to,
+          destinationCode: q.destinationCode,
+          tripId: q.tripId,
           sales: deps.sales,
           trips: deps.trips,
           debtPayments: deps.debtPayments,

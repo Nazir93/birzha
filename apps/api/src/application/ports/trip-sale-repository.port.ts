@@ -79,6 +79,7 @@ export type TripSaleDebtGroup = {
 };
 
 export type TripSaleDebtListFilter = {
+  tripId?: string;
   counterpartyId?: string;
   fromYmd?: string;
   toYmd?: string;

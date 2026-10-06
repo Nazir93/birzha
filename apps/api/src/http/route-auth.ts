@@ -24,8 +24,14 @@ const BATCH_CREATE_ROLES = ["admin", "manager", "purchaser", "warehouse"] as con
 /** POST/DELETE /warehouses, /product-grades — админ и зам. */
 const INVENTORY_CATALOG_ROLES = ["admin", "manager"] as const;
 
+/** POST /wholesalers — руководство + продавец (в поле при оптовой продаже). DELETE — inventoryCatalogWrite. */
+const WHOLESALER_CREATE_ROLES = ["admin", "manager", "seller"] as const;
+
 /** Чтение и запись бухгалтерии (дебиторка, кредиторка, расходы). */
 const ACCOUNTING_ROLES = ["admin", "manager", "accountant"] as const;
+
+/** Оплата долга клиента — бухгалтер/руководство + продавец (в отчёте по рейсу). */
+const RECEIVABLE_PAYMENT_ROLES = ["admin", "manager", "accountant", "seller"] as const;
 
 /** Расходы закупщика (в т.ч. на ПН) — бухгалтер + закупщик. */
 const PURCHASER_EXPENSE_ROLES = ["admin", "manager", "accountant", "purchaser"] as const;
@@ -87,9 +93,13 @@ export type BusinessRouteAuth = {
   catalogWrite: AuthPreHandler[];
   /** POST/DELETE /warehouses, /product-grades — admin и manager. */
   inventoryCatalogWrite: AuthPreHandler[];
+  /** POST /wholesalers — admin/manager/seller. */
+  wholesalerCreate: AuthPreHandler[];
   /** GET/POST бухгалтерия — admin/manager/accountant. */
   accountingRead: AuthPreHandler[];
   accountingWrite: AuthPreHandler[];
+  /** POST /accounting/receivables/:saleId/payments — admin/manager/accountant/seller. */
+  receivablePaymentWrite: AuthPreHandler[];
   /** DELETE оплат/расходов — только admin. */
   accountingAdminDelete: AuthPreHandler[];
   /** Расходы закупщика — purchaser + admin/manager/accountant. */
@@ -125,8 +135,10 @@ const EMPTY_AUTH: BusinessRouteAuth = {
   catalogRead: [],
   catalogWrite: [],
   inventoryCatalogWrite: [],
+  wholesalerCreate: [],
   accountingRead: [],
   accountingWrite: [],
+  receivablePaymentWrite: [],
   accountingAdminDelete: [],
   purchaserExpenseRead: [],
   purchaserExpenseWrite: [],
@@ -175,8 +187,10 @@ export function createBusinessRouteAuth(app: FastifyInstance, env: AppEnv): Busi
     catalogRead: [a, requireGlobalRoles(CATALOG_READ_ROLES)],
     catalogWrite: [a, requireGlobalRoles(CATALOG_WRITE_ROLES)],
     inventoryCatalogWrite: [a, requireGlobalRoles(INVENTORY_CATALOG_ROLES)],
+    wholesalerCreate: [a, requireGlobalRoles(WHOLESALER_CREATE_ROLES)],
     accountingRead: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
     accountingWrite: [a, requireGlobalRoles(ACCOUNTING_ROLES)],
+    receivablePaymentWrite: [a, requireGlobalRoles(RECEIVABLE_PAYMENT_ROLES)],
     accountingAdminDelete: [a, requireGlobalRoles(ACCOUNTING_ADMIN_DELETE_ROLES)],
     purchaserExpenseRead: [a, requireGlobalRoles(PURCHASER_EXPENSE_ROLES)],
     purchaserExpenseWrite: [a, requireGlobalRoles(PURCHASER_EXPENSE_ROLES)],

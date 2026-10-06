@@ -8,8 +8,11 @@ import {
   canCreateTrip,
   canShipLoadingManifest,
   canManageInventoryCatalog,
+  canCreateWholesaler,
   canEditPurchaseDocumentLines,
   canRecordWarehouseReturn,
+  canWriteAccounting,
+  canRecordReceivablePayment,
   canWriteCounterpartyCatalog,
   defaultRouteForUser,
   hrefForPanelInCabinet,
@@ -175,6 +178,16 @@ describe("role-panels", () => {
     expect(canShipLoadingManifest(null)).toBe(false);
   });
 
+  it("canRecordReceivablePayment — admin/manager/accountant/seller", () => {
+    expect(canRecordReceivablePayment(userWithRoles("admin"))).toBe(true);
+    expect(canRecordReceivablePayment(userWithRoles("manager"))).toBe(true);
+    expect(canRecordReceivablePayment(userWithRoles("accountant"))).toBe(true);
+    expect(canRecordReceivablePayment(userWithRoles("seller"))).toBe(true);
+    expect(canRecordReceivablePayment(userWithRoles("warehouse"))).toBe(false);
+    expect(canRecordReceivablePayment(null)).toBe(false);
+    expect(canWriteAccounting(userWithRoles("seller"))).toBe(false);
+  });
+
   it("canWriteCounterpartyCatalog — как CATALOG_WRITE на API (admin, manager, accountant)", () => {
     expect(canWriteCounterpartyCatalog(userWithRoles("admin"))).toBe(true);
     expect(canWriteCounterpartyCatalog(userWithRoles("manager"))).toBe(true);
@@ -182,6 +195,15 @@ describe("role-panels", () => {
     expect(canWriteCounterpartyCatalog(userWithRoles("seller"))).toBe(false);
     expect(canWriteCounterpartyCatalog(userWithRoles("warehouse"))).toBe(false);
     expect(canWriteCounterpartyCatalog(null)).toBe(false);
+  });
+
+  it("canCreateWholesaler — как wholesalerCreate на API (admin, manager, seller)", () => {
+    expect(canCreateWholesaler(userWithRoles("admin"))).toBe(true);
+    expect(canCreateWholesaler(userWithRoles("manager"))).toBe(true);
+    expect(canCreateWholesaler(userWithRoles("seller"))).toBe(true);
+    expect(canCreateWholesaler(userWithRoles("warehouse"))).toBe(false);
+    expect(canCreateWholesaler(userWithRoles("purchaser"))).toBe(false);
+    expect(canCreateWholesaler(null)).toBe(false);
   });
 
   it("isFieldSellerOnly: только глобальный seller без закуп/склада/руководства", () => {

@@ -12,6 +12,7 @@ import {
 } from "../format/aggregate-trip-shipment-loading.js";
 import { FieldSellerTripReport } from "./FieldSellerTripReport.js";
 import { AccountingTripExpensesBlock } from "./AccountingTripExpensesBlock.js";
+import { TripDebtReceivablesSection } from "./TripDebtReceivablesSection.js";
 import {
   filterTripsAssignedToSellerForReports,
   isTripOpenForSellerWorkspace,
@@ -777,16 +778,16 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
                         <strong>{kopecksToRubLabel(r.financials.grossProfitKopecks)} ₽</strong>
                       </td>
                     </tr>
+                    <tr>
+                      <td style={thtd}>Оплачено долгов</td>
+                      <td style={thtd}>{kopecksToRubLabel(r.financials.debtPaidKopecks || "0")} ₽</td>
+                    </tr>
+                    <tr>
+                      <td style={thtd}>Остаток дебиторки по рейсу</td>
+                      <td style={thtd}>{kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0")} ₽</td>
+                    </tr>
                     {viewContext === "accounting" ? (
                       <>
-                        <tr>
-                          <td style={thtd}>Оплачено долгов</td>
-                          <td style={thtd}>{kopecksToRubLabel(r.financials.debtPaidKopecks || "0")} ₽</td>
-                        </tr>
-                        <tr>
-                          <td style={thtd}>Остаток дебиторки по рейсу</td>
-                          <td style={thtd}>{kopecksToRubLabel(r.financials.debtOutstandingKopecks || "0")} ₽</td>
-                        </tr>
                         <tr>
                           <td style={thtd}>Расходы по рейсу</td>
                           <td style={thtd}>{kopecksToRubLabel(r.financials.expensesKopecks || "0")} ₽</td>
@@ -838,6 +839,8 @@ export function TripReportPanel({ viewContext = "default" }: { viewContext?: Tri
             </table>
           </div>
           </BirzhaDisclosure>
+
+          <TripDebtReceivablesSection receivables={r.debtReceivables ?? []} />
 
           <BirzhaDisclosure
             defaultOpen

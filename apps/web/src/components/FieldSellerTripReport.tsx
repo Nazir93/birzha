@@ -1,6 +1,9 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
+import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
+import { isFieldSellerOnly } from "../auth/role-panels.js";
 import type { BatchListItem, ShipmentReportResponse } from "../api/types.js";
 import {
   aggregateTripSalesByProductLine,
@@ -10,6 +13,7 @@ import { gramsToKgLabel, kopecksToRubLabelSafe } from "../format/money.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
 import { formatPackageCountLabel } from "../format/seller-trip-metrics.js";
+import { isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import {
   formatTripSaleClientDisplayLabel,
   salesChannelTotals,
@@ -17,9 +21,12 @@ import {
   shouldShowSalesClientTable,
   type SaleChannelFilter,
 } from "../format/trip-sales-channel.js";
+import { queryRoots } from "../query/core-list-queries.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
+import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { SellerSaleChannelPills } from "./SellerSaleChannelPills.js";
 import { SellerTripLoadingManifest } from "./SellerTripLoadingManifest.js";
+import { TripDebtReceivablesSection } from "./TripDebtReceivablesSection.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function sumSalesByProductLine(rows: TripSalesByProductLineRow[]) {
@@ -113,13 +120,28 @@ export function FieldSellerTripReport({
   report: ShipmentReportResponse;
   batchById: Map<string, BatchListItem>;
 }) {
-  const { meta } = useAuth();
+  const { user, meta } = useAuth();
+  const qc = useQueryClient();
   const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
+  const fieldOnly = Boolean(user && isFieldSellerOnly(user));
+  const canDeleteExpenses = fieldOnly && isTripOpenForSellerWorkspace(report.trip);
   const [channel, setChannel] = useState<SaleChannelFilter>("all");
   const { sales } = report;
   const retailTotals = salesChannelTotals(sales, "retail");
   const wholesaleTotals = salesChannelTotals(sales, "wholesale");
   const allTotals = salesChannelTotals(sales, "all");
+
+  const delExpenseM = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiFetch(`/api/seller-field-expenses/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await assertOkResponse(res);
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
+      await qc.invalidateQueries({ queryKey: queryRoots.sellerFieldExpenses });
+      await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
+    },
+  });
 
   const salesByProductLine = useMemo(
     () => aggregateTripSalesByProductLine(report, batchById, channel),
@@ -157,12 +179,21 @@ export function FieldSellerTripReport({
         <strong>{kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽</strong>
         {" · "}к сдаче{" "}
         <strong>{kopecksToRubLabelSafe(report.financials.cashToHandOverKopecks)} ₽</strong>
+        {report.financials.debtOutstandingKopecks != null &&
+        report.financials.debtOutstandingKopecks !== "0" &&
+        report.financials.debtOutstandingKopecks !== "" ? (
+          <>
+            {" · "}остаток долгов{" "}
+            <strong>{kopecksToRubLabelSafe(report.financials.debtOutstandingKopecks)} ₽</strong>
+          </>
+        ) : null}
       </p>
+      {delExpenseM.isError ? <ErrorAlert error={delExpenseM.error} title="Удаление траты" /> : null}
       {(report.fieldExpenses ?? []).length === 0 ? (
         <BirzhaEmptyState compact title="Трат по рейсу нет" />
       ) : (
         <div className="birzha-table-scroll" style={{ marginBottom: "1rem" }}>
-          <table style={{ ...tableStyle, minWidth: 480 }} aria-label="Траты с кассы">
+          <table style={{ ...tableStyle, minWidth: canDeleteExpenses ? 560 : 480 }} aria-label="Траты с кассы">
             <thead>
               <tr>
                 <th scope="col" style={thHead}>
@@ -177,6 +208,7 @@ export function FieldSellerTripReport({
                 <th scope="col" style={thHead}>
                   Комментарий
                 </th>
+                {canDeleteExpenses ? <th scope="col" style={thHead} /> : null}
               </tr>
             </thead>
             <tbody>
@@ -186,6 +218,22 @@ export function FieldSellerTripReport({
                   <td style={thtd}>{sellerFieldExpenseCategoryLabel(e.category)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabelSafe(e.amountKopecks)} ₽</td>
                   <td style={thtd}>{e.comment?.trim() ? e.comment : "—"}</td>
+                  {canDeleteExpenses ? (
+                    <td style={thtd}>
+                      <button
+                        type="button"
+                        className="birzha-clean-ops-text-btn"
+                        disabled={delExpenseM.isPending}
+                        onClick={() => {
+                          if (window.confirm("Удалить трату?")) {
+                            void delExpenseM.mutate(e.id);
+                          }
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -197,12 +245,14 @@ export function FieldSellerTripReport({
                 <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
                   {kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽
                 </td>
-                <td style={thtd} />
+                <td style={thtd} colSpan={canDeleteExpenses ? 2 : 1} />
               </tr>
             </tfoot>
           </table>
         </div>
       )}
+
+      <TripDebtReceivablesSection receivables={report.debtReceivables ?? []} compact />
 
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
         Анализ продаж

@@ -5,7 +5,7 @@ import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { AccountingSectionBack } from "./AccountingSectionBack.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canWriteAccounting } from "../auth/role-panels.js";
+import { canRecordReceivablePayment } from "../auth/role-panels.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
@@ -44,7 +44,7 @@ function downloadCsv(filename: string, rows: string[][]) {
 
 export function AccountingReceivablesPanel() {
   const { user } = useAuth();
-  const canWrite = canWriteAccounting(user);
+  const canWrite = canRecordReceivablePayment(user);
   const qc = useQueryClient();
   const [status, setStatus] = useState<"open" | "closed" | "all">("open");
   const [paySaleId, setPaySaleId] = useState<string | null>(null);
@@ -111,7 +111,7 @@ export function AccountingReceivablesPanel() {
         Дебиторка клиентов
       </h2>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem", maxWidth: "40rem" }}>
-        Долг по продажам с рейса. Оплату проводит бухгалтер или руководитель.
+        Долг по продажам с рейса. Оплату проводят бухгалтер, руководитель или продавец (в отчёте по рейсу).
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
         {(["open", "closed", "all"] as const).map((s) => (

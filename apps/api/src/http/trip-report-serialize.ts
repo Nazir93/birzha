@@ -218,3 +218,35 @@ export function tripFinancialsToJson(f: TripFinancials): TripFinancialsJson {
     cashToHandOverKopecks: f.cashToHandOverKopecks.toString(),
   };
 }
+
+export type TripDebtReceivableJson = {
+  saleId: string;
+  clientLabel: string | null;
+  debtKopecks: string;
+  paidKopecks: string;
+  remainingKopecks: string;
+  status: "open" | "closed";
+  soldAt: string;
+};
+
+export function tripDebtReceivablesToJson(
+  rows: Array<{
+    saleId: string;
+    clientLabel: string | null;
+    debtKopecks: bigint;
+    paidKopecks: bigint;
+    remainingKopecks: bigint;
+    status: "open" | "closed";
+    soldAt: Date;
+  }>,
+): TripDebtReceivableJson[] {
+  return rows.map((r) => ({
+    saleId: r.saleId,
+    clientLabel: r.clientLabel,
+    debtKopecks: r.debtKopecks.toString(),
+    paidKopecks: r.paidKopecks.toString(),
+    remainingKopecks: r.remainingKopecks.toString(),
+    status: r.status,
+    soldAt: r.soldAt.toISOString(),
+  }));
+}

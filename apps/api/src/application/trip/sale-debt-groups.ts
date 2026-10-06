@@ -50,6 +50,9 @@ export function filterSaleDebtGroups(
     return [...groups];
   }
   return groups.filter((g) => {
+    if (filter.tripId && g.tripId !== filter.tripId) {
+      return false;
+    }
     if (filter.counterpartyId && (g.counterpartyId ?? "") !== filter.counterpartyId) {
       return false;
     }

@@ -32,6 +32,7 @@ import {
   saleLedgerAggregateToJson,
   sellerFieldExpensesToJson,
   shipmentLedgerToJson,
+  tripDebtReceivablesToJson,
   tripFinancialsToJson,
 } from "./trip-report-serialize.js";
 import {
@@ -176,6 +177,7 @@ export function registerTripRoutes(
         shortage: shortageAgg,
         financials,
         fieldExpenses,
+        debtReceivables,
       } = await tripReport.execute(tripId, onlySales ? { onlySalesRecordedByUserId: onlySales } : undefined);
       const destNames = await shipDestinationDisplayNamesByCodes(db, [trip.getDestinationCode()]);
       return reply.send({
@@ -188,6 +190,7 @@ export function registerTripRoutes(
         shortage: ledgerAggregateToJson(shortageAgg),
         financials: tripFinancialsToJson(financials),
         fieldExpenses: sellerFieldExpensesToJson(fieldExpenses),
+        debtReceivables: tripDebtReceivablesToJson(debtReceivables),
       });
     } catch (error) {
       return sendMappedError(reply, error);

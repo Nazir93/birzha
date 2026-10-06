@@ -130,6 +130,8 @@ export class SellerFieldExpensesUseCase {
     expenseId: string;
     actorUserId: string | null;
     isAdminLike: boolean;
+    /** Полевой продавец: может удалять траты своего закреплённого открытого рейса. */
+    isAssignedFieldSeller?: boolean;
   }): Promise<void> {
     const row = await this.expenses.findById(input.expenseId);
     if (!row) {
@@ -140,7 +142,12 @@ export class SellerFieldExpensesUseCase {
       throw new TripNotFoundError(row.tripId);
     }
     if (!input.isAdminLike) {
-      if (!input.actorUserId || row.recordedByUserId !== input.actorUserId) {
+      const assignedSeller =
+        Boolean(input.isAssignedFieldSeller) &&
+        Boolean(input.actorUserId) &&
+        trip.getAssignedSellerUserId() === input.actorUserId;
+      const ownRow = Boolean(input.actorUserId) && row.recordedByUserId === input.actorUserId;
+      if (!assignedSeller && !ownRow) {
         throw new SellerFieldExpenseNotFoundError(input.expenseId);
       }
       if (trip.getStatus() === "closed") {

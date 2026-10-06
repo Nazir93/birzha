@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
+import { apiPostJsonOr403 } from "../api/fetch-api.js";
+import { useAuth } from "../auth/auth-context.js";
+import { canCreateWholesaler } from "../auth/role-panels.js";
 import {
   filterWholesalersForSellerPicker,
+  wholesalerCreateNameFromSearch,
   WHOLESALER_SELLER_MAX_ROWS,
 } from "../format/wholesaler-picker.js";
-import { wholesalersFullListQueryOptions } from "../query/core-list-queries.js";
-import { BirzhaAlert } from "../ui/BirzhaAlert.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
+import { queryRoots, wholesalersFullListQueryOptions } from "../query/core-list-queries.js";
+import { BirzhaAlert } from "../ui/BirzhaAlert.js";
 
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -18,7 +22,7 @@ function useDebouncedValue<T>(value: T, ms: number): T {
   return v;
 }
 
-/** Выбор оптовика: поиск + список (как в форме продажи у продавца). */
+/** Выбор оптовика: поиск + список + добавление нового (продавец / руководство). */
 export function SellerWholesalerPicker({
   value,
   onChange,
@@ -33,7 +37,11 @@ export function SellerWholesalerPicker({
   enabled?: boolean;
   fallbackLabel?: string | null;
 }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const canCreate = canCreateWholesaler(user);
   const [search, setSearch] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
   const searchDebounced = useDebouncedValue(search, 220);
 
   const wholesalersQ = useQuery({
@@ -51,6 +59,11 @@ export function SellerWholesalerPicker({
     return filterWholesalersForSellerPicker(activeWholesalers, qSource, value);
   }, [activeWholesalers, searchDebounced, value]);
 
+  const createName = useMemo(
+    () => (canCreate ? wholesalerCreateNameFromSearch(search, activeWholesalers) : null),
+    [canCreate, search, activeWholesalers],
+  );
+
   const selectedName = useMemo(() => {
     if (!value) {
       return "";
@@ -58,6 +71,26 @@ export function SellerWholesalerPicker({
     const w = (wholesalersQ.data?.wholesalers ?? []).find((x) => x.id === value);
     return w?.name ?? fallbackLabel?.trim() ?? "";
   }, [value, wholesalersQ.data?.wholesalers, fallbackLabel]);
+
+  const createM = useMutation({
+    mutationFn: async (name: string) => {
+      setCreateError(null);
+      const res = (await apiPostJsonOr403(
+        "/api/wholesalers",
+        { name },
+        "Нет прав на добавление оптовика",
+      )) as { wholesaler: { id: string; name: string } };
+      return res.wholesaler;
+    },
+    onSuccess: async (w) => {
+      setSearch("");
+      onChange(w.id);
+      await queryClient.invalidateQueries({ queryKey: queryRoots.wholesalers });
+    },
+    onError: (e: Error) => {
+      setCreateError(humanizeErrorMessage(e));
+    },
+  });
 
   if (!enabled) {
     return (
@@ -74,19 +107,41 @@ export function SellerWholesalerPicker({
       </span>
       <input
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => {
+          setCreateError(null);
+          setSearch(e.target.value);
+        }}
         className="birzha-seller-form-control"
         style={{ marginBottom: "0.45rem", maxWidth: "100%" }}
         placeholder={
           activeWholesalers.length > 0
             ? activeWholesalers.length > WHOLESALER_SELLER_MAX_ROWS
-              ? "Поиск по имени…"
-              : "Поиск или выберите ниже"
-            : "Название оптовика…"
+              ? "Поиск или новое имя…"
+              : "Поиск, выбор или новое имя"
+            : "Название нового оптовика…"
         }
-        aria-label="Поиск оптовика"
+        aria-label="Поиск или название оптовика"
         autoComplete="off"
       />
+      {canCreate && createName ? (
+        <div style={{ marginBottom: "0.45rem" }}>
+          <button
+            type="button"
+            className="birzha-btn-primary"
+            style={{ width: "100%", maxWidth: "100%" }}
+            disabled={createM.isPending}
+            aria-busy={createM.isPending ? true : undefined}
+            onClick={() => void createM.mutate(createName)}
+          >
+            {createM.isPending ? "Добавление…" : `Добавить «${createName}»`}
+          </button>
+        </div>
+      ) : null}
+      {createError ? (
+        <BirzhaAlert variant="error" title="Оптовик">
+          {createError}
+        </BirzhaAlert>
+      ) : null}
       {search.trim() !== searchDebounced.trim() ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.35rem" }}>
           Поиск…
@@ -102,11 +157,15 @@ export function SellerWholesalerPicker({
         <ul className="birzha-seller-wholesaler-list" aria-label="Наши оптовики">
           {activeWholesalers.length === 0 ? (
             <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-              Активных оптовиков нет — их добавляет администратор в разделе «Инвентарь».
+              {canCreate
+                ? "Пока нет оптовиков — введите название выше и нажмите «Добавить»."
+                : "Активных оптовиков нет — их добавляет администратор или продавец."}
             </li>
           ) : picker.rows.length === 0 ? (
             <li className="birzha-text-muted" style={{ padding: "0.5rem 0.65rem", fontSize: "0.88rem" }}>
-              Нет совпадений по поиску — измените запрос.
+              {canCreate && createName
+                ? "Нет совпадений — можно добавить нового оптовика кнопкой выше."
+                : "Нет совпадений по поиску — измените запрос."}
             </li>
           ) : (
             picker.rows.map((w) => (

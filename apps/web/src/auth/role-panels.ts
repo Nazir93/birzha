@@ -145,6 +145,22 @@ export function canManageInventoryCatalog(user: AuthUser): boolean {
   return codes.has("admin") || codes.has("manager");
 }
 
+/** POST /wholesalers — как `wholesalerCreate` на API: admin, manager, seller. */
+const WHOLESALER_CREATE_ROLES = new Set<string>(["admin", "manager", "seller"]);
+
+export function canCreateWholesaler(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  for (const r of WHOLESALER_CREATE_ROLES) {
+    if (codes.has(r)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Правка строк закупочной накладной (PUT lines) — как `purchaseDocumentLinesWrite` на API:
  * admin, manager, purchaser (свои документы).
@@ -226,8 +242,11 @@ export function canRecordWarehouseReturn(user: AuthUser | null): boolean {
 /** Создание/удаление в справочнике контрагентов — как `CATALOG_WRITE_ROLES` в API. */
 const COUNTERPARTY_WRITE_ROLES = new Set<string>(["admin", "manager", "accountant"]);
 
-/** Проводки бухгалтерии (оплаты долгов, кредиторка, расходы) — как `ACCOUNTING_ROLES` в API. */
+/** Проводки бухгалтерии (оплаты тепличнику, расходы) — как `ACCOUNTING_ROLES` в API. */
 const ACCOUNTING_WRITE_ROLES = new Set<string>(["admin", "manager", "accountant"]);
+
+/** Оплата долга клиента — как `receivablePaymentWrite` на API: admin/manager/accountant/seller. */
+const RECEIVABLE_PAYMENT_ROLES = new Set<string>(["admin", "manager", "accountant", "seller"]);
 
 export function canWriteCounterpartyCatalog(user: AuthUser | null): boolean {
   if (!user) {
@@ -248,6 +267,20 @@ export function canWriteAccounting(user: AuthUser | null): boolean {
   }
   const codes = globalRoleCodes(user);
   for (const r of ACCOUNTING_WRITE_ROLES) {
+    if (codes.has(r)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Принять оплату по дебиторке клиента (в т.ч. продавец в отчёте по рейсу). */
+export function canRecordReceivablePayment(user: AuthUser | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const codes = globalRoleCodes(user);
+  for (const r of RECEIVABLE_PAYMENT_ROLES) {
     if (codes.has(r)) {
       return true;
     }

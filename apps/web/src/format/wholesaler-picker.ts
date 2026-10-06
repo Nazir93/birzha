@@ -18,3 +18,21 @@ export function filterWholesalersForSellerPicker(
   }
   return { rows, truncated: totalMatched > WHOLESALER_SELLER_MAX_ROWS, totalMatched };
 }
+
+/**
+ * Имя для «Добавить оптовика» из строки поиска: непустое и без точного совпадения (без учёта регистра).
+ */
+export function wholesalerCreateNameFromSearch(
+  search: string,
+  active: Pick<WholesalerListItem, "name">[],
+): string | null {
+  const name = search.trim();
+  if (!name) {
+    return null;
+  }
+  const lower = name.toLocaleLowerCase("ru-RU");
+  if (active.some((w) => w.name.trim().toLocaleLowerCase("ru-RU") === lower)) {
+    return null;
+  }
+  return name;
+}

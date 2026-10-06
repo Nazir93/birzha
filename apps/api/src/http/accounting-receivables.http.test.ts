@@ -98,6 +98,10 @@ describe("Accounting receivables HTTP", () => {
     expect(report.financials.debtPaidKopecks).toBe("20000");
     expect(report.financials.debtOutstandingKopecks).toBe("0");
     expect(report.financials.expensesKopecks).toBe("0");
+    const withRecv = report as typeof report & {
+      debtReceivables?: { saleId: string; remainingKopecks: string; status: string }[];
+    };
+    expect(withRecv.debtReceivables?.some((x) => x.saleId === "sale-debt-1" && x.status === "closed")).toBe(true);
 
     await app.close();
   });
@@ -138,14 +142,51 @@ describe("Accounting receivables HTTP", () => {
     const summary = JSON.parse(r.body) as { expensesKopecks: string };
     expect(summary.expensesKopecks).toBe("50000");
 
+    await app.inject({
+      method: "POST",
+      url: "/trips",
+      payload: {
+        id: "acc-t-msk",
+        tripNumber: "Ф-MSK",
+        destinationCode: "moscow",
+        departedAt: "2026-10-06T08:00:00.000Z",
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/accounting/trips/acc-t-msk/expenses",
+      payload: {
+        category: "fuel",
+        amountKopecks: 10000,
+        expenseDate: "2026-10-06",
+      },
+    });
+
+    r = await app.inject({
+      method: "GET",
+      url: "/accounting/period-summary?from=2026-10-01&to=2026-10-31&destinationCode=moscow",
+    });
+    expect(r.statusCode).toBe(200);
+    const scoped = JSON.parse(r.body) as {
+      expensesKopecks: string;
+      destinationCode: string | null;
+      selected: { tripExpensesKopecks: string } | null;
+      trips: { tripId: string; tripExpensesKopecks: string }[];
+    };
+    expect(scoped.destinationCode).toBe("moscow");
+    expect(scoped.expensesKopecks).toBe("60000");
+    expect(scoped.selected?.tripExpensesKopecks).toBe("10000");
+    expect(scoped.trips.some((t) => t.tripId === "acc-t-msk")).toBe(true);
+    expect(scoped.trips.every((t) => t.tripId !== "acc-t-exp")).toBe(true);
+
     r = await app.inject({
       method: "GET",
       url: "/accounting/trip-expenses?from=2026-10-01&to=2026-10-31",
     });
     expect(r.statusCode).toBe(200);
     const tripExp = JSON.parse(r.body) as { totalKopecks: string; expenses: { category: string }[] };
-    expect(tripExp.totalKopecks).toBe("50000");
-    expect(tripExp.expenses).toHaveLength(1);
+    expect(tripExp.totalKopecks).toBe("60000");
+    expect(tripExp.expenses).toHaveLength(2);
 
     await app.close();
   });

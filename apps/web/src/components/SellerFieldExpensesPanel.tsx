@@ -6,6 +6,10 @@ import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { isFieldSellerOnly } from "../auth/role-panels.js";
 import { readAccountingPeriodParams } from "../format/accounting-period.js";
+import {
+  sellerExpensesDefaultDateRange,
+  sellerExpensesListQueryParams,
+} from "../format/seller-expenses-list-query.js";
 import { filterTripsAssignedToSellerForReports, isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
 import { formatTripSelectLabel } from "../format/trip-label.js";
@@ -67,15 +71,6 @@ function localTodayYmd(): string {
   return formatYmd(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-function localMonthBounds(): { from: string; to: string } {
-  const n = new Date();
-  const last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
-  return {
-    from: formatYmd(n.getFullYear(), n.getMonth(), 1),
-    to: formatYmd(n.getFullYear(), n.getMonth(), last),
-  };
-}
-
 function matchesKind(category: string, kind: SellerFieldExpenseKind): boolean {
   if (kind === "rent") {
     return category === "rent";
@@ -96,7 +91,7 @@ export function SellerFieldExpensesPanel({
   const qc = useQueryClient();
   const fieldOnly = Boolean(user && isFieldSellerOnly(user));
   const [searchParams] = useSearchParams();
-  const defaults = useMemo(() => localMonthBounds(), []);
+  const defaults = useMemo(() => sellerExpensesDefaultDateRange(), []);
   const initial = useMemo(() => readAccountingPeriodParams(searchParams, defaults), [searchParams, defaults]);
   const [tripId, setTripId] = useState("");
   const [from, setFrom] = useState(initial.from);
@@ -117,6 +112,7 @@ export function SellerFieldExpensesPanel({
   );
   const [amountRub, setAmountRub] = useState("");
   const [comment, setComment] = useState("");
+  const tripSelected = Boolean(tripId.trim());
 
   const tripsQ = useQuery(tripsFullListQueryOptions());
   const tripsForSelect = useMemo(() => {
@@ -137,12 +133,9 @@ export function SellerFieldExpensesPanel({
   }, [tripsForSelect, tripId]);
 
   const listQ = useQuery({
-    queryKey: [...queryRoots.sellerFieldExpenses, tripId, from, to, group],
+    queryKey: [...queryRoots.sellerFieldExpenses, tripId, from, to, group, tripSelected],
     queryFn: async () => {
-      const params = new URLSearchParams({ from, to, group });
-      if (tripId) {
-        params.set("tripId", tripId);
-      }
+      const params = sellerExpensesListQueryParams({ tripId, from, to, group });
       const res = await apiFetch(`/api/seller-field-expenses?${params}`);
       await assertOkResponse(res);
       return (await res.json()) as {
@@ -221,7 +214,7 @@ export function SellerFieldExpensesPanel({
       ? "Аренда и бронь точки — списываются с кассы выбранного рейса (к сдаче = нал − все траты рейса)."
       : kind === "field"
         ? "Полевые траты с кассы: грузчик, обед, палеты. Аренда / бронь — отдельное окно на сводке бухгалтера, но тоже с рейса."
-        : "Траты с кассы по выбранному рейсу: грузчик, обед, палеты, аренда/бронь. Все траты рейса видны продавцу и вычитаются из «к сдаче».");
+        : "Траты с кассы: грузчик, обед, палеты, аренда/бронь. Выберите рейс — увидите все траты по машине (как в отчёте), без обрезки по датам.");
 
   return (
     <div role="region" aria-label={title}>
@@ -239,19 +232,27 @@ export function SellerFieldExpensesPanel({
             value={tripId}
             onChange={setTripId}
             options={[
-              { value: "", label: fieldOnly ? "Все свои (только сверка)" : "Все рейсы (список)" },
+              { value: "", label: fieldOnly ? "Все свои (сверка по датам)" : "Все рейсы (сверка по датам)" },
               ...tripsForSelect.map((t) => ({ value: t.id, label: formatTripSelectLabel(t) })),
             ]}
           />
         </label>
-        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
-          С
-          <BirzhaDateField aria-label="Дата с" value={from} onChange={setFrom} style={dateFieldStyle} />
-        </label>
-        <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
-          По
-          <BirzhaDateField aria-label="Дата по" value={to} onChange={setTo} style={dateFieldStyle} />
-        </label>
+        {!tripSelected ? (
+          <>
+            <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
+              С
+              <BirzhaDateField aria-label="Дата с" value={from} onChange={setFrom} style={dateFieldStyle} />
+            </label>
+            <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
+              По
+              <BirzhaDateField aria-label="Дата по" value={to} onChange={setTo} style={dateFieldStyle} />
+            </label>
+          </>
+        ) : (
+          <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0, maxWidth: "22rem" }}>
+            По выбранному рейсу — все даты (как в «Отчёт по рейсу»). Ошибочную запись можно удалить в таблице ниже.
+          </p>
+        )}
       </div>
 
       {kind === "all" ? (
@@ -335,7 +336,18 @@ export function SellerFieldExpensesPanel({
         {visibleExpenses.length > 0 ? ` (${visibleExpenses.length})` : ""}
       </h3>
       {visibleExpenses.length === 0 && listQ.data ? (
-        <BirzhaEmptyState compact title={kind === "rent" ? "Аренды за период нет" : "Трат за период нет"} />
+        <BirzhaEmptyState
+          compact
+          title={
+            tripSelected
+              ? kind === "rent"
+                ? "Аренды по рейсу нет"
+                : "Трат по рейсу нет"
+              : kind === "rent"
+                ? "Аренды за период нет"
+                : "Трат за период нет"
+          }
+        />
       ) : null}
       {visibleExpenses.length > 0 ? (
         <div className="birzha-table-scroll" style={{ marginBottom: "1.1rem" }}>

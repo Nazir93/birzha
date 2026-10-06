@@ -564,6 +564,16 @@ export type TripFieldExpenseRow = {
   comment: string | null;
 };
 
+export type TripDebtReceivableRow = {
+  saleId: string;
+  clientLabel: string | null;
+  debtKopecks: string;
+  paidKopecks: string;
+  remainingKopecks: string;
+  status: "open" | "closed";
+  soldAt: string;
+};
+
 export type ShipmentReportResponse = {
   trip: TripJson;
   shipment: ShipmentLedgerBlock;
@@ -576,4 +586,6 @@ export type ShipmentReportResponse = {
   shortage: LedgerBlock;
   financials: FinancialsBlock;
   fieldExpenses?: TripFieldExpenseRow[];
+  /** Долги по сделкам рейса (с учётом оплат) — для погашения в отчёте. */
+  debtReceivables?: TripDebtReceivableRow[];
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterWholesalersForSellerPicker } from "./wholesaler-picker.js";
+import { filterWholesalersForSellerPicker, wholesalerCreateNameFromSearch } from "./wholesaler-picker.js";
 
 describe("filterWholesalersForSellerPicker", () => {
   const active = [
@@ -26,5 +26,24 @@ describe("filterWholesalersForSellerPicker", () => {
     }));
     const r = filterWholesalersForSellerPicker(many, "", "w89");
     expect(r.rows[0]?.id).toBe("w89");
+  });
+});
+
+describe("wholesalerCreateNameFromSearch", () => {
+  const active = [
+    { id: "w1", name: "Альфа", isActive: true },
+    { id: "w2", name: "Бета", isActive: true },
+  ];
+
+  it("предлагает новое имя, если нет точного совпадения", () => {
+    expect(wholesalerCreateNameFromSearch("  Гамма  ", active)).toBe("Гамма");
+  });
+
+  it("не предлагает, если имя уже есть (без регистра)", () => {
+    expect(wholesalerCreateNameFromSearch("альфа", active)).toBeNull();
+  });
+
+  it("пустой поиск — null", () => {
+    expect(wholesalerCreateNameFromSearch("   ", active)).toBeNull();
   });
 });

@@ -141,10 +141,12 @@ export function registerSellerFieldExpenseRoutes(
         const { expenseId } = z.object({ expenseId: z.string().min(1) }).parse(req.params);
         const user = (req as FastifyRequest & { user?: JwtRequestUser }).user;
         const adminLike = user ? isAdminLike(user.roles) : true;
+        const isAssignedFieldSeller = Boolean(user && isGlobalSellerOnly(user.roles));
         await uc.delete({
           expenseId,
           actorUserId: user?.sub ?? null,
           isAdminLike: adminLike,
+          isAssignedFieldSeller,
         });
         return reply.code(204).send();
       } catch (error) {
