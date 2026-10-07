@@ -15,11 +15,22 @@ import {
   loadingManifestTripAssignLockMessage,
 } from "../../format/loading-manifest-trip-assign-lock.js";
 import { loadingManifestTripDetachLockMessage } from "../../format/loading-manifest-trip-detach-lock.js";
+import { kopecksToRubLabel } from "../../format/money.js";
+import { formatPurchaseDocDateRu } from "../../format/purchase-doc-date.js";
 import { formatTripSelectLabel } from "../../format/trip-label.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
 import { btnClassSpaced, selectFieldStyle } from "../../ui/styles.js";
 import { BirzhaSelect } from "../../ui/BirzhaSelect.js";
+
+const PURCHASER_EXPENSE_CATEGORY_LABEL: Record<string, string> = {
+  loading: "Погрузка",
+  lunch: "Обед",
+  foam: "Пенопласт",
+  fuel: "Заправка",
+  other: "Прочее",
+  salary: "Зарплата",
+};
 
 function formatPkg(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) {
@@ -439,6 +450,49 @@ export function LoadingManifestAccordion({
                                 .toLocaleString("ru-RU", { maximumFractionDigits: 0 })
                             : "—"}
                         </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              ) : null}
+              {(detail.purchaserExpenses ?? []).length > 0 ? (
+                <div
+                  className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card"
+                  style={{ marginTop: "0.75rem" }}
+                >
+                  <h4 style={{ margin: "0 0 0.4rem", fontSize: "0.92rem" }}>Расходы закупщика</h4>
+                  <table
+                    className="birzha-data-table birzha-data-table--compact"
+                    style={{ minWidth: 420 }}
+                    aria-label="Расходы закупщика по ПН"
+                  >
+                    <thead>
+                      <tr>
+                        <th>Дата</th>
+                        <th>Категория</th>
+                        <th className="birzha-data-table__num">Сумма</th>
+                        <th>Комментарий</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(detail.purchaserExpenses ?? []).map((e) => (
+                        <tr key={e.id}>
+                          <td>{formatPurchaseDocDateRu(e.expenseDate)}</td>
+                          <td>{PURCHASER_EXPENSE_CATEGORY_LABEL[e.category] ?? e.category}</td>
+                          <td className="birzha-data-table__num">{kopecksToRubLabel(e.amountKopecks)} ₽</td>
+                          <td>{e.comment?.trim() ? e.comment : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row" colSpan={2} style={{ fontWeight: 700 }}>
+                          Итого
+                        </th>
+                        <td className="birzha-data-table__num" style={{ fontWeight: 700 }}>
+                          {kopecksToRubLabel(detail.purchaserExpensesKopecks ?? "0")} ₽
+                        </td>
+                        <td />
                       </tr>
                     </tfoot>
                   </table>

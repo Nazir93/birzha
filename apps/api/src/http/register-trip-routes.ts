@@ -5,8 +5,11 @@ import { z } from "zod";
 import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { TripNotFoundError } from "../application/errors.js";
+import { eq } from "drizzle-orm";
+
 import type { BatchRepository } from "../application/ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../application/ports/debt-payment-repository.port.js";
+import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
 import type { TripArchiveManifestCleanupPort } from "../application/ports/trip-archive-manifest-cleanup.port.js";
 import type { SellerFieldExpenseRepository } from "../application/ports/seller-field-expense-repository.port.js";
 import type { TripExpenseRepository } from "../application/ports/trip-expense-repository.port.js";
@@ -27,6 +30,7 @@ import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import type { DbClient } from "../db/client.js";
+import { loadingManifests } from "../db/schema.js";
 import {
   ledgerAggregateToJson,
   saleLedgerAggregateToJson,
@@ -57,6 +61,7 @@ export function registerTripRoutes(
   debtPayments: DebtPaymentRepository | null = null,
   tripExpenses: TripExpenseRepository | null = null,
   sellerFieldExpenses: SellerFieldExpenseRepository | null = null,
+  purchaserExpenses: PurchaserExpenseRepository | null = null,
 ): void {
   const createTrip = new CreateTripUseCase(trips);
   const assignTripSeller = new AssignTripSellerUseCase(trips);
@@ -64,6 +69,15 @@ export function registerTripRoutes(
   const reopenTrip = new ReopenTripUseCase(trips);
   const deleteTrip = new DeleteTripUseCase(trips, shipments, sales, shortages, manifestCleanup);
   const updateTripHeader = new UpdateTripHeaderUseCase(trips);
+  const listLoadingManifestIdsByTripId = db
+    ? async (tripId: string) => {
+        const rows = await db
+          .select({ id: loadingManifests.id })
+          .from(loadingManifests)
+          .where(eq(loadingManifests.tripId, tripId));
+        return rows.map((r) => r.id);
+      }
+    : null;
   const tripReport = new GetTripReportUseCase(
     trips,
     shipments,
@@ -73,6 +87,8 @@ export function registerTripRoutes(
     debtPayments,
     tripExpenses,
     sellerFieldExpenses,
+    purchaserExpenses,
+    listLoadingManifestIdsByTripId,
   );
   const listFieldSellers = listAssignableFieldSellers ?? (async () => []);
 

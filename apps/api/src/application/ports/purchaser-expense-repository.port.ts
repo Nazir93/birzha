@@ -37,6 +37,8 @@ export type PurchaserExpenseListFilter = {
   toYmd?: string;
   purchaserUserId?: string;
   loadingManifestId?: string;
+  /** Несколько ПН (например все ПН рейса). */
+  loadingManifestIds?: readonly string[];
 };
 
 export interface PurchaserExpenseRepository {
@@ -45,4 +47,6 @@ export interface PurchaserExpenseRepository {
   deleteById(id: string): Promise<void>;
   list(filter: PurchaserExpenseListFilter): Promise<PurchaserExpenseRecord[]>;
   sumInPeriod(fromYmd: string, toYmd: string): Promise<bigint>;
+  /** Сумма полевых расходов по списку погрузочных (пустой список → 0). */
+  sumByLoadingManifestIds(loadingManifestIds: readonly string[]): Promise<bigint>;
 }

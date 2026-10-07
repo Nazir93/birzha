@@ -334,6 +334,14 @@ export type LoadingManifestsListResponse = {
   listMeta?: LoadingManifestsListMeta;
 };
 
+export type LoadingManifestPurchaserExpenseRow = {
+  id: string;
+  expenseDate: string;
+  category: string;
+  amountKopecks: string;
+  comment: string | null;
+};
+
 export type LoadingManifestDetail = {
   id: string;
   manifestNumber: string;
@@ -369,6 +377,9 @@ export type LoadingManifestDetail = {
     warehouseId?: string | null;
     warehouseName?: string | null;
   }[];
+  /** Полевые расходы закупщика, привязанные к этой ПН. */
+  purchaserExpenses?: LoadingManifestPurchaserExpenseRow[];
+  purchaserExpensesKopecks?: string;
 };
 
 export type LoadingManifestDetailResponse = { manifest: LoadingManifestDetail };

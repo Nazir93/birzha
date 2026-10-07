@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { LoadingManifestTripDetachForbiddenError } from "../application/errors.js";
+import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
@@ -55,6 +56,7 @@ import {
 } from "../application/trip/loading-manifest-available-grams.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import { sumActiveLoadingManifestGramsByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
+import { calendarYmdFromDate } from "../format/calendar-date.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
 import { type BusinessRouteAuth, withPreHandlers } from "./route-auth.js";
@@ -156,6 +158,7 @@ export function registerLoadingManifestRoutes(
   routeAuth: BusinessRouteAuth,
   /** Для POST assign-trip: синхронизация отгрузки в рейс по строкам ПН (иначе только запись trip_id). */
   tripRead?: TripRepository,
+  purchaserExpenses?: PurchaserExpenseRepository | null,
 ): void {
   const deleteLoadingManifest = new DeleteLoadingManifestUseCase(db);
   const updateLoadingManifestHeader = new UpdateLoadingManifestHeaderUseCase(db);
@@ -333,6 +336,13 @@ export function registerLoadingManifestRoutes(
         lineMasses,
       });
       const detachState = await loadLoadingManifestTripDetachState(db, params.manifestId, header.manifest.tripId);
+      const expenseRows = purchaserExpenses
+        ? await purchaserExpenses.list({ loadingManifestId: params.manifestId })
+        : [];
+      let purchaserExpensesKopecks = 0n;
+      for (const e of expenseRows) {
+        purchaserExpensesKopecks += e.amountKopecks;
+      }
       return reply.send({
         manifest: {
           id: header.manifest.id,
@@ -366,6 +376,14 @@ export function registerLoadingManifestRoutes(
               warehouseName: r.batchWarehouseName,
             }))
             .sort((a, b) => a.lineNo - b.lineNo),
+          purchaserExpenses: expenseRows.map((e) => ({
+            id: e.id,
+            expenseDate: calendarYmdFromDate(e.expenseDate),
+            category: e.category,
+            amountKopecks: e.amountKopecks.toString(),
+            comment: e.comment,
+          })),
+          purchaserExpensesKopecks: purchaserExpensesKopecks.toString(),
         },
       });
     } catch (error) {

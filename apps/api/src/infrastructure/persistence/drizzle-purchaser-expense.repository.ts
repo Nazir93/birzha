@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type {
   PurchaserExpenseAppend,
@@ -78,6 +78,9 @@ export class DrizzlePurchaserExpenseRepository implements PurchaserExpenseReposi
     if (filter.loadingManifestId) {
       parts.push(eq(purchaserExpenses.loadingManifestId, filter.loadingManifestId));
     }
+    if (filter.loadingManifestIds && filter.loadingManifestIds.length > 0) {
+      parts.push(inArray(purchaserExpenses.loadingManifestId, [...filter.loadingManifestIds]));
+    }
     if (filter.fromYmd) {
       parts.push(gte(purchaserExpenses.expenseDate, parseYmdUtc(filter.fromYmd)));
     }
@@ -102,6 +105,18 @@ export class DrizzlePurchaserExpenseRepository implements PurchaserExpenseReposi
           lte(purchaserExpenses.expenseDate, parseYmdUtc(toYmd)),
         ),
       );
+    return BigInt(rows[0]?.s ?? 0);
+  }
+
+  async sumByLoadingManifestIds(loadingManifestIds: readonly string[]): Promise<bigint> {
+    const ids = [...new Set(loadingManifestIds.map((id) => id.trim()).filter(Boolean))];
+    if (ids.length === 0) {
+      return 0n;
+    }
+    const rows = await this.db
+      .select({ s: sql<bigint>`coalesce(sum(${purchaserExpenses.amountKopecks}), 0)` })
+      .from(purchaserExpenses)
+      .where(inArray(purchaserExpenses.loadingManifestId, ids));
     return BigInt(rows[0]?.s ?? 0);
   }
 }

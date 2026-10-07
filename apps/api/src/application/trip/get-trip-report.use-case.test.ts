@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { InMemoryBatchRepository } from "../testing/in-memory-batch.repository.js";
 import { InMemoryDebtPaymentRepository } from "../testing/in-memory-debt-payment.repository.js";
+import { InMemoryPurchaserExpenseRepository } from "../testing/in-memory-purchaser-expense.repository.js";
+import { InMemoryTripExpenseRepository } from "../testing/in-memory-trip-expense.repository.js";
 import { InMemoryTripRepository } from "../testing/in-memory-trip.repository.js";
 import { InMemoryTripSaleRepository } from "../testing/in-memory-trip-sale.repository.js";
 import { InMemoryTripShipmentRepository } from "../testing/in-memory-trip-shipment.repository.js";
@@ -206,5 +208,82 @@ describe("GetTripReportUseCase", () => {
     const forBob = await uc.execute("t-2", { onlySalesRecordedByUserId: "u-bob" });
     expect(forBob.sales.totalGrams).toBe(5_000n);
     expect(forBob.salesForTripStock?.totalGrams).toBe(15_000n);
+  });
+
+  it("расходы закупщика по ПН рейса входят в expensesKopecks вместе с расходами рейса", async () => {
+    const trips = new InMemoryTripRepository();
+    const shipments = new InMemoryTripShipmentRepository();
+    const sales = new InMemoryTripSaleRepository();
+    const shortages = new InMemoryTripShortageRepository();
+    const batches = new InMemoryBatchRepository();
+    const tripExpenses = new InMemoryTripExpenseRepository();
+    const purchaserExpenses = new InMemoryPurchaserExpenseRepository();
+    await batches.save(
+      Batch.create({
+        id: "b-pe",
+        purchaseId: "p-pe",
+        totalKg: 100,
+        pricePerKg: 10,
+        distribution: "on_hand",
+      }),
+    );
+    await trips.save(Trip.create({ id: "t-pe", tripNumber: "Ф-PE" }));
+    await shipments.append({
+      id: "sh-pe",
+      tripId: "t-pe",
+      batchId: "b-pe",
+      grams: 10_000n,
+      packageCount: null,
+    });
+    await sales.append({
+      id: "sl-pe",
+      tripId: "t-pe",
+      batchId: "b-pe",
+      saleId: "sale-pe",
+      grams: 5_000n,
+      pricePerKgKopecks: 2_000n,
+      revenueKopecks: 10_000n,
+      cashKopecks: 10_000n,
+      debtKopecks: 0n,
+      cardTransferKopecks: 0n,
+      saleChannel: "retail",
+    });
+    await tripExpenses.append({
+      id: "te-1",
+      tripId: "t-pe",
+      amountKopecks: 1_000n,
+      expenseDate: new Date("2026-10-01T00:00:00.000Z"),
+      category: "other",
+    });
+    await purchaserExpenses.append({
+      id: "pe-1",
+      expenseDate: new Date("2026-10-01T00:00:00.000Z"),
+      category: "loading",
+      amountKopecks: 2_500n,
+      loadingManifestId: "lm-pe-1",
+    });
+    await purchaserExpenses.append({
+      id: "pe-other",
+      expenseDate: new Date("2026-10-01T00:00:00.000Z"),
+      category: "fuel",
+      amountKopecks: 9_999n,
+      loadingManifestId: "lm-other-trip",
+    });
+
+    const { financials } = await new GetTripReportUseCase(
+      trips,
+      shipments,
+      sales,
+      shortages,
+      batches,
+      null,
+      tripExpenses,
+      null,
+      purchaserExpenses,
+      async () => ["lm-pe-1"],
+    ).execute("t-pe");
+
+    expect(financials.expensesKopecks).toBe(3_500n);
+    expect(financials.netProfitKopecks).toBe(financials.grossProfitKopecks - 3_500n);
   });
 });

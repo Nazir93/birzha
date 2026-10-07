@@ -43,12 +43,19 @@ export class InMemoryPurchaserExpenseRepository implements PurchaserExpenseRepos
   }
 
   async list(filter: PurchaserExpenseListFilter): Promise<PurchaserExpenseRecord[]> {
+    const idSet =
+      filter.loadingManifestIds && filter.loadingManifestIds.length > 0
+        ? new Set(filter.loadingManifestIds)
+        : null;
     return this.rows
       .filter((r) => {
         if (filter.purchaserUserId && (r.purchaserUserId ?? "") !== filter.purchaserUserId) {
           return false;
         }
         if (filter.loadingManifestId && (r.loadingManifestId ?? "") !== filter.loadingManifestId) {
+          return false;
+        }
+        if (idSet && !idSet.has(r.loadingManifestId ?? "")) {
           return false;
         }
         const day = ymd(r.expenseDate);
@@ -69,6 +76,20 @@ export class InMemoryPurchaserExpenseRepository implements PurchaserExpenseRepos
     for (const r of this.rows) {
       const day = ymd(r.expenseDate);
       if (day >= fromYmd && day <= toYmd) {
+        s += r.amountKopecks;
+      }
+    }
+    return s;
+  }
+
+  async sumByLoadingManifestIds(loadingManifestIds: readonly string[]): Promise<bigint> {
+    const idSet = new Set(loadingManifestIds.map((id) => id.trim()).filter(Boolean));
+    if (idSet.size === 0) {
+      return 0n;
+    }
+    let s = 0n;
+    for (const r of this.rows) {
+      if (r.loadingManifestId && idSet.has(r.loadingManifestId)) {
         s += r.amountKopecks;
       }
     }

@@ -541,6 +541,7 @@ export async function buildApp(options: {
       debtPaymentRepository,
       tripExpenseRepository,
       sellerFieldExpenseRepository,
+      purchaserExpenseRepository,
     );
     if (sellerFieldExpenseRepository) {
       registerSellerFieldExpenseRoutes(
@@ -600,7 +601,13 @@ export async function buildApp(options: {
     }
     if (db) {
       registerShipDestinationRoutes(app, db, routeAuth);
-      registerLoadingManifestRoutes(app, db, routeAuth, tripRepository ?? undefined);
+      registerLoadingManifestRoutes(
+        app,
+        db,
+        routeAuth,
+        tripRepository ?? undefined,
+        purchaserExpenseRepository,
+      );
       registerWholesalerRoutes(app, wholesalerRepository, routeAuth);
       if (supplierRepository) {
         registerSupplierRoutes(app, supplierRepository, routeAuth);

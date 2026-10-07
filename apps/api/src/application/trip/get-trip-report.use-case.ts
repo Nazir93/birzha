@@ -4,6 +4,7 @@ import { TripNotFoundError } from "../errors.js";
 import { loadBatchOrThrow } from "../load-batch.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type { DebtPaymentRepository } from "../ports/debt-payment-repository.port.js";
+import type { PurchaserExpenseRepository } from "../ports/purchaser-expense-repository.port.js";
 import type { SellerFieldExpenseRepository } from "../ports/seller-field-expense-repository.port.js";
 import type { TripExpenseRepository } from "../ports/trip-expense-repository.port.js";
 import type { TripRepository } from "../ports/trip-repository.port.js";
@@ -13,6 +14,9 @@ import type { TripShortageRepository } from "../ports/trip-shortage-repository.p
 
 import { buildSaleDebtGroupsFromLines } from "./sale-debt-groups.js";
 import { computeTripFinancials } from "./trip-financials.js";
+
+/** Id погрузочных, привязанных к рейсу (для расходов закупщика). */
+export type ListLoadingManifestIdsByTripId = (tripId: string) => Promise<string[]>;
 
 export type TripDebtReceivableRow = {
   saleId: string;
@@ -54,6 +58,8 @@ export class GetTripReportUseCase {
     private readonly debtPayments?: DebtPaymentRepository | null,
     private readonly tripExpenses?: TripExpenseRepository | null,
     private readonly sellerFieldExpenses?: SellerFieldExpenseRepository | null,
+    private readonly purchaserExpenses?: PurchaserExpenseRepository | null,
+    private readonly listLoadingManifestIdsByTripId?: ListLoadingManifestIdsByTripId | null,
   ) {}
 
   /**
@@ -101,9 +107,16 @@ export class GetTripReportUseCase {
     const debtReceivables = buildDebtReceivableRows(debtGroups, paidMap);
     const debtPaidKopecks = debtReceivables.reduce((acc, row) => acc + row.paidKopecks, 0n);
 
-    const expensesKopecks = this.tripExpenses
+    const tripExpensesKopecks = this.tripExpenses
       ? await this.tripExpenses.sumByTripId(tripId)
       : 0n;
+    let purchaserExpensesOnManifestsKopecks = 0n;
+    if (this.purchaserExpenses && this.listLoadingManifestIdsByTripId) {
+      const manifestIds = await this.listLoadingManifestIdsByTripId(tripId);
+      purchaserExpensesOnManifestsKopecks =
+        await this.purchaserExpenses.sumByLoadingManifestIds(manifestIds);
+    }
+    const expensesKopecks = tripExpensesKopecks + purchaserExpensesOnManifestsKopecks;
     const fieldExpenseRows = this.sellerFieldExpenses
       ? await this.sellerFieldExpenses.list({ tripId })
       : [];

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { apiFetch, apiPostJson, assertOkResponse } from "../api/fetch-api.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
 import { kopecksToRubLabel } from "../format/money.js";
-import { loadingManifestsPagedQueryOptions } from "../query/core-list-queries.js";
+import { loadingManifestsPagedQueryOptions, queryRoots } from "../query/core-list-queries.js";
 import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -100,6 +100,8 @@ export function PurchaserFieldExpensesPanel() {
       setAmountRub("");
       setComment("");
       await qc.invalidateQueries({ queryKey: ["accounting", "purchaser-expenses"] });
+      await qc.invalidateQueries({ queryKey: queryRoots.loadingManifest });
+      await qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
     },
   });
