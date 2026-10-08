@@ -7380,3 +7380,212 @@ html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
   background: var(--birzha-accent-soft) !important;
   color: var(--birzha-link);
 }
+
+/* --- Этап 2: каркас кабинета — бренд и подписи групп в сайдбаре --- */
+#root .birzha-cabinet-sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.75rem 0.6rem 0.45rem 0.85rem;
+}
+
+#root .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__head {
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.65rem 0.35rem 0.35rem;
+}
+
+.birzha-cabinet-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.birzha-cabinet-sidebar__brand-mark {
+  display: inline-flex;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #a78bfa 0%, #6d28d9 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0;
+  box-shadow: 0 8px 18px -10px rgba(124, 58, 237, 0.75);
+}
+
+.birzha-cabinet-sidebar__brand-text {
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+  color: var(--birzha-chrome-text);
+  white-space: nowrap;
+}
+
+#root .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__brand-text {
+  display: none;
+}
+
+#root .birzha-cabinet-sidebar__toggle {
+  margin: 0;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+#root .birzha-cabinet-sidebar__toggle:hover {
+  background: var(--birzha-chrome-muted);
+  color: var(--birzha-chrome-text);
+}
+
+.birzha-cabinet-sidebar__caption {
+  margin: 0.4rem 0.7rem 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+#root .birzha-cabinet-sidebar--collapsed .birzha-cabinet-sidebar__caption {
+  display: none;
+}
+
+#root .birzha-cabinet-sidebar__link {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--birzha-chrome-text) 74%, transparent);
+}
+
+#root .birzha-cabinet-sidebar__link:hover {
+  background: var(--birzha-chrome-muted);
+  color: var(--birzha-chrome-text);
+}
+
+#root .birzha-cabinet-sidebar__link--active,
+#root .birzha-cabinet-sidebar__link--active:hover {
+  background: var(--birzha-accent-soft);
+  color: var(--birzha-accent);
+}
+
+#root .birzha-cabinet-drawer__head {
+  border-bottom-color: var(--birzha-border-hairline);
+}
+
+/* --- Этап 2: шапка страницы — не карточка, а заголовок уровня страницы --- */
+#root .birzha-admin-dash-modern__hero,
+#root .birzha-home-hero,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__hero,
+html[data-birzha-theme="dark"] #root .birzha-home-hero {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.2rem 0 0.95rem;
+  margin-bottom: 0.9rem;
+  align-items: flex-start;
+}
+
+#root .birzha-admin-dash-modern__title,
+#root .birzha-home-hero__title {
+  margin: 0.1rem 0 0;
+  font-size: clamp(1.45rem, 2.6vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+#root .birzha-home-hero__eyebrow,
+#root .birzha-section-heading__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+/* Быстрые действия в шапке — pill-кнопки; первая — основная */
+#root .birzha-admin-dash-modern__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-content: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__actions .birzha-home-action {
+  flex-direction: row;
+  min-height: 2.45rem;
+  padding: 0.45rem 1.05rem;
+  border-radius: 999px;
+  border: 1px solid var(--birzha-border-hairline);
+  background: var(--birzha-surface);
+  box-shadow: none;
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action:hover,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__actions .birzha-home-action:hover {
+  transform: none;
+  background: var(--birzha-accent-soft);
+  border-color: color-mix(in srgb, var(--birzha-accent) 35%, transparent);
+  box-shadow: none;
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action:first-child,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__actions .birzha-home-action:first-child {
+  background: var(--birzha-accent);
+  border-color: var(--birzha-accent);
+  color: var(--birzha-accent-contrast);
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action:first-child strong {
+  color: var(--birzha-accent-contrast);
+}
+
+#root .birzha-admin-dash-modern__actions .birzha-home-action:first-child:hover,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__actions .birzha-home-action:first-child:hover {
+  background: var(--birzha-accent-strong);
+  border-color: var(--birzha-accent-strong);
+}
+
+/* Переключатели периода — pill-табы */
+#root .birzha-admin-summary-toggle {
+  min-height: 1.95rem;
+  padding: 0.3rem 0.85rem !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--color-text-muted) !important;
+  font-weight: 600;
+}
+
+#root .birzha-admin-summary-toggle:hover:not(:disabled) {
+  background: var(--birzha-accent-soft) !important;
+  color: var(--color-text) !important;
+}
+
+#root .birzha-admin-summary-toggle--active,
+#root .birzha-admin-summary-toggle--active:hover:not(:disabled),
+html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
+  background: var(--birzha-accent) !important;
+  color: var(--birzha-accent-contrast) !important;
+}
+
+@media (max-width: 48rem) {
+  #root .birzha-admin-dash-modern__actions {
+    justify-content: flex-start;
+  }
+}

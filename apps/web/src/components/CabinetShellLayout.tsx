@@ -224,7 +224,12 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
 
   const sidebarNav = (
     <div className="birzha-cabinet-sidebar__nav-inner">
-      <div className="birzha-cabinet-sidebar__nav-main">{renderSidebarLinks(mainNavEntries)}</div>
+      <div className="birzha-cabinet-sidebar__nav-main">
+        <p className="birzha-cabinet-sidebar__caption" aria-hidden>
+          Разделы
+        </p>
+        {renderSidebarLinks(mainNavEntries)}
+      </div>
       {bottomNavEntries.length > 0 ? (
         <div className="birzha-cabinet-sidebar__nav-foot">{renderSidebarLinks(bottomNavEntries)}</div>
       ) : null}
@@ -289,16 +294,22 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
             className={`birzha-cabinet-sidebar no-print${sidebarCollapsed ? " birzha-cabinet-sidebar--collapsed" : ""}`}
             aria-label="Разделы приложения"
           >
-            <button
-              type="button"
-              className="birzha-cabinet-sidebar__toggle"
-              onClick={() => setSidebarCollapsed((c) => !c)}
-              aria-expanded={!sidebarCollapsed}
-              aria-controls="birzha-cabinet-sidebar-nav"
-              title={sidebarCollapsed ? "Развернуть меню" : "Свернуть меню"}
-            >
-              <SidebarToggleIcon collapsed={sidebarCollapsed} />
-            </button>
+            <div className="birzha-cabinet-sidebar__head">
+              <div className="birzha-cabinet-sidebar__brand" aria-hidden>
+                <span className="birzha-cabinet-sidebar__brand-mark">Б</span>
+                <span className="birzha-cabinet-sidebar__brand-text">Биржа</span>
+              </div>
+              <button
+                type="button"
+                className="birzha-cabinet-sidebar__toggle"
+                onClick={() => setSidebarCollapsed((c) => !c)}
+                aria-expanded={!sidebarCollapsed}
+                aria-controls="birzha-cabinet-sidebar-nav"
+                title={sidebarCollapsed ? "Развернуть меню" : "Свернуть меню"}
+              >
+                <SidebarToggleIcon collapsed={sidebarCollapsed} />
+              </button>
+            </div>
             <nav id="birzha-cabinet-sidebar-nav" className="birzha-cabinet-sidebar__nav" aria-label="Разделы приложения">
               {sidebarNav}
             </nav>
