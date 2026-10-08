@@ -7589,3 +7589,199 @@ html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
     justify-content: flex-start;
   }
 }
+
+/* --- Этап 3: KPI-полоса сводки — одна карточка, ячейки разделены hairline-линиями --- */
+#root .birzha-admin-dash-modern__kpi {
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0;
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--birzha-border-hairline);
+  border-radius: var(--birzha-radius-card);
+  background: var(--birzha-surface);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
+  gap: 0.3rem;
+  padding: 0.85rem 1rem 0.8rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  /* Линии справа и снизу; внешние обрезаются overflow контейнера */
+  box-shadow: 1px 1px 0 0 var(--birzha-border-hairline);
+  animation: none;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__label::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-muted) 55%, transparent);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label::before {
+  background: var(--birzha-accent);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label::before {
+  background: #f59e0b;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label::before {
+  background: #3b82f6;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet .birzha-kpi-tile__label::before {
+  background: #14b8a6;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__value--md {
+  font-size: 1.15rem;
+}
+
+#root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:hover,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:hover,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+  background: var(--birzha-accent-soft);
+  border: 0;
+  box-shadow: 1px 1px 0 0 var(--birzha-border-hairline);
+  transform: none;
+}
+
+#root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:focus-visible {
+  outline-offset: -3px;
+}
+
+/* --- Этап 3: стековый бар + легенда точками --- */
+.birzha-stack-bar {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.birzha-stack-bar__track {
+  display: flex;
+  width: 100%;
+  height: 0.6rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.birzha-stack-bar__seg {
+  min-width: 2px;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.birzha-stack-bar__seg + .birzha-stack-bar__seg {
+  box-shadow: -1px 0 0 0 var(--birzha-surface);
+}
+
+.birzha-stack-bar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.birzha-stack-bar__legend-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.birzha-stack-bar__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.birzha-stack-bar__legend-value {
+  color: var(--color-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Кольцо массы: тоньше, с цифрой в центре */
+#root .birzha-admin-mass-ring {
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+#root .birzha-admin-mass-ring__hole {
+  inset: 33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  text-align: center;
+}
+
+.birzha-admin-mass-ring__center-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.birzha-admin-mass-ring__center-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+#root .birzha-admin-dash-modern__mass-row {
+  gap: 0.85rem 1.4rem;
+}
+
+/* Фильтры сводки (бухгалтерия) — отдельная карточка под шапкой */
+#root .birzha-dash-filters {
+  padding: 0.85rem 1.05rem 0.95rem;
+}
+
+#root .birzha-dash-filters .birzha-admin-dash-modern__dates {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 48rem) {
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
+    padding: 0.7rem 0.8rem;
+  }
+
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__value {
+    font-size: 1.15rem;
+  }
+}

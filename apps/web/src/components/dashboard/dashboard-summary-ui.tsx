@@ -19,6 +19,9 @@ type MassRingTooltip = {
   kg: number;
 };
 
+/** Доля «дырки» кольца от края (см. `.birzha-admin-mass-ring__hole { inset }` в index.css). */
+const MASS_RING_HOLE_INSET_RATIO = 0.33;
+
 export function formatDashboardKg(v: number): string {
   return `${v.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} кг`;
 }
@@ -125,7 +128,7 @@ export function MassDistributionRing({
       return;
     }
     const rect = el.getBoundingClientRect();
-    if (!isMassRingPointerOnDonut(clientX, clientY, rect)) {
+    if (!isMassRingPointerOnDonut(clientX, clientY, rect, MASS_RING_HOLE_INSET_RATIO)) {
       setTooltip(null);
       return;
     }
@@ -155,7 +158,10 @@ export function MassDistributionRing({
         onPointerMove={(event) => updateTooltip(event.clientX, event.clientY)}
         onPointerLeave={() => setTooltip(null)}
       >
-        <div className="birzha-admin-mass-ring__hole" aria-hidden />
+        <div className="birzha-admin-mass-ring__hole" aria-hidden>
+          <span className="birzha-admin-mass-ring__center-value">{formatDashboardKg(total)}</span>
+          <span className="birzha-admin-mass-ring__center-label">всего</span>
+        </div>
       </div>
       {tooltip ? (
         <div
@@ -177,25 +183,37 @@ type MassSegment = {
   fillClass: string;
 };
 
+/**
+ * Один стековый бар по этапам + легенда точками (а не отдельная полоска на строку).
+ * Цвета сегментов — те же классы `birzha-admin-dash-modern__bar-fill--*`.
+ */
 export function MassBalanceLegend({ segments }: { segments: MassSegment[] }) {
   const total = segments.reduce((sum, row) => sum + row.kg, 0);
   if (total <= 0) {
     return null;
   }
+  const visible = segments.filter((row) => row.kg > 0);
   return (
-    <div className="birzha-admin-dash-modern__mass-bars" aria-label="Распределение массы по этапам">
-      {segments.map((row) => (
-        <div key={row.label} className="birzha-admin-dash-modern__bar-row">
-          <div className="birzha-admin-dash-modern__bar-label">{row.label}</div>
-          <div className="birzha-admin-dash-modern__bar-track">
-            <div
-              className={`birzha-admin-dash-modern__bar-fill ${row.fillClass}`}
-              style={{ width: `${ratioPart(row.kg, total)}%` }}
-            />
-          </div>
-          <div className="birzha-admin-dash-modern__bar-value">{formatDashboardKg(row.kg)}</div>
-        </div>
-      ))}
+    <div className="birzha-stack-bar" aria-label="Распределение массы по этапам">
+      <div className="birzha-stack-bar__track" role="img" aria-hidden>
+        {visible.map((row) => (
+          <div
+            key={row.label}
+            className={`birzha-stack-bar__seg ${row.fillClass}`}
+            style={{ width: `${ratioPart(row.kg, total)}%` }}
+            title={`${row.label}: ${formatDashboardKg(row.kg)}`}
+          />
+        ))}
+      </div>
+      <ul className="birzha-stack-bar__legend">
+        {segments.map((row) => (
+          <li key={row.label} className="birzha-stack-bar__legend-item">
+            <span className={`birzha-stack-bar__dot ${row.fillClass}`} aria-hidden />
+            <span className="birzha-stack-bar__legend-label">{row.label}</span>
+            <strong className="birzha-stack-bar__legend-value">{formatDashboardKg(row.kg)}</strong>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

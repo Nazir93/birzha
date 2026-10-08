@@ -365,6 +365,30 @@ export function AccountingCabinetHome() {
           <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "40rem" }}>
             Сверху — период, регион и рейс. Ниже всегда общее за период; при выборке — детальная касса по рейсам.
           </p>
+        </div>
+        <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
+          <Link to={href(accounting.payables)} className="birzha-home-action">
+            <strong>Тепличники</strong>
+          </Link>
+          <Link to={href(accounting.receivables)} className="birzha-home-action">
+            <strong>Долги</strong>
+          </Link>
+          <Link to={accounting.reports} className="birzha-home-action">
+            <strong>Отчёт</strong>
+          </Link>
+          <Link to={accounting.counterparties} className="birzha-home-action">
+            <strong>Контрагенты</strong>
+          </Link>
+          {canGoToAdminPanel ? (
+            <Link to={adminRoutes.home} className="birzha-home-action">
+              <strong>Админка</strong>
+            </Link>
+          ) : null}
+        </nav>
+      </header>
+
+      <section className="birzha-panel birzha-dash-filters" aria-label="Период и выборка">
+        <div>
           <DashboardSummaryPeriodToggles period={period} onChange={onPeriodChange} />
           <div className="birzha-admin-dash-modern__dates">
             <label className="birzha-form-label" style={{ margin: 0, minWidth: "9rem" }}>
@@ -435,26 +459,7 @@ export function AccountingCabinetHome() {
             ) : null}
           </div>
         </div>
-        <nav className="birzha-admin-dash-modern__actions no-print" aria-label="Быстрые действия">
-          <Link to={href(accounting.payables)} className="birzha-home-action">
-            <strong>Тепличники</strong>
-          </Link>
-          <Link to={href(accounting.receivables)} className="birzha-home-action">
-            <strong>Долги</strong>
-          </Link>
-          <Link to={accounting.reports} className="birzha-home-action">
-            <strong>Отчёт</strong>
-          </Link>
-          <Link to={accounting.counterparties} className="birzha-home-action">
-            <strong>Контрагенты</strong>
-          </Link>
-          {canGoToAdminPanel ? (
-            <Link to={adminRoutes.home} className="birzha-home-action">
-              <strong>Админка</strong>
-            </Link>
-          ) : null}
-        </nav>
-      </header>
+      </section>
 
       {periodQ.isPending ? <LoadingBlock label="Сводка за период…" minHeight={72} skeleton skeletonRows={3} /> : null}
       {periodQ.isError ? <ErrorAlert error={periodQ.error} title="Сводка за период" /> : null}
