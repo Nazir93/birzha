@@ -7785,3 +7785,35 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
     font-size: 1.15rem;
   }
 }
+
+/* ===== Дизайн-слой v2 · этап 4: графики по дням (recharts) ===== */
+#root .birzha-daily-chart-card {
+  margin-bottom: 1rem;
+}
+
+.birzha-daily-chart {
+  margin-top: 0.35rem;
+  min-width: 0;
+}
+
+.birzha-daily-chart .recharts-legend-item-text {
+  color: var(--color-text-muted) !important;
+}
+
+.birzha-daily-chart .recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.birzha-daily-chart .recharts-default-tooltip {
+  color: var(--color-text) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.birzha-daily-chart .recharts-tooltip-item {
+  color: var(--color-text) !important;
+}
+
+.birzha-daily-chart .recharts-surface:focus,
+.birzha-daily-chart .recharts-wrapper:focus {
+  outline: none;
+}

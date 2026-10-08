@@ -11,6 +11,7 @@ import { tripReportHref } from "../format/trip-report-href.js";
 import { accounting, adminRoutes } from "../routes.js";
 import { BirzhaDateField, formatYmd } from "./BirzhaCalendarFields.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
+import { DailySeriesChart } from "./dashboard/DailySeriesChart.js";
 import {
   DashboardSummaryPeriodToggles,
   dashboardPeriodStartDate,
@@ -538,6 +539,14 @@ export function AccountingCabinetHome() {
           <OverallKpis s={s} href={href} />
         </section>
       ) : null}
+
+      <section className="birzha-admin-dash-modern__chart-card birzha-daily-chart-card" aria-labelledby="acc-daily-h">
+        <div className="birzha-admin-dash-modern__chart-head">
+          <h4 id="acc-daily-h" style={{ margin: 0, fontSize: "1rem" }}>Касса и расходы по дням</h4>
+          <span className="birzha-text-muted birzha-ui-sm">наличные · карта · долг · расходы</span>
+        </div>
+        <DailySeriesChart variant="cashStack" from={from} to={to} destinationCode={destinationCode} tripId={tripId} />
+      </section>
 
       <div className="birzha-admin-dash-modern__layout">
         <section className="birzha-admin-dash-modern__chart-card">

@@ -102,6 +102,23 @@ export type DashboardGradeStockRow = DashboardStockSlice & {
   productGroup: string | null;
 };
 
+/** GET /accounting/period-daily — одна точка ряда (день). */
+export type AccountingDailyPoint = {
+  day: string;
+  revenueCashKopecks: string;
+  revenueCardKopecks: string;
+  revenueDebtKopecks: string;
+  revenueTotalKopecks: string;
+  soldGrams: string;
+  expensesKopecks: string;
+};
+
+export type AccountingDailySeries = {
+  from: string;
+  to: string;
+  days: AccountingDailyPoint[];
+};
+
 export type DashboardWarehouseStockRow = DashboardStockSlice & {
   warehouseId: string;
   warehouseName: string;

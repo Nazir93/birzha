@@ -71,6 +71,11 @@ export const accountingPeriodSummaryQuerySchema = z
 
 export type AccountingPeriodSummaryQuery = z.infer<typeof accountingPeriodSummaryQuerySchema>;
 
+/** GET /accounting/period-daily — ряд по дням для графиков сводки (те же параметры). */
+export const accountingPeriodDailyQuerySchema = accountingPeriodSummaryQuerySchema;
+
+export type AccountingPeriodDailyQuery = z.infer<typeof accountingPeriodDailyQuerySchema>;
+
 /** GET /accounting/trip-expenses */
 export const accountingTripExpensesQuerySchema = accountingPeriodSummaryQuerySchema;
 

@@ -36,6 +36,7 @@ import {
   type DashboardSummaryPeriod,
 } from "./dashboard/dashboard-summary-ui.js";
 import { AdminSummaryAttention } from "./admin/AdminSummaryAttention.js";
+import { DailySeriesChart } from "./dashboard/DailySeriesChart.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -70,6 +71,16 @@ export function AdminCabinetHome() {
 
   const periodStart = useMemo(() => dashboardPeriodStartDate(summaryPeriod), [summaryPeriod]);
   const sinceParam = periodStart ? periodStart.toISOString().slice(0, 10) : undefined;
+  /** Для графика по дням «всё время» ограничиваем 90 днями, чтобы ось оставалась читаемой. */
+  const dailyRange = useMemo(() => {
+    const to = new Date().toISOString().slice(0, 10);
+    if (sinceParam) {
+      return { from: sinceParam, to };
+    }
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return { from: d.toISOString().slice(0, 10), to };
+  }, [sinceParam]);
 
   const summaryQ = useQuery({
     ...adminDashboardSummaryQueryOptions(sinceParam),
@@ -300,6 +311,16 @@ export function AdminCabinetHome() {
                 <div className="birzha-kpi-tile__value">{formatDashboardKg(aggregates.soldKg)}</div>
                 <div className="birzha-kpi-tile__hint birzha-ui-sm">С открытых рейсов</div>
               </Link>
+          </section>
+
+          <section className="birzha-admin-dash-modern__chart-card birzha-daily-chart-card" aria-labelledby="admin-daily-h">
+            <div className="birzha-admin-dash-modern__chart-head">
+              <h4 id="admin-daily-h" style={{ margin: 0, fontSize: "1rem" }}>Выручка и продажи по дням</h4>
+              <span className="birzha-text-muted birzha-ui-sm">
+                {summaryPeriod === "all" ? "последние 90 дней" : "за выбранный период"}
+              </span>
+            </div>
+            <DailySeriesChart variant="revenueMass" from={dailyRange.from} to={dailyRange.to} />
           </section>
 
           <div className="birzha-admin-dash-modern__layout">

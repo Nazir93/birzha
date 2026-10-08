@@ -19,6 +19,7 @@ export { createSupplierBodySchema } from "./supplier.js";
 export type { CreateSupplierBody } from "./supplier.js";
 export {
   accountingPayablesQuerySchema,
+  accountingPeriodDailyQuerySchema,
   accountingPeriodSummaryQuerySchema,
   accountingPurchaserExpensesQuerySchema,
   accountingReceivablesQuerySchema,
@@ -33,6 +34,7 @@ export {
 } from "./accounting.js";
 export type {
   AccountingPayablesQuery,
+  AccountingPeriodDailyQuery,
   AccountingPeriodSummaryQuery,
   AccountingPurchaserExpensesQuery,
   AccountingReceivablesQuery,

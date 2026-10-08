@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   accountingPayablesQuerySchema,
+  accountingPeriodDailyQuerySchema,
   accountingPeriodSummaryQuerySchema,
   accountingPurchaserExpensesQuerySchema,
   accountingReceivablesQuerySchema,
@@ -15,6 +16,7 @@ import { z } from "zod";
 import { globalRoleCodes } from "../auth/global-roles.js";
 import type { AuthRoleGrant } from "../auth/role-grant.js";
 import { isGlobalSellerOnly, tripVisibleToFieldSeller } from "../auth/seller-scope.js";
+import { AccountingDailySeriesUseCase } from "../application/accounting/accounting-daily-series.use-case.js";
 import { AccountingPayablesUseCase } from "../application/accounting/accounting-payables.use-case.js";
 import { AccountingReceivablesUseCase } from "../application/accounting/accounting-receivables.use-case.js";
 import { AccountingTripExpensesUseCase } from "../application/accounting/accounting-trip-expenses.use-case.js";
@@ -536,4 +538,27 @@ export function registerAccountingRoutes(
       }
     },
   );
+
+  const dailySeries = new AccountingDailySeriesUseCase(
+    deps.sales,
+    deps.trips,
+    deps.tripExpenses ?? null,
+    deps.sellerFieldExpenses ?? null,
+    deps.purchaserExpenses ?? null,
+  );
+
+  app.get("/accounting/period-daily", { ...withPreHandlers(routeAuth.accountingRead) }, async (req, reply) => {
+    try {
+      const q = accountingPeriodDailyQuerySchema.parse(req.query);
+      const series = await dailySeries.execute({
+        fromYmd: q.from,
+        toYmd: q.to,
+        destinationCode: q.destinationCode,
+        tripId: q.tripId,
+      });
+      return reply.send(series);
+    } catch (error) {
+      return sendMappedError(reply, error);
+    }
+  });
 }
