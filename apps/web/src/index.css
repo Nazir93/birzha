@@ -32,45 +32,49 @@
   --color-text: #18181b;
   --color-muted: #71717a;
   --color-text-muted: #71717a;
-  --color-border: #d4d4d8;
-  --color-border-focus: #18181b;
+  --color-border: #e4e4e7;
+  --color-border-focus: #7c3aed;
   --color-surface-input: #ffffff;
-  --focus-ring: 0 0 0 3px rgba(0, 0, 0, 0.12);
+  --focus-ring: 0 0 0 3px rgba(124, 58, 237, 0.22);
 
-  --birzha-bg-page: #f4f4f5;
+  /* Три уровня поверхности: страница → карточка → вложенный блок. Рамка только у карточки (hairline). */
+  --birzha-bg-page: #f6f7f9;
   --birzha-surface: #ffffff;
-  --birzha-surface-muted: #fafafa;
-  /* Нейтральный «акцент»: чёрный / серые подложки — без цветных кабинетов */
-  --birzha-accent: #18181b;
-  --birzha-accent-strong: #0a0a0a;
-  --birzha-accent-soft: #ebebeb;
+  --birzha-surface-muted: #f6f7f9;
+  --birzha-border-hairline: rgba(15, 23, 42, 0.08);
+  /* Акцент интерфейса — фиолетовый (кнопки, активный пункт, фокус). Цвета данных в графиках — отдельно. */
+  --birzha-accent: #7c3aed;
+  --birzha-accent-strong: #6d28d9;
+  --birzha-accent-soft: rgba(124, 58, 237, 0.1);
+  --birzha-accent-contrast: #ffffff;
   --birzha-danger: #b91c1c;
   --birzha-warn: #52525b;
   --birzha-text-subtle: #52525b;
-  --birzha-radius: 10px;
-  --birzha-radius-sm: 8px;
-  --birzha-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --birzha-radius: 12px;
+  --birzha-radius-sm: 10px;
+  --birzha-radius-card: 16px;
+  --birzha-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --birzha-shadow-nav: 0 1px 0 rgba(0, 0, 0, 0.06);
   /* Панели «хрома»: шапка, сайдбар, drawer — одна система для светлой/тёмной темы */
   --birzha-chrome-surface: #ffffff;
   --birzha-chrome-text: #09090b;
-  --birzha-chrome-muted: #f4f4f5;
-  --birzha-chrome-elevated: #fafafa;
-  --birzha-cabinet-canvas-bg: linear-gradient(165deg, #fafbfc 0%, #f3f4f6 48%, #eef0f3 100%);
+  --birzha-chrome-muted: #f3f4f6;
+  --birzha-chrome-elevated: #eceef2;
+  --birzha-cabinet-canvas-bg: #f6f7f9;
   --birzha-radius-drawer: 16px;
   --birzha-shadow-drawer: 8px 0 32px rgba(15, 23, 42, 0.12);
   /* Вторичные кнопки (style btnStyle / btnStyleInline в TS) */
   --birzha-btn-outline-bg: #ffffff;
-  --birzha-btn-outline-border: #cbd5e1;
+  --birzha-btn-outline-border: #d4d4d8;
   --birzha-btn-outline-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   /* Текстовые ссылки в контенте (не навигация / плитки) */
-  --birzha-link: #1d4ed8;
-  --birzha-link-hover: #2563eb;
-  --birzha-link-visited: #4338ca;
+  --birzha-link: #6d28d9;
+  --birzha-link-hover: #7c3aed;
+  --birzha-link-visited: #5b21b6;
 
   /** Рамка полей и акцент строки в выпадающих списках */
   --birzha-field-outline: var(--color-border);
-  --birzha-popup-accent: #2563eb;
+  --birzha-popup-accent: #7c3aed;
   --birzha-popup-surface: var(--color-surface-input);
 
   --birzha-scrollbar-size: 8px;
@@ -221,44 +225,47 @@ html[data-birzha-theme="dark"] .birzha-pwa-toast {
 html[data-birzha-theme="dark"] {
   color-scheme: dark;
   --color-text: #f4f4f5;
-  --color-muted: #a1a1aa;
-  --color-text-muted: #a1a1aa;
-  --color-border: #3f3f46;
-  --color-border-focus: #e4e4e7;
-  --color-surface-input: #27272a;
-  --focus-ring: 0 0 0 3px rgba(250, 250, 250, 0.12);
+  --color-muted: #9ca3af;
+  --color-text-muted: #9ca3af;
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-focus: #a78bfa;
+  --color-surface-input: #1c1c22;
+  --focus-ring: 0 0 0 3px rgba(167, 139, 250, 0.28);
 
-  --birzha-bg-page: #18181b;
-  --birzha-surface: #27272a;
-  --birzha-surface-muted: #1f1f23;
-  --birzha-accent: #f4f4f5;
-  --birzha-accent-strong: #fafafa;
-  --birzha-accent-soft: #3f3f46;
+  /* Нейтральный ряд (без синего slate): страница → карточка → вложенный блок */
+  --birzha-bg-page: #0b0b0e;
+  --birzha-surface: #141418;
+  --birzha-surface-muted: #1b1b21;
+  --birzha-border-hairline: rgba(255, 255, 255, 0.07);
+  --birzha-accent: #8b5cf6;
+  --birzha-accent-strong: #7c3aed;
+  --birzha-accent-soft: rgba(139, 92, 246, 0.18);
+  --birzha-accent-contrast: #ffffff;
   --birzha-danger: #f87171;
   --birzha-warn: #a1a1aa;
   --birzha-text-subtle: #a1a1aa;
-  --birzha-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --birzha-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --birzha-shadow-nav: 0 1px 0 rgba(0, 0, 0, 0.35);
 
-  --birzha-chrome-surface: #27272a;
+  --birzha-chrome-surface: #0f0f13;
   --birzha-chrome-text: #fafafa;
-  --birzha-chrome-muted: #3f3f46;
-  --birzha-chrome-elevated: #2e2e33;
-  --birzha-cabinet-canvas-bg: linear-gradient(165deg, #1f1f23 0%, #18181b 55%, #141418 100%);
-  --birzha-shadow-drawer: 12px 0 40px rgba(0, 0, 0, 0.45);
-  --birzha-btn-outline-bg: #52525b;
-  --birzha-btn-outline-border: #d4d4d8;
-  --birzha-btn-outline-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
-  /* На тёмном фоне — светлые ссылки, не синий/фиолетовый браузера */
-  --birzha-link: #93c5fd;
-  --birzha-link-hover: #e0f2fe;
-  --birzha-link-visited: #c4b5fd;
+  --birzha-chrome-muted: #1b1b21;
+  --birzha-chrome-elevated: #232329;
+  --birzha-cabinet-canvas-bg: #0b0b0e;
+  --birzha-shadow-drawer: 12px 0 40px rgba(0, 0, 0, 0.55);
+  --birzha-btn-outline-bg: #1f1f26;
+  --birzha-btn-outline-border: rgba(255, 255, 255, 0.14);
+  --birzha-btn-outline-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+  /* На тёмном фоне — светло-фиолетовые ссылки */
+  --birzha-link: #c4b5fd;
+  --birzha-link-hover: #ddd6fe;
+  --birzha-link-visited: #a78bfa;
 
-  --birzha-field-outline: transparent;
-  --birzha-popup-accent: #2563eb;
-  --birzha-popup-surface: #27272a;
+  --birzha-field-outline: rgba(255, 255, 255, 0.1);
+  --birzha-popup-accent: #8b5cf6;
+  --birzha-popup-surface: #1c1c22;
 
-  --birzha-scrollbar-track: rgba(39, 39, 42, 0.95);
+  --birzha-scrollbar-track: rgba(20, 20, 24, 0.95);
   --birzha-scrollbar-thumb: rgba(82, 82, 91, 0.92);
   --birzha-scrollbar-thumb-hover: rgba(113, 113, 122, 0.98);
 }
@@ -4815,7 +4822,7 @@ html[data-birzha-theme="dark"] .birzha-admin-mass-ring__tooltip {
 }
 
 .birzha-admin-dash__legend-dot--lm {
-  background: #7c3aed;
+  background: #14b8a6;
 }
 
 .birzha-admin-dash__legend-dot--tr {
@@ -5237,7 +5244,7 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
 }
 
 .birzha-admin-dash-modern__bar-fill--lm {
-  background: #7c3aed;
+  background: #14b8a6;
 }
 
 .birzha-admin-dash-modern__bar-fill--tr {
@@ -6999,4 +7006,377 @@ html[data-birzha-theme="dark"] .birzha-section-filters {
     width: 100%;
     justify-self: stretch;
   }
+}
+
+/* ============================================================================
+ * Дизайн-слой v2 («плоские» карточки, фиолетовый акцент, без рамок в рамках).
+ * Правила якорятся на `#root`, чтобы перекрывать точечные переопределения выше
+ * (в т.ч. `html[data-birzha-theme="dark"] …`) без `!important`. Логика/разметка не меняются.
+ * ========================================================================== */
+
+/* --- Уровень 1: карточка. Один фон, hairline-рамка, без цветных теней --- */
+#root .app-shell--cabinet .birzha-card,
+#root .app-shell--cabinet .birzha-panel:not(.birzha-clean-ops-page),
+#root .app-shell--cabinet .birzha-disclosure:not(.birzha-clean-ops-disclosure),
+#root .birzha-home-work-card,
+#root .birzha-admin-dash-modern__chart-card,
+#root .birzha-admin-dash-modern__ops-card,
+#root .birzha-seller-sell-wrap,
+#root .birzha-section-filters,
+#root .birzha-chart-card--premium,
+#root .birzha-admin-dash__hero,
+#root .birzha-admin-dash-modern__hero,
+#root .birzha-admin-stat {
+  background: var(--birzha-surface);
+  border: 1px solid var(--birzha-border-hairline);
+  border-radius: var(--birzha-radius-card);
+  box-shadow: none;
+}
+
+#root .app-shell--cabinet .birzha-panel:not(.birzha-clean-ops-page):last-child {
+  border-bottom: 1px solid var(--birzha-border-hairline);
+}
+
+#root .birzha-admin-stat {
+  border-radius: var(--birzha-radius);
+}
+
+#root .birzha-cabinet-main .birzha-inline-panel,
+#root .birzha-nakl-details {
+  background: var(--birzha-surface-muted);
+  border: 1px solid var(--birzha-border-hairline);
+  box-shadow: none;
+}
+
+#root .birzha-nakl-details[open] {
+  background: var(--birzha-surface-muted);
+}
+
+/* --- Уровень 2: всё, что лежит внутри карточки, — без своей рамки и тени --- */
+#root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card, .birzha-admin-dash-modern__chart-card, .birzha-admin-dash-modern__ops-card, .birzha-seller-sell-wrap)
+  :is(.birzha-card, .birzha-panel, .birzha-home-work-card, .birzha-table-scroll, .birzha-nakl-lines-card, .birzha-inline-panel) {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+#root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card)
+  :is(.birzha-table-scroll, .birzha-nakl-lines-card) {
+  background: transparent;
+  border-width: 0;
+}
+
+/* Вложенный раскрывающийся блок («матрёшка») отличается фоном, а не рамкой */
+#root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card) .birzha-disclosure:not(.birzha-clean-ops-disclosure) {
+  background: var(--birzha-surface-muted);
+  border-color: transparent;
+  border-radius: var(--birzha-radius);
+  box-shadow: none;
+}
+
+#root .birzha-nakl-lines-card {
+  border-color: var(--birzha-border-hairline);
+  box-shadow: none;
+}
+
+#root .birzha-disclosure--nested {
+  border-left-color: var(--birzha-border-hairline);
+}
+
+/* --- Шапка страницы и hero: плоские, без радиальных пятен --- */
+#root .birzha-admin-dash__hero,
+#root .birzha-admin-dash-modern__hero {
+  background: var(--birzha-surface);
+}
+
+/* --- KPI-плитки: один стиль; цвет модификатора — тонкая полоска слева --- */
+#root .birzha-kpi-tile {
+  background: var(--birzha-surface);
+  border: 1px solid var(--birzha-border-hairline);
+  border-left-width: 3px;
+  border-left-color: color-mix(in srgb, var(--color-muted) 35%, transparent);
+  border-radius: var(--birzha-radius);
+  box-shadow: none;
+}
+
+/* Плитка внутри карточки — вложенный уровень: фон, не рамка */
+#root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card, .birzha-admin-dash-modern__chart-card, .birzha-admin-dash-modern__ops-card, .birzha-seller-sell-wrap) .birzha-kpi-tile {
+  background: var(--birzha-surface-muted);
+  border-color: transparent;
+  border-left-color: color-mix(in srgb, var(--color-muted) 35%, transparent);
+}
+
+#root .birzha-kpi-tile .birzha-kpi-tile__label {
+  color: var(--color-muted);
+}
+
+#root .birzha-kpi-tile .birzha-kpi-tile__value {
+  color: var(--color-text);
+}
+
+#root .birzha-kpi-tile--accent {
+  border-left-color: var(--birzha-accent);
+}
+
+#root .birzha-kpi-tile--amber {
+  border-left-color: #f59e0b;
+}
+
+#root .birzha-kpi-tile--blue {
+  border-left-color: #3b82f6;
+}
+
+#root .birzha-kpi-tile--violet {
+  border-left-color: #14b8a6;
+}
+
+#root a.birzha-kpi-tile--link:hover,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+  background: color-mix(in srgb, var(--birzha-accent) 8%, var(--birzha-surface));
+  border-color: color-mix(in srgb, var(--birzha-accent) 30%, transparent);
+  border-left-color: var(--birzha-accent);
+  box-shadow: none;
+  transform: none;
+}
+
+#root a.birzha-kpi-tile--link:focus-visible,
+#root a.birzha-admin-stat--link:focus-visible,
+#root a.birzha-admin-dash__hero-ring--link:focus-visible,
+#root .birzha-home-action:focus-visible {
+  outline: 2px solid var(--birzha-accent);
+  outline-offset: 2px;
+}
+
+/* --- Быстрые действия на сводке --- */
+#root .birzha-home-action {
+  background: var(--birzha-surface-muted);
+  border: 1px solid transparent;
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+#root .birzha-home-action span {
+  color: var(--color-muted);
+}
+
+#root .birzha-home-action:hover {
+  background: var(--birzha-accent-soft);
+  border-color: color-mix(in srgb, var(--birzha-accent) 35%, transparent);
+  box-shadow: none;
+}
+
+/* --- Кнопки: основная — фиолетовая --- */
+#root .birzha-btn-primary,
+#root .birzha-dp__primary {
+  background: var(--birzha-accent) !important;
+  color: var(--birzha-accent-contrast) !important;
+  border-color: var(--birzha-accent) !important;
+}
+
+#root .birzha-btn-primary:hover:not(:disabled),
+#root .birzha-dp__primary:hover:not(:disabled) {
+  background: var(--birzha-accent-strong) !important;
+  border-color: var(--birzha-accent-strong) !important;
+}
+
+#root .birzha-btn--seller-save:hover:not(:disabled) {
+  background: var(--birzha-accent-strong) !important;
+}
+
+/* --- Прогресс-бары интерфейса (не данные графиков) — фиолетовый градиент --- */
+#root .birzha-hbar-list__fill,
+#root .birzha-admin-dash-modern__warehouse-fill {
+  background: linear-gradient(90deg, var(--birzha-accent-strong) 0%, var(--birzha-accent) 100%);
+}
+
+#root .birzha-admin-dash-modern__bar-track,
+#root .birzha-admin-dash-modern__warehouse-track,
+#root .birzha-mass-strip__bar {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  border-color: transparent;
+}
+
+#root .birzha-admin-mass-ring {
+  box-shadow: none;
+}
+
+#root .birzha-admin-mass-ring__hole {
+  background: var(--birzha-surface);
+  box-shadow: none;
+}
+
+/* --- Каркас кабинета: сайдбар, шапка, drawer --- */
+#root .birzha-cabinet-topbar {
+  border-bottom-color: var(--birzha-border-hairline);
+}
+
+#root .birzha-cabinet-sidebar,
+#root .birzha-cabinet-drawer {
+  background: var(--birzha-chrome-surface);
+  border-right-color: var(--birzha-border-hairline);
+}
+
+#root .birzha-cabinet-sidebar__nav-foot {
+  border-top-color: var(--birzha-border-hairline);
+}
+
+#root .birzha-cabinet-sidebar__link {
+  border-color: transparent;
+}
+
+#root .birzha-cabinet-sidebar__link--active {
+  background: var(--birzha-accent-soft);
+  color: var(--birzha-accent);
+  border-color: transparent;
+}
+
+#root .birzha-cabinet-sidebar__link--active .birzha-cabinet-sidebar__icon {
+  color: var(--birzha-accent);
+}
+
+#root .birzha-cabinet-topbar__menu-btn,
+#root .birzha-cabinet-topbar__logout,
+#root .birzha-push-bell__btn,
+#root .birzha-cabinet-topbar .birzha-theme-toggle--icon {
+  border-color: transparent;
+}
+
+#root .birzha-theme-toggle-segment--active {
+  border-color: var(--birzha-accent);
+  background: var(--birzha-accent-soft);
+  color: var(--birzha-accent);
+}
+
+/* --- Таблицы: нейтральный заголовок, лёгкий hover (тёмная тема без slate-синего) --- */
+html[data-birzha-theme="dark"] #root .birzha-table-scroll table thead th,
+html[data-birzha-theme="dark"] #root .birzha-data-table thead th,
+html[data-birzha-theme="dark"] #root .birzha-nakl-lines-table thead th {
+  background: var(--birzha-surface-muted) !important;
+  color: var(--color-text) !important;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-table-scroll table tbody tr:not(.birzha-table-subtotal-row):hover td,
+html[data-birzha-theme="dark"] #root .birzha-data-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* --- Календарь (date picker) на тёмной теме — нейтральные поверхности, акцент фиолетовый --- */
+html[data-birzha-theme="dark"] #root .birzha-dp__nav,
+html[data-birzha-theme="dark"] #root .birzha-dp__day {
+  background: var(--birzha-surface-muted);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-dp__nav:hover,
+html[data-birzha-theme="dark"] #root .birzha-dp__day:hover {
+  background: var(--birzha-chrome-elevated);
+  border-color: var(--color-border-focus);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-dp__day--today {
+  border-color: var(--birzha-accent);
+  color: var(--birzha-link);
+}
+
+/* --- Тёмная тема: карточки без градиентов (перекрывает точечные правила выше) --- */
+html[data-birzha-theme="dark"] #root .app-shell--cabinet .birzha-card,
+html[data-birzha-theme="dark"] #root .app-shell--cabinet .birzha-panel:not(.birzha-clean-ops-page),
+html[data-birzha-theme="dark"] #root .app-shell--cabinet .birzha-disclosure:not(.birzha-clean-ops-disclosure),
+html[data-birzha-theme="dark"] #root .birzha-home-work-card,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__chart-card,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__ops-card,
+html[data-birzha-theme="dark"] #root .birzha-seller-sell-wrap,
+html[data-birzha-theme="dark"] #root .birzha-section-filters,
+html[data-birzha-theme="dark"] #root .birzha-chart-card--premium,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash__hero,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__hero,
+html[data-birzha-theme="dark"] #root .birzha-admin-stat {
+  background: var(--birzha-surface);
+  border-color: var(--birzha-border-hairline);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] #root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card) .birzha-disclosure:not(.birzha-clean-ops-disclosure) {
+  background: var(--birzha-surface-muted);
+  border-color: transparent;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-home-action {
+  background: var(--birzha-surface-muted);
+  border-color: transparent;
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-home-action span {
+  color: var(--color-muted);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-home-action:hover {
+  background: var(--birzha-accent-soft);
+  border-color: color-mix(in srgb, var(--birzha-accent) 40%, transparent);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile {
+  background: var(--birzha-surface);
+  border-color: var(--birzha-border-hairline);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] #root .app-shell--cabinet :is(.birzha-card, .birzha-panel, .birzha-disclosure, .birzha-home-work-card, .birzha-admin-dash-modern__chart-card, .birzha-admin-dash-modern__ops-card, .birzha-seller-sell-wrap) .birzha-kpi-tile {
+  background: var(--birzha-surface-muted);
+  border-color: transparent;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile .birzha-kpi-tile__label {
+  color: var(--color-muted);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile .birzha-kpi-tile__value,
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile .birzha-kpi-tile__cash-debt {
+  color: var(--color-text);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile--accent {
+  border-left-color: var(--birzha-accent);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile--amber {
+  border-left-color: #f59e0b;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile--blue {
+  border-left-color: #3b82f6;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-kpi-tile--violet {
+  border-left-color: #14b8a6;
+}
+
+html[data-birzha-theme="dark"] #root a.birzha-kpi-tile--link:hover,
+html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+  background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface));
+  border-color: color-mix(in srgb, var(--birzha-accent) 35%, transparent);
+  border-left-color: var(--birzha-accent);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-cabinet-sidebar,
+html[data-birzha-theme="dark"] #root .birzha-cabinet-drawer {
+  border-right-color: var(--birzha-border-hairline);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-cabinet-main .birzha-inline-panel {
+  background: var(--birzha-surface-muted);
+  border-color: var(--birzha-border-hairline);
+}
+
+html[data-birzha-theme="dark"] #root .birzha-admin-mass-ring__hole {
+  background: var(--birzha-surface);
+  box-shadow: none;
+}
+
+html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
+  background: var(--birzha-accent-soft) !important;
+  color: var(--birzha-link);
 }

@@ -113,7 +113,7 @@ export function MassDistributionRing({
   const tr = lm + (inTripKg / total) * 360;
   const gradient = `conic-gradient(
     #16a34a 0deg ${w}deg,
-    #7c3aed ${w}deg ${lm}deg,
+    #14b8a6 ${w}deg ${lm}deg,
     #f59e0b ${lm}deg ${tr}deg,
     #2563eb ${tr}deg 360deg
   )`;

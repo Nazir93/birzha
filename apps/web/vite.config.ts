@@ -32,8 +32,8 @@ export default defineConfig({
         name: "Биржа",
         short_name: "Биржа",
         description: "Учёт: закупка → склад → рейс → продажа",
-        theme_color: "#18181b",
-        background_color: "#18181b",
+        theme_color: "#0b0b0e",
+        background_color: "#0b0b0e",
         display: "standalone",
         /**
          * Поле `orientation` не задаём: Chrome на Android читает `"any"` как блокировку книжной.

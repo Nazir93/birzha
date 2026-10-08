@@ -39,7 +39,7 @@ export function applyBirzhaThemeToDocument(mode: BirzhaThemePreference): void {
   document.documentElement.dataset.birzhaTheme = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute("content", mode === "dark" ? "#18181b" : "#f4f4f5");
+    meta.setAttribute("content", mode === "dark" ? "#0b0b0e" : "#f6f7f9");
   }
 }
 
