@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
 import type { LoadingManifestSummary } from "../../api/types.js";
-import { formatLoadingManifestTableNumberLabel } from "../../format/loading-manifest.js";
+import {
+  formatLoadingManifestDisplayName,
+  formatLoadingManifestTableNumberLabel,
+} from "../../format/loading-manifest.js";
 import { groupLoadingManifestsForList } from "../../format/loading-manifest-list.js";
 import { formatPurchaseDocDateRu } from "../../format/purchase-doc-date.js";
 import { BirzhaPagination } from "../../ui/BirzhaPagination.js";
@@ -109,10 +112,18 @@ export function DistributionManifestListTable({
                 docDate: m.docDate,
                 tripLabel,
               });
+              /** Если после очистки дублей осталось «—» — показываем полное имя (город / свой №). */
+              const listNumberLabel =
+                numberLabel === "—"
+                  ? formatLoadingManifestDisplayName({
+                      manifestNumber: m.manifestNumber,
+                      destinationName: m.destinationName,
+                    })
+                  : numberLabel;
               const deleting = deletingManifestId === m.id;
               return (
                 <tr key={row.key} className={isCurrent ? "birzha-distribution-manifest-row--current" : undefined}>
-                  <td className="birzha-data-table__emph">{numberLabel}</td>
+                  <td className="birzha-data-table__emph">{listNumberLabel}</td>
                   <td>{tripLabel}</td>
                   <td>{formatPurchaseDocDateRu(m.docDate)}</td>
                   <td>{m.warehouseName}</td>

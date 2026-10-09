@@ -41,7 +41,8 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
   }
 
   async function apiLogin(request: import("@playwright/test").APIRequestContext, login: string): Promise<string> {
-    const res = await request.post("/auth/login", { data: { login, password } });
+    // Vite proxy: браузерный baseURL → /api → e2e API :3099
+    const res = await request.post("/api/auth/login", { data: { login, password } });
     expect(res.status()).toBe(200);
     const body = (await res.json()) as { token: string };
     return body.token;
@@ -111,49 +112,49 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
       tripNumber: `ROLE-${Date.now().toString().slice(-6)}`
     };
 
-    const sellerTripCreate = await request.post("/trips", {
+    const sellerTripCreate = await request.post("/api/trips", {
       headers: { authorization: `Bearer ${sellerToken}` },
       data: tripPayload
     });
     expect(sellerTripCreate.status()).toBe(403);
 
-    const purchaserTripCreate = await request.post("/trips", {
+    const purchaserTripCreate = await request.post("/api/trips", {
       headers: { authorization: `Bearer ${purchaserToken}` },
       data: { ...tripPayload, id: `${tripPayload.id}-p`, tripNumber: `${tripPayload.tripNumber}-P` }
     });
     expect(purchaserTripCreate.status()).toBe(201);
 
-    const receiverTripCreate = await request.post("/trips", {
+    const receiverTripCreate = await request.post("/api/trips", {
       headers: { authorization: `Bearer ${receiverToken}` },
       data: { ...tripPayload, id: `${tripPayload.id}-r`, tripNumber: `${tripPayload.tripNumber}-R` }
     });
     expect(receiverTripCreate.status()).toBe(403);
 
-    const managerTripCreate = await request.post("/trips", {
+    const managerTripCreate = await request.post("/api/trips", {
       headers: { authorization: `Bearer ${managerToken}` },
       data: { ...tripPayload, id: `${tripPayload.id}-m`, tripNumber: `${tripPayload.tripNumber}-M` }
     });
     expect(managerTripCreate.status()).toBe(201);
 
-    const logisticsTripCreate = await request.post("/trips", {
+    const logisticsTripCreate = await request.post("/api/trips", {
       headers: { authorization: `Bearer ${logisticsToken}` },
       data: { ...tripPayload, id: `${tripPayload.id}-l`, tripNumber: `${tripPayload.tripNumber}-L` }
     });
     expect(logisticsTripCreate.status()).toBe(201);
 
-    const warehouseCreateByAccountant = await request.post("/warehouses", {
+    const warehouseCreateByAccountant = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${accountantToken}`, "content-type": "application/json" },
       data: { name: "Forbidden warehouse", code: `F${Date.now().toString().slice(-4)}` }
     });
     expect(warehouseCreateByAccountant.status()).toBe(403);
 
-    const warehouseCreateByAdmin = await request.post("/warehouses", {
+    const warehouseCreateByAdmin = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${adminToken}`, "content-type": "application/json" },
       data: { name: "E2E warehouse", code: `A${Date.now().toString().slice(-4)}` }
     });
     expect(warehouseCreateByAdmin.status()).toBe(201);
 
-    const warehouseCreateByManager = await request.post("/warehouses", {
+    const warehouseCreateByManager = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${managerToken}`, "content-type": "application/json" },
       data: { name: "E2E manager warehouse", code: `M${Date.now().toString().slice(-4)}` }
     });

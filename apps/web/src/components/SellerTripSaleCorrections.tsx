@@ -1,11 +1,13 @@
 ﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../auth/auth-context.js";
 import { apiDelete, apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import type { BatchListItem, TripSaleLineJson } from "../api/types.js";
-import { kopecksToRubLabel } from "../format/money.js";
+import { gramsToKgLabel, kopecksToRubLabel } from "../format/money.js";
+import { sumSelectedSaleCorrectionGroups } from "../format/seller-sale-corrections-calc.js";
 import { kgNumberToGramsBigInt } from "../format/seller-trip-caliber-groups.js";
+import { formatPackageCountLabel } from "../format/seller-trip-metrics.js";
 import {
   maxSellablePackageCountForRowForSell,
   rowUsesPackageAccountingForSell,
@@ -347,6 +349,8 @@ function SellerTripSaleCorrectionsGroupRow({
   sellableRows,
   wholesalersCatalog,
   editingGroupKey,
+  selected,
+  onToggleSelected,
   onEditGroup,
   onCancelEdit,
   onDoneEdit,
@@ -357,6 +361,8 @@ function SellerTripSaleCorrectionsGroupRow({
   sellableRows: TripBatchTableRow[];
   wholesalersCatalog: boolean;
   editingGroupKey: string | null;
+  selected: boolean;
+  onToggleSelected: (groupKey: string) => void;
   onEditGroup: (groupKey: string) => void;
   onCancelEdit: () => void;
   onDoneEdit: () => void;
@@ -366,6 +372,7 @@ function SellerTripSaleCorrectionsGroupRow({
   const { muted, emphasis } = formatGroupCorrectionMetaParts(group);
   const multi = group.lines.length > 1;
   const isEditing = editingGroupKey === group.key;
+  const selectId = `seller-sale-calc-${group.key}`;
 
   const deleteGroup = () => {
     const msg = multi
@@ -381,6 +388,7 @@ function SellerTripSaleCorrectionsGroupRow({
 
   return (
     <li
+      className={selected ? "birzha-seller-sale-corrections__row--selected" : undefined}
       style={{
         borderBottom: "1px solid var(--color-border)",
         padding: "0.55rem 0",
@@ -394,23 +402,43 @@ function SellerTripSaleCorrectionsGroupRow({
           alignItems: "baseline",
         }}
       >
-        <span style={{ flex: "1 1 12rem" }}>
-          <strong>{group.lineLabel}</strong>
-          <span className="birzha-text-muted">
-            {" "}
-            · {muted}
-          </span>
-          {emphasis ? (
-            <>
+        <label
+          htmlFor={selectId}
+          style={{
+            display: "inline-flex",
+            alignItems: "flex-start",
+            gap: "0.45rem",
+            flex: "1 1 12rem",
+            cursor: "pointer",
+            margin: 0,
+          }}
+        >
+          <input
+            id={selectId}
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelected(group.key)}
+            style={{ marginTop: "0.2rem" }}
+            aria-label={`В калькулятор: ${group.lineLabel}, ${sum} ₽`}
+          />
+          <span>
+            <strong>{group.lineLabel}</strong>
+            <span className="birzha-text-muted">
               {" "}
-              · <strong>{emphasis}</strong>
-            </>
-          ) : null}
-          <span className="birzha-text-muted">
-            {" "}
-            · {sum} ₽
+              · {muted}
+            </span>
+            {emphasis ? (
+              <>
+                {" "}
+                · <strong>{emphasis}</strong>
+              </>
+            ) : null}
+            <span className="birzha-text-muted">
+              {" "}
+              · {sum} ₽
+            </span>
           </span>
-        </span>
+        </label>
         {!isEditing ? (
           <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
             <button type="button" className={btnClassSpaced} onClick={() => onEditGroup(group.key)}>
@@ -472,10 +500,16 @@ export function SellerTripSaleCorrections({
   const wholesalersCatalog = meta?.wholesalersCatalogApi === "enabled";
   const queryClient = useQueryClient();
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const linesQ = useQuery({
     ...tripSaleLinesQueryOptions(tripId),
     enabled: tripId.trim().length > 0 && tripOpen,
   });
+
+  useEffect(() => {
+    setSelectedKeys(new Set());
+    setEditingGroupKey(null);
+  }, [tripId]);
 
   const batchIds = useMemo(
     () => [...new Set((linesQ.data?.lines ?? []).map((l) => l.batchId))],
@@ -504,6 +538,52 @@ export function SellerTripSaleCorrections({
     }
     return groupTripSaleLinesForCorrections(sortedLines, batchById);
   }, [sortedLines, batchById, correctionsGroupsReady]);
+
+  const groupKeys = useMemo(() => saleGroups.map((g) => g.key), [saleGroups]);
+
+  useEffect(() => {
+    setSelectedKeys((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const alive = new Set(groupKeys);
+      let changed = false;
+      const next = new Set<string>();
+      for (const key of prev) {
+        if (alive.has(key)) {
+          next.add(key);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [groupKeys]);
+
+  const calcTotals = useMemo(
+    () => sumSelectedSaleCorrectionGroups(saleGroups, selectedKeys),
+    [saleGroups, selectedKeys],
+  );
+
+  const toggleSelected = (groupKey: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedKeys(new Set(groupKeys));
+  };
+
+  const clearSelection = () => {
+    setSelectedKeys(new Set());
+  };
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: queryRoots.shipmentReport });
@@ -537,8 +617,8 @@ export function SellerTripSaleCorrections({
       }
     >
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-        Можно изменить или отменить свою продажу, пока рейс не закрыт в админке. Список по калибрам из погрузочной
-        накладной — без разбивки по закупочным накладным.
+        Можно изменить или отменить свою продажу, пока рейс не закрыт в админке. Отметьте строки галочкой — внизу
+        сложится сумма «для себя» (на продажу не влияет).
       </p>
       {linesQ.isPending || (sortedLines.length > 0 && !correctionsGroupsReady) ? (
         <LoadingIndicator size="sm" label="Загрузка продаж…" />
@@ -547,25 +627,74 @@ export function SellerTripSaleCorrections({
       ) : saleGroups.length === 0 ? (
         <BirzhaEmptyState compact title="Пока нет продаж по этому рейсу" />
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-          {saleGroups.map((group) => (
-            <SellerTripSaleCorrectionsGroupRow
-              key={group.key}
-              group={group}
-              batchById={batchById}
-              sellableRows={sellableRows}
-              wholesalersCatalog={wholesalersCatalog}
-              editingGroupKey={editingGroupKey}
-              onEditGroup={setEditingGroupKey}
-              onCancelEdit={() => setEditingGroupKey(null)}
-              onDoneEdit={() => {
-                setEditingGroupKey(null);
-                invalidate();
-              }}
-              remove={remove}
-            />
-          ))}
-        </ul>
+        <>
+          <div className="birzha-seller-sale-corrections__toolbar no-print">
+            <button type="button" className="birzha-btn birzha-btn--inline" onClick={selectAll}>
+              Выбрать все
+            </button>
+            <button
+              type="button"
+              className="birzha-btn birzha-btn--inline"
+              onClick={clearSelection}
+              disabled={selectedKeys.size === 0}
+            >
+              Сбросить
+            </button>
+          </div>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {saleGroups.map((group) => (
+              <SellerTripSaleCorrectionsGroupRow
+                key={group.key}
+                group={group}
+                batchById={batchById}
+                sellableRows={sellableRows}
+                wholesalersCatalog={wholesalersCatalog}
+                editingGroupKey={editingGroupKey}
+                selected={selectedKeys.has(group.key)}
+                onToggleSelected={toggleSelected}
+                onEditGroup={setEditingGroupKey}
+                onCancelEdit={() => setEditingGroupKey(null)}
+                onDoneEdit={() => {
+                  setEditingGroupKey(null);
+                  invalidate();
+                }}
+                remove={remove}
+              />
+            ))}
+          </ul>
+          <div
+            className="birzha-seller-sale-corrections__calc"
+            role="status"
+            aria-live="polite"
+            aria-label="Калькулятор выбранных продаж"
+          >
+            {calcTotals.selectedCount === 0 ? (
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>
+                Отметьте продажи галочкой — здесь сложится сумма.
+              </p>
+            ) : (
+              <>
+                <p style={{ margin: 0, fontWeight: 700 }}>
+                  Выбрано: {calcTotals.selectedCount} · {gramsToKgLabel(calcTotals.grams.toString())} кг
+                  {calcTotals.packages > 0n ? (
+                    <>
+                      {" "}
+                      · {formatPackageCountLabel(calcTotals.packages)} ящ
+                    </>
+                  ) : null}
+                </p>
+                <p style={{ margin: "0.25rem 0 0", fontSize: "1.05rem" }}>
+                  Сумма: <strong>{kopecksToRubLabel(calcTotals.revenueKopecks.toString())} ₽</strong>
+                </p>
+                <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.2rem 0 0" }}>
+                  Нал {kopecksToRubLabel(calcTotals.cashKopecks.toString())} ₽ · карта{" "}
+                  {kopecksToRubLabel(calcTotals.cardKopecks.toString())} ₽ · долг{" "}
+                  {kopecksToRubLabel(calcTotals.debtKopecks.toString())} ₽
+                </p>
+              </>
+            )}
+          </div>
+        </>
       )}
       <FieldError error={remove.error as Error | null} />
     </BirzhaDisclosure>

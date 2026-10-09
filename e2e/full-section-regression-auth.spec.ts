@@ -66,22 +66,25 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await expect(page.getByText("Закупочные накладные")).toBeVisible();
 
     await page.goto("/a/settings/team");
-    await expect(page.getByRole("heading", { name: "Сотрудники" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Настройки" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Сотрудники" })).toBeVisible();
+    await expect(page.getByLabel("Сотрудники")).toBeVisible();
   });
 
   test("закупщик: /o содержит рабочие разделы и без админ-настроек", async ({ page }) => {
     await login(page, "e2e_purchaser");
-    await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/o\/?$/, { timeout: 20_000 });
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Погрузка на машину" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Догрузка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Смена рейса" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Рейсы" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
+    // Закрепление продавца — только admin/manager, не закупщик.
+    await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Настройки" })).toHaveCount(0);
     await page.goto("/a/settings/catalog");
-    await expect(page).toHaveURL(/\/o\/purchase-nakladnaya$/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/o\/?$/, { timeout: 20_000 });
   });
 
   test("логист: доступен полный операционный цикл /o", async ({ page }) => {
@@ -111,14 +114,17 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await login(page, "e2e_logistics");
     await expect(page).toHaveURL(/\/o\/reports$/, { timeout: 20_000 });
 
-    const token = await apiLogin(request, "e2e_logistics");
-    const auth = { authorization: `Bearer ${token}` };
+    // Создание накладной — purchaser/warehouse; логист только ship/trip.
+    const purchaserToken = await apiLogin(request, "e2e_purchaser");
+    const logisticsToken = await apiLogin(request, "e2e_logistics");
+    const purchaserAuth = { authorization: `Bearer ${purchaserToken}` };
+    const logisticsAuth = { authorization: `Bearer ${logisticsToken}` };
     const suffix = `${Date.now()}`;
     const docId = `e2e-pg-pn-${suffix}`;
     const tripNumber = `PG-PN-${suffix.slice(-8)}`;
 
     let res = await request.post("/api/purchase-documents", {
-      headers: auth,
+      headers: purchaserAuth,
       data: {
         id: docId,
         documentNumber: `НФ-PG-${suffix.slice(-8)}`,
@@ -137,30 +143,30 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
         ],
       },
     });
-    expect(res.ok()).toBeTruthy();
+    expect(res.ok(), await res.text()).toBeTruthy();
 
-    const docRes = await request.get(`/api/purchase-documents/${docId}`, { headers: auth });
+    const docRes = await request.get(`/api/purchase-documents/${docId}`, { headers: purchaserAuth });
     expect(docRes.ok()).toBeTruthy();
     const doc = (await docRes.json()) as { lines: { batchId: string }[] };
     const batchIds = doc.lines.map((l) => l.batchId);
 
     res = await request.post("/api/trips", {
-      headers: auth,
+      headers: logisticsAuth,
       data: { id: `e2e-pg-trip-${suffix}`, tripNumber },
     });
-    expect(res.ok()).toBeTruthy();
+    expect(res.ok(), await res.text()).toBeTruthy();
 
     res = await request.post("/api/loading-manifests", {
-      headers: auth,
+      headers: logisticsAuth,
       data: {
         warehouseId: "wh-manas",
-        destinationCode: "regions",
+        destinationCode: "moscow",
         batchIds,
         docDate: "2026-06-07",
         manifestNumber: `E2E-PG-PN-${suffix.slice(-8)}`,
       },
     });
-    expect(res.ok()).toBeTruthy();
+    expect(res.ok(), await res.text()).toBeTruthy();
     const { manifestId } = (await res.json()) as { manifestId: string };
 
     await page.goto(`/o/distribution/${encodeURIComponent(manifestId)}`);
@@ -197,6 +203,9 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await expect(page.getByRole("heading", { name: "Отчёт по рейсу (сверка)" })).toBeVisible();
 
     await page.goto("/b/counterparties");
-    await expect(page.getByRole("button", { name: "Добавить контрагента" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Контрагенты" })).toBeVisible();
+    await page.getByRole("tab", { name: "Клиенты" }).click();
+    await expect(page.getByText("Новый клиент")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Добавить" })).toBeVisible();
   });
 });

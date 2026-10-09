@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -12,6 +12,10 @@ import {
 import { gramsToKgLabel, kopecksToRubLabelSafe } from "../format/money.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { sellerFieldExpenseCategoryLabel } from "../format/seller-field-expense-labels.js";
+import {
+  buildDayScopedReport,
+  listSellerTripReportDays,
+} from "../format/seller-trip-daily-report.js";
 import { formatPackageCountLabel } from "../format/seller-trip-metrics.js";
 import { isTripOpenForSellerWorkspace } from "../format/seller-workspace-trips.js";
 import {
@@ -21,13 +25,14 @@ import {
   shouldShowSalesClientTable,
   type SaleChannelFilter,
 } from "../format/trip-sales-channel.js";
-import { queryRoots } from "../query/core-list-queries.js";
+import { queryRoots, tripSaleLinesQueryOptions } from "../query/core-list-queries.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { BirzhaDateField } from "./BirzhaCalendarFields.js";
 import { SellerSaleChannelPills } from "./SellerSaleChannelPills.js";
 import { SellerTripLoadingManifest } from "./SellerTripLoadingManifest.js";
 import { TripDebtReceivablesSection } from "./TripDebtReceivablesSection.js";
-import { tableStyle, thHead, thtd } from "../ui/styles.js";
+import { dateFieldStyle, tableStyle, thHead, thtd } from "../ui/styles.js";
 
 function sumSalesByProductLine(rows: TripSalesByProductLineRow[]) {
   let grams = 0n;
@@ -126,10 +131,33 @@ export function FieldSellerTripReport({
   const fieldOnly = Boolean(user && isFieldSellerOnly(user));
   const canDeleteExpenses = fieldOnly && isTripOpenForSellerWorkspace(report.trip);
   const [channel, setChannel] = useState<SaleChannelFilter>("all");
-  const { sales } = report;
+  /** `null` — весь рейс; иначе YYYY-MM-DD. */
+  const [dayYmd, setDayYmd] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDayYmd(null);
+  }, [report.trip.id]);
+
+  const linesQ = useQuery({
+    ...tripSaleLinesQueryOptions(report.trip.id),
+    enabled: Boolean(report.trip.id),
+  });
+  const saleLines = linesQ.data?.lines ?? [];
+  const activityDays = useMemo(
+    () => listSellerTripReportDays({ lines: saleLines, expenses: report.fieldExpenses ?? [] }),
+    [saleLines, report.fieldExpenses],
+  );
+  /** Пока строки не загрузились — не режем день (иначе пустая касса). */
+  const effectiveDay = linesQ.isSuccess ? dayYmd : null;
+  const view = useMemo(
+    () => buildDayScopedReport(report, saleLines, effectiveDay),
+    [report, saleLines, effectiveDay],
+  );
+  const { sales } = view;
   const retailTotals = salesChannelTotals(sales, "retail");
   const wholesaleTotals = salesChannelTotals(sales, "wholesale");
   const allTotals = salesChannelTotals(sales, "all");
+  const dayLabel = effectiveDay ? formatPurchaseDocDateRu(effectiveDay) : null;
 
   const delExpenseM = useMutation({
     mutationFn: async (id: string) => {
@@ -139,13 +167,14 @@ export function FieldSellerTripReport({
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: queryRoots.shipmentReport });
       await qc.invalidateQueries({ queryKey: queryRoots.sellerFieldExpenses });
+      await qc.invalidateQueries({ queryKey: queryRoots.tripSaleLines });
       await qc.invalidateQueries({ queryKey: ["accounting", "period-summary"] });
     },
   });
 
   const salesByProductLine = useMemo(
-    () => aggregateTripSalesByProductLine(report, batchById, channel),
-    [report, batchById, channel],
+    () => aggregateTripSalesByProductLine(view, batchById, channel),
+    [view, batchById, channel],
   );
   const clientLines = useMemo(() => salesClientLinesForChannel(sales, channel), [sales, channel]);
   const caliberTotals = sumSalesByProductLine(salesByProductLine);
@@ -156,6 +185,57 @@ export function FieldSellerTripReport({
 
   return (
     <div style={{ marginTop: "1rem" }} role="region" aria-label={`Отчёт ${report.trip.tripNumber}`}>
+      <section className="birzha-seller-day-filter no-print" aria-label="Период отчёта">
+        <div className="birzha-seller-day-filter__head">
+          <h3 className="birzha-form-label" style={{ margin: 0, fontSize: "0.95rem" }}>
+            {dayLabel ? `Отчёт за ${dayLabel}` : "Отчёт за весь рейс"}
+          </h3>
+          {linesQ.isPending ? (
+            <span className="birzha-text-muted birzha-ui-sm">Загрузка дней…</span>
+          ) : null}
+        </div>
+        <div className="birzha-seller-day-filter__pills" role="group" aria-label="День отчёта">
+          <button
+            type="button"
+            className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${dayYmd === null ? " birzha-admin-summary-toggle--active" : ""}`}
+            onClick={() => setDayYmd(null)}
+          >
+            Весь рейс
+          </button>
+          {activityDays.map((ymd) => (
+            <button
+              key={ymd}
+              type="button"
+              className={`birzha-btn birzha-btn--inline birzha-admin-summary-toggle${dayYmd === ymd ? " birzha-admin-summary-toggle--active" : ""}`}
+              onClick={() => setDayYmd(ymd)}
+              disabled={linesQ.isPending}
+            >
+              {formatPurchaseDocDateRu(ymd)}
+            </button>
+          ))}
+        </div>
+        <div className="birzha-seller-day-filter__calendar">
+          <label className="birzha-form-label" htmlFor="seller-report-day" style={{ margin: 0 }}>
+            Дата
+          </label>
+          <BirzhaDateField
+            id="seller-report-day"
+            aria-label="Дата дневного отчёта"
+            value={dayYmd ?? ""}
+            onChange={(ymd) => setDayYmd(ymd.trim() ? ymd : null)}
+            style={{ ...dateFieldStyle, maxWidth: "14rem" }}
+            disabled={linesQ.isPending}
+          />
+        </div>
+        {linesQ.isError ? (
+          <ErrorAlert
+            error={linesQ.error}
+            title="Дни отчёта"
+            message="Не удалось загрузить продажи по дням. Показан весь рейс."
+          />
+        ) : null}
+      </section>
+
       <SellerTripLoadingManifest report={report} batchById={batchById} defaultOpen />
       {report.shortage.totalGrams !== "0" && report.shortage.totalGrams !== "" ? (
         <p className="birzha-callout-info" style={{ margin: "0 0 1rem", fontSize: "0.92rem" }} role="status">
@@ -168,29 +248,31 @@ export function FieldSellerTripReport({
               · <strong>{report.shortage.totalPackageCount} ящ</strong>
             </>
           ) : null}
+          {dayLabel ? <span className="birzha-text-muted"> · за весь рейс</span> : null}
         </p>
       ) : null}
 
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.35rem", fontSize: "0.95rem" }}>
-        Траты с кассы
+        Траты с кассы{dayLabel ? ` · ${dayLabel}` : ""}
       </h3>
       <p className="birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
         Итого траты{" "}
-        <strong>{kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽</strong>
+        <strong>{kopecksToRubLabelSafe(view.financials.fieldExpensesKopecks)} ₽</strong>
         {" · "}к сдаче{" "}
-        <strong>{kopecksToRubLabelSafe(report.financials.cashToHandOverKopecks)} ₽</strong>
-        {report.financials.debtOutstandingKopecks != null &&
-        report.financials.debtOutstandingKopecks !== "0" &&
-        report.financials.debtOutstandingKopecks !== "" ? (
+        <strong>{kopecksToRubLabelSafe(view.financials.cashToHandOverKopecks)} ₽</strong>
+        {effectiveDay == null &&
+        view.financials.debtOutstandingKopecks != null &&
+        view.financials.debtOutstandingKopecks !== "0" &&
+        view.financials.debtOutstandingKopecks !== "" ? (
           <>
             {" · "}остаток долгов{" "}
-            <strong>{kopecksToRubLabelSafe(report.financials.debtOutstandingKopecks)} ₽</strong>
+            <strong>{kopecksToRubLabelSafe(view.financials.debtOutstandingKopecks)} ₽</strong>
           </>
         ) : null}
       </p>
       {delExpenseM.isError ? <ErrorAlert error={delExpenseM.error} title="Удаление траты" /> : null}
-      {(report.fieldExpenses ?? []).length === 0 ? (
-        <BirzhaEmptyState compact title="Трат по рейсу нет" />
+      {(view.fieldExpenses ?? []).length === 0 ? (
+        <BirzhaEmptyState compact title={dayLabel ? `Трат за ${dayLabel} нет` : "Трат по рейсу нет"} />
       ) : (
         <div className="birzha-table-scroll" style={{ marginBottom: "1rem" }}>
           <table style={{ ...tableStyle, minWidth: canDeleteExpenses ? 560 : 480 }} aria-label="Траты с кассы">
@@ -212,7 +294,7 @@ export function FieldSellerTripReport({
               </tr>
             </thead>
             <tbody>
-              {(report.fieldExpenses ?? []).map((e) => (
+              {(view.fieldExpenses ?? []).map((e) => (
                 <tr key={e.id}>
                   <td style={thtd}>{formatPurchaseDocDateRu(e.expenseDate)}</td>
                   <td style={thtd}>{sellerFieldExpenseCategoryLabel(e.category)}</td>
@@ -243,7 +325,7 @@ export function FieldSellerTripReport({
                   Итого
                 </th>
                 <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
-                  {kopecksToRubLabelSafe(report.financials.fieldExpensesKopecks)} ₽
+                  {kopecksToRubLabelSafe(view.financials.fieldExpensesKopecks)} ₽
                 </td>
                 <td style={thtd} colSpan={canDeleteExpenses ? 2 : 1} />
               </tr>
@@ -252,10 +334,10 @@ export function FieldSellerTripReport({
         </div>
       )}
 
-      <TripDebtReceivablesSection receivables={report.debtReceivables ?? []} compact />
+      <TripDebtReceivablesSection receivables={view.debtReceivables ?? []} compact />
 
       <h3 className="birzha-form-label" style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
-        Анализ продаж
+        Анализ продаж{dayLabel ? ` · ${dayLabel}` : ""}
       </h3>
       <SellerSaleChannelPills
         value={channel}
@@ -337,7 +419,15 @@ export function FieldSellerTripReport({
       {salesByProductLine.length === 0 ? (
         <BirzhaEmptyState
           compact
-          title={channel === "wholesale" && !hasWholesale ? "Нет оптовых продаж" : channel === "retail" && !hasRetail ? "Нет розничных продаж" : "Нет продаж"}
+          title={
+            dayLabel && !hasWholesale && !hasRetail
+              ? `Нет продаж за ${dayLabel}`
+              : channel === "wholesale" && !hasWholesale
+                ? "Нет оптовых продаж"
+                : channel === "retail" && !hasRetail
+                  ? "Нет розничных продаж"
+                  : "Нет продаж"
+          }
         />
       ) : (
         <div className="birzha-table-scroll birzha-table-scroll--sticky-head" style={{ marginBottom: "1rem" }}>

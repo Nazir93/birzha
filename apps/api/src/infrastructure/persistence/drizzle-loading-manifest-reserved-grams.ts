@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
 
 import type { DbClient } from "../../db/client.js";
-import { loadingManifestLines, loadingManifests } from "../../db/schema.js";
+import { batches, loadingManifestLines, loadingManifests } from "../../db/schema.js";
 
 /**
  * Резерв под новую ПН/догрузку: только строки черновых ПН (ещё без рейса).
@@ -38,4 +38,49 @@ export async function sumActiveLoadingManifestGramsByBatchIds(
     out.set(row.batchId, BigInt(row.grams));
   }
   return out;
+}
+
+/**
+ * Партия «полностью в резерве» черновых ПН: на складе нет свободных кг сверх строк ПН.
+ * Частичный возврат из отбора оставляет хвост на складе — такую партию нельзя прятать
+ * целиком из списка погрузки (иначе возвращённое нельзя снова взять в ПН/догрузку).
+ */
+export function isBatchFullyReservedOnDraftManifests(input: {
+  onWarehouseGrams: bigint;
+  reservedOnDraftManifestsGrams: bigint;
+}): boolean {
+  const reserved =
+    input.reservedOnDraftManifestsGrams > 0n ? input.reservedOnDraftManifestsGrams : 0n;
+  return reserved > 0n && reserved >= input.onWarehouseGrams;
+}
+
+/** ID партий склада, у которых весь остаток уже в черновых ПН (без рейса). */
+export async function listFullyReservedDraftManifestBatchIds(
+  db: DbClient,
+  warehouseId: string,
+): Promise<string[]> {
+  const wh = warehouseId.trim();
+  if (!wh) {
+    return [];
+  }
+  const rows = await db
+    .select({
+      batchId: loadingManifestLines.batchId,
+      reservedGrams: sql<string>`coalesce(sum(${loadingManifestLines.grams}), 0)`.mapWith(String),
+      onWarehouseGrams: batches.onWarehouseGrams,
+    })
+    .from(loadingManifestLines)
+    .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
+    .innerJoin(batches, eq(batches.id, loadingManifestLines.batchId))
+    .where(and(eq(loadingManifests.warehouseId, wh), isNull(loadingManifests.tripId)))
+    .groupBy(loadingManifestLines.batchId, batches.onWarehouseGrams);
+
+  return rows
+    .filter((r) =>
+      isBatchFullyReservedOnDraftManifests({
+        onWarehouseGrams: r.onWarehouseGrams,
+        reservedOnDraftManifestsGrams: BigInt(r.reservedGrams),
+      }),
+    )
+    .map((r) => r.batchId);
 }

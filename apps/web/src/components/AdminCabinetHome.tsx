@@ -10,7 +10,7 @@ import {
   tripsPickerQueryOptions,
 } from "../query/core-list-queries.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canCloseOrDeleteTrip } from "../auth/role-panels.js";
+import { canAccessCabinet, canCloseOrDeleteTrip } from "../auth/role-panels.js";
 import {
   buildMassSegments,
   gradeTableRows,
@@ -53,6 +53,8 @@ export function AdminCabinetHome() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showCloseTrip = canCloseOrDeleteTrip(user ?? null);
+  /** Переход в кабинет /b: admin/manager всегда; без JWT (dev) — тоже показываем. */
+  const showAccountingJump = !user || canAccessCabinet(user, "accounting");
   const [summaryChartMode, setSummaryChartMode] = useState<DashboardSummaryChartMode>("mass");
   const [summaryPeriod, setSummaryPeriod] = useState<DashboardSummaryPeriod>("30d");
 
@@ -264,13 +266,18 @@ export function AdminCabinetHome() {
               <Link to={adminRoutes.assignSeller} className="birzha-home-action">
                 <strong>Продажи</strong>
               </Link>
+              {showAccountingJump ? (
+                <Link to={accounting.home} className="birzha-home-action">
+                  <strong>Бухгалтерия</strong>
+                </Link>
+              ) : null}
             </nav>
           </header>
 
           <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi">
               <Link
                 to={adminRoutes.stockWarehouses}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
                 title="Физический остаток на складах (без массы в пути)"
               >
                 <div className="birzha-kpi-tile__label">Остаток на складе</div>
@@ -295,7 +302,7 @@ export function AdminCabinetHome() {
               </Link>
               <Link
                 to={adminRoutes.reports}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
                 title="Остаток в открытых рейсах (отгружено − продано − недостача)"
               >
                 <div className="birzha-kpi-tile__label">В открытых рейсах</div>
@@ -437,11 +444,49 @@ export function AdminCabinetHome() {
                 <Link to={adminRoutes.reports}>Отчёты</Link>
                 <Link to={adminRoutes.archive}>Архив</Link>
               </div>
-              <p className="birzha-admin-dash-modern__ops-accounting birzha-ui-sm">
-                <Link to={accounting.home}>Деньги и прибыль → Бухгалтерия</Link>
-              </p>
             </aside>
           </div>
+
+          {showAccountingJump ? (
+            <section
+              className="birzha-admin-dash-modern__chart-card birzha-admin-dash-modern__accounting"
+              aria-labelledby="admin-accounting-h"
+            >
+              <div className="birzha-admin-dash-modern__chart-head">
+                <h4 id="admin-accounting-h" style={{ margin: 0, fontSize: "1rem" }}>
+                  Бухгалтерия
+                </h4>
+                <Link to={accounting.home} className="birzha-ui-sm" style={{ fontWeight: 600 }}>
+                  Открыть кабинет →
+                </Link>
+              </div>
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.75rem" }}>
+                Касса, долги и прибыль — отдельный кабинет, чтобы не смешивать с товарными операциями.
+              </p>
+              <nav className="birzha-home-actions" aria-label="Разделы бухгалтерии">
+                <Link to={accounting.home} className="birzha-home-action">
+                  <span>Сводка</span>
+                  <strong>Касса и KPI</strong>
+                </Link>
+                <Link to={accounting.receivables} className="birzha-home-action">
+                  <span>Клиенты</span>
+                  <strong>Дебиторка</strong>
+                </Link>
+                <Link to={accounting.payables} className="birzha-home-action">
+                  <span>Тепличники</span>
+                  <strong>Кредиторка</strong>
+                </Link>
+                <Link to={accounting.profit} className="birzha-home-action">
+                  <span>Итог</span>
+                  <strong>Прибыль</strong>
+                </Link>
+                <Link to={accounting.reports} className="birzha-home-action">
+                  <span>Рейс</span>
+                  <strong>Отчёт</strong>
+                </Link>
+              </nav>
+            </section>
+          ) : null}
 
           <BirzhaDisclosure
             className="birzha-admin-dash-modern__trips-disclosure"

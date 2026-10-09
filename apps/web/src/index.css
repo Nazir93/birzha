@@ -7603,13 +7603,18 @@ html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
 
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
+  --kpi-glow: transparent;
+  --kpi-glow-soft: transparent;
   gap: 0.3rem;
   padding: 0.85rem 1rem 0.8rem;
   border: 0;
   border-radius: 0;
   background: transparent;
-  /* Линии справа и снизу; внешние обрезаются overflow контейнера */
-  box-shadow: 1px 1px 0 0 var(--birzha-border-hairline);
+  /* Линии справа и снизу + цветная «горящая» рамка по тону */
+  box-shadow:
+    1px 1px 0 0 var(--birzha-border-hairline),
+    inset 0 0 0 1px var(--kpi-glow),
+    inset 0 0 22px -8px var(--kpi-glow-soft);
   animation: none;
 }
 
@@ -7633,11 +7638,47 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
   background: color-mix(in srgb, var(--color-muted) 55%, transparent);
 }
 
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label::before {
-  background: var(--birzha-accent);
+/* Прибыль / плюс — зелёный */
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good {
+  --kpi-glow: rgba(34, 197, 94, 0.72);
+  --kpi-glow-soft: rgba(34, 197, 94, 0.42);
 }
 
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label::before {
+/* Убыль / расходы — красный */
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad {
+  --kpi-glow: rgba(239, 68, 68, 0.75);
+  --kpi-glow-soft: rgba(239, 68, 68, 0.45);
+}
+
+/* Долги / в рейсе / к сдаче — жёлтый */
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn {
+  --kpi-glow: rgba(245, 158, 11, 0.75);
+  --kpi-glow-soft: rgba(245, 158, 11, 0.42);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue {
+  --kpi-glow: rgba(59, 130, 246, 0.7);
+  --kpi-glow-soft: rgba(59, 130, 246, 0.38);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet {
+  --kpi-glow: rgba(20, 184, 166, 0.7);
+  --kpi-glow-soft: rgba(20, 184, 166, 0.38);
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label::before,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good .birzha-kpi-tile__label::before {
+  background: #22c55e;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad .birzha-kpi-tile__label::before {
+  background: #ef4444;
+}
+
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label::before,
+#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn .birzha-kpi-tile__label::before {
   background: #f59e0b;
 }
 
@@ -7647,6 +7688,34 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
 
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet .birzha-kpi-tile__label::before {
   background: #14b8a6;
+}
+
+@keyframes birzha-kpi-frame-glow {
+  0%,
+  100% {
+    box-shadow:
+      1px 1px 0 0 var(--birzha-border-hairline),
+      inset 0 0 0 1px var(--kpi-glow),
+      inset 0 0 18px -8px var(--kpi-glow-soft);
+  }
+  50% {
+    box-shadow:
+      1px 1px 0 0 var(--birzha-border-hairline),
+      inset 0 0 0 1.5px var(--kpi-glow),
+      inset 0 0 30px -4px var(--kpi-glow-soft);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue,
+  #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet {
+    animation: birzha-kpi-frame-glow 2.8s ease-in-out infinite;
+  }
 }
 
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile__value {
@@ -7664,14 +7733,33 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:hover,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
-  background: var(--birzha-accent-soft);
+  background: color-mix(in srgb, var(--kpi-glow) 10%, transparent);
   border: 0;
-  box-shadow: 1px 1px 0 0 var(--birzha-border-hairline);
+  box-shadow:
+    1px 1px 0 0 var(--birzha-border-hairline),
+    inset 0 0 0 1.5px var(--kpi-glow),
+    inset 0 0 28px -4px var(--kpi-glow-soft);
   transform: none;
 }
 
 #root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:focus-visible {
   outline-offset: -3px;
+}
+
+/* Плитки вне полосы сводки (страница прибыли и т.п.) */
+#root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-good {
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 18px -6px rgba(34, 197, 94, 0.45);
+}
+
+#root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-bad {
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 0 18px -6px rgba(239, 68, 68, 0.45);
+}
+
+#root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-warn {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35), 0 0 18px -6px rgba(245, 158, 11, 0.45);
 }
 
 /* --- Этап 3: стековый бар + легенда точками --- */
@@ -7789,6 +7877,69 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
 /* ===== Дизайн-слой v2 · этап 4: графики по дням (recharts) ===== */
 #root .birzha-daily-chart-card {
   margin-bottom: 1rem;
+}
+
+#root .birzha-admin-dash-modern__accounting {
+  margin: 1rem 0;
+}
+
+#root .birzha-admin-dash-modern__accounting .birzha-home-actions {
+  min-width: 0;
+}
+
+/* ===== Отчёт продавца: выбор дня ===== */
+.birzha-seller-day-filter {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--birzha-border-hairline);
+  border-radius: var(--birzha-radius-card, 16px);
+  background: var(--birzha-surface);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.birzha-seller-day-filter__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.birzha-seller-day-filter__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.birzha-seller-day-filter__calendar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+/* ===== Исправить продажи: калькулятор выбора ===== */
+.birzha-seller-sale-corrections__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+}
+
+.birzha-seller-sale-corrections__row--selected {
+  background: var(--birzha-accent-soft);
+  border-radius: 10px;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+}
+
+.birzha-seller-sale-corrections__calc {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--birzha-border-hairline);
+  border-radius: var(--birzha-radius-card, 16px);
+  background: var(--birzha-surface-muted);
 }
 
 .birzha-daily-chart {

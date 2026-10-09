@@ -26,6 +26,8 @@ const jwtSecret = process.env.E2E_JWT_SECRET ?? process.env.JWT_SECRET;
 
 if (pgUrl && jwtSecret && jwtSecret.length >= 32) {
   const requireAuth = process.env.E2E_REQUIRE_API_AUTH !== "false";
+  // E2E логинит все роли подряд — иначе @fastify/rate-limit (10/мин) даёт 429.
+  process.env.BIRZHA_AUTH_LOGIN_RATE_MAX ??= "1000";
   const env = loadEnv({
     NODE_ENV: "development",
     PORT: String(port),

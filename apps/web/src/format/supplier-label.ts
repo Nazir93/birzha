@@ -28,10 +28,17 @@ export function formatSupplierPurchaseLabel(
   const datePart = dateRu && dateRu !== "—" ? dateRu : "";
   const m = /^(\d+)/.exec(doc);
   if (!m) {
+    // Произвольный номер (НФ-… и т.п.): не теряем тепличника в подписи карточки.
+    if (doc && name && !doc.toLowerCase().includes(name.toLowerCase())) {
+      return datePart ? `${doc} · ${name} · ${datePart}` : `${doc} · ${name}`;
+    }
     return doc || name || "—";
   }
   const num = formatSupplierPurchaseNumber(Number.parseInt(m[1]!, 10));
   if (!num) {
+    if (doc && name && !doc.toLowerCase().includes(name.toLowerCase())) {
+      return datePart ? `${doc} · ${name} · ${datePart}` : `${doc} · ${name}`;
+    }
     return doc || name || "—";
   }
   const parts = [num];

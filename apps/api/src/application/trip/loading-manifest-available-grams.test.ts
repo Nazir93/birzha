@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   availableGramsForLoadingManifestLine,
+  batchIdsToReleaseLoadingBlocks,
   shouldReleaseLoadingBlocksForManifest,
 } from "./loading-manifest-available-grams.js";
 
@@ -46,18 +47,68 @@ describe("availableGramsForLoadingManifestLine", () => {
   });
 });
 
+describe("batchIdsToReleaseLoadingBlocks", () => {
+  it("режим новой ПН: только available=0 при наличии склада", () => {
+    expect(
+      batchIdsToReleaseLoadingBlocks(
+        [
+          { batchId: "a", physicalFreeGrams: 10_000n, availableGrams: 0n },
+          { batchId: "b", physicalFreeGrams: 5_000n, availableGrams: 2_000n },
+        ],
+        "when_available_zero",
+      ),
+    ).toEqual(["a"]);
+  });
+
+  it("режим новой ПН: в смешанном отборе снимает только полностью заблокированные", () => {
+    expect(
+      batchIdsToReleaseLoadingBlocks(
+        [
+          { batchId: "free", physicalFreeGrams: 10_000n, availableGrams: 6_000n },
+          { batchId: "returned", physicalFreeGrams: 5_000n, availableGrams: 0n },
+        ],
+        "when_available_zero",
+      ),
+    ).toEqual(["returned"]);
+  });
+
+  it("режим догрузки: снимает если блокировка режет свободный склад", () => {
+    expect(
+      batchIdsToReleaseLoadingBlocks(
+        [{ batchId: "partial", physicalFreeGrams: 100_000n, availableGrams: 60_000n }],
+        "when_blocking_reduces_free",
+      ),
+    ).toEqual(["partial"]);
+  });
+
+  it("не снимает если свободного склада нет", () => {
+    expect(
+      batchIdsToReleaseLoadingBlocks(
+        [{ batchId: "x", physicalFreeGrams: 0n, availableGrams: 0n }],
+        "when_available_zero",
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("shouldReleaseLoadingBlocksForManifest", () => {
-  it("снимает блокировку если всё закрыто журналом, а склад не пуст", () => {
+  it("true если есть партия с available=0 и физическим остатком", () => {
     expect(
       shouldReleaseLoadingBlocksForManifest([{ physicalFreeGrams: 10_000n, availableGrams: 0n }]),
     ).toBe(true);
-  });
-
-  it("не снимает если есть доступные кг", () => {
     expect(
       shouldReleaseLoadingBlocksForManifest([
         { physicalFreeGrams: 10_000n, availableGrams: 6_000n },
         { physicalFreeGrams: 5_000n, availableGrams: 0n },
+      ]),
+    ).toBe(true);
+  });
+
+  it("false если у всех available > 0", () => {
+    expect(
+      shouldReleaseLoadingBlocksForManifest([
+        { physicalFreeGrams: 10_000n, availableGrams: 6_000n },
+        { physicalFreeGrams: 5_000n, availableGrams: 1_000n },
       ]),
     ).toBe(false);
   });

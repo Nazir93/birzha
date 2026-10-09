@@ -83,11 +83,16 @@ export async function registerAuthRoutes(app: FastifyInstance, opts: { db: DbCli
     }
   });
 
+  const loginRateMaxRaw = process.env.BIRZHA_AUTH_LOGIN_RATE_MAX;
+  const loginRateMaxParsed = loginRateMaxRaw ? Number.parseInt(loginRateMaxRaw, 10) : Number.NaN;
+  const loginRateMax =
+    Number.isFinite(loginRateMaxParsed) && loginRateMaxParsed > 0 ? loginRateMaxParsed : 10;
+
   app.post(
     "/auth/login",
     {
       preHandler: app.rateLimit({
-        max: 10,
+        max: loginRateMax,
         timeWindow: "1 minute",
         groupId: "auth-login",
       }),

@@ -113,7 +113,7 @@ export function SellerCabinetHome() {
           <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi" aria-label="Итоги по открытым рейсам">
             <a
               href={`#${SELL_FORM_ID}`}
-              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
               title="Остаток на машине — к форме продажи"
             >
               <div className="birzha-kpi-tile__label">На машине</div>
@@ -122,7 +122,7 @@ export function SellerCabinetHome() {
             </a>
             <Link
               to={sales.reports}
-              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--violet birzha-kpi-tile--link"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
               title="Продано с закреплённых рейсов"
             >
               <div className="birzha-kpi-tile__label">Продано</div>
@@ -131,7 +131,7 @@ export function SellerCabinetHome() {
             </Link>
             <Link
               to={sales.expenses}
-              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
               title="Наличные к сдаче"
             >
               <div className="birzha-kpi-tile__label">К сдаче</div>

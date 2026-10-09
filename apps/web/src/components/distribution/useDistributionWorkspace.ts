@@ -355,7 +355,10 @@ export function useDistributionWorkspace({
     [byWarehouse, selectedWarehouse],
   );
 
-  const documentOptions = useMemo(() => documentOptionsForAllocation(batchesInWh), [batchesInWh]);
+  const documentOptions = useMemo(
+    () => documentOptionsForAllocation(batchesInWh, labelDest),
+    [batchesInWh, labelDest],
+  );
   const manifestDocumentOptions: LoadingManifestDocOption[] = useMemo(
     () => documentOptions.map((d) => ({ id: d.id, checkboxLabel: d.checkboxLabel })),
     [documentOptions],

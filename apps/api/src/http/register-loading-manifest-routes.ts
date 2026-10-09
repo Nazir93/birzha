@@ -8,7 +8,7 @@ import {
   loadingManifestReservedBatchIdsQuerySchema,
   updateLoadingManifestHeaderBodySchema,
 } from "@birzha/contracts";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
@@ -51,11 +51,14 @@ import {
 } from "../db/schema.js";
 import {
   availableGramsForLoadingManifestLine,
+  batchIdsToReleaseLoadingBlocks,
   physicalFreeGramsForLoadingManifestLine,
-  shouldReleaseLoadingBlocksForManifest,
 } from "../application/trip/loading-manifest-available-grams.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
-import { sumActiveLoadingManifestGramsByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
+import {
+  listFullyReservedDraftManifestBatchIds,
+  sumActiveLoadingManifestGramsByBatchIds,
+} from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { calendarYmdFromDate } from "../format/calendar-date.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
 import { sendMappedError } from "./map-http-error.js";
@@ -117,6 +120,7 @@ async function resolveAvailableGramsForManifestBatches(
     onWarehouseGrams: bigint;
   }[],
   reservedSums: Map<string, bigint>,
+  releaseMode: "when_available_zero" | "when_blocking_reduces_free" = "when_available_zero",
 ): Promise<Map<string, bigint>> {
   const batchIds = selected.map((r) => r.batchId);
   let blockingSums = await ledger.totalBlockingLoadingGramsByBatchIds(batchIds);
@@ -133,9 +137,12 @@ async function resolveAvailableGramsForManifestBatches(
     });
     return { batchId: r.batchId, physicalFreeGrams, availableGrams };
   });
-  if (shouldReleaseLoadingBlocksForManifest(draft)) {
-    await ledger.clearBlocksLoadingByBatchIds(batchIds);
-    blockingSums = new Map();
+  const releaseIds = batchIdsToReleaseLoadingBlocks(draft, releaseMode);
+  if (releaseIds.length > 0) {
+    await ledger.clearBlocksLoadingByBatchIds(releaseIds);
+    for (const id of releaseIds) {
+      blockingSums.delete(id);
+    }
   }
   const out = new Map<string, bigint>();
   for (const r of selected) {
@@ -265,14 +272,9 @@ export function registerLoadingManifestRoutes(
   app.get("/loading-manifests/reserved-batch-ids", { ...withPreHandlers(routeAuth.dataRead) }, async (req, reply) => {
     try {
       const q = loadingManifestReservedBatchIdsQuerySchema.parse(req.query);
-      /** Только черновые ПН (без рейса): после отгрузки остаток на складе снова доступен к догрузке. */
-      const rows = await db
-        .select({ batchId: loadingManifestLines.batchId })
-        .from(loadingManifestLines)
-        .innerJoin(loadingManifests, eq(loadingManifests.id, loadingManifestLines.manifestId))
-        .where(and(eq(loadingManifests.warehouseId, q.warehouseId), isNull(loadingManifests.tripId)))
-        .groupBy(loadingManifestLines.batchId);
-      return reply.send({ batchIds: rows.map((r) => r.batchId) });
+      /** Черновики без рейса; прячем только партии без свободного хвоста на складе. */
+      const batchIds = await listFullyReservedDraftManifestBatchIds(db, q.warehouseId);
+      return reply.send({ batchIds });
     } catch (error) {
       return sendMappedError(reply, error);
     }
@@ -670,6 +672,7 @@ export function registerLoadingManifestRoutes(
         blockingLedger,
         selected,
         reservedSums,
+        "when_blocking_reduces_free",
       );
       const withAvailable = selected.map((r) => ({
         ...r,

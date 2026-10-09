@@ -28,18 +28,44 @@ export function physicalFreeGramsForLoadingManifestLine(input: {
   return input.onWarehouseGrams > reserved ? input.onWarehouseGrams - reserved : 0n;
 }
 
+export type ReleaseLoadingBlocksMode =
+  /** Новая ПН: снять блокировку только если журнал обнулил доступность (available=0). */
+  | "when_available_zero"
+  /** Догрузка: снять, если блокировка режет свободный склад (чтобы вернуть кг в ту же ПН). */
+  | "when_blocking_reduces_free";
+
 /**
- * Если весь отбор «заблокирован» возвратом, а на складе есть кг — снимаем блокировку
- * (пользователь грузит возвращённый товар в новую ПН).
+ * Партии, у которых журнал возврата мешает положить свободный склад в ПН.
+ * При явном отборе (create/add-batches) блокировку снимаем по режиму.
  */
+export function batchIdsToReleaseLoadingBlocks(
+  rows: readonly {
+    batchId: string;
+    physicalFreeGrams: bigint;
+    availableGrams: bigint;
+  }[],
+  mode: ReleaseLoadingBlocksMode = "when_available_zero",
+): string[] {
+  return rows
+    .filter((r) => {
+      if (r.physicalFreeGrams <= 0n) {
+        return false;
+      }
+      if (mode === "when_blocking_reduces_free") {
+        return r.availableGrams < r.physicalFreeGrams;
+      }
+      return r.availableGrams <= 0n;
+    })
+    .map((r) => r.batchId);
+}
+
+/** Есть ли партии к снятию блокировки (режим новой ПН). */
 export function shouldReleaseLoadingBlocksForManifest(rows: readonly {
   physicalFreeGrams: bigint;
   availableGrams: bigint;
 }[]): boolean {
-  if (rows.length === 0) {
-    return false;
-  }
-  const anyPhysical = rows.some((r) => r.physicalFreeGrams > 0n);
-  const noneAvailable = rows.every((r) => r.availableGrams <= 0n);
-  return anyPhysical && noneAvailable;
+  return batchIdsToReleaseLoadingBlocks(
+    rows.map((r, i) => ({ batchId: String(i), ...r })),
+    "when_available_zero",
+  ).length > 0;
 }

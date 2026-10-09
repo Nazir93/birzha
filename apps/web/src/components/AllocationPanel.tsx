@@ -623,6 +623,7 @@ export function AllocationPanel() {
             onClearNakl={onClearNakl}
             batchesInWh={batchesInWh}
             warehouseName={warehouseName(selectedWarehouse)}
+            labelDest={labelDest}
             manifest={savedManifestQuery.data?.manifest ?? null}
             writeOff={
               meta?.warehouseWriteOffApi === "enabled" &&

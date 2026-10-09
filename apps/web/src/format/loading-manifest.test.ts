@@ -532,6 +532,41 @@ describe("buildWriteOffItemsFromInputs", () => {
 });
 
 describe("batchSnapshotForManifestLineRemainder / WriteOff", () => {
+  it("сохраняет тепличника со строки ПН и направление с живой партии", () => {
+    const live = b({
+      id: "b1",
+      totalKg: 100,
+      onWarehouseKg: 100,
+      nakladnaya: {
+        documentId: "d1",
+        warehouseId: "w1",
+        productGradeCode: "6",
+        productGroup: "Помидоры",
+        documentNumber: "01",
+        linePackageCount: null,
+        supplierName: "Со склада",
+      },
+      allocation: { qualityTier: null, destination: "moscow" },
+    });
+    const snap = batchSnapshotForManifestLineRemainder(
+      {
+        batchId: "b1",
+        kg: 40,
+        packageCount: null,
+        purchaseDocumentId: "d1",
+        purchaseDocumentNumber: "01",
+        productGradeCode: "6",
+        productGroup: "Помидоры",
+        supplierName: "Теплица Юг",
+      },
+      live,
+    );
+    expect(snap.nakladnaya?.supplierName).toBe("Теплица Юг");
+    expect(snap.allocation?.destination).toBe("moscow");
+    const rows = aggregateBatchesByPurchaseDocument([snap], "selection_remainder", { moscow: "Москва" });
+    expect(rows[0]?.displayLabel).toBe("Теплица Юг · № 01 → Москва");
+  });
+
   it("остаток в отборе берёт кг строки ПН, а не склад партии", () => {
     const live = b({
       id: "b1",

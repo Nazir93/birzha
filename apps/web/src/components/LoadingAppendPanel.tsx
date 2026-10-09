@@ -85,6 +85,7 @@ export function LoadingAppendPanel() {
     viewingArchivedManifest,
     warehouseName,
     activeManifestId,
+    labelDest,
   } = workspace;
 
   const appendTargetManifest = useMemo(() => {
@@ -395,6 +396,7 @@ export function LoadingAppendPanel() {
                 onClearNakl={onClearNakl}
                 batchesInWh={batchesInWh}
                 warehouseName={warehouseName(selectedWarehouse)}
+                labelDest={labelDest}
                 /* Возврат и остаток в отборе — по строкам выбранной ПН; отбор к догрузке — свободный склад. */
                 manifest={writeOffTargetManifest}
                 writeOff={

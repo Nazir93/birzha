@@ -1,6 +1,7 @@
 import { compareProductGradeLineLabels } from "@birzha/contracts";
 
 import type { BatchListItem } from "../api/types.js";
+import { purchaseDocumentLabelFromBatches } from "./allocation-document-options.js";
 import {
   batchAvailableForLoadingKg,
   batchKgInSelectionRemainder,
@@ -112,6 +113,8 @@ export type LoadingManifestLineStockSnapshot = {
   productGradeCode: string | null;
   productGroup: string | null;
   warehouseId?: string | null;
+  /** Тепличник со строки ПН / живой партии. */
+  supplierName?: string | null;
 };
 
 function parseLinePackageCount(raw: string | null | undefined): number | null {
@@ -137,6 +140,8 @@ function nakladnayaFromManifestLine(
     productGroup: line.productGroup ?? live?.nakladnaya?.productGroup ?? null,
     documentNumber: line.purchaseDocumentNumber?.trim() || live?.nakladnaya?.documentNumber || null,
     linePackageCount: linePk ?? live?.nakladnaya?.linePackageCount ?? null,
+    supplierName: line.supplierName?.trim() || live?.nakladnaya?.supplierName?.trim() || null,
+    docDate: live?.nakladnaya?.docDate ?? null,
   };
 }
 
@@ -162,6 +167,7 @@ export function batchSnapshotForManifestLineRemainder(
     availableForLoadingKg: lineKg,
     qualityRejectWrittenOffKg: 0,
     nakladnaya: nakladnayaFromManifestLine(line, live, linePk),
+    allocation: live?.allocation,
   };
 }
 
@@ -288,6 +294,7 @@ export type DocumentCaliberAggregateRow = {
 export function aggregateBatchesByDocumentCaliberLine(
   batches: readonly BatchListItem[],
   quantityMode: BatchAggregateQuantityMode = "loading",
+  labelDest?: Record<string, string>,
 ): DocumentCaliberAggregateRow[] {
   type Acc = {
     rowKey: string;
@@ -335,7 +342,11 @@ export function aggregateBatchesByDocumentCaliberLine(
   }
   const out: DocumentCaliberAggregateRow[] = [];
   for (const v of m.values()) {
-    const documentDisplayLabel = formatPurchaseDocumentDisplayLabel(v.documentId, v.documentNumber);
+    const documentDisplayLabel = purchaseDocumentLabelFromBatches(
+      v.batches,
+      { documentId: v.documentId, documentNumber: v.documentNumber },
+      labelDest,
+    );
     out.push({
       rowKey: v.rowKey,
       documentId: v.documentId,
@@ -476,6 +487,7 @@ export type PurchaseDocumentAggregateRow = {
 export function aggregateBatchesByPurchaseDocument(
   batches: readonly BatchListItem[],
   quantityMode: BatchAggregateQuantityMode = "loading",
+  labelDest?: Record<string, string>,
 ): PurchaseDocumentAggregateRow[] {
   type Acc = {
     rowKey: string;
@@ -519,7 +531,11 @@ export function aggregateBatchesByPurchaseDocument(
   }
   const out: PurchaseDocumentAggregateRow[] = [];
   for (const v of m.values()) {
-    const displayLabel = formatPurchaseDocumentDisplayLabel(v.documentId, v.documentNumber);
+    const displayLabel = purchaseDocumentLabelFromBatches(
+      v.batches,
+      { documentId: v.documentId, documentNumber: v.documentNumber },
+      labelDest,
+    );
     out.push({
       rowKey: v.rowKey,
       documentId: v.documentId,

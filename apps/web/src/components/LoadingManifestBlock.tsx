@@ -49,6 +49,8 @@ type Props = {
   onClearNakl: () => void;
   batchesInWh: BatchListItem[];
   warehouseName: string;
+  /** Подписи направлений для «→ Москва» в строках накладных. */
+  labelDest?: Record<string, string>;
   manifest?: LoadingManifestDetail | null;
   writeOff?: LoadingManifestWriteOffProps | null;
 };
@@ -94,6 +96,7 @@ export function LoadingManifestBlock({
   onClearNakl,
   batchesInWh,
   warehouseName,
+  labelDest,
   manifest = null,
   writeOff = null,
 }: Props) {
@@ -132,16 +135,16 @@ export function LoadingManifestBlock({
     [selectionRemainderBatches],
   );
   const documentRows = useMemo(
-    () => aggregateBatchesByPurchaseDocument(selectionRemainderBatches, "selection_remainder"),
-    [selectionRemainderBatches],
+    () => aggregateBatchesByPurchaseDocument(selectionRemainderBatches, "selection_remainder", labelDest),
+    [selectionRemainderBatches, labelDest],
   );
   const writeOffDocumentCaliberRows = useMemo(
-    () => aggregateBatchesByDocumentCaliberLine(writeOffBatches, "warehouse_return"),
-    [writeOffBatches],
+    () => aggregateBatchesByDocumentCaliberLine(writeOffBatches, "warehouse_return", labelDest),
+    [writeOffBatches, labelDest],
   );
   const writeOffDocumentRows = useMemo(
-    () => aggregateBatchesByPurchaseDocument(writeOffBatches, "warehouse_return"),
-    [writeOffBatches],
+    () => aggregateBatchesByPurchaseDocument(writeOffBatches, "warehouse_return", labelDest),
+    [writeOffBatches, labelDest],
   );
   const writeOffShowsPackages = useMemo(
     () =>
@@ -151,19 +154,21 @@ export function LoadingManifestBlock({
   );
 
   const uniqueDocuments = useMemo(() => {
-    const m = new Map<string, { id: string; number: string }>();
+    const labelById = new Map(documentOptions.map((d) => [d.id, d.checkboxLabel]));
+    const m = new Map<string, { id: string; label: string }>();
     for (const b of selectionRemainderBatches) {
-      const id = b.nakladnaya?.documentId;
+      const id = b.nakladnaya?.documentId?.trim();
       if (!id) {
         continue;
       }
-      m.set(id, {
-        id,
-        number: formatPurchaseDocumentDisplayLabel(id, b.nakladnaya?.documentNumber).replace(/^№\s*/, ""),
-      });
+      const fromOptions = labelById.get(id);
+      const label =
+        fromOptions ??
+        formatPurchaseDocumentDisplayLabel(id, b.nakladnaya?.documentNumber);
+      m.set(id, { id, label });
     }
-    return [...m.values()].sort((a, b) => a.number.localeCompare(b.number, "ru"));
-  }, [selectionRemainderBatches]);
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, "ru"));
+  }, [documentOptions, selectionRemainderBatches]);
 
   const stockTableLabelId = "loading-manifest-stock-table";
   const modeToggleId = "loading-manifest-mode";
@@ -223,7 +228,7 @@ export function LoadingManifestBlock({
           {uniqueDocuments.map((d) => (
             <span key={d.id} style={{ marginRight: 10 }}>
               <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontSize: "0.9rem" }}>
-                № {d.number}
+                {d.label}
               </Link>
             </span>
           ))}

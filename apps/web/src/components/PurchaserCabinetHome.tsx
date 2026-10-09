@@ -141,7 +141,7 @@ export function PurchaserCabinetHome() {
           <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi" aria-label="Итоги периода">
             <Link
               to={ops.purchaseNakladnaya}
-              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--accent birzha-kpi-tile--link"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
               title="Закупочные накладные за период"
             >
               <div className="birzha-kpi-tile__label">Накладных</div>
@@ -155,7 +155,7 @@ export function PurchaserCabinetHome() {
             </div>
             <Link
               to={ops.distribution}
-              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--amber birzha-kpi-tile--link"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
               title="Масса по вашим закупкам"
             >
               <div className="birzha-kpi-tile__label">Кг</div>

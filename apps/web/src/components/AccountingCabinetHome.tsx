@@ -6,6 +6,7 @@ import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
 import { canAccessCabinet } from "../auth/role-panels.js";
 import { accountingPathWithPeriod } from "../format/accounting-period.js";
+import { kpiToneForSignedKopecks } from "../format/kpi-tone.js";
 import { kopecksToRubDisplay } from "../format/money.js";
 import { tripReportHref } from "../format/trip-report-href.js";
 import { accounting, adminRoutes } from "../routes.js";
@@ -140,7 +141,7 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
   return (
     <>
       <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi" aria-label="Деньги с продаж и долги">
-        <KpiLink to={href(accounting.sales)} extraClass="birzha-kpi-tile--accent">
+        <KpiLink to={href(accounting.sales)} extraClass="birzha-kpi-tile--tone-good">
           <div className="birzha-kpi-tile__label">С продаж</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.revenueTotalKopecks)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">
@@ -152,12 +153,12 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.purchaseTotalKopecks)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">отдали {money(s.supplierPaidKopecks)}</div>
         </KpiLink>
-        <KpiLink to={href(accounting.payables)} extraClass="birzha-kpi-tile--amber">
+        <KpiLink to={href(accounting.payables)} extraClass="birzha-kpi-tile--tone-warn">
           <div className="birzha-kpi-tile__label">Должны тепличникам</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.payablesOutstandingKopecks)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">выдать по накладным</div>
         </KpiLink>
-        <KpiLink to={href(accounting.receivables)} extraClass="birzha-kpi-tile--blue">
+        <KpiLink to={href(accounting.receivables)} extraClass="birzha-kpi-tile--tone-warn">
           <div className="birzha-kpi-tile__label">Долги клиентов</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {money(s.receivablesOutstandingKopecks)}
@@ -167,17 +168,17 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
       </section>
 
       <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi" aria-label="Расходы и прибыль">
-        <KpiLink to={href(accounting.purchaserExpenses)} extraClass="birzha-kpi-tile--accent">
+        <KpiLink to={href(accounting.purchaserExpenses)} extraClass="birzha-kpi-tile--tone-bad">
           <div className="birzha-kpi-tile__label">Расходы закупщиков</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(purchaserExp)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">зарплата и прочее</div>
         </KpiLink>
-        <KpiLink to={href(accounting.sellerExpenses)} extraClass="birzha-kpi-tile--violet">
+        <KpiLink to={href(accounting.sellerExpenses)} extraClass="birzha-kpi-tile--tone-bad">
           <div className="birzha-kpi-tile__label">Расходы продавцов</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(sellerExp)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">грузчик, обед, палеты</div>
         </KpiLink>
-        <KpiLink to={href(accounting.rent)} extraClass="birzha-kpi-tile--amber">
+        <KpiLink to={href(accounting.rent)} extraClass="birzha-kpi-tile--tone-bad">
           <div className="birzha-kpi-tile__label">Аренда / бронь</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(rentExp)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">отдельно от полевых</div>
@@ -190,12 +191,12 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
       </section>
 
       <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi birzha-admin-dash-modern__kpi--pair" aria-label="Рейс и прибыль">
-        <KpiLink to={href(accounting.tripExpenses)} extraClass="birzha-kpi-tile--amber">
+        <KpiLink to={href(accounting.tripExpenses)} extraClass="birzha-kpi-tile--tone-bad">
           <div className="birzha-kpi-tile__label">Расходы по рейсу</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(tripExp)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">топливо, дорога, водитель</div>
         </KpiLink>
-        <KpiLink to={href(accounting.profit)} extraClass="birzha-kpi-tile--accent">
+        <KpiLink to={href(accounting.profit)} extraClass={kpiToneForSignedKopecks(s.netProfitKopecks)}>
           <div className="birzha-kpi-tile__label">Валовая / чистая</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
             {money(s.grossProfitKopecks)} / {money(s.netProfitKopecks)}
@@ -218,24 +219,24 @@ function SelectedKpis({ s }: { s: PeriodSummarySlice }) {
 
   return (
     <section className="birzha-kpi-grid birzha-admin-dash-modern__kpi" aria-label="Сводка по выборке">
-      <KpiTile extraClass="birzha-kpi-tile--accent">
+      <KpiTile extraClass="birzha-kpi-tile--tone-good">
         <div className="birzha-kpi-tile__label">С продаж</div>
         <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.revenueTotalKopecks)}</div>
         <div className="birzha-kpi-tile__hint birzha-ui-sm">
           нал {money(s.revenueCashKopecks)} · карта {money(s.revenueCardKopecks)} · долг {money(s.revenueDebtKopecks)}
         </div>
       </KpiTile>
-      <KpiTile extraClass="birzha-kpi-tile--blue">
+      <KpiTile extraClass="birzha-kpi-tile--tone-warn">
         <div className="birzha-kpi-tile__label">Долги клиентов</div>
         <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.receivablesOutstandingKopecks)}</div>
         <div className="birzha-kpi-tile__hint birzha-ui-sm">погашено {money(s.debtPaidKopecks)}</div>
       </KpiTile>
-      <KpiTile extraClass="birzha-kpi-tile--violet">
+      <KpiTile extraClass="birzha-kpi-tile--tone-bad">
         <div className="birzha-kpi-tile__label">Расходы продавцов</div>
         <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(sellerExp)}</div>
         <div className="birzha-kpi-tile__hint birzha-ui-sm">аренда {money(rentExp)} · отправки {money(sellerSends)}</div>
       </KpiTile>
-      <KpiTile extraClass="birzha-kpi-tile--amber">
+      <KpiTile extraClass={kpiToneForSignedKopecks(s.netProfitKopecks)}>
         <div className="birzha-kpi-tile__label">Рейс / прибыль</div>
         <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
           {money(s.grossProfitKopecks)} / {money(s.netProfitKopecks)}

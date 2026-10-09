@@ -8,6 +8,7 @@ import {
   accountingPathWithPeriod,
   readAccountingPeriodParams,
 } from "../format/accounting-period.js";
+import { kpiToneForSignedKopecks } from "../format/kpi-tone.js";
 import { kopecksToRubLabel } from "../format/money.js";
 import { accounting } from "../routes.js";
 import { AccountingSectionBack } from "./AccountingSectionBack.js";
@@ -77,19 +78,19 @@ export function AccountingProfitPeriodPanel() {
       {s ? (
         <>
           <div className="birzha-kpi-grid birzha-kpi-grid--wide" style={{ marginBottom: "1.25rem" }}>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <div className={`birzha-kpi-tile birzha-kpi-tile--premium ${kpiToneForSignedKopecks(s.grossProfitKopecks)}`}>
               <div className="birzha-kpi-tile__label">Валовая</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.grossProfitKopecks)}
               </div>
             </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <div className={`birzha-kpi-tile birzha-kpi-tile--premium ${kpiToneForSignedKopecks(s.netProfitKopecks)}`}>
               <div className="birzha-kpi-tile__label">Чистая</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.netProfitKopecks)}
               </div>
             </div>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium">
+            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-bad">
               <div className="birzha-kpi-tile__label">Все расходы</div>
               <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">
                 {kopecksToRubLabel(s.operatingExpensesKopecks ?? "0")}

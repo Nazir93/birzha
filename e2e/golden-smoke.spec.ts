@@ -132,7 +132,9 @@ test.describe("золотой smoke (UI + API)", () => {
       timeout: 15_000,
     });
     await expect(page.getByRole("heading", { name: "Продажи по клиентам" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(clientLabel, { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Продажи по клиентам").getByRole("cell", { name: clientLabel, exact: true }),
+    ).toBeVisible();
   });
 
   test("отчёты: недостача рейса в блоке «Массы, кг»", async ({ page, request }) => {
@@ -301,7 +303,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(region).toBeVisible({ timeout: 15_000 });
     await expect(region).toContainText(`${cashLabel} ₽ / ${cardLabel} ₽ / ${debtLabel} ₽`);
     await expect(page.getByRole("heading", { name: "Продажи по клиентам" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("E2E-Mixed", { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Продажи по клиентам").getByRole("cell", { name: "E2E-Mixed", exact: true }),
+    ).toBeVisible();
   });
 
   test("отчёты: полный числовой сценарий как в golden-scenario.flow.test (5000 кг → отгрузка → недостача → продажа)", async ({
@@ -407,7 +411,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(region.locator("tr").filter({ hasText: "Отгрузка в рейс" })).toContainText("3000,000");
     await expect(region.locator("tr").filter({ hasText: "Продажи" }).first()).toContainText("2900,000");
     await expect(region.locator("tr").filter({ hasText: "Недостача (фикс.)" })).toContainText("100,000");
-    await expect(page.getByText("ИП Иванов", { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Продажи по клиентам").getByRole("cell", { name: "ИП Иванов", exact: true }),
+    ).toBeVisible();
     await expect(region).toContainText(`${kopecksToRubLabel(report.financials.grossProfitKopecks)} ₽`);
   });
 
@@ -755,12 +761,13 @@ test.describe("золотой smoke (UI + API)", () => {
 
   test("продавец: /s — кабинет и форма продажи", async ({ page }) => {
     await page.goto("/s");
-    await expect(page.getByRole("heading", { name: "Кабинет продавца" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Сводка", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Итоги по открытым рейсам" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Продажа с рейса" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Тип сделки" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Розница или опт" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Розница" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Рейс" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Рейс", exact: true })).toBeVisible();
     await expect(birzhaSelectTrigger(page, "#seller-sell-sel-trip")).toBeVisible();
   });
 
@@ -1004,7 +1011,9 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёт по рейсу" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Контрагенты" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Сверка по рейсам" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Сводка", exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Общее за период" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Деньги с продаж и долги" })).toBeVisible();
   });
 
   test("бухгалтерия: /b без PostgreSQL — только деньги по рейсам", async ({ page, request }) => {
@@ -1012,9 +1021,10 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(res.status()).toBe(404);
 
     await page.goto("/b");
-    await expect(page.getByRole("heading", { name: "Сверка по рейсам" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Общее за период" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Остатки не загрузились")).toHaveCount(0);
-    await expect(page.getByText("Выручка, себестоимость и валовая прибыль")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Деньги с продаж и долги" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Расходы и прибыль" })).toBeVisible();
   });
 
   test("бухгалтерия: /b/reports — отчёт (сверка)", async ({ page, request }) => {
@@ -1038,9 +1048,13 @@ test.describe("золотой smoke (UI + API)", () => {
     expect(meta.counterpartyCatalogApi).toBe("enabled");
 
     await page.goto("/b/counterparties");
-    await expect(page.getByRole("region", { name: "Справочник контрагентов" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Контрагенты" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Контрагенты" })).toBeVisible();
-    await expect(page.getByText("Список контрагентов")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("tab", { name: "Тепличники" })).toBeVisible();
+    await page.getByRole("tab", { name: "Клиенты" }).click();
+    // Без сессии формы записи нет — проверяем вкладку и список (in-memory пуст).
+    await expect(page.getByText("Список клиентов")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Список пуст" })).toBeVisible();
   });
 
   test("бухгалтерия: legacy /b/seller-dispatch и /b/trade → /b", async ({ page }) => {
