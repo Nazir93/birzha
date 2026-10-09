@@ -143,21 +143,22 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     });
     expect(logisticsTripCreate.status()).toBe(201);
 
+    const uniq = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
     const warehouseCreateByAccountant = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${accountantToken}`, "content-type": "application/json" },
-      data: { name: "Forbidden warehouse", code: `F${Date.now().toString().slice(-4)}` }
+      data: { name: "Forbidden warehouse", code: `F${uniq}`.slice(0, 16) }
     });
     expect(warehouseCreateByAccountant.status()).toBe(403);
 
     const warehouseCreateByAdmin = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${adminToken}`, "content-type": "application/json" },
-      data: { name: "E2E warehouse", code: `A${Date.now().toString().slice(-4)}` }
+      data: { name: "E2E warehouse", code: `A${uniq}`.slice(0, 16) }
     });
     expect(warehouseCreateByAdmin.status()).toBe(201);
 
     const warehouseCreateByManager = await request.post("/api/warehouses", {
       headers: { authorization: `Bearer ${managerToken}`, "content-type": "application/json" },
-      data: { name: "E2E manager warehouse", code: `M${Date.now().toString().slice(-4)}` }
+      data: { name: "E2E manager warehouse", code: `M${uniq}`.slice(0, 16) }
     });
     expect(warehouseCreateByManager.status()).toBe(201);
   });
