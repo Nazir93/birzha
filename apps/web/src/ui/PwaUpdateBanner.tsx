@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+import { applyPwaUpdate } from "../pwa/apply-pwa-update.js";
 import { useSwPeriodicUpdate } from "../pwa/use-sw-periodic-update.js";
 
 /**
@@ -9,6 +10,7 @@ import { useSwPeriodicUpdate } from "../pwa/use-sw-periodic-update.js";
  */
 export function PwaUpdateBanner() {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | undefined>();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -37,20 +39,38 @@ export function PwaUpdateBanner() {
     return null;
   }
 
+  const onUpdate = () => {
+    if (isUpdating) {
+      return;
+    }
+    setIsUpdating(true);
+    void applyPwaUpdate({
+      updateServiceWorker,
+      registration,
+    }).catch(() => {
+      setIsUpdating(false);
+      window.location.reload();
+    });
+  };
+
   return (
     <div className="birzha-pwa-toast no-print" role="status" aria-live="polite">
-      <p className="birzha-pwa-toast__text">
-        Доступна новая версия. Обновите, чтобы получить последние изменения.
-      </p>
+      <p className="birzha-pwa-toast__text">Доступна новая версия приложения.</p>
       <div className="birzha-pwa-toast__actions">
         <button
           type="button"
-          className="birzha-btn-ghost birzha-pwa-toast__btn"
-          onClick={() => void updateServiceWorker(true)}
+          className="birzha-btn-primary birzha-pwa-toast__btn"
+          disabled={isUpdating}
+          onClick={onUpdate}
         >
-          Обновить
+          {isUpdating ? "Обновление…" : "Обновить"}
         </button>
-        <button type="button" className="birzha-btn-ghost birzha-pwa-toast__btn" onClick={() => setNeedRefresh(false)}>
+        <button
+          type="button"
+          className="birzha-btn-ghost birzha-pwa-toast__btn"
+          disabled={isUpdating}
+          onClick={() => setNeedRefresh(false)}
+        >
           Позже
         </button>
       </div>
