@@ -148,7 +148,7 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
             нал {money(s.revenueCashKopecks)} · карта {money(s.revenueCardKopecks)}
           </div>
         </KpiLink>
-        <KpiLink to={href(accounting.payables)} extraClass="birzha-kpi-tile--violet">
+        <KpiLink to={href(accounting.payables)} extraClass="birzha-kpi-tile--tone-bad">
           <div className="birzha-kpi-tile__label">Закуп тепличников</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(s.purchaseTotalKopecks)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">отдали {money(s.supplierPaidKopecks)}</div>
@@ -183,7 +183,7 @@ function OverallKpis({ s, href }: { s: PeriodSummarySlice; href: (path: string) 
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(rentExp)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">отдельно от полевых</div>
         </KpiLink>
-        <KpiLink to={href(accounting.sellerSends)} extraClass="birzha-kpi-tile--blue">
+        <KpiLink to={href(accounting.sellerSends)} extraClass="birzha-kpi-tile--tone-warn">
           <div className="birzha-kpi-tile__label">Отправки продавцов</div>
           <div className="birzha-kpi-tile__value birzha-kpi-tile__value--md">{money(sellerSends)}</div>
           <div className="birzha-kpi-tile__hint birzha-ui-sm">кому / сколько / дата</div>

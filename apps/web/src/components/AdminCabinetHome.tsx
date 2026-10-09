@@ -286,7 +286,7 @@ export function AdminCabinetHome() {
               </Link>
               <Link
                 to={adminRoutes.distribution}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--violet birzha-kpi-tile--link"
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
                 title="Погрузочные накладные в работе"
               >
                 <div className="birzha-kpi-tile__label">
@@ -311,7 +311,7 @@ export function AdminCabinetHome() {
               </Link>
               <Link
                 to={adminRoutes.assignSeller}
-                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue birzha-kpi-tile--link"
+                className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
                 title="Продано с открытых рейсов"
               >
                 <div className="birzha-kpi-tile__label">Продано</div>

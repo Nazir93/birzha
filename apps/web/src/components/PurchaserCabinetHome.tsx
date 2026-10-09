@@ -148,7 +148,7 @@ export function PurchaserCabinetHome() {
               <div className="birzha-kpi-tile__value">{grand.documentCount}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">Закупка товара</div>
             </Link>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--violet">
+            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good">
               <div className="birzha-kpi-tile__label">Сумма</div>
               <div className="birzha-kpi-tile__value">{kopecksToRubDisplay(grand.totalKopecks)} ₽</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">По вашим накладным</div>
@@ -162,7 +162,7 @@ export function PurchaserCabinetHome() {
               <div className="birzha-kpi-tile__value">{formatDashboardKg(grand.totalKg)}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке</div>
             </Link>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--blue">
+            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn">
               <div className="birzha-kpi-tile__label">Ящики</div>
               <div className="birzha-kpi-tile__value">{grand.packageCount.toLocaleString("ru-RU")}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">За период</div>

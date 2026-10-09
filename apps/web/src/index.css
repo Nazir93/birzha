@@ -5078,7 +5078,7 @@ html:not([data-birzha-theme="dark"]) .birzha-chart-card--premium {
   padding: 0.45rem 0.6rem;
   border-radius: 12px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease,
@@ -5640,12 +5640,9 @@ html[data-birzha-theme="dark"] .birzha-admin-summary-toggle--active {
   color: var(--color-text) !important;
 }
 
+/* Неон KPI задаётся ниже (#root … --kpi-neon); здесь только базовый фон без перетирания рамки */
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.94), rgba(17, 24, 39, 0.96));
-  border-color: rgba(100, 116, 139, 0.52);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 22px 46px -34px rgba(30, 64, 175, 0.55);
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile__label {
@@ -5656,34 +5653,37 @@ html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile__
   color: #f8fafc;
 }
 
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent {
-  background: linear-gradient(180deg, rgba(20, 83, 45, 0.92), rgba(17, 24, 39, 0.98));
-  border-color: rgba(34, 197, 94, 0.45);
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good {
+  background: linear-gradient(180deg, rgba(20, 83, 45, 0.55), rgba(17, 24, 39, 0.96));
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label,
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__value {
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__value,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good .birzha-kpi-tile__value {
   color: #bbf7d0;
 }
 
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber {
-  background: linear-gradient(180deg, rgba(120, 53, 15, 0.9), rgba(17, 24, 39, 0.98));
-  border-color: rgba(245, 158, 11, 0.48);
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn {
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.5), rgba(17, 24, 39, 0.96));
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label,
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__value {
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__value,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn .birzha-kpi-tile__value {
   color: #fde68a;
 }
 
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue {
-  background: linear-gradient(180deg, rgba(30, 58, 138, 0.92), rgba(17, 24, 39, 0.98));
-  border-color: rgba(96, 165, 250, 0.5);
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.55), rgba(17, 24, 39, 0.96));
 }
 
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label,
-html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__value {
-  color: #bfdbfe;
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad .birzha-kpi-tile__label,
+html[data-birzha-theme="dark"] .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad .birzha-kpi-tile__value {
+  color: #fecaca;
 }
 
 html[data-birzha-theme="dark"] .birzha-admin-dash-modern__chart-card,
@@ -7129,8 +7129,8 @@ html[data-birzha-theme="dark"] .birzha-section-filters {
   border-left-color: #14b8a6;
 }
 
-#root a.birzha-kpi-tile--link:hover,
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+/* Hover вне KPI-полосы сводки; неон полосы задаётся ниже и не должен сбрасываться */
+#root a.birzha-kpi-tile--link:hover {
   background: color-mix(in srgb, var(--birzha-accent) 8%, var(--birzha-surface));
   border-color: color-mix(in srgb, var(--birzha-accent) 30%, transparent);
   border-left-color: var(--birzha-accent);
@@ -7353,8 +7353,7 @@ html[data-birzha-theme="dark"] #root .birzha-kpi-tile--violet {
   border-left-color: #14b8a6;
 }
 
-html[data-birzha-theme="dark"] #root a.birzha-kpi-tile--link:hover,
-html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
+html[data-birzha-theme="dark"] #root a.birzha-kpi-tile--link:hover {
   background: color-mix(in srgb, var(--birzha-accent) 12%, var(--birzha-surface));
   border-color: color-mix(in srgb, var(--birzha-accent) 35%, transparent);
   border-left-color: var(--birzha-accent);
@@ -7590,31 +7589,33 @@ html[data-birzha-theme="dark"] #root .birzha-admin-summary-toggle--active {
   }
 }
 
-/* --- Этап 3: KPI-полоса сводки — одна карточка, ячейки разделены hairline-линиями --- */
+/* --- KPI-полоса сводок: отдельные плитки с неоновой рамкой (зел / крас / жёл) --- */
 #root .birzha-admin-dash-modern__kpi {
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0;
-  overflow: hidden;
-  margin-bottom: 0.9rem;
-  border: 1px solid var(--birzha-border-hairline);
-  border-radius: var(--birzha-radius-card);
-  background: var(--birzha-surface);
+  gap: 0.65rem;
+  overflow: visible;
+  margin-bottom: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile {
-  --kpi-glow: transparent;
-  --kpi-glow-soft: transparent;
+  --kpi-neon: rgba(148, 163, 184, 0.45);
+  --kpi-neon-soft: rgba(148, 163, 184, 0.2);
+  --kpi-neon-core: #94a3b8;
   gap: 0.3rem;
   padding: 0.85rem 1rem 0.8rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  /* Линии справа и снизу + цветная «горящая» рамка по тону */
+  overflow: visible;
+  border: 1.5px solid var(--kpi-neon);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--birzha-surface) 92%, transparent);
   box-shadow:
-    1px 1px 0 0 var(--birzha-border-hairline),
-    inset 0 0 0 1px var(--kpi-glow),
-    inset 0 0 22px -8px var(--kpi-glow-soft);
+    0 0 0 1px color-mix(in srgb, var(--kpi-neon) 35%, transparent),
+    0 0 12px var(--kpi-neon-soft),
+    0 0 28px -6px var(--kpi-neon-soft),
+    inset 0 0 18px -10px var(--kpi-neon-soft);
   animation: none;
 }
 
@@ -7635,74 +7636,64 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
   height: 0.5rem;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-muted) 55%, transparent);
+  background: var(--kpi-neon-core);
+  box-shadow: 0 0 8px var(--kpi-neon);
 }
 
-/* Прибыль / плюс — зелёный */
+/* Зелёный — остаток / продажи / прибыль+ */
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent,
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good {
-  --kpi-glow: rgba(34, 197, 94, 0.72);
-  --kpi-glow-soft: rgba(34, 197, 94, 0.42);
+  --kpi-neon: rgba(34, 197, 94, 0.95);
+  --kpi-neon-soft: rgba(34, 197, 94, 0.55);
+  --kpi-neon-core: #22c55e;
+  background: color-mix(in srgb, rgba(34, 197, 94, 0.12) 40%, var(--birzha-surface));
 }
 
-/* Убыль / расходы — красный */
+/* Красный — расходы / убыль / закуп */
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad {
-  --kpi-glow: rgba(239, 68, 68, 0.75);
-  --kpi-glow-soft: rgba(239, 68, 68, 0.45);
+  --kpi-neon: rgba(239, 68, 68, 0.95);
+  --kpi-neon-soft: rgba(239, 68, 68, 0.55);
+  --kpi-neon-core: #ef4444;
+  background: color-mix(in srgb, rgba(239, 68, 68, 0.12) 40%, var(--birzha-surface));
 }
 
-/* Долги / в рейсе / к сдаче — жёлтый */
+/* Жёлтый — долги / в рейсе / к сдаче */
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber,
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn {
-  --kpi-glow: rgba(245, 158, 11, 0.75);
-  --kpi-glow-soft: rgba(245, 158, 11, 0.42);
+  --kpi-neon: rgba(245, 158, 11, 0.95);
+  --kpi-neon-soft: rgba(245, 158, 11, 0.55);
+  --kpi-neon-core: #f59e0b;
+  background: color-mix(in srgb, rgba(245, 158, 11, 0.12) 40%, var(--birzha-surface));
 }
 
+/* Legacy blue/violet → тоже неоном, если где-то остались */
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue {
-  --kpi-glow: rgba(59, 130, 246, 0.7);
-  --kpi-glow-soft: rgba(59, 130, 246, 0.38);
+  --kpi-neon: rgba(59, 130, 246, 0.9);
+  --kpi-neon-soft: rgba(59, 130, 246, 0.5);
+  --kpi-neon-core: #3b82f6;
 }
 
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet {
-  --kpi-glow: rgba(20, 184, 166, 0.7);
-  --kpi-glow-soft: rgba(20, 184, 166, 0.38);
-}
-
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--accent .birzha-kpi-tile__label::before,
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-good .birzha-kpi-tile__label::before {
-  background: #22c55e;
-}
-
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-bad .birzha-kpi-tile__label::before {
-  background: #ef4444;
-}
-
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--amber .birzha-kpi-tile__label::before,
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn .birzha-kpi-tile__label::before {
-  background: #f59e0b;
-}
-
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue .birzha-kpi-tile__label::before {
-  background: #3b82f6;
-}
-
-#root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet .birzha-kpi-tile__label::before {
-  background: #14b8a6;
+  --kpi-neon: rgba(20, 184, 166, 0.9);
+  --kpi-neon-soft: rgba(20, 184, 166, 0.5);
+  --kpi-neon-core: #14b8a6;
 }
 
 @keyframes birzha-kpi-frame-glow {
   0%,
   100% {
     box-shadow:
-      1px 1px 0 0 var(--birzha-border-hairline),
-      inset 0 0 0 1px var(--kpi-glow),
-      inset 0 0 18px -8px var(--kpi-glow-soft);
+      0 0 0 1px color-mix(in srgb, var(--kpi-neon) 40%, transparent),
+      0 0 10px var(--kpi-neon-soft),
+      0 0 22px -4px var(--kpi-neon-soft),
+      inset 0 0 16px -10px var(--kpi-neon-soft);
   }
   50% {
     box-shadow:
-      1px 1px 0 0 var(--birzha-border-hairline),
-      inset 0 0 0 1.5px var(--kpi-glow),
-      inset 0 0 30px -4px var(--kpi-glow-soft);
+      0 0 0 1px color-mix(in srgb, var(--kpi-neon) 70%, transparent),
+      0 0 16px var(--kpi-neon-soft),
+      0 0 36px -2px var(--kpi-neon-soft),
+      inset 0 0 22px -6px var(--kpi-neon-soft);
   }
 }
 
@@ -7714,7 +7705,7 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
   #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--tone-warn,
   #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--blue,
   #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile--violet {
-    animation: birzha-kpi-frame-glow 2.8s ease-in-out infinite;
+    animation: birzha-kpi-frame-glow 2.6s ease-in-out infinite;
   }
 }
 
@@ -7733,33 +7724,44 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
 #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:hover,
 html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-tile:hover {
-  background: color-mix(in srgb, var(--kpi-glow) 10%, transparent);
-  border: 0;
+  background: color-mix(in srgb, var(--kpi-neon-core) 14%, var(--birzha-surface));
+  border-color: var(--kpi-neon);
   box-shadow:
-    1px 1px 0 0 var(--birzha-border-hairline),
-    inset 0 0 0 1.5px var(--kpi-glow),
-    inset 0 0 28px -4px var(--kpi-glow-soft);
+    0 0 0 1px color-mix(in srgb, var(--kpi-neon) 65%, transparent),
+    0 0 18px var(--kpi-neon-soft),
+    0 0 40px -2px var(--kpi-neon-soft),
+    inset 0 0 24px -6px var(--kpi-neon-soft);
   transform: none;
 }
 
 #root .birzha-admin-dash-modern__kpi a.birzha-kpi-tile--link:focus-visible {
-  outline-offset: -3px;
+  outline: 2px solid var(--kpi-neon-core);
+  outline-offset: 2px;
 }
 
-/* Плитки вне полосы сводки (страница прибыли и т.п.) */
+/* Плитки вне полосы сводки (страница прибыли и т.п.) — тот же неон */
 #root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-good {
-  border-color: rgba(34, 197, 94, 0.55);
-  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 0 18px -6px rgba(34, 197, 94, 0.45);
+  border: 1.5px solid rgba(34, 197, 94, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.35),
+    0 0 14px rgba(34, 197, 94, 0.45),
+    0 0 28px -4px rgba(34, 197, 94, 0.4);
 }
 
 #root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-bad {
-  border-color: rgba(239, 68, 68, 0.55);
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 0 18px -6px rgba(239, 68, 68, 0.45);
+  border: 1.5px solid rgba(239, 68, 68, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.35),
+    0 0 14px rgba(239, 68, 68, 0.45),
+    0 0 28px -4px rgba(239, 68, 68, 0.4);
 }
 
 #root .birzha-kpi-grid--wide > .birzha-kpi-tile--tone-warn {
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35), 0 0 18px -6px rgba(245, 158, 11, 0.45);
+  border: 1.5px solid rgba(245, 158, 11, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.35),
+    0 0 14px rgba(245, 158, 11, 0.45),
+    0 0 28px -4px rgba(245, 158, 11, 0.4);
 }
 
 /* --- Этап 3: стековый бар + легенда точками --- */
