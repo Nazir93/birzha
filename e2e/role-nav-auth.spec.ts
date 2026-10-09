@@ -20,7 +20,8 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
     { login: "e2e_accountant", home: /\/b\/?$/, disallowCabinets: ["/a/reports", "/o/reports", "/s/reports"] },
     { login: "e2e_manager", home: /\/a\/?$/, disallowCabinets: [] as string[] },
     { login: "e2e_purchaser", home: /\/o\/?$/, disallowCabinets: ["/a/reports", "/b/reports"] },
-    { login: "e2e_warehouse", home: /\/o\/purchase-nakladnaya$/, disallowCabinets: ["/a/reports", "/b/reports"] },
+    // defaultRoute = закупка; postLogin может оставить /o/reports (роль видит отчёты).
+    { login: "e2e_warehouse", home: /\/o\/(purchase-nakladnaya|reports)\/?$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_logistics", home: /\/o\/reports$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_receiver", home: /\/o\/reports$/, disallowCabinets: ["/a/reports", "/b/reports"] },
     { login: "e2e_seller", home: /\/s\/?$/, disallowCabinets: ["/a/reports", "/o/reports", "/b/reports"] },
@@ -28,11 +29,11 @@ describeAuth("роли: навигация при REQUIRE_API_AUTH (PostgreSQL)"
 
   async function uiLogin(page: import("@playwright/test").Page, login: string): Promise<void> {
     await page.context().clearCookies();
-    await page.addInitScript(() => {
-      sessionStorage.clear();
-      localStorage.removeItem("birzha_api_token");
-    });
     await page.goto("/login");
+    await page.evaluate(() => {
+      sessionStorage.clear();
+      localStorage.clear();
+    });
     await expect(page.getByRole("heading", { name: "Вход" })).toBeVisible({ timeout: 30_000 });
     await page.locator("#login-user").fill(login);
     await page.locator("#login-pass").fill(password);
