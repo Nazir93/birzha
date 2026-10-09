@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { apiFetch, assertOkResponse } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
-import { canAccessCabinet } from "../auth/role-panels.js";
 import { accountingPathWithPeriod } from "../format/accounting-period.js";
 import { kpiToneForSignedKopecks } from "../format/kpi-tone.js";
 import { kopecksToRubDisplay } from "../format/money.js";
 import { tripReportHref } from "../format/trip-report-href.js";
-import { accounting, adminRoutes } from "../routes.js";
+import { accounting } from "../routes.js";
 import { BirzhaDateField, formatYmd } from "./BirzhaCalendarFields.js";
 import { AccountingStockBalances } from "./AccountingStockBalances.js";
 import { DailySeriesChart } from "./dashboard/DailySeriesChart.js";
@@ -253,8 +252,7 @@ function SelectedKpis({ s }: { s: PeriodSummarySlice }) {
  * Сводка бухгалтера: общее за период + выборка региона/рейса с детализацией.
  */
 export function AccountingCabinetHome() {
-  const { user, meta } = useAuth();
-  const canGoToAdminPanel = user ? canAccessCabinet(user, "admin") : false;
+  const { meta } = useAuth();
   const shipDestEnabled = meta?.shipDestinationsApi === "enabled";
   const [period, setPeriod] = useState<DashboardSummaryPeriod>("30d");
   const defaults = useMemo(() => periodRange("30d"), []);
@@ -381,11 +379,6 @@ export function AccountingCabinetHome() {
           <Link to={accounting.counterparties} className="birzha-home-action">
             <strong>Контрагенты</strong>
           </Link>
-          {canGoToAdminPanel ? (
-            <Link to={adminRoutes.home} className="birzha-home-action">
-              <strong>Админка</strong>
-            </Link>
-          ) : null}
         </nav>
       </header>
 

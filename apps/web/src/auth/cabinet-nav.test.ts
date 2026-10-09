@@ -139,7 +139,22 @@ describe("cabinet-nav", () => {
       key: "acc-purch-exp",
     });
     expect(links[5]).toEqual({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    expect(links.find((x) => x.key === "jump-admin")).toBeUndefined();
     expect(links.every((l) => l.to.startsWith(prefix.accounting))).toBe(true);
+  });
+
+  it("admin в /b: в сайдбаре есть переход в админку", () => {
+    const user = {
+      id: "u-admin",
+      login: "admin",
+      roles: [{ roleCode: "admin", scopeType: "global" as const, scopeId: "" }],
+    };
+    const links = buildCabinetNavEntries("accounting", user, true);
+    expect(links.find((x) => x.key === "jump-admin")).toEqual({
+      to: adminRoutes.home,
+      label: "Админка",
+      key: "jump-admin",
+    });
   });
 
   it("продавец (только seller): кабинет /s — продажа, отчёт, траты и архив", () => {

@@ -101,6 +101,9 @@ export function buildCabinetNavEntries(
     out.push({ to: accounting.payables, label: "Кредиторка", key: "acc-pay" });
     out.push({ to: accounting.purchaserExpenses, label: "Расходы закуп", key: "acc-purch-exp" });
     out.push({ to: accounting.counterparties, label: "Контрагенты", key: "acc-cp" });
+    if (canAccessCabinet(user, "admin")) {
+      out.push({ to: adminRoutes.home, label: "Админка", key: "jump-admin" });
+    }
     return out;
   }
   const panelOrder = cabinet === "admin" ? adminSidebarPanelOrder(user) : operationsPanelOrder(user);
