@@ -17,6 +17,7 @@ import { LoadingManifestTripDetachForbiddenError } from "../application/errors.j
 import type { PurchaserExpenseRepository } from "../application/ports/purchaser-expense-repository.port.js";
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
+import { planAppendLoadingManifestLineGrams } from "../application/trip/plan-append-loading-manifest-line-grams.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
 import { assertBatchesMatchTripProduct } from "../application/trip/assert-batches-match-trip-product.js";
@@ -697,22 +698,26 @@ export function registerLoadingManifestRoutes(
         const affectedBatchIds = new Set<string>();
         for (const row of withStock) {
           const already = existingByBatch.get(row.batchId);
-          const targetGrams = row.availableGrams;
-          const packageCount = packageCountForPart(row.totalGrams, targetGrams, row.linePackageCount);
-          if (already) {
-            if (targetGrams > already.grams) {
-              await exec
-                .update(loadingManifestLines)
-                .set({ grams: targetGrams, packageCount })
-                .where(and(eq(loadingManifestLines.manifestId, manifestId), eq(loadingManifestLines.batchId, row.batchId)));
-              affectedBatchIds.add(row.batchId);
-            }
+          const linePlan = planAppendLoadingManifestLineGrams({
+            existingLineGrams: already ? already.grams : null,
+            availableWarehouseGrams: row.availableGrams,
+          });
+          if (linePlan.kind === "skip") {
+            continue;
+          }
+          const packageCount = packageCountForPart(row.totalGrams, linePlan.targetGrams, row.linePackageCount);
+          if (linePlan.kind === "increase" && already) {
+            await exec
+              .update(loadingManifestLines)
+              .set({ grams: linePlan.targetGrams, packageCount })
+              .where(and(eq(loadingManifestLines.manifestId, manifestId), eq(loadingManifestLines.batchId, row.batchId)));
+            affectedBatchIds.add(row.batchId);
           } else {
             await exec.insert(loadingManifestLines).values({
               manifestId,
               batchId: row.batchId,
               lineNo: nextLineNo++,
-              grams: targetGrams,
+              grams: linePlan.targetGrams,
               packageCount,
             });
             affectedBatchIds.add(row.batchId);
