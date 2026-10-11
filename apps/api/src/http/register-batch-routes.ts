@@ -555,6 +555,7 @@ export function registerBatchRoutes(
               createdAt: batchWarehouseWriteOffs.createdAt,
               documentId: purchaseDocuments.id,
               documentNumber: purchaseDocuments.documentNumber,
+              supplierName: purchaseDocuments.supplierName,
               productGradeCode: productGrades.code,
             })
             .from(batchWarehouseWriteOffs)
@@ -583,6 +584,7 @@ export function registerBatchRoutes(
               kg: gramsToKg(r.grams),
               createdAt: r.createdAt.toISOString(),
               productGradeCode: r.productGradeCode,
+              supplierName: r.supplierName,
             })),
           });
         }
@@ -622,6 +624,7 @@ export function registerBatchRoutes(
             createdAt: batchWarehouseWriteOffs.createdAt,
             purchaseDocumentId: purchaseDocuments.id,
             documentNumber: purchaseDocuments.documentNumber,
+            supplierName: purchaseDocuments.supplierName,
             productGradeCode: productGrades.code,
             warehouseName: warehousesTable.name,
             warehouseCode: warehousesTable.code,
@@ -670,6 +673,7 @@ export function registerBatchRoutes(
             createdAt: r.createdAt.toISOString(),
             purchaseDocumentId: r.purchaseDocumentId,
             documentNumber: r.documentNumber,
+            supplierName: r.supplierName,
             productGradeCode: r.productGradeCode,
             warehouseName: r.warehouseName,
             warehouseCode: r.warehouseCode,

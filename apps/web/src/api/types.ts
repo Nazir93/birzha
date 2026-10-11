@@ -45,7 +45,14 @@ export type BatchListItem = {
 export type WarehouseWriteOffsByDocumentResponse = {
   documentId: string;
   totalKg: number;
-  lines: { id: string; batchId: string; kg: number; createdAt: string; productGradeCode: string | null }[];
+  lines: {
+    id: string;
+    batchId: string;
+    kg: number;
+    createdAt: string;
+    productGradeCode: string | null;
+    supplierName?: string | null;
+  }[];
 };
 
 /** Ответ `GET /warehouse-write-offs` без `purchaseDocumentId` — последние списания по всем накладным. */
@@ -70,6 +77,8 @@ export type WarehouseWriteOffsRecentResponse = {
     createdAt: string;
     purchaseDocumentId: string;
     documentNumber: string | null;
+    /** Тепличник (снимок с закупочной накладной). */
+    supplierName?: string | null;
     productGradeCode: string | null;
     warehouseName: string | null;
     warehouseCode: string | null;

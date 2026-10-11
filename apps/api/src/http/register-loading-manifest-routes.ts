@@ -240,7 +240,9 @@ export function registerLoadingManifestRoutes(
             await exec.update(batches).set({ destination: body.destinationCode }).where(eq(batches.id, row.batchId));
           }
         }
-        await new DrizzleBatchWarehouseWriteOffLedger(exec).clearBlocksLoadingByBatchIds(batchIds);
+        const ledger = new DrizzleBatchWarehouseWriteOffLedger(exec);
+        await ledger.clearBlocksLoadingByBatchIds(batchIds);
+        await ledger.deleteQualityRejectByBatchIds(batchIds);
       });
 
       return reply.code(201).send({ manifestId: id });
@@ -727,7 +729,9 @@ export function registerLoadingManifestRoutes(
           }
         }
 
-        await new DrizzleBatchWarehouseWriteOffLedger(exec).clearBlocksLoadingByBatchIds(batchIds);
+        const ledger = new DrizzleBatchWarehouseWriteOffLedger(exec);
+        await ledger.clearBlocksLoadingByBatchIds(batchIds);
+        await ledger.deleteQualityRejectByBatchIds(batchIds);
 
         if (assignedTripId && tripRead && affectedBatchIds.size > 0) {
           const batchRepo = new DrizzleBatchRepository(exec);

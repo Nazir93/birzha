@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/auth-context.js";
 import { warehouseWriteOffsLedgerQueryOptions, warehousesFullListQueryOptions } from "../query/core-list-queries.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import { BirzhaEmptyState } from "../ui/BirzhaEmptyState.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
@@ -15,8 +16,9 @@ import { BirzhaSelect } from "../ui/BirzhaSelect.js";
 const PAGE_SIZE = 50;
 
 /**
- * Журнал возвратов на склад при погрузке: склад, время, накладная, калибр, кг и ящики.
+ * Журнал возвратов на склад при погрузке: склад, время, тепличник, калибр, кг и ящики.
  * Остаток на складе при возврате не уменьшается — товар доступен для другого направления.
+ * После повторной погрузки/догрузки запись уходит из журнала.
  */
 export function WarehouseReturnsPage() {
   const { pathname } = useLocation();
@@ -62,7 +64,8 @@ export function WarehouseReturnsPage() {
         </h2>
         <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0.35rem 0 0", maxWidth: "42rem", lineHeight: 1.45 }}>
           Товар снимается с отбора и из активных погрузочных накладных. Физический остаток на складе
-          не списывается — эти кг снова можно погрузить в другой рейс. Журнал хранит историю возвратов.
+          не списывается — эти кг снова можно погрузить в другой рейс. В списке — только возвращённый
+          калибр и тепличник; после догрузки или новой погрузки запись исчезает.
         </p>
       </header>
 
@@ -132,12 +135,13 @@ export function WarehouseReturnsPage() {
               </>
             ) : null}
           </p>          <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-            <table style={{ ...tableStyle, minWidth: 820 }} aria-label="Журнал возвратов на склад">
+            <table style={{ ...tableStyle, minWidth: 920 }} aria-label="Журнал возвратов на склад">
               <thead>
                 <tr>
                   <th style={thHead}>Когда</th>
                   <th style={thHead}>Склад</th>
-                  <th style={thHead}>№ накладной</th>
+                  <th style={thHead}>Тепличник</th>
+                  <th style={thHead}>Накладная</th>
                   <th style={thHead}>Калибр</th>
                   <th style={{ ...thHead, textAlign: "right" }}>Кг</th>
                   <th style={{ ...thHead, textAlign: "right" }}>Ящ.</th>
@@ -155,9 +159,12 @@ export function WarehouseReturnsPage() {
                         </span>
                       ) : null}
                     </td>
+                    <td style={thtd}>{(r.supplierName ?? "").trim() || "—"}</td>
                     <td style={thtd}>
                       <Link to={purchaseNakladnayaDocumentPathForPath(pathname, r.purchaseDocumentId)}>
-                        {r.documentNumber?.trim() ? `№ ${r.documentNumber.trim()}` : "—"}
+                        {r.documentNumber?.trim()
+                          ? formatSupplierPurchaseLabel(r.documentNumber, null)
+                          : "—"}
                       </Link>
                     </td>
                     <td style={thtd}>{r.productGradeCode ?? "—"}</td>

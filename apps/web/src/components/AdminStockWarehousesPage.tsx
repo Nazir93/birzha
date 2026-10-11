@@ -451,7 +451,7 @@ export function AdminStockWarehousesPage() {
                         <strong>
                           {selectedWarehouseStats.writtenOffKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })} кг
                         </strong>
-                        <span className="birzha-text-muted"> (история; склад не списывается)</span>
+                        <span className="birzha-text-muted"> (до повторной погрузки; склад не списывается)</span>
                       </>
                     ) : null}
                   </p>
@@ -548,10 +548,11 @@ export function AdminStockWarehousesPage() {
                           {writeOffLines.length} опер.
                         </p>
                         <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-                          <table style={{ ...tableStyle, minWidth: 560 }}>
+                          <table style={{ ...tableStyle, minWidth: 640 }}>
                             <thead>
                               <tr>
                                 <th style={thHeadDense}>Когда</th>
+                                <th style={thHeadDense}>Тепличник</th>
                                 <th style={thHeadDense}>Накладная</th>
                                 <th style={thHeadDense}>Калибр</th>
                                 <th style={thHeadDense}>Возвращено, кг</th>
@@ -561,12 +562,15 @@ export function AdminStockWarehousesPage() {
                               {writeOffLines.map((row) => (
                                 <tr key={row.id}>
                                   <td style={thtdDense}>{new Date(row.createdAt).toLocaleString("ru-RU")}</td>
+                                  <td style={thtdDense}>{(row.supplierName ?? "").trim() || "—"}</td>
                                   <td style={thtdDense}>
                                     <Link
                                       to={purchaseNakladnayaDocumentPathForPath(pathname, row.purchaseDocumentId)}
                                       style={{ fontWeight: 600 }}
                                     >
-                                      {row.documentNumber?.trim() || "—"}
+                                      {row.documentNumber?.trim()
+                                        ? formatSupplierPurchaseLabel(row.documentNumber, null)
+                                        : "—"}
                                     </Link>
                                   </td>
                                   <td style={thtdDense}>{row.productGradeCode ?? "—"}</td>

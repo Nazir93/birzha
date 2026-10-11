@@ -120,6 +120,20 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       );
   }
 
+  async deleteQualityRejectByBatchIds(batchIds: string[]): Promise<void> {
+    if (batchIds.length === 0) {
+      return;
+    }
+    await this.db
+      .delete(batchWarehouseWriteOffs)
+      .where(
+        and(
+          inArray(batchWarehouseWriteOffs.batchId, batchIds),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+        ),
+      );
+  }
+
   async enableBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
     if (batchIds.length === 0) {
       return;

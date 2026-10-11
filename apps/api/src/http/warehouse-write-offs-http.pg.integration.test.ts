@@ -61,6 +61,7 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
       documentNumber: "WO-DOC-IT-99",
       docDate: new Date("2024-06-01"),
       warehouseId: whId,
+      supplierName: "Тепличник IT",
     });
     await db.insert(schema.purchaseDocumentLines).values({
       id: lineId,
@@ -143,6 +144,8 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
         kg: number;
         purchaseDocumentId: string;
         warehouseName: string | null;
+        supplierName: string | null;
+        productGradeCode: string | null;
       }[];
     };
     expect(body.ledger).toBe("recent");
@@ -154,6 +157,8 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
     expect(hit!.purchaseDocumentId).toBe(docId);
     expect(hit!.kg).toBe(10);
     expect(hit!.warehouseName).toContain("write-off IT");
+    expect(hit!.supplierName).toBe("Тепличник IT");
+    expect(hit!.productGradeCode).toContain("IT");
     await app.close();
   });
 

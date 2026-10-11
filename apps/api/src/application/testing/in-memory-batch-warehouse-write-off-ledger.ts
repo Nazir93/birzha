@@ -67,6 +67,16 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
     }
   }
 
+  async deleteQualityRejectByBatchIds(batchIds: string[]): Promise<void> {
+    const set = new Set(batchIds);
+    for (let i = this.rows.length - 1; i >= 0; i -= 1) {
+      const row = this.rows[i];
+      if (row && set.has(row.batchId) && row.reason === "quality_reject") {
+        this.rows.splice(i, 1);
+      }
+    }
+  }
+
   async enableBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
     const set = new Set(batchIds);
     for (const r of this.rows) {
