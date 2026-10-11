@@ -186,6 +186,9 @@ export type PurchaseByPurchaserReportResponse = {
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg?: number;
+    onWarehousePackageCount?: number;
+    documentsWithStockCount?: number;
   }>;
   byPurchaser: Array<{
     purchaserUserId: string | null;
@@ -194,6 +197,9 @@ export type PurchaseByPurchaserReportResponse = {
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg?: number;
+    onWarehousePackageCount?: number;
+    documentsWithStockCount?: number;
   }>;
   byWarehouse: Array<{
     warehouseId: string;
@@ -202,12 +208,18 @@ export type PurchaseByPurchaserReportResponse = {
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg?: number;
+    onWarehousePackageCount?: number;
+    documentsWithStockCount?: number;
   }>;
   grand: {
     totalKg: number;
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg?: number;
+    onWarehousePackageCount?: number;
+    documentsWithStockCount?: number;
   };
 };
 

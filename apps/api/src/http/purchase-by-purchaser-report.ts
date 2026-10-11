@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
 import {
+  batches,
   purchaseDocumentLines,
   purchaseDocuments,
   users,
@@ -38,6 +39,12 @@ export type PurchaseByPurchaserCell = {
   packageCount: number;
   totalKopecks: string;
   documentCount: number;
+  /** Кг ещё на складе (к погрузке) по партиям этих накладных. */
+  onWarehouseKg: number;
+  /** Оценка ящиков на складе (доля onWarehouse от строки). */
+  onWarehousePackageCount: number;
+  /** Накладные с остатком onWarehouse > 0. */
+  documentsWithStockCount: number;
 };
 
 export type PurchaseByPurchaserTotals = {
@@ -45,6 +52,9 @@ export type PurchaseByPurchaserTotals = {
   packageCount: number;
   totalKopecks: string;
   documentCount: number;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  documentsWithStockCount: number;
 };
 
 export type PurchaseByPurchaserReport = {
@@ -58,6 +68,9 @@ export type PurchaseByPurchaserReport = {
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg: number;
+    onWarehousePackageCount: number;
+    documentsWithStockCount: number;
   }>;
   byWarehouse: Array<{
     warehouseId: string;
@@ -66,6 +79,9 @@ export type PurchaseByPurchaserReport = {
     packageCount: number;
     totalKopecks: string;
     documentCount: number;
+    onWarehouseKg: number;
+    onWarehousePackageCount: number;
+    documentsWithStockCount: number;
   }>;
   grand: PurchaseByPurchaserTotals;
 };
@@ -79,6 +95,8 @@ type DocAggRow = {
   extraKopecks: unknown;
   grams: unknown;
   packages: unknown;
+  onWarehouseGrams?: unknown;
+  onWarehousePackages?: unknown;
 };
 
 function metricFromParts(linesKop: unknown, extraKop: unknown, grams: unknown, packages: unknown) {
@@ -97,32 +115,82 @@ function metricFromParts(linesKop: unknown, extraKop: unknown, grams: unknown, p
   };
 }
 
-function emptyTotals(): { totalKg: number; packageCount: number; totalKopecks: bigint; documentCount: number } {
-  return { totalKg: 0, packageCount: 0, totalKopecks: 0n, documentCount: 0 };
+type AccTotals = {
+  totalKg: number;
+  packageCount: number;
+  totalKopecks: bigint;
+  documentCount: number;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  documentsWithStockCount: number;
+};
+
+function emptyTotals(): AccTotals {
+  return {
+    totalKg: 0,
+    packageCount: 0,
+    totalKopecks: 0n,
+    documentCount: 0,
+    onWarehouseKg: 0,
+    onWarehousePackageCount: 0,
+    documentsWithStockCount: 0,
+  };
 }
 
 function addInto(
-  acc: { totalKg: number; packageCount: number; totalKopecks: bigint; documentCount: number },
-  part: { totalKg: number; packageCount: number; totalKopecks: bigint },
+  acc: AccTotals,
+  part: {
+    totalKg: number;
+    packageCount: number;
+    totalKopecks: bigint;
+    onWarehouseKg: number;
+    onWarehousePackageCount: number;
+    documentsWithStockCount: number;
+  },
   documentCount = 1,
 ): void {
   acc.totalKg += part.totalKg;
   acc.packageCount += part.packageCount;
   acc.totalKopecks += part.totalKopecks;
   acc.documentCount += documentCount;
+  acc.onWarehouseKg += part.onWarehouseKg;
+  acc.onWarehousePackageCount += part.onWarehousePackageCount;
+  acc.documentsWithStockCount += part.documentsWithStockCount;
 }
 
-function finalizeTotals(acc: {
-  totalKg: number;
-  packageCount: number;
-  totalKopecks: bigint;
-  documentCount: number;
-}): PurchaseByPurchaserTotals {
+function finalizeTotals(acc: AccTotals): PurchaseByPurchaserTotals {
   return {
     totalKg: acc.totalKg,
     packageCount: acc.packageCount,
     totalKopecks: acc.totalKopecks.toString(),
     documentCount: acc.documentCount,
+    onWarehouseKg: acc.onWarehouseKg,
+    onWarehousePackageCount: Math.round(acc.onWarehousePackageCount),
+    documentsWithStockCount: acc.documentsWithStockCount,
+  };
+}
+
+function stockFromDocRow(row: DocAggRow): {
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  documentsWithStockCount: number;
+} {
+  const whG =
+    typeof row.onWarehouseGrams === "bigint"
+      ? row.onWarehouseGrams
+      : toKopecksBigInt(row.onWarehouseGrams);
+  const onWarehouseKg = gramsToKg(whG);
+  const pkgRaw = row.onWarehousePackages;
+  const onWarehousePackageCount =
+    typeof pkgRaw === "number"
+      ? pkgRaw
+      : typeof pkgRaw === "bigint"
+        ? Number(pkgRaw)
+        : Number(toKopecksBigInt(pkgRaw));
+  return {
+    onWarehouseKg,
+    onWarehousePackageCount: Number.isFinite(onWarehousePackageCount) ? onWarehousePackageCount : 0,
+    documentsWithStockCount: whG > 0n ? 1 : 0,
   };
 }
 
@@ -143,6 +211,9 @@ export function buildPurchaseByPurchaserReport(
       packageCount: number;
       totalKopecks: bigint;
       documentCount: number;
+      onWarehouseKg: number;
+      onWarehousePackageCount: number;
+      documentsWithStockCount: number;
     }
   >();
 
@@ -151,12 +222,16 @@ export function buildPurchaseByPurchaserReport(
     const purchaserLogin = row.purchaserLogin?.trim() || (purchaserUserId ? purchaserUserId : "Без автора");
     const key = `${purchaserUserId ?? ""}::${row.warehouseId}`;
     const m = metricFromParts(row.linesKopecks, row.extraKopecks, row.grams, row.packages);
+    const stock = stockFromDocRow(row);
     const existing = cellMap.get(key);
     if (existing) {
       existing.totalKg += m.totalKg;
       existing.packageCount += m.packageCount;
       existing.totalKopecks += BigInt(m.totalKopecks);
       existing.documentCount += 1;
+      existing.onWarehouseKg += stock.onWarehouseKg;
+      existing.onWarehousePackageCount += stock.onWarehousePackageCount;
+      existing.documentsWithStockCount += stock.documentsWithStockCount;
     } else {
       cellMap.set(key, {
         purchaserUserId,
@@ -167,6 +242,9 @@ export function buildPurchaseByPurchaserReport(
         packageCount: m.packageCount,
         totalKopecks: BigInt(m.totalKopecks),
         documentCount: 1,
+        onWarehouseKg: stock.onWarehouseKg,
+        onWarehousePackageCount: stock.onWarehousePackageCount,
+        documentsWithStockCount: stock.documentsWithStockCount,
       });
     }
   }
@@ -181,6 +259,9 @@ export function buildPurchaseByPurchaserReport(
       packageCount: c.packageCount,
       totalKopecks: c.totalKopecks.toString(),
       documentCount: c.documentCount,
+      onWarehouseKg: c.onWarehouseKg,
+      onWarehousePackageCount: Math.round(c.onWarehousePackageCount),
+      documentsWithStockCount: c.documentsWithStockCount,
     }))
     .sort((a, b) => {
       const pl = a.purchaserLogin.localeCompare(b.purchaserLogin, "ru");
@@ -190,13 +271,20 @@ export function buildPurchaseByPurchaserReport(
       return a.warehouseName.localeCompare(b.warehouseName, "ru");
     });
 
-  const byPurchaserMap = new Map<string, ReturnType<typeof emptyTotals> & { purchaserUserId: string | null; purchaserLogin: string }>();
-  const byWarehouseMap = new Map<string, ReturnType<typeof emptyTotals> & { warehouseId: string; warehouseName: string }>();
+  const byPurchaserMap = new Map<string, AccTotals & { purchaserUserId: string | null; purchaserLogin: string }>();
+  const byWarehouseMap = new Map<string, AccTotals & { warehouseId: string; warehouseName: string }>();
   const grand = emptyTotals();
 
   for (const c of cells) {
     const kop = BigInt(c.totalKopecks);
-    const part = { totalKg: c.totalKg, packageCount: c.packageCount, totalKopecks: kop };
+    const part = {
+      totalKg: c.totalKg,
+      packageCount: c.packageCount,
+      totalKopecks: kop,
+      onWarehouseKg: c.onWarehouseKg,
+      onWarehousePackageCount: c.onWarehousePackageCount,
+      documentsWithStockCount: c.documentsWithStockCount,
+    };
     addInto(grand, part, c.documentCount);
 
     const pk = c.purchaserUserId ?? "";
@@ -267,11 +355,19 @@ export async function getPurchaseByPurchaserReport(
       extraKopecks: purchaseDocuments.extraCostKopecks,
       grams: sql`coalesce(sum(${purchaseDocumentLines.quantityGrams}), 0)`,
       packages: sql`coalesce(sum(coalesce(${purchaseDocumentLines.packageCount}, 0)), 0)`,
+      onWarehouseGrams: sql`coalesce(sum(${batches.onWarehouseGrams}), 0)`,
+      onWarehousePackages: sql`coalesce(sum(
+        case when ${batches.totalGrams} > 0 then
+          ${batches.onWarehouseGrams}::numeric / ${batches.totalGrams}::numeric
+            * coalesce(${purchaseDocumentLines.packageCount}, 0)
+        else 0 end
+      ), 0)::float`,
     })
     .from(purchaseDocuments)
     .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
     .leftJoin(users, eq(users.id, effectivePurchaser))
     .leftJoin(purchaseDocumentLines, eq(purchaseDocumentLines.documentId, purchaseDocuments.id))
+    .leftJoin(batches, eq(batches.id, purchaseDocumentLines.batchId))
     .where(where)
     .groupBy(
       purchaseDocuments.id,
@@ -294,6 +390,8 @@ export async function getPurchaseByPurchaserReport(
       extraKopecks: r.extraKopecks,
       grams: r.grams,
       packages: r.packages,
+      onWarehouseGrams: r.onWarehouseGrams,
+      onWarehousePackages: r.onWarehousePackages,
     })),
   );
 }

@@ -63,9 +63,9 @@ export function PurchaserCabinetHome() {
       byWarehouse.map((w) => ({
         key: w.warehouseId,
         label: w.warehouseName,
-        sublabel: `${w.documentCount} накл.`,
-        kg: w.totalKg,
-        packages: w.packageCount,
+        sublabel: `${w.documentsWithStockCount ?? 0} накл. на складе`,
+        kg: w.onWarehouseKg ?? 0,
+        packages: w.onWarehousePackageCount ?? 0,
         valueKopecks: w.totalKopecks,
       })),
     [byWarehouse],
@@ -77,7 +77,7 @@ export function PurchaserCabinetHome() {
     () =>
       byWarehouse.map((w, i) => ({
         label: w.warehouseName,
-        kg: w.totalKg,
+        kg: w.onWarehouseKg ?? 0,
         fillClass: FILL[i % FILL.length]!,
       })),
     [byWarehouse],
@@ -88,8 +88,8 @@ export function PurchaserCabinetHome() {
       return { kg: 0, packages: 0, valueKopecks: "0" };
     }
     return {
-      kg: grand.totalKg,
-      packages: grand.packageCount,
+      kg: grand.onWarehouseKg ?? 0,
+      packages: grand.onWarehousePackageCount ?? 0,
       valueKopecks: grand.totalKopecks,
     };
   }, [grand]);
@@ -115,7 +115,7 @@ export function PurchaserCabinetHome() {
               <p className="birzha-home-hero__eyebrow">Закупки</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "36rem" }}>
-                Ваши накладные за период: сумма, кг и ящики по складам.
+                Остаток ваших накладных на складе (к погрузке) и сумма закупок за период.
               </p>
               <DashboardSummaryPeriodToggles period={period} onChange={setPeriod} />
             </div>
@@ -142,30 +142,32 @@ export function PurchaserCabinetHome() {
             <Link
               to={ops.purchaseNakladnaya}
               className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
-              title="Закупочные накладные за период"
+              title="Накладные с остатком на складе"
             >
               <div className="birzha-kpi-tile__label">Накладных</div>
-              <div className="birzha-kpi-tile__value">{grand.documentCount}</div>
-              <div className="birzha-kpi-tile__hint birzha-ui-sm">Закупка товара</div>
+              <div className="birzha-kpi-tile__value">{grand.documentsWithStockCount ?? 0}</div>
+              <div className="birzha-kpi-tile__hint birzha-ui-sm">С остатком на складе</div>
             </Link>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good">
               <div className="birzha-kpi-tile__label">Сумма</div>
               <div className="birzha-kpi-tile__value">{kopecksToRubDisplay(grand.totalKopecks)} ₽</div>
-              <div className="birzha-kpi-tile__hint birzha-ui-sm">По вашим накладным</div>
+              <div className="birzha-kpi-tile__hint birzha-ui-sm">Закупки за период</div>
             </div>
             <Link
               to={ops.distribution}
               className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
-              title="Масса по вашим закупкам"
+              title="Остаток кг к погрузке"
             >
               <div className="birzha-kpi-tile__label">Кг</div>
-              <div className="birzha-kpi-tile__value">{formatDashboardKg(grand.totalKg)}</div>
+              <div className="birzha-kpi-tile__value">{formatDashboardKg(grand.onWarehouseKg ?? 0)}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке</div>
             </Link>
             <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn">
               <div className="birzha-kpi-tile__label">Ящики</div>
-              <div className="birzha-kpi-tile__value">{grand.packageCount.toLocaleString("ru-RU")}</div>
-              <div className="birzha-kpi-tile__hint birzha-ui-sm">За период</div>
+              <div className="birzha-kpi-tile__value">
+                {(grand.onWarehousePackageCount ?? 0).toLocaleString("ru-RU")}
+              </div>
+              <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке</div>
             </div>
           </section>
 
@@ -181,10 +183,10 @@ export function PurchaserCabinetHome() {
                 <MassBalanceLegend segments={massSegments} />
               ) : (
                 <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-                  Нет накладных за выбранный период.
+                  Нет остатка на складе за выбранный период.
                 </p>
               )}
-              <SummaryTotalsStrip totals={stockTotals} caption="Итого закупки:" />
+              <SummaryTotalsStrip totals={stockTotals} caption="Остаток на складе:" />
               <SummaryStockTable
                 labelColumn="Склад"
                 rows={warehouseRows}

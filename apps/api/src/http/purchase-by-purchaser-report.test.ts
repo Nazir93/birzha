@@ -14,6 +14,8 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 500n,
         grams: 1_000_000n,
         packages: 10n,
+        onWarehouseGrams: 200_000n,
+        onWarehousePackages: 2,
       },
       {
         purchaserUserId: "u1",
@@ -24,6 +26,8 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 500_000n,
         packages: 5n,
+        onWarehouseGrams: 0n,
+        onWarehousePackages: 0,
       },
       {
         purchaserUserId: "u1",
@@ -34,6 +38,8 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 200_000n,
         packages: 2n,
+        onWarehouseGrams: 200_000n,
+        onWarehousePackages: 2,
       },
       {
         purchaserUserId: "u2",
@@ -44,6 +50,8 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 100n,
         grams: 300_000n,
         packages: 3n,
+        onWarehouseGrams: 0n,
+        onWarehousePackages: 0,
       },
       {
         purchaserUserId: null,
@@ -54,6 +62,8 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 10_000n,
         packages: 1n,
+        onWarehouseGrams: 10_000n,
+        onWarehousePackages: 1,
       },
     ]);
 
@@ -69,6 +79,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       packageCount: 15,
       totalKg: 1500,
       totalKopecks: "150500",
+      onWarehouseKg: 200,
+      onWarehousePackageCount: 2,
+      documentsWithStockCount: 1,
     });
 
     const ivan = report.byPurchaser.find((p) => p.purchaserLogin === "ivan");
@@ -77,6 +90,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       packageCount: 17,
       totalKg: 1700,
       totalKopecks: "170500",
+      onWarehouseKg: 400,
+      onWarehousePackageCount: 4,
+      documentsWithStockCount: 2,
     });
 
     const manas = report.byWarehouse.find((w) => w.warehouseId === "wh-manas");
@@ -85,6 +101,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       packageCount: 19,
       totalKg: 1810,
       totalKopecks: "181600",
+      onWarehouseKg: 210,
+      onWarehousePackageCount: 3,
+      documentsWithStockCount: 2,
     });
 
     expect(report.grand).toMatchObject({
@@ -92,6 +111,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       packageCount: 21,
       totalKg: 2010,
       totalKopecks: "201600",
+      onWarehouseKg: 410,
+      onWarehousePackageCount: 5,
+      documentsWithStockCount: 3,
     });
 
     const orphan = report.cells.find((c) => c.purchaserUserId === null);
@@ -108,6 +130,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       packageCount: 0,
       totalKopecks: "0",
       documentCount: 0,
+      onWarehouseKg: 0,
+      onWarehousePackageCount: 0,
+      documentsWithStockCount: 0,
     });
   });
 });
