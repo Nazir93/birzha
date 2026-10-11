@@ -245,6 +245,11 @@ export async function unshipManifestFromLinkedTrip(
   });
 }
 
+/**
+ * Отвязка от рейса: масса возвращается на склад, затем ПН удаляется.
+ * Иначе документ остаётся черновиком без рейса со строками и снова резервирует
+ * весь остаток («в резерве ПН» / 0 для отбора) — повторная погрузка невозможна.
+ */
 export async function detachManifestTripId(db: DbClient, manifestId: string): Promise<void> {
   const link = await loadLoadingManifestTripLinkContext(db, manifestId);
   if (!link) {
@@ -265,7 +270,7 @@ export async function detachManifestTripId(db: DbClient, manifestId: string): Pr
       );
     }
     await unshipManifestFromLinkedTrip(exec, manifestId, linkCtx);
-    await exec.update(loadingManifests).set({ tripId: null }).where(eq(loadingManifests.id, manifestId));
+    await exec.delete(loadingManifests).where(eq(loadingManifests.id, manifestId));
   });
 }
 

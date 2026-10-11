@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { apiPostJson } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -17,6 +17,7 @@ import { LoadingManifestAccordion } from "./loading-manifest/LoadingManifestAcco
 
 export function LoadingTripPanel() {
   const { manifestId: routeManifestId = "" } = useParams();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user } = useAuth();
   const canShip = canShipLoadingManifest(user);
@@ -80,6 +81,8 @@ export function LoadingTripPanel() {
     onSuccess: async () => {
       setAssignTripId("");
       await refreshDistributionLists(queryClient);
+      /** После открепления ПН удаляется — уходим со страницы удалённого документа. */
+      void navigate(tripBase);
     },
   });
 
@@ -99,9 +102,10 @@ export function LoadingTripPanel() {
         </div>
       </div>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }}>
-        Привязка, смена и открепление рейса для сохранённых погрузочных накладных. При смене рейса город
-        накладной становится городом выбранного рейса. Можно сохранить ПН без рейса в{" "}
-        <Link to={distributionBase}>«Погрузка на машину»</Link> и привязать здесь.
+        Привязка и смена рейса для сохранённых погрузочных. При смене город накладной становится городом нового
+        рейса. Открепление возвращает товар на склад и <strong>удаляет</strong> погрузочную — чтобы снова
+        погрузить, создайте новую ПН в <Link to={distributionBase}>«Погрузка на машину»</Link>. ПН без рейса
+        (сохранённые без привязки) тоже можно привязать здесь.
       </p>
 
       {loading && !distributionManifestListReady ? (

@@ -230,7 +230,7 @@ export function LoadingManifestAccordion({
                   const label = formatTripLabel(linkedTripId);
                   if (
                     window.confirm(
-                      `Отвязать накладную от рейса «${label}»? Масса вернётся на склад, если по рейсу ещё не было продаж.`,
+                      `Отвязать накладную от рейса «${label}»? Масса вернётся на склад, сама погрузочная будет удалена — товар снова можно погрузить в новую ПН. Если по рейсу уже были продажи, отвязка недоступна.`,
                     )
                   ) {
                     detachTrip!.mutate(manifestId);

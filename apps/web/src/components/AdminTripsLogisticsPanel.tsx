@@ -529,7 +529,7 @@ export function AdminTripsLogisticsPanel() {
                                   onClick={() => {
                                     if (
                                       window.confirm(
-                                        `Отвязать погрузочную «${onlyManifest.manifestNumber}» от рейса ${t.tripNumber}? Масса вернётся на склад, если ещё не было продаж.`,
+                                        `Отвязать погрузочную «${onlyManifest.manifestNumber}» от рейса ${t.tripNumber}? Масса вернётся на склад, погрузочная будет удалена — можно создать новую погрузку. Если уже были продажи, отвязка недоступна.`,
                                       )
                                     ) {
                                       void detachManifest.mutate(onlyManifest.id);

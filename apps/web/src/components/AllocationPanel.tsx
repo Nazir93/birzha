@@ -610,9 +610,9 @@ export function AllocationPanel() {
                 {selectedWarehouseRow.totalKgOnWarehouse.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг
               </strong>{" "}
               ({selectedWarehouseRow.totalBatchCountOnWarehouse} парт.) уже учтены в активных погрузочных накладных — для
-              нового отбора свободных партий нет. Откройте сохранённую накладную в таблице выше или раздел{" "}
-              <Link to={appendBase}>«Догрузка»</Link>, если
-              нужно добавить партии.
+              нового отбора свободных партий нет. Откройте сохранённую накладную в таблице выше, привяжите её к рейсу в{" "}
+              <Link to={tripBase}>«Смена рейса»</Link> или удалите лишнюю ПН без рейса. Догрузка в уже привязанную ПН — в{" "}
+              <Link to={appendBase}>«Догрузка»</Link>.
             </InfoAlert>
           ) : null}
           <LoadingManifestBlock
@@ -724,8 +724,9 @@ export function AllocationPanel() {
           title="Весь остаток уже в погрузочных накладных"
           description={
             <>
-              Свободных партий для новой ПН нет — откройте сохранённые накладные в таблице выше или{" "}
-              <Link to={archiveBase}>«Архив»</Link> для закрытых рейсов.
+              Свободных партий для новой ПН нет — они в сохранённых погрузочных (часто ПН без рейса после отбора).
+              Откройте таблицу выше, раздел <Link to={tripBase}>«Смена рейса»</Link> или удалите лишнюю ПН. Закрытые
+              рейсы — в <Link to={archiveBase}>«Архив»</Link>.
             </>
           }
         />

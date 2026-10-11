@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { InMemoryBatchRepository } from "../application/testing/in-memory-batch.repository.js";
 import { buildApp } from "../app.js";
 import { loadEnv } from "../config.js";
+import { calendarYmdFromDate } from "../format/calendar-date.js";
 
 describe("GET /accounting/period-daily", () => {
   it("отдаёт ряд по дням периода с продажей за сегодня и расходом рейса", async () => {
@@ -27,7 +28,8 @@ describe("GET /accounting/period-daily", () => {
     });
     expect(sell.statusCode).toBe(200);
 
-    const today = new Date().toISOString().slice(0, 10);
+    /** Как `calendarYmdFromDate(recordedAt)` у продаж — не UTC `toISOString`, иначе около полуночи день «уезжает». */
+    const today = calendarYmdFromDate(new Date());
     const exp = await app.inject({
       method: "POST",
       url: "/accounting/trips/pd-t1/expenses",
