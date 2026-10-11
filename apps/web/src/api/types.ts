@@ -174,6 +174,30 @@ export type AdminDashboardSummaryResponse = {
 };
 
 /** GET /api/admin/purchase-by-purchaser?from=&to= */
+export type PurchaseByPurchaserSupplierRow = {
+  supplierId: string | null;
+  supplierName: string;
+  totalKopecks: string;
+  paidKopecks: string;
+  remainingPayableKopecks: string;
+  documentCount: number;
+  documentsWithStockCount: number;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  onWarehouseValueKopecks: string;
+};
+
+export type PurchaseByPurchaserWarehouseSupplierRow = {
+  warehouseId: string;
+  warehouseName: string;
+  supplierId: string | null;
+  supplierName: string;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  onWarehouseValueKopecks: string;
+  documentsWithStockCount: number;
+};
+
 export type PurchaseByPurchaserReportResponse = {
   from: string;
   to: string;
@@ -200,6 +224,9 @@ export type PurchaseByPurchaserReportResponse = {
     onWarehouseKg?: number;
     onWarehousePackageCount?: number;
     documentsWithStockCount?: number;
+    onWarehouseValueKopecks?: string;
+    paidKopecks?: string;
+    remainingPayableKopecks?: string;
   }>;
   byWarehouse: Array<{
     warehouseId: string;
@@ -211,7 +238,12 @@ export type PurchaseByPurchaserReportResponse = {
     onWarehouseKg?: number;
     onWarehousePackageCount?: number;
     documentsWithStockCount?: number;
+    onWarehouseValueKopecks?: string;
+    paidKopecks?: string;
+    remainingPayableKopecks?: string;
   }>;
+  bySupplier?: PurchaseByPurchaserSupplierRow[];
+  byWarehouseSupplier?: PurchaseByPurchaserWarehouseSupplierRow[];
   grand: {
     totalKg: number;
     packageCount: number;
@@ -220,6 +252,9 @@ export type PurchaseByPurchaserReportResponse = {
     onWarehouseKg?: number;
     onWarehousePackageCount?: number;
     documentsWithStockCount?: number;
+    onWarehouseValueKopecks?: string;
+    paidKopecks?: string;
+    remainingPayableKopecks?: string;
   };
 };
 

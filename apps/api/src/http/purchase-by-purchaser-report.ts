@@ -6,6 +6,7 @@ import {
   batches,
   purchaseDocumentLines,
   purchaseDocuments,
+  supplierPayments,
   users,
   warehouses,
 } from "../db/schema.js";
@@ -55,6 +56,34 @@ export type PurchaseByPurchaserTotals = {
   onWarehouseKg: number;
   onWarehousePackageCount: number;
   documentsWithStockCount: number;
+  /** Оценка ₽ остатка на складе (доля onWarehouse × цена строки). */
+  onWarehouseValueKopecks: string;
+  paidKopecks: string;
+  remainingPayableKopecks: string;
+};
+
+export type PurchaseByPurchaserSupplierRow = {
+  supplierId: string | null;
+  supplierName: string;
+  totalKopecks: string;
+  paidKopecks: string;
+  remainingPayableKopecks: string;
+  documentCount: number;
+  documentsWithStockCount: number;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  onWarehouseValueKopecks: string;
+};
+
+export type PurchaseByPurchaserWarehouseSupplierRow = {
+  warehouseId: string;
+  warehouseName: string;
+  supplierId: string | null;
+  supplierName: string;
+  onWarehouseKg: number;
+  onWarehousePackageCount: number;
+  onWarehouseValueKopecks: string;
+  documentsWithStockCount: number;
 };
 
 export type PurchaseByPurchaserReport = {
@@ -71,6 +100,9 @@ export type PurchaseByPurchaserReport = {
     onWarehouseKg: number;
     onWarehousePackageCount: number;
     documentsWithStockCount: number;
+    onWarehouseValueKopecks: string;
+    paidKopecks: string;
+    remainingPayableKopecks: string;
   }>;
   byWarehouse: Array<{
     warehouseId: string;
@@ -82,7 +114,14 @@ export type PurchaseByPurchaserReport = {
     onWarehouseKg: number;
     onWarehousePackageCount: number;
     documentsWithStockCount: number;
+    onWarehouseValueKopecks: string;
+    paidKopecks: string;
+    remainingPayableKopecks: string;
   }>;
+  /** Бухгалтерия закупщика: по тепличникам — взял / отдал / осталось. */
+  bySupplier: PurchaseByPurchaserSupplierRow[];
+  /** Остаток на складе: склад × тепличник (для раскрытия строк). */
+  byWarehouseSupplier: PurchaseByPurchaserWarehouseSupplierRow[];
   grand: PurchaseByPurchaserTotals;
 };
 
@@ -91,12 +130,16 @@ type DocAggRow = {
   purchaserLogin: string | null;
   warehouseId: string;
   warehouseName: string;
+  supplierId?: string | null;
+  supplierName?: string | null;
   linesKopecks: unknown;
   extraKopecks: unknown;
   grams: unknown;
   packages: unknown;
   onWarehouseGrams?: unknown;
   onWarehousePackages?: unknown;
+  onWarehouseValueKopecks?: unknown;
+  paidKopecks?: unknown;
 };
 
 function metricFromParts(linesKop: unknown, extraKop: unknown, grams: unknown, packages: unknown) {
@@ -123,6 +166,8 @@ type AccTotals = {
   onWarehouseKg: number;
   onWarehousePackageCount: number;
   documentsWithStockCount: number;
+  onWarehouseValueKopecks: bigint;
+  paidKopecks: bigint;
 };
 
 function emptyTotals(): AccTotals {
@@ -134,6 +179,8 @@ function emptyTotals(): AccTotals {
     onWarehouseKg: 0,
     onWarehousePackageCount: 0,
     documentsWithStockCount: 0,
+    onWarehouseValueKopecks: 0n,
+    paidKopecks: 0n,
   };
 }
 
@@ -146,6 +193,8 @@ function addInto(
     onWarehouseKg: number;
     onWarehousePackageCount: number;
     documentsWithStockCount: number;
+    onWarehouseValueKopecks: bigint;
+    paidKopecks: bigint;
   },
   documentCount = 1,
 ): void {
@@ -156,9 +205,13 @@ function addInto(
   acc.onWarehouseKg += part.onWarehouseKg;
   acc.onWarehousePackageCount += part.onWarehousePackageCount;
   acc.documentsWithStockCount += part.documentsWithStockCount;
+  acc.onWarehouseValueKopecks += part.onWarehouseValueKopecks;
+  acc.paidKopecks += part.paidKopecks;
 }
 
 function finalizeTotals(acc: AccTotals): PurchaseByPurchaserTotals {
+  const remaining =
+    acc.totalKopecks > acc.paidKopecks ? acc.totalKopecks - acc.paidKopecks : 0n;
   return {
     totalKg: acc.totalKg,
     packageCount: acc.packageCount,
@@ -167,6 +220,9 @@ function finalizeTotals(acc: AccTotals): PurchaseByPurchaserTotals {
     onWarehouseKg: acc.onWarehouseKg,
     onWarehousePackageCount: Math.round(acc.onWarehousePackageCount),
     documentsWithStockCount: acc.documentsWithStockCount,
+    onWarehouseValueKopecks: acc.onWarehouseValueKopecks.toString(),
+    paidKopecks: acc.paidKopecks.toString(),
+    remainingPayableKopecks: remaining.toString(),
   };
 }
 
@@ -174,6 +230,8 @@ function stockFromDocRow(row: DocAggRow): {
   onWarehouseKg: number;
   onWarehousePackageCount: number;
   documentsWithStockCount: number;
+  onWarehouseValueKopecks: bigint;
+  paidKopecks: bigint;
 } {
   const whG =
     typeof row.onWarehouseGrams === "bigint"
@@ -191,6 +249,8 @@ function stockFromDocRow(row: DocAggRow): {
     onWarehouseKg,
     onWarehousePackageCount: Number.isFinite(onWarehousePackageCount) ? onWarehousePackageCount : 0,
     documentsWithStockCount: whG > 0n ? 1 : 0,
+    onWarehouseValueKopecks: toKopecksBigInt(row.onWarehouseValueKopecks),
+    paidKopecks: toKopecksBigInt(row.paidKopecks),
   };
 }
 
@@ -213,6 +273,34 @@ export function buildPurchaseByPurchaserReport(
       documentCount: number;
       onWarehouseKg: number;
       onWarehousePackageCount: number;
+      documentsWithStockCount: number;
+    }
+  >();
+
+  const bySupplierMap = new Map<
+    string,
+    {
+      supplierId: string | null;
+      supplierName: string;
+      totalKopecks: bigint;
+      paidKopecks: bigint;
+      documentCount: number;
+      documentsWithStockCount: number;
+      onWarehouseKg: number;
+      onWarehousePackageCount: number;
+      onWarehouseValueKopecks: bigint;
+    }
+  >();
+  const byWarehouseSupplierMap = new Map<
+    string,
+    {
+      warehouseId: string;
+      warehouseName: string;
+      supplierId: string | null;
+      supplierName: string;
+      onWarehouseKg: number;
+      onWarehousePackageCount: number;
+      onWarehouseValueKopecks: bigint;
       documentsWithStockCount: number;
     }
   >();
@@ -247,6 +335,54 @@ export function buildPurchaseByPurchaserReport(
         documentsWithStockCount: stock.documentsWithStockCount,
       });
     }
+
+    const supplierId = row.supplierId?.trim() || null;
+    const supplierName = (row.supplierName ?? "").trim() || "Без тепличника";
+    const sk = `${supplierId ?? ""}::${supplierName}`;
+    let sup = bySupplierMap.get(sk);
+    if (!sup) {
+      sup = {
+        supplierId,
+        supplierName,
+        totalKopecks: 0n,
+        paidKopecks: 0n,
+        documentCount: 0,
+        documentsWithStockCount: 0,
+        onWarehouseKg: 0,
+        onWarehousePackageCount: 0,
+        onWarehouseValueKopecks: 0n,
+      };
+      bySupplierMap.set(sk, sup);
+    }
+    sup.totalKopecks += BigInt(m.totalKopecks);
+    sup.paidKopecks += stock.paidKopecks;
+    sup.documentCount += 1;
+    sup.documentsWithStockCount += stock.documentsWithStockCount;
+    sup.onWarehouseKg += stock.onWarehouseKg;
+    sup.onWarehousePackageCount += stock.onWarehousePackageCount;
+    sup.onWarehouseValueKopecks += stock.onWarehouseValueKopecks;
+
+    if (stock.onWarehouseKg > 0 || stock.onWarehousePackageCount > 0) {
+      const wsk = `${row.warehouseId}::${sk}`;
+      let ws = byWarehouseSupplierMap.get(wsk);
+      if (!ws) {
+        ws = {
+          warehouseId: row.warehouseId,
+          warehouseName: row.warehouseName,
+          supplierId,
+          supplierName,
+          onWarehouseKg: 0,
+          onWarehousePackageCount: 0,
+          onWarehouseValueKopecks: 0n,
+          documentsWithStockCount: 0,
+        };
+        byWarehouseSupplierMap.set(wsk, ws);
+      }
+      ws.onWarehouseKg += stock.onWarehouseKg;
+      ws.onWarehousePackageCount += stock.onWarehousePackageCount;
+      ws.onWarehouseValueKopecks += stock.onWarehouseValueKopecks;
+      ws.documentsWithStockCount += stock.documentsWithStockCount;
+    }
   }
 
   const cells: PurchaseByPurchaserCell[] = [...cellMap.values()]
@@ -275,32 +411,37 @@ export function buildPurchaseByPurchaserReport(
   const byWarehouseMap = new Map<string, AccTotals & { warehouseId: string; warehouseName: string }>();
   const grand = emptyTotals();
 
-  for (const c of cells) {
-    const kop = BigInt(c.totalKopecks);
+  for (const row of docRows) {
+    const m = metricFromParts(row.linesKopecks, row.extraKopecks, row.grams, row.packages);
+    const stock = stockFromDocRow(row);
     const part = {
-      totalKg: c.totalKg,
-      packageCount: c.packageCount,
-      totalKopecks: kop,
-      onWarehouseKg: c.onWarehouseKg,
-      onWarehousePackageCount: c.onWarehousePackageCount,
-      documentsWithStockCount: c.documentsWithStockCount,
+      totalKg: m.totalKg,
+      packageCount: m.packageCount,
+      totalKopecks: BigInt(m.totalKopecks),
+      onWarehouseKg: stock.onWarehouseKg,
+      onWarehousePackageCount: stock.onWarehousePackageCount,
+      documentsWithStockCount: stock.documentsWithStockCount,
+      onWarehouseValueKopecks: stock.onWarehouseValueKopecks,
+      paidKopecks: stock.paidKopecks,
     };
-    addInto(grand, part, c.documentCount);
+    addInto(grand, part, 1);
 
-    const pk = c.purchaserUserId ?? "";
+    const purchaserUserId = row.purchaserUserId;
+    const purchaserLogin = row.purchaserLogin?.trim() || (purchaserUserId ? purchaserUserId : "Без автора");
+    const pk = purchaserUserId ?? "";
     let p = byPurchaserMap.get(pk);
     if (!p) {
-      p = { ...emptyTotals(), purchaserUserId: c.purchaserUserId, purchaserLogin: c.purchaserLogin };
+      p = { ...emptyTotals(), purchaserUserId, purchaserLogin };
       byPurchaserMap.set(pk, p);
     }
-    addInto(p, part, c.documentCount);
+    addInto(p, part, 1);
 
-    let w = byWarehouseMap.get(c.warehouseId);
+    let w = byWarehouseMap.get(row.warehouseId);
     if (!w) {
-      w = { ...emptyTotals(), warehouseId: c.warehouseId, warehouseName: c.warehouseName };
-      byWarehouseMap.set(c.warehouseId, w);
+      w = { ...emptyTotals(), warehouseId: row.warehouseId, warehouseName: row.warehouseName };
+      byWarehouseMap.set(row.warehouseId, w);
     }
-    addInto(w, part, c.documentCount);
+    addInto(w, part, 1);
   }
 
   return {
@@ -321,6 +462,39 @@ export function buildPurchaseByPurchaserReport(
         ...finalizeTotals(w),
       }))
       .sort((a, b) => a.warehouseName.localeCompare(b.warehouseName, "ru")),
+    bySupplier: [...bySupplierMap.values()]
+      .map((s) => {
+        const remaining = s.totalKopecks > s.paidKopecks ? s.totalKopecks - s.paidKopecks : 0n;
+        return {
+          supplierId: s.supplierId,
+          supplierName: s.supplierName,
+          totalKopecks: s.totalKopecks.toString(),
+          paidKopecks: s.paidKopecks.toString(),
+          remainingPayableKopecks: remaining.toString(),
+          documentCount: s.documentCount,
+          documentsWithStockCount: s.documentsWithStockCount,
+          onWarehouseKg: s.onWarehouseKg,
+          onWarehousePackageCount: Math.round(s.onWarehousePackageCount),
+          onWarehouseValueKopecks: s.onWarehouseValueKopecks.toString(),
+        };
+      })
+      .sort((a, b) => a.supplierName.localeCompare(b.supplierName, "ru")),
+    byWarehouseSupplier: [...byWarehouseSupplierMap.values()]
+      .map((r) => ({
+        warehouseId: r.warehouseId,
+        warehouseName: r.warehouseName,
+        supplierId: r.supplierId,
+        supplierName: r.supplierName,
+        onWarehouseKg: r.onWarehouseKg,
+        onWarehousePackageCount: Math.round(r.onWarehousePackageCount),
+        onWarehouseValueKopecks: r.onWarehouseValueKopecks.toString(),
+        documentsWithStockCount: r.documentsWithStockCount,
+      }))
+      .sort(
+        (a, b) =>
+          a.warehouseName.localeCompare(b.warehouseName, "ru") ||
+          a.supplierName.localeCompare(b.supplierName, "ru"),
+      ),
     grand: finalizeTotals(grand),
   };
 }
@@ -345,12 +519,20 @@ export async function getPurchaseByPurchaserReport(
       ? and(...periodFilters, sql`${effectivePurchaser} = ${onlyId}`)
       : and(...periodFilters);
 
+  const paidByDoc = sql`coalesce((
+    select sum(${supplierPayments.amountKopecks})
+    from ${supplierPayments}
+    where ${supplierPayments.purchaseDocumentId} = ${purchaseDocuments.id}
+  ), 0)`;
+
   const rows = await db
     .select({
       purchaserUserId: sql<string | null>`${effectivePurchaser}`,
       purchaserLogin: users.login,
       warehouseId: purchaseDocuments.warehouseId,
       warehouseName: warehouses.name,
+      supplierId: purchaseDocuments.supplierId,
+      supplierName: purchaseDocuments.supplierName,
       linesKopecks: sql`coalesce(sum(${purchaseDocumentLines.lineTotalKopecks}), 0)`,
       extraKopecks: purchaseDocuments.extraCostKopecks,
       grams: sql`coalesce(sum(${purchaseDocumentLines.quantityGrams}), 0)`,
@@ -362,6 +544,10 @@ export async function getPurchaseByPurchaserReport(
             * coalesce(${purchaseDocumentLines.packageCount}, 0)
         else 0 end
       ), 0)::float`,
+      onWarehouseValueKopecks: sql`coalesce(sum((
+        ${batches.onWarehouseGrams}::numeric * ${purchaseDocumentLines.pricePerKg} * 100 / 1000
+      )::bigint), 0)`,
+      paidKopecks: paidByDoc,
     })
     .from(purchaseDocuments)
     .innerJoin(warehouses, eq(warehouses.id, purchaseDocuments.warehouseId))
@@ -375,6 +561,8 @@ export async function getPurchaseByPurchaserReport(
       users.login,
       purchaseDocuments.warehouseId,
       warehouses.name,
+      purchaseDocuments.supplierId,
+      purchaseDocuments.supplierName,
       purchaseDocuments.extraCostKopecks,
     );
 
@@ -386,12 +574,16 @@ export async function getPurchaseByPurchaserReport(
       purchaserLogin: r.purchaserLogin,
       warehouseId: r.warehouseId,
       warehouseName: r.warehouseName,
+      supplierId: r.supplierId,
+      supplierName: r.supplierName,
       linesKopecks: r.linesKopecks,
       extraKopecks: r.extraKopecks,
       grams: r.grams,
       packages: r.packages,
       onWarehouseGrams: r.onWarehouseGrams,
       onWarehousePackages: r.onWarehousePackages,
+      onWarehouseValueKopecks: r.onWarehouseValueKopecks,
+      paidKopecks: r.paidKopecks,
     })),
   );
 }

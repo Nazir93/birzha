@@ -249,10 +249,14 @@ function SummaryStockTableRow({
   row,
   maxKg,
   variant,
+  expanded,
+  onToggle,
 }: {
   row: SummaryStockTableRowData;
   maxKg: number;
   variant: "default" | "group" | "child";
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
   const showTrack = variant !== "child";
   const rowClass =
@@ -261,11 +265,27 @@ function SummaryStockTableRow({
       : variant === "child"
         ? "birzha-admin-summary-table__child-row"
         : undefined;
+  const canToggle = variant === "group" && onToggle != null;
 
   return (
     <tr key={row.key} className={rowClass}>
       <th scope="row" className="birzha-admin-summary-table__label-cell">
-        <div className="birzha-admin-summary-table__label">{row.label}</div>
+        <div className="birzha-admin-summary-table__label">
+          {canToggle ? (
+            <button
+              type="button"
+              className="birzha-clean-ops-text-btn"
+              aria-expanded={expanded}
+              onClick={onToggle}
+              style={{ fontWeight: 600, textAlign: "left", padding: 0 }}
+            >
+              {expanded ? "▾ " : "▸ "}
+              {row.label}
+            </button>
+          ) : (
+            row.label
+          )}
+        </div>
         {row.sublabel ? (
           <div className="birzha-text-muted birzha-ui-sm birzha-admin-summary-table__sublabel">
             {row.sublabel}
@@ -295,13 +315,18 @@ export function SummaryStockTable({
   totals,
   maxKg,
   nestedGrades,
+  collapsibleNested,
 }: {
   labelColumn: string;
   rows: SummaryStockTableRowData[];
   totals?: DashboardStockSlice;
   maxKg: number;
   nestedGrades?: boolean;
+  /** Раскрывать дочерние строки по клику (иначе все видны сразу). */
+  collapsibleNested?: boolean;
 }) {
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
+
   if (rows.length === 0) {
     return <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>—</p>;
   }
@@ -333,15 +358,23 @@ export function SummaryStockTable({
         <tbody>
           {rows.flatMap((row) => {
             const hasChildren = nestedGrades && (row.children?.length ?? 0) > 0;
+            const expanded = collapsibleNested ? Boolean(expandedKeys[row.key]) : true;
+            const showChildren = hasChildren && expanded;
             const groupRows = [
               <SummaryStockTableRow
                 key={row.key}
                 row={row}
                 maxKg={maxKg}
                 variant={hasChildren ? "group" : "default"}
+                expanded={expanded}
+                onToggle={
+                  hasChildren && collapsibleNested
+                    ? () => setExpandedKeys((prev) => ({ ...prev, [row.key]: !prev[row.key] }))
+                    : undefined
+                }
               />,
             ];
-            if (hasChildren) {
+            if (showChildren) {
               for (const child of row.children ?? []) {
                 groupRows.push(
                   <SummaryStockTableRow key={child.key} row={child} maxKg={maxKg} variant="child" />,

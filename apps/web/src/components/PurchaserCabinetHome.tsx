@@ -15,8 +15,10 @@ import {
   formatDashboardKg,
   type DashboardSummaryPeriod,
 } from "./dashboard/dashboard-summary-ui.js";
+import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
+import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
 const FILL = [
   "birzha-admin-dash-modern__bar-fill--wh",
@@ -42,11 +44,12 @@ function periodRange(period: DashboardSummaryPeriod): { from: string; to: string
 }
 
 /**
- * Сводка закупщика: KPI и разрез по складам только по своим накладным;
- * быстрые переходы — те же операционные разделы, что в сайдбаре.
+ * Сводка закупщика: остаток на складе к погрузке + бухгалтерия по тепличникам.
  */
 export function PurchaserCabinetHome() {
   const [period, setPeriod] = useState<DashboardSummaryPeriod>("30d");
+  const [sumOpen, setSumOpen] = useState(false);
+  const [packagesOpen, setPackagesOpen] = useState(false);
   const range = useMemo(() => periodRange(period), [period]);
 
   const q = useQuery({
@@ -57,19 +60,32 @@ export function PurchaserCabinetHome() {
   const report = q.data;
   const grand = report?.grand;
   const byWarehouse = report?.byWarehouse ?? [];
+  const bySupplier = report?.bySupplier ?? [];
+  const byWarehouseSupplier = report?.byWarehouseSupplier ?? [];
 
-  const warehouseRows = useMemo(
-    () =>
-      byWarehouse.map((w) => ({
+  const warehouseRows = useMemo(() => {
+    return byWarehouse.map((w) => {
+      const children = byWarehouseSupplier
+        .filter((r) => r.warehouseId === w.warehouseId)
+        .map((r) => ({
+          key: `${r.warehouseId}:${r.supplierId ?? r.supplierName}`,
+          label: r.supplierName,
+          sublabel: `${r.documentsWithStockCount} накл.`,
+          kg: r.onWarehouseKg,
+          packages: r.onWarehousePackageCount,
+          valueKopecks: r.onWarehouseValueKopecks,
+        }));
+      return {
         key: w.warehouseId,
         label: w.warehouseName,
-        sublabel: `${w.documentsWithStockCount ?? 0} накл. на складе`,
+        sublabel: `${w.documentsWithStockCount ?? 0} накл. · нажмите, чтобы раскрыть`,
         kg: w.onWarehouseKg ?? 0,
         packages: w.onWarehousePackageCount ?? 0,
-        valueKopecks: w.totalKopecks,
-      })),
-    [byWarehouse],
-  );
+        valueKopecks: w.onWarehouseValueKopecks ?? "0",
+        children,
+      };
+    });
+  }, [byWarehouse, byWarehouseSupplier]);
 
   const warehouseMaxKg = Math.max(0, ...warehouseRows.map((r) => r.kg));
 
@@ -90,7 +106,7 @@ export function PurchaserCabinetHome() {
     return {
       kg: grand.onWarehouseKg ?? 0,
       packages: grand.onWarehousePackageCount ?? 0,
-      valueKopecks: grand.totalKopecks,
+      valueKopecks: grand.onWarehouseValueKopecks ?? "0",
     };
   }, [grand]);
 
@@ -115,7 +131,7 @@ export function PurchaserCabinetHome() {
               <p className="birzha-home-hero__eyebrow">Закупки</p>
               <h3 className="birzha-admin-dash-modern__title">Сводка</h3>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.35rem 0 0", maxWidth: "36rem" }}>
-                Остаток ваших накладных на складе (к погрузке) и сумма закупок за период.
+                Остаток на складе к погрузке. Сумма — ваша бухгалтерия по тепличникам: взял / отдал / осталось.
               </p>
               <DashboardSummaryPeriodToggles period={period} onChange={setPeriod} />
             </div>
@@ -148,11 +164,23 @@ export function PurchaserCabinetHome() {
               <div className="birzha-kpi-tile__value">{grand.documentsWithStockCount ?? 0}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">С остатком на складе</div>
             </Link>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good">
+            <button
+              type="button"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-good birzha-kpi-tile--link"
+              title="Бухгалтерия по тепличникам"
+              onClick={() => {
+                setSumOpen(true);
+                setPackagesOpen(false);
+              }}
+              style={{ cursor: "pointer", border: "none", font: "inherit", textAlign: "left" }}
+            >
               <div className="birzha-kpi-tile__label">Сумма</div>
               <div className="birzha-kpi-tile__value">{kopecksToRubDisplay(grand.totalKopecks)} ₽</div>
-              <div className="birzha-kpi-tile__hint birzha-ui-sm">Закупки за период</div>
-            </div>
+              <div className="birzha-kpi-tile__hint birzha-ui-sm">
+                Отдал {kopecksToRubDisplay(grand.paidKopecks ?? "0")} · долг{" "}
+                {kopecksToRubDisplay(grand.remainingPayableKopecks ?? "0")}
+              </div>
+            </button>
             <Link
               to={ops.distribution}
               className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
@@ -162,19 +190,138 @@ export function PurchaserCabinetHome() {
               <div className="birzha-kpi-tile__value">{formatDashboardKg(grand.onWarehouseKg ?? 0)}</div>
               <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке</div>
             </Link>
-            <div className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn">
+            <button
+              type="button"
+              className="birzha-kpi-tile birzha-kpi-tile--premium birzha-kpi-tile--tone-warn birzha-kpi-tile--link"
+              title="Остаток ящиков к погрузке"
+              onClick={() => {
+                setPackagesOpen(true);
+                setSumOpen(false);
+              }}
+              style={{ cursor: "pointer", border: "none", font: "inherit", textAlign: "left" }}
+            >
               <div className="birzha-kpi-tile__label">Ящики</div>
               <div className="birzha-kpi-tile__value">
                 {(grand.onWarehousePackageCount ?? 0).toLocaleString("ru-RU")}
               </div>
-              <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке</div>
-            </div>
+              <div className="birzha-kpi-tile__hint birzha-ui-sm">К погрузке · открыть</div>
+            </button>
           </section>
+
+          {sumOpen ? (
+            <section className="birzha-admin-dash-modern__chart-card" style={{ marginBottom: "0.85rem" }}>
+              <BirzhaDisclosure
+                defaultOpen
+                title={
+                  <span className="birzha-section-title-inline">
+                    По тепличникам — взял / отдал / осталось
+                  </span>
+                }
+              >
+                {bySupplier.length === 0 ? (
+                  <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }}>
+                    Нет закупок за период.
+                  </p>
+                ) : (
+                  <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
+                    <table style={{ ...tableStyle, minWidth: 720 }} aria-label="Бухгалтерия по тепличникам">
+                      <thead>
+                        <tr>
+                          <th style={thHead}>Тепличник</th>
+                          <th style={{ ...thHead, textAlign: "right" }}>Взял, ₽</th>
+                          <th style={{ ...thHead, textAlign: "right" }}>Отдал, ₽</th>
+                          <th style={{ ...thHead, textAlign: "right" }}>Осталось, ₽</th>
+                          <th style={{ ...thHead, textAlign: "right" }}>На складе, кг</th>
+                          <th style={{ ...thHead, textAlign: "right" }}>Ящ.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bySupplier.map((s) => (
+                          <tr key={`${s.supplierId ?? ""}:${s.supplierName}`}>
+                            <td style={thtd}>
+                              <strong>{s.supplierName}</strong>
+                              <div className="birzha-text-muted birzha-ui-sm">
+                                {s.documentCount} накл.
+                                {s.documentsWithStockCount > 0
+                                  ? ` · ${s.documentsWithStockCount} с остатком`
+                                  : ""}
+                              </div>
+                            </td>
+                            <td style={{ ...thtd, textAlign: "right" }}>
+                              {kopecksToRubDisplay(s.totalKopecks)}
+                            </td>
+                            <td style={{ ...thtd, textAlign: "right" }}>
+                              {kopecksToRubDisplay(s.paidKopecks)}
+                            </td>
+                            <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
+                              {kopecksToRubDisplay(s.remainingPayableKopecks)}
+                            </td>
+                            <td style={{ ...thtd, textAlign: "right" }}>
+                              {formatDashboardKg(s.onWarehouseKg)}
+                            </td>
+                            <td style={{ ...thtd, textAlign: "right" }}>
+                              {s.onWarehousePackageCount.toLocaleString("ru-RU")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <th style={thtd}>Итого</th>
+                          <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                            {kopecksToRubDisplay(grand.totalKopecks)}
+                          </td>
+                          <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                            {kopecksToRubDisplay(grand.paidKopecks ?? "0")}
+                          </td>
+                          <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                            {kopecksToRubDisplay(grand.remainingPayableKopecks ?? "0")}
+                          </td>
+                          <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                            {formatDashboardKg(grand.onWarehouseKg ?? 0)}
+                          </td>
+                          <td style={{ ...thtd, textAlign: "right", fontWeight: 700 }}>
+                            {(grand.onWarehousePackageCount ?? 0).toLocaleString("ru-RU")}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </BirzhaDisclosure>
+            </section>
+          ) : null}
+
+          {packagesOpen ? (
+            <section className="birzha-admin-dash-modern__chart-card" style={{ marginBottom: "0.85rem" }}>
+              <BirzhaDisclosure
+                defaultOpen
+                title={<span className="birzha-section-title-inline">Ящики к погрузке по складам</span>}
+              >
+                <p className="birzha-ui-sm birzha-text-muted" style={{ margin: "0 0 0.55rem" }}>
+                  Только остаток на складе. Раскройте склад — тепличники и ящики.
+                </p>
+                <SummaryStockTable
+                  labelColumn="Склад / тепличник"
+                  rows={warehouseRows}
+                  totals={stockTotals}
+                  maxKg={warehouseMaxKg}
+                  nestedGrades
+                  collapsibleNested
+                />
+                <p style={{ margin: "0.65rem 0 0" }}>
+                  <Link to={ops.distribution} style={{ fontWeight: 600 }}>
+                    Перейти к погрузке →
+                  </Link>
+                </p>
+              </BirzhaDisclosure>
+            </section>
+          ) : null}
 
           <div className="birzha-admin-dash-modern__layout">
             <section className="birzha-admin-dash-modern__chart-card">
               <div className="birzha-admin-dash-modern__chart-head">
-                <h4 style={{ margin: 0, fontSize: "1rem" }}>По складам</h4>
+                <h4 style={{ margin: 0, fontSize: "1rem" }}>По складам — остаток</h4>
                 <Link to={ops.purchaseByPurchaser} className="birzha-ui-sm" style={{ fontWeight: 600 }}>
                   Подробнее
                 </Link>
@@ -188,10 +335,12 @@ export function PurchaserCabinetHome() {
               )}
               <SummaryTotalsStrip totals={stockTotals} caption="Остаток на складе:" />
               <SummaryStockTable
-                labelColumn="Склад"
+                labelColumn="Склад / тепличник"
                 rows={warehouseRows}
                 totals={stockTotals}
                 maxKg={warehouseMaxKg}
+                nestedGrades
+                collapsibleNested
               />
             </section>
 

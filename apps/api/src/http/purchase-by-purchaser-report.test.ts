@@ -14,8 +14,12 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 500n,
         grams: 1_000_000n,
         packages: 10n,
+        supplierId: "s-murad",
+        supplierName: "Мурад",
         onWarehouseGrams: 200_000n,
         onWarehousePackages: 2,
+        onWarehouseValueKopecks: 20_000n,
+        paidKopecks: 40_000n,
       },
       {
         purchaserUserId: "u1",
@@ -26,8 +30,12 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 500_000n,
         packages: 5n,
+        supplierId: "s-murad",
+        supplierName: "Мурад",
         onWarehouseGrams: 0n,
         onWarehousePackages: 0,
+        onWarehouseValueKopecks: 0n,
+        paidKopecks: 50_000n,
       },
       {
         purchaserUserId: "u1",
@@ -38,8 +46,12 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 200_000n,
         packages: 2n,
+        supplierId: "s-umar",
+        supplierName: "Умар",
         onWarehouseGrams: 200_000n,
         onWarehousePackages: 2,
+        onWarehouseValueKopecks: 8_000n,
+        paidKopecks: 0n,
       },
       {
         purchaserUserId: "u2",
@@ -50,8 +62,12 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 100n,
         grams: 300_000n,
         packages: 3n,
+        supplierId: "s-murad",
+        supplierName: "Мурад",
         onWarehouseGrams: 0n,
         onWarehousePackages: 0,
+        onWarehouseValueKopecks: 0n,
+        paidKopecks: 10_000n,
       },
       {
         purchaserUserId: null,
@@ -62,8 +78,12 @@ describe("buildPurchaseByPurchaserReport", () => {
         extraKopecks: 0n,
         grams: 10_000n,
         packages: 1n,
+        supplierId: null,
+        supplierName: null,
         onWarehouseGrams: 10_000n,
         onWarehousePackages: 1,
+        onWarehouseValueKopecks: 500n,
+        paidKopecks: 0n,
       },
     ]);
 
@@ -114,7 +134,23 @@ describe("buildPurchaseByPurchaserReport", () => {
       onWarehouseKg: 410,
       onWarehousePackageCount: 5,
       documentsWithStockCount: 3,
+      paidKopecks: "100000",
+      remainingPayableKopecks: "101600",
+      onWarehouseValueKopecks: "28500",
     });
+
+    const murad = report.bySupplier.find((s) => s.supplierName === "Мурад");
+    expect(murad).toMatchObject({
+      totalKopecks: "180600",
+      paidKopecks: "100000",
+      remainingPayableKopecks: "80600",
+      documentsWithStockCount: 1,
+      onWarehouseKg: 200,
+    });
+
+    expect(report.byWarehouseSupplier.some((r) => r.warehouseId === "wh-kayakent" && r.supplierName === "Умар")).toBe(
+      true,
+    );
 
     const orphan = report.cells.find((c) => c.purchaserUserId === null);
     expect(orphan?.purchaserLogin).toBe("Без автора");
@@ -125,6 +161,7 @@ describe("buildPurchaseByPurchaserReport", () => {
     expect(report.cells).toEqual([]);
     expect(report.byPurchaser).toEqual([]);
     expect(report.byWarehouse).toEqual([]);
+    expect(report.bySupplier).toEqual([]);
     expect(report.grand).toEqual({
       totalKg: 0,
       packageCount: 0,
@@ -133,6 +170,9 @@ describe("buildPurchaseByPurchaserReport", () => {
       onWarehouseKg: 0,
       onWarehousePackageCount: 0,
       documentsWithStockCount: 0,
+      onWarehouseValueKopecks: "0",
+      paidKopecks: "0",
+      remainingPayableKopecks: "0",
     });
   });
 });
