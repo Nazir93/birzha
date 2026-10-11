@@ -103,15 +103,23 @@ function PurchaseDocRow({ doc, saving, deleting, onSave, onDelete }: PurchaseDoc
   }, [doc.documentNumber, doc.docDate]);
 
   const dirty = documentNumber.trim() !== doc.documentNumber || docDate !== doc.docDate;
+  const fullLabel = formatSupplierPurchaseLabel(documentNumber, doc.supplierName, docDate);
+  const supplierLabel = (doc.supplierName ?? "").trim() || "—";
+  const warehouseLabel = (doc.warehouseName ?? "").trim() || "—";
 
   return (
     <tr>
+      <td style={thtdDense}>
+        <strong style={{ fontWeight: 600 }}>{fullLabel}</strong>
+      </td>
+      <td style={thtdDense}>{supplierLabel}</td>
+      <td style={thtdDense}>{warehouseLabel}</td>
       <td style={thtdDense}>
         <input
           value={documentNumber}
           onChange={(e) => setDocumentNumber(e.target.value)}
           style={compactField}
-          aria-label={`Номер накладной ${doc.documentNumber}`}
+          aria-label={`Номер накладной ${fullLabel}`}
         />
       </td>
       <td style={thtdDense}>
@@ -119,7 +127,7 @@ function PurchaseDocRow({ doc, saving, deleting, onSave, onDelete }: PurchaseDoc
           value={docDate}
           onChange={setDocDate}
           style={compactField}
-          aria-label={`Дата накладной ${doc.documentNumber}`}
+          aria-label={`Дата накладной ${fullLabel}`}
         />
       </td>
       <td style={thtdDense}>{doc.lineCount}</td>
@@ -489,9 +497,12 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
         )}
         {purchaseDocsQ.isSuccess && (
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head">
-            <table style={{ ...tableStyle, minWidth: 640 }}>
+            <table style={{ ...tableStyle, minWidth: 860 }}>
               <thead>
                 <tr>
+                  <th style={thHeadDense}>Накладная</th>
+                  <th style={thHeadDense}>Тепличник</th>
+                  <th style={thHeadDense}>Склад</th>
                   <th style={thHeadDense}>№</th>
                   <th style={thHeadDense}>Дата</th>
                   <th style={thHeadDense}>Строк</th>
@@ -501,7 +512,13 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
               <tbody>
                 {(purchaseDocsQ.data.purchaseDocuments ?? [])
                   .slice()
-                  .sort((a, b) => a.documentNumber.localeCompare(b.documentNumber, "ru", { numeric: true }))
+                  .sort((a, b) =>
+                    formatSupplierPurchaseLabel(a.documentNumber, a.supplierName, a.docDate).localeCompare(
+                      formatSupplierPurchaseLabel(b.documentNumber, b.supplierName, b.docDate),
+                      "ru",
+                      { numeric: true },
+                    ),
+                  )
                   .map((d) => (
                     <PurchaseDocRow
                       key={d.id}
