@@ -8,6 +8,7 @@ import type { BatchListItem } from "../api/types.js";
 import { useAuth } from "../auth/auth-context.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import { totalsByGradeFromNakladnayaBatches } from "../format/purchase-nakladnaya-totals-by-grade.js";
 import { purchaseDocumentsFullListQueryOptions } from "../query/core-list-queries.js";
 import { isFromPurchaseNakladnaya } from "../format/is-from-purchase-nakladnaya.js";
@@ -189,11 +190,15 @@ export function BatchesByNakladnayaReference({
             title={
               <>
                 <span style={{ fontWeight: 600, fontSize: "0.92rem" }}>
-                  Накладная № {grp.documentNumber ?? "—"}
-                  {docDateLabel != null ? (
+                  {formatSupplierPurchaseLabel(
+                    grp.documentNumber,
+                    grp.batches[0]?.nakladnaya?.supplierName,
+                    rawDocDate ?? grp.batches[0]?.nakladnaya?.docDate,
+                  )}
+                  {docDateLabel == null && purchaseDocsQuery.isPending ? (
                     <>
                       {" "}
-                      <span style={{ fontWeight: 600 }}>· {docDateLabel}</span>
+                      <span style={{ fontWeight: 600 }}>· …</span>
                     </>
                   ) : null}{" "}
                   <span className="birzha-text-muted birzha-text-muted--lg" style={{ fontWeight: 500 }}>
@@ -215,7 +220,11 @@ export function BatchesByNakladnayaReference({
           >
             <table
               style={tableStyleDense}
-              aria-label={`Партии по накладной ${grp.documentNumber ?? "без номера"}`}
+              aria-label={`Партии по накладной ${formatSupplierPurchaseLabel(
+                grp.documentNumber,
+                grp.batches[0]?.nakladnaya?.supplierName,
+                rawDocDate ?? grp.batches[0]?.nakladnaya?.docDate,
+              )}`}
             >
               <thead>
                 <tr>

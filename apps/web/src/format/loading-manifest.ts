@@ -13,15 +13,18 @@ import {
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
 import { formatPurchaseDocDateRu } from "./purchase-doc-date.js";
+import { formatSupplierPurchaseLabel } from "./supplier-label.js";
 
-/** Подпись закупочной накладной в таблицах погрузки / возврата. */
+/** Подпись закупочной накладной: номер · тепличник · дата (не один только номер). */
 export function formatPurchaseDocumentDisplayLabel(
   documentId: string | null | undefined,
   documentNumber: string | null | undefined,
+  supplierName?: string | null,
+  docDate?: string | null,
 ): string {
-  const num = documentNumber?.trim() ?? "";
-  if (num) {
-    return `№ ${num}`;
+  const label = formatSupplierPurchaseLabel(documentNumber, supplierName, docDate);
+  if (label !== "—") {
+    return label;
   }
   const id = documentId?.trim() ?? "";
   if (id) {

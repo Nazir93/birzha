@@ -52,6 +52,7 @@ export type WarehouseWriteOffsByDocumentResponse = {
     createdAt: string;
     productGradeCode: string | null;
     supplierName?: string | null;
+    docDate?: string | null;
   }[];
 };
 
@@ -79,6 +80,8 @@ export type WarehouseWriteOffsRecentResponse = {
     documentNumber: string | null;
     /** Тепличник (снимок с закупочной накладной). */
     supplierName?: string | null;
+    /** Дата закупочной накладной YYYY-MM-DD. */
+    docDate?: string | null;
     productGradeCode: string | null;
     warehouseName: string | null;
     warehouseCode: string | null;

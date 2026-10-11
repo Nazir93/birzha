@@ -26,6 +26,7 @@ import {
 import { filterTripsAssignedToSellerForReports } from "../format/seller-workspace-trips.js";
 import { formatPurchaseDocDateRu } from "../format/purchase-doc-date.js";
 import { formatLoadingManifestDisplayName } from "../format/loading-manifest.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import { formatTripListStatusLabel } from "../format/trip-label.js";
 import { ARCHIVE_LIST_PAGE_SIZE } from "../format/list-page-sizes.js";
 import {
@@ -195,8 +196,8 @@ function NakladnayaArchiveTable({
 }) {
   const whById = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name || w.code])), [warehouses]);
   const headers = canDelete
-    ? ["№", "Дата", "№ документа", "Склад", "", ""]
-    : ["№", "Дата", "№ документа", "Склад", ""];
+    ? ["№", "Дата", "Накладная", "Склад", "", ""]
+    : ["№", "Дата", "Накладная", "Склад", ""];
   return (
     <ArchiveDataTable
       ariaLabel="Архив закупочных накладных"
@@ -206,7 +207,7 @@ function NakladnayaArchiveTable({
           String(startIndex + idx),
           formatPurchaseDocDateRu(d.docDate),
           <Link key="doc" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontWeight: 700 }}>
-            {d.documentNumber}
+            {formatSupplierPurchaseLabel(d.documentNumber, d.supplierName, d.docDate)}
           </Link>,
           whById.get(d.warehouseId) ?? "—",
           <Link key="open" to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)}>
@@ -714,7 +715,7 @@ export function ArchivePage() {
                 onDelete={(doc) => {
                   if (
                     window.confirm(
-                      `Удалить накладную № ${doc.documentNumber} из архива и все связанные партии? Действие необратимо.`,
+                      `Удалить накладную «${formatSupplierPurchaseLabel(doc.documentNumber, doc.supplierName, doc.docDate)}» из архива и все связанные партии? Действие необратимо.`,
                     )
                   ) {
                     void deletePurchaseDocument.mutate(doc.id);

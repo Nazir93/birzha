@@ -140,7 +140,6 @@ export function WarehouseReturnsPage() {
                 <tr>
                   <th style={thHead}>Когда</th>
                   <th style={thHead}>Склад</th>
-                  <th style={thHead}>Тепличник</th>
                   <th style={thHead}>Накладная</th>
                   <th style={thHead}>Калибр</th>
                   <th style={{ ...thHead, textAlign: "right" }}>Кг</th>
@@ -159,12 +158,9 @@ export function WarehouseReturnsPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td style={thtd}>{(r.supplierName ?? "").trim() || "—"}</td>
                     <td style={thtd}>
                       <Link to={purchaseNakladnayaDocumentPathForPath(pathname, r.purchaseDocumentId)}>
-                        {r.documentNumber?.trim()
-                          ? formatSupplierPurchaseLabel(r.documentNumber, null)
-                          : "—"}
+                        {formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate)}
                       </Link>
                     </td>
                     <td style={thtd}>{r.productGradeCode ?? "—"}</td>

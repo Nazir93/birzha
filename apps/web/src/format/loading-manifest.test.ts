@@ -66,8 +66,14 @@ describe("estimatedPackageCountOnShelf", () => {
 });
 
 describe("formatPurchaseDocumentDisplayLabel", () => {
-  it("показывает номер даже без documentId", () => {
-    expect(formatPurchaseDocumentDisplayLabel(null, "дадай · 2026-07-13")).toBe("№ дадай · 2026-07-13");
+  it("номер · тепличник · дата", () => {
+    expect(formatPurchaseDocumentDisplayLabel(null, "01", "Мурад", "2026-10-06")).toBe(
+      "01 · Мурад · 06.10.2026",
+    );
+  });
+
+  it("старый номер с именем внутри — как есть", () => {
+    expect(formatPurchaseDocumentDisplayLabel(null, "дадай · 2026-07-13")).toBe("дадай · 2026-07-13");
   });
 
   it("fallback на хвост id", () => {

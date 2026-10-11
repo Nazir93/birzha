@@ -39,7 +39,7 @@ describe("formatBatchPartyCaption", () => {
           supplierName: "Теплица Юг",
         },
       }),
-    ).toBe("Теплица Юг · № ЗН-1 · Помидоры · №5");
+    ).toBe("ЗН-1 · Теплица Юг · Помидоры · №5");
   });
 });
 

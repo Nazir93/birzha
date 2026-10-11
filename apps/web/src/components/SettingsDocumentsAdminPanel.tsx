@@ -24,6 +24,7 @@ import { buildTripDisplayNumber, formatTripListStatusLabel } from "../format/tri
 import { sortTripsByDepartedDesc } from "../format/trip-sort.js";
 import { humanizeErrorMessage } from "../format/user-facing-error.js";
 import { SETTINGS_LIST_PAGE_SIZE } from "../format/list-page-sizes.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import { BirzhaDateField, BirzhaDateTimeField } from "./BirzhaCalendarFields.js";
 import { BirzhaDisclosure } from "../ui/BirzhaDisclosure.js";
 import { BirzhaPagination } from "../ui/BirzhaPagination.js";
@@ -511,7 +512,7 @@ export function SettingsDocumentsAdminPanel({ embedded = false }: SettingsDocume
                       onDelete={(doc) => {
                         if (
                           window.confirm(
-                            `Удалить накладную № ${doc.documentNumber} и все связанные партии? Действие необратимо.`,
+                            `Удалить накладную «${formatSupplierPurchaseLabel(doc.documentNumber, doc.supplierName, doc.docDate)}» и все связанные партии? Действие необратимо.`,
                           )
                         ) {
                           void deletePurchaseDocument.mutate(doc.id);

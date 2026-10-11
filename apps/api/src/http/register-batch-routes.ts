@@ -27,6 +27,7 @@ import {
   warehouses as warehousesTable,
 } from "../db/schema.js";
 import { gramsToKg } from "../application/units/mass.js";
+import { calendarYmdFromDate } from "../format/calendar-date.js";
 import { DrizzlePurchaseLinePackageMetaRepository } from "../infrastructure/persistence/drizzle-purchase-line-package-meta.js";
 import { NullPurchaseLinePackageMetaPort } from "../infrastructure/persistence/null-purchase-line-package-meta.js";
 
@@ -556,6 +557,7 @@ export function registerBatchRoutes(
               documentId: purchaseDocuments.id,
               documentNumber: purchaseDocuments.documentNumber,
               supplierName: purchaseDocuments.supplierName,
+              docDate: purchaseDocuments.docDate,
               productGradeCode: productGrades.code,
             })
             .from(batchWarehouseWriteOffs)
@@ -585,6 +587,7 @@ export function registerBatchRoutes(
               createdAt: r.createdAt.toISOString(),
               productGradeCode: r.productGradeCode,
               supplierName: r.supplierName,
+              docDate: calendarYmdFromDate(r.docDate),
             })),
           });
         }
@@ -625,6 +628,7 @@ export function registerBatchRoutes(
             purchaseDocumentId: purchaseDocuments.id,
             documentNumber: purchaseDocuments.documentNumber,
             supplierName: purchaseDocuments.supplierName,
+            docDate: purchaseDocuments.docDate,
             productGradeCode: productGrades.code,
             warehouseName: warehousesTable.name,
             warehouseCode: warehousesTable.code,
@@ -674,6 +678,7 @@ export function registerBatchRoutes(
             purchaseDocumentId: r.purchaseDocumentId,
             documentNumber: r.documentNumber,
             supplierName: r.supplierName,
+            docDate: calendarYmdFromDate(r.docDate),
             productGradeCode: r.productGradeCode,
             warehouseName: r.warehouseName,
             warehouseCode: r.warehouseCode,

@@ -211,9 +211,9 @@ export function AccountingPayablesPanel() {
             downloadCsv("birzha-payables.csv", [
               ["Тепличник", "Накладная", "Дата", "Сумма", "Оплачено", "Остаток", "Статус"],
               ...rows.map((r) => [
+                (r.supplierName ?? "").trim() || "—",
                 formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate),
-                r.documentNumber,
-                r.docDate,
+                formatPurchaseDocDateRu(r.docDate),
                 kopecksToRubLabel(r.totalKopecks),
                 kopecksToRubLabel(r.paidKopecks),
                 kopecksToRubLabel(r.remainingKopecks),
@@ -245,9 +245,11 @@ export function AccountingPayablesPanel() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.documentId}>
-                  <td style={thtd}>{formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate)}</td>
-                  <td style={thtd}>{r.documentNumber}</td>
-                  <td style={thtd}>{r.docDate}</td>
+                  <td style={thtd}>{(r.supplierName ?? "").trim() || "—"}</td>
+                  <td style={thtd}>
+                    {formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate)}
+                  </td>
+                  <td style={thtd}>{formatPurchaseDocDateRu(r.docDate)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.totalKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right" }}>{kopecksToRubLabel(r.paidKopecks)}</td>
                   <td style={{ ...thtd, textAlign: "right", fontWeight: 600 }}>
@@ -274,15 +276,7 @@ export function AccountingPayablesPanel() {
               Тепличник
               <input
                 style={fieldStyle}
-                value={
-                  selectedPayable
-                    ? formatSupplierPurchaseLabel(
-                        selectedPayable.documentNumber,
-                        selectedPayable.supplierName,
-                        selectedPayable.docDate,
-                      )
-                    : "—"
-                }
+                value={(selectedPayable?.supplierName ?? "").trim() || "—"}
                 readOnly
                 aria-label="Тепличник"
               />
@@ -293,11 +287,11 @@ export function AccountingPayablesPanel() {
                 style={fieldStyle}
                 value={
                   selectedPayable
-                    ? `${selectedPayable.documentNumber}${
-                        selectedPayable.docDate
-                          ? ` · ${formatPurchaseDocDateRu(selectedPayable.docDate)}`
-                          : ""
-                      }`
+                    ? formatSupplierPurchaseLabel(
+                        selectedPayable.documentNumber,
+                        selectedPayable.supplierName,
+                        selectedPayable.docDate,
+                      )
                     : "—"
                 }
                 readOnly

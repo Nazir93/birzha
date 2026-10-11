@@ -17,6 +17,7 @@ import {
 import { loadingManifestTripDetachLockMessage } from "../../format/loading-manifest-trip-detach-lock.js";
 import { kopecksToRubLabel } from "../../format/money.js";
 import { formatPurchaseDocDateRu } from "../../format/purchase-doc-date.js";
+import { formatSupplierPurchaseLabel } from "../../format/supplier-label.js";
 import { formatTripSelectLabel } from "../../format/trip-label.js";
 import { LoadingBlock } from "../../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../../ui/ErrorAlerts.js";
@@ -585,7 +586,12 @@ export function LoadingManifestAccordion({
                             <td>{line.warehouseName?.trim() || "—"}</td>
                           ) : null}
                           <td>{line.supplierName?.trim() || "—"}</td>
-                          <td>{line.purchaseDocumentNumber ?? "—"}</td>
+                          <td>
+                            {formatSupplierPurchaseLabel(
+                              line.purchaseDocumentNumber,
+                              line.supplierName,
+                            )}
+                          </td>
                           <td>{`${line.productGroup?.trim() || "Товар"} · ${line.productGradeCode?.trim() || "—"}`}</td>
                           <td className="birzha-data-table__num">
                             {line.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}

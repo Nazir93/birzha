@@ -222,8 +222,12 @@ export function PurchaseNakladnayaDetailSection() {
   }, [gradeOptionGroups, docProductGroup]);
 
   const supplierHeading = useMemo(() => {
-    return formatSupplierPurchaseLabel(docQ.data?.documentNumber, docQ.data?.supplierName);
-  }, [docQ.data?.documentNumber, docQ.data?.supplierName]);
+    return formatSupplierPurchaseLabel(
+      docQ.data?.documentNumber,
+      docQ.data?.supplierName,
+      docQ.data?.docDate,
+    );
+  }, [docQ.data?.documentNumber, docQ.data?.supplierName, docQ.data?.docDate]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

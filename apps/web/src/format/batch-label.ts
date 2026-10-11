@@ -1,4 +1,5 @@
 import type { BatchListItem } from "../api/types.js";
+import { formatSupplierPurchaseLabel } from "./supplier-label.js";
 
 /** Подпись калибра в `<select>`: без «№5 — Калибр №5» и «HC+ — HC+». */
 export function productGradeOptionLabel(code: string, displayName: string): string {
@@ -81,15 +82,15 @@ export function formatBatchPartyCaption(b: BatchListItem | undefined, _batchId?:
   if (!b) {
     return "партия без накладной";
   }
-  const supplier = b.nakladnaya?.supplierName?.trim();
-  const doc = b.nakladnaya?.documentNumber?.trim();
+  const docLabel = formatSupplierPurchaseLabel(
+    b.nakladnaya?.documentNumber,
+    b.nakladnaya?.supplierName,
+    b.nakladnaya?.docDate,
+  );
   const line = formatNakladLineLabel(b);
   const parts: string[] = [];
-  if (supplier) {
-    parts.push(supplier);
-  }
-  if (doc) {
-    parts.push(`№ ${doc}`);
+  if (docLabel !== "—") {
+    parts.push(docLabel);
   }
   if (line !== "—") {
     parts.push(line);

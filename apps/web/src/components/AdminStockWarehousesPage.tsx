@@ -552,7 +552,6 @@ export function AdminStockWarehousesPage() {
                             <thead>
                               <tr>
                                 <th style={thHeadDense}>Когда</th>
-                                <th style={thHeadDense}>Тепличник</th>
                                 <th style={thHeadDense}>Накладная</th>
                                 <th style={thHeadDense}>Калибр</th>
                                 <th style={thHeadDense}>Возвращено, кг</th>
@@ -562,15 +561,16 @@ export function AdminStockWarehousesPage() {
                               {writeOffLines.map((row) => (
                                 <tr key={row.id}>
                                   <td style={thtdDense}>{new Date(row.createdAt).toLocaleString("ru-RU")}</td>
-                                  <td style={thtdDense}>{(row.supplierName ?? "").trim() || "—"}</td>
                                   <td style={thtdDense}>
                                     <Link
                                       to={purchaseNakladnayaDocumentPathForPath(pathname, row.purchaseDocumentId)}
                                       style={{ fontWeight: 600 }}
                                     >
-                                      {row.documentNumber?.trim()
-                                        ? formatSupplierPurchaseLabel(row.documentNumber, null)
-                                        : "—"}
+                                      {formatSupplierPurchaseLabel(
+                                        row.documentNumber,
+                                        row.supplierName,
+                                        row.docDate,
+                                      )}
                                     </Link>
                                   </td>
                                   <td style={thtdDense}>{row.productGradeCode ?? "—"}</td>

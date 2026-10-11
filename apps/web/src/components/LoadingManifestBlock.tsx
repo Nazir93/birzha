@@ -164,7 +164,12 @@ export function LoadingManifestBlock({
       const fromOptions = labelById.get(id);
       const label =
         fromOptions ??
-        formatPurchaseDocumentDisplayLabel(id, b.nakladnaya?.documentNumber);
+        formatPurchaseDocumentDisplayLabel(
+          id,
+          b.nakladnaya?.documentNumber,
+          b.nakladnaya?.supplierName,
+          b.nakladnaya?.docDate,
+        );
       m.set(id, { id, label });
     }
     return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, "ru"));

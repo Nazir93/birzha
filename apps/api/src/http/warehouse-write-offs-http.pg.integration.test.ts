@@ -145,6 +145,7 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
         purchaseDocumentId: string;
         warehouseName: string | null;
         supplierName: string | null;
+        docDate: string | null;
         productGradeCode: string | null;
       }[];
     };
@@ -158,6 +159,7 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
     expect(hit!.kg).toBe(10);
     expect(hit!.warehouseName).toContain("write-off IT");
     expect(hit!.supplierName).toBe("Тепличник IT");
+    expect(hit!.docDate).toBe("2024-06-01");
     expect(hit!.productGradeCode).toContain("IT");
     await app.close();
   });

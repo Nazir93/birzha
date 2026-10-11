@@ -10,6 +10,7 @@ import { apiPostJson } from "../api/fetch-api.js";
 import { isLikelyNetworkFailure } from "../api/is-likely-network-failure.js";
 import type { BatchListItem, TripJson } from "../api/types.js";
 import { formatNakladLineLabel } from "../format/batch-label.js";
+import { formatSupplierPurchaseLabel } from "../format/supplier-label.js";
 import {
   findSellerCaliberGroupForBatch,
   groupSellableRowsByCaliber,
@@ -462,7 +463,11 @@ export function SellFromTripSection() {
     const residualKgOnly = sellerResidualKgOnly(hasPkgData, estPkg, netG);
     return {
       line: group?.lineLabel ?? (b ? formatNakladLineLabel(b) : "—"),
-      doc: b?.nakladnaya?.documentNumber?.trim() ?? "—",
+      doc: formatSupplierPurchaseLabel(
+        b?.nakladnaya?.documentNumber,
+        b?.nakladnaya?.supplierName,
+        b?.nakladnaya?.docDate,
+      ),
       kg: gramsBigIntToKgDecimalString(netG),
       estPkg,
       hasShipped: group ? group.rows.some((r) => r.shippedG > 0n) : row.shippedG > 0n,
