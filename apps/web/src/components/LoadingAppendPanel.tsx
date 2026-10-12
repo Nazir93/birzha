@@ -79,7 +79,6 @@ export function LoadingAppendPanel() {
     selectedWarehouseRow,
     batchesInWh,
     documentOptions,
-    manifestDocumentOptions,
     tableRows,
     tableRowsTotalKg,
     manifestListTotal,
@@ -399,46 +398,45 @@ export function LoadingAppendPanel() {
           {showWorkspace && selectedWarehouse ? (
             <>
               <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">
-                Погрузочная и возврат на склад
+                1. Отбор со склада — что догрузить
               </h4>
               {documentOptions.length === 0 && batchesInWh.length > 0 ? (
                 <p className="birzha-callout-info" role="status">
                   На складе нет привязки к номеру накладной — показаны все партии с остатком.
                 </p>
               ) : null}
-              <LoadingManifestBlock
-                documentOptions={manifestDocumentOptions}
-                selectedDocIds={loadNaklSelection}
-                onToggleNaklDoc={onToggleNaklDoc}
-                onSelectAllNakl={onSelectAllNakl}
-                onClearNakl={onClearNakl}
-                batchesInWh={batchesInWh}
-                warehouseName={warehouseName(selectedWarehouse)}
-                labelDest={labelDest}
-                /* Возврат и остаток в отборе — по строкам выбранной ПН; отбор к догрузке — свободный склад. */
-                manifest={writeOffTargetManifest}
-                writeOff={
-                  meta?.warehouseWriteOffApi === "enabled" &&
-                  canReturn &&
-                  (batchesInWh.length > 0 || (writeOffTargetManifest?.lines.length ?? 0) > 0)
-                    ? {
-                        enabled: true,
-                        isPending: writeOff.isPending,
-                        isError: writeOff.isError,
-                        errorMessage: writeOff.isError ? humanizeErrorMessage(writeOff.error) : null,
-                        rejectInput: rejectScrapInput,
-                        rejectPkgInput: rejectScrapPkgInput,
-                        onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
-                        onRejectPkgInputChange: (key, value) => setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
-                        onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
-                        recentWriteOffs,
-                        undoingWriteOffId,
-                        undoError: writeOffUndoError,
-                        onUndoWriteOff: (writeOffId) => void undoWriteOff.mutate(writeOffId),
-                      }
-                    : null
-                }
-              />
+              {documentOptions.length > 0 ? (
+                <div
+                  className="no-print birzha-clean-ops-meta-grid birzha-distribution-doc-checkboxes"
+                  style={{ marginBottom: "0.75rem" }}
+                >
+                  <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem", gridColumn: "1 / -1" }}>
+                    Накладные на складе (отметьте, что брать в догрузку)
+                  </p>
+                  {documentOptions.map((d) => (
+                    <label
+                      key={d.id}
+                      className="birzha-form-label"
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={loadNaklSelection.has(d.id)}
+                        onChange={() => onToggleNaklDoc(d.id)}
+                      />
+                      {d.checkboxLabel}
+                    </label>
+                  ))}
+                  <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                    <button type="button" className={btnClassSpaced} onClick={onSelectAllNakl}>
+                      Все
+                    </button>
+                    <button type="button" className={btnClassSpaced} onClick={onClearNakl}>
+                      Снять
+                    </button>
+                  </span>
+                </div>
+              ) : null}
               <AppendCandidatesTable
                 batches={tableRows}
                 warehouseName={warehouseName(selectedWarehouse)}
@@ -458,8 +456,7 @@ export function LoadingAppendPanel() {
                 {tableRows.length > 0 ? (
                   <span className="birzha-text-muted birzha-ui-sm" style={{ width: "100%", marginBottom: "0.35rem" }}>
                     На складе доступно: <strong>{tableRows.length}</strong> парт.,{" "}
-                    <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг — укажите
-                    сколько догрузить в таблице выше.
+                    <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
                   </span>
                 ) : null}
                 {appendQtyError ? <ErrorAlert message={appendQtyError} title="Догрузка" /> : null}
@@ -496,6 +493,50 @@ export function LoadingAppendPanel() {
                   </p>
                 )}
               </p>
+
+              <h4
+                className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step"
+                style={{ marginTop: "1.25rem" }}
+              >
+                2. Уже в погрузочной — возврат на склад
+              </h4>
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+                Ниже — строки этой погрузочной. Возврат с вводом кг/ящ. убирает товар из ПН обратно на склад (для
+                другого рейса или новой догрузки).
+              </p>
+              <LoadingManifestBlock
+                documentOptions={[]}
+                selectedDocIds={new Set()}
+                onToggleNaklDoc={() => undefined}
+                onSelectAllNakl={() => undefined}
+                onClearNakl={() => undefined}
+                batchesInWh={batchesInWh}
+                warehouseName={warehouseName(selectedWarehouse)}
+                labelDest={labelDest}
+                manifest={writeOffTargetManifest}
+                writeOff={
+                  meta?.warehouseWriteOffApi === "enabled" &&
+                  canReturn &&
+                  (writeOffTargetManifest?.lines.length ?? 0) > 0
+                    ? {
+                        enabled: true,
+                        isPending: writeOff.isPending,
+                        isError: writeOff.isError,
+                        errorMessage: writeOff.isError ? humanizeErrorMessage(writeOff.error) : null,
+                        rejectInput: rejectScrapInput,
+                        rejectPkgInput: rejectScrapPkgInput,
+                        onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
+                        onRejectPkgInputChange: (key, value) =>
+                          setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
+                        onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
+                        recentWriteOffs,
+                        undoingWriteOffId,
+                        undoError: writeOffUndoError,
+                        onUndoWriteOff: (writeOffId) => void undoWriteOff.mutate(writeOffId),
+                      }
+                    : null
+                }
+              />
             </>
           ) : null}
 

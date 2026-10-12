@@ -64,10 +64,11 @@ export function AppendCandidatesTable({
   return (
     <section className="no-print" aria-labelledby="append-candidates-h" style={{ margin: "0.85rem 0 0.5rem" }}>
       <h4 id="append-candidates-h" style={{ fontSize: "0.95rem", margin: "0 0 0.4rem" }}>
-        Будет добавлено со склада: {warehouseName}
+        Со склада «{warehouseName}» — свободный остаток
       </h4>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-        Укажите кг или ящики — сколько догрузить. Пустое поле = весь остаток строки; «0» = не брать эту строку.
+        Здесь товар на складе (в т.ч. то, что вернули из погрузочной). Введите кг или ящики — сколько догрузить. Пусто =
+        весь остаток строки; «0» = не брать.
       </p>
       {rows.length === 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
