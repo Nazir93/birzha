@@ -17,6 +17,7 @@ import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnClassSpaced, selectFieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
+import { AppendCandidatesTable } from "./distribution/AppendCandidatesTable.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
@@ -382,7 +383,9 @@ export function LoadingAppendPanel() {
 
           {showWorkspace && selectedWarehouse ? (
             <>
-              <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">Отбор партий</h4>
+              <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">
+                Погрузочная и возврат на склад
+              </h4>
               {documentOptions.length === 0 && batchesInWh.length > 0 ? (
                 <p className="birzha-callout-info" role="status">
                   На складе нет привязки к номеру накладной — показаны все партии с остатком.
@@ -420,6 +423,11 @@ export function LoadingAppendPanel() {
                       }
                     : null
                 }
+              />
+              <AppendCandidatesTable
+                batches={tableRows}
+                warehouseName={warehouseName(selectedWarehouse)}
+                labelDest={labelDest}
               />
               <p className="birzha-clean-ops-form-actions no-print">
                 {tableRows.length > 0 ? (
