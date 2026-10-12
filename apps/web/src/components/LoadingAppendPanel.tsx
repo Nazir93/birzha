@@ -17,7 +17,10 @@ import { ErrorAlert, InfoAlert } from "../ui/ErrorAlerts.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
 import { btnClassSpaced, selectFieldStyle } from "../ui/styles.js";
 import { BirzhaSelect } from "../ui/BirzhaSelect.js";
-import { AppendCandidatesTable } from "./distribution/AppendCandidatesTable.js";
+import {
+  AppendCandidatesTable,
+  resolveAppendCandidateLines,
+} from "./distribution/AppendCandidatesTable.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
@@ -42,6 +45,10 @@ export function LoadingAppendPanel() {
   const [manifestListPage, setManifestListPage] = useState(0);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
   const [rejectScrapPkgInput, setRejectScrapPkgInput] = useState<Record<string, string>>({});
+  const [appendKgInput, setAppendKgInput] = useState<Record<string, string>>({});
+  const [appendPkgInput, setAppendPkgInput] = useState<Record<string, string>>({});
+  const [appendQtyError, setAppendQtyError] = useState<string | null>(null);
+  const [pendingAppendLines, setPendingAppendLines] = useState<{ batchId: string; kg: number }[]>([]);
   const [recentWriteOffs, setRecentWriteOffs] = useState<RecentWriteOffRow[]>([]);
   const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
   const [undoingWriteOffId, setUndoingWriteOffId] = useState<string | null>(null);
@@ -167,18 +174,22 @@ export function LoadingAppendPanel() {
       appendToManifestId: string;
       warehouseId: string;
       destinationCode: string;
-      batchIds: string[];
+      lines: { batchId: string; kg: number }[];
       docDate: string;
       manifestNumber: string;
     }) => {
       await apiPostJson(`/api/loading-manifests/${encodeURIComponent(payload.appendToManifestId)}/add-batches`, {
-        batchIds: payload.batchIds,
+        lines: payload.lines,
       });
       return payload.appendToManifestId;
     },
     onSuccess: (manifestId) => {
       setLoadNaklSelection(new Set());
       setManifestFormOpen(false);
+      setAppendKgInput({});
+      setAppendPkgInput({});
+      setAppendQtyError(null);
+      setPendingAppendLines([]);
       setSelectedWarehouse("");
       writePreferredWarehouseId(null);
       void refreshDistributionLists(queryClient);
@@ -204,6 +215,10 @@ export function LoadingAppendPanel() {
   useEffect(() => {
     setManifestFormOpen(false);
     setRejectScrapInput({});
+    setAppendKgInput({});
+    setAppendPkgInput({});
+    setAppendQtyError(null);
+    setPendingAppendLines([]);
     setRecentWriteOffs([]);
   }, [selectedWarehouse, routeManifestId]);
 
@@ -428,20 +443,50 @@ export function LoadingAppendPanel() {
                 batches={tableRows}
                 warehouseName={warehouseName(selectedWarehouse)}
                 labelDest={labelDest}
+                kgInput={appendKgInput}
+                pkgInput={appendPkgInput}
+                onKgChange={(key, value) => {
+                  setAppendQtyError(null);
+                  setAppendKgInput((prev) => ({ ...prev, [key]: value }));
+                }}
+                onPkgChange={(key, value) => {
+                  setAppendQtyError(null);
+                  setAppendPkgInput((prev) => ({ ...prev, [key]: value }));
+                }}
               />
               <p className="birzha-clean-ops-form-actions no-print">
                 {tableRows.length > 0 ? (
                   <span className="birzha-text-muted birzha-ui-sm" style={{ width: "100%", marginBottom: "0.35rem" }}>
-                    К догрузке: <strong>{tableRows.length}</strong> парт.,{" "}
-                    <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг.
+                    На складе доступно: <strong>{tableRows.length}</strong> парт.,{" "}
+                    <strong>{tableRowsTotalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}</strong> кг — укажите
+                    сколько догрузить в таблице выше.
                   </span>
                 ) : null}
+                {appendQtyError ? <ErrorAlert message={appendQtyError} title="Догрузка" /> : null}
                 {canShip ? (
                   <button
                     type="button"
                     className={btnClassSpaced}
                     disabled={tableRows.length === 0}
-                    onClick={() => setManifestFormOpen(true)}
+                    onClick={() => {
+                      const lines = resolveAppendCandidateLines(
+                        tableRows,
+                        labelDest,
+                        appendKgInput,
+                        appendPkgInput,
+                      );
+                      if (lines == null) {
+                        setAppendQtyError("Проверьте кг/ящики: нельзя больше остатка на складе.");
+                        return;
+                      }
+                      if (lines.length === 0) {
+                        setAppendQtyError("Укажите количество больше нуля хотя бы по одной строке.");
+                        return;
+                      }
+                      setAppendQtyError(null);
+                      setPendingAppendLines(lines);
+                      setManifestFormOpen(true);
+                    }}
                   >
                     Добавить в погрузочную
                   </button>
@@ -488,14 +533,14 @@ export function LoadingAppendPanel() {
           createError={appendManifest.isError ? appendManifest.error : null}
           tripsBase=""
           onSave={(payload) => {
-            if (!payload.appendToManifestId) {
+            if (!payload.appendToManifestId || pendingAppendLines.length === 0) {
               return;
             }
             appendManifest.mutate({
               appendToManifestId: payload.appendToManifestId,
               warehouseId: payload.warehouseId,
               destinationCode: payload.destinationCode,
-              batchIds: payload.batchIds,
+              lines: pendingAppendLines,
               docDate: payload.docDate,
               manifestNumber: payload.manifestNumber,
             });

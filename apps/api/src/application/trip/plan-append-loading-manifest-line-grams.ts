@@ -13,10 +13,20 @@ export function planAppendLoadingManifestLineGrams(input: {
   existingLineGrams: bigint | null;
   /** Свободно на складе для погрузки (после резерва других черновых ПН и blocks_loading). */
   availableWarehouseGrams: bigint;
+  /** Сколько догрузить (не больше доступного). `undefined` — весь свободный склад. */
+  requestedAddGrams?: bigint;
 }): AppendLoadingManifestLinePlan {
-  const add = input.availableWarehouseGrams > 0n ? input.availableWarehouseGrams : 0n;
-  if (add <= 0n) {
+  const available = input.availableWarehouseGrams > 0n ? input.availableWarehouseGrams : 0n;
+  if (available <= 0n) {
     return { kind: "skip" };
+  }
+  let add = available;
+  if (input.requestedAddGrams != null) {
+    const requested = input.requestedAddGrams > 0n ? input.requestedAddGrams : 0n;
+    if (requested <= 0n) {
+      return { kind: "skip" };
+    }
+    add = requested < available ? requested : available;
   }
   if (input.existingLineGrams == null) {
     return { kind: "insert", targetGrams: add, addGrams: add };

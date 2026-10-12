@@ -18,6 +18,7 @@ import type { PurchaserExpenseRepository } from "../application/ports/purchaser-
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { planAppendLoadingManifestLineGrams } from "../application/trip/plan-append-loading-manifest-line-grams.js";
+import { kgToGrams } from "../application/units/mass.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
 import { assertBatchesMatchTripProduct } from "../application/trip/assert-batches-match-trip-product.js";
@@ -609,7 +610,20 @@ export function registerLoadingManifestRoutes(
       const params = z.object({ manifestId: z.string().min(1) }).parse(req.params);
       const body = appendLoadingManifestBatchesBodySchema.parse(req.body);
       const manifestId = params.manifestId;
-      const batchIds: string[] = [...new Set(body.batchIds.map((x) => x.trim()).filter(Boolean))];
+      const requestedKgByBatch = new Map<string, number>();
+      if (body.lines && body.lines.length > 0) {
+        for (const line of body.lines) {
+          const id = line.batchId.trim();
+          if (!id) {
+            continue;
+          }
+          requestedKgByBatch.set(id, (requestedKgByBatch.get(id) ?? 0) + line.kg);
+        }
+      }
+      const batchIds: string[] =
+        requestedKgByBatch.size > 0
+          ? [...requestedKgByBatch.keys()]
+          : [...new Set((body.batchIds ?? []).map((x) => x.trim()).filter(Boolean))];
       if (batchIds.length === 0) {
         return reply.code(400).send({ error: "empty_manifest" });
       }
@@ -703,9 +717,11 @@ export function registerLoadingManifestRoutes(
         const affectedBatchIds = new Set<string>();
         for (const row of withStock) {
           const already = existingByBatch.get(row.batchId);
+          const requestedKg = requestedKgByBatch.get(row.batchId);
           const linePlan = planAppendLoadingManifestLineGrams({
             existingLineGrams: already ? already.grams : null,
             availableWarehouseGrams: row.availableGrams,
+            ...(requestedKg != null ? { requestedAddGrams: kgToGrams(requestedKg) } : {}),
           });
           if (linePlan.kind === "skip") {
             continue;

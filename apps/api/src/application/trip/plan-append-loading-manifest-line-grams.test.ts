@@ -40,4 +40,21 @@ describe("planAppendLoadingManifestLineGrams", () => {
       }),
     ).toEqual({ kind: "skip" });
   });
+
+  it("частичная догрузка: не больше доступного", () => {
+    expect(
+      planAppendLoadingManifestLineGrams({
+        existingLineGrams: null,
+        availableWarehouseGrams: 1148_000n,
+        requestedAddGrams: 500_000n,
+      }),
+    ).toEqual({ kind: "insert", targetGrams: 500_000n, addGrams: 500_000n });
+    expect(
+      planAppendLoadingManifestLineGrams({
+        existingLineGrams: 100_000n,
+        availableWarehouseGrams: 200_000n,
+        requestedAddGrams: 500_000n,
+      }),
+    ).toEqual({ kind: "increase", targetGrams: 300_000n, addGrams: 200_000n });
+  });
 });

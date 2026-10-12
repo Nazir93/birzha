@@ -248,9 +248,26 @@ export const loadingManifestTripDetachLockReasonSchema = z.enum([
 export const loadingManifestTripActionOkSchema = z.object({ ok: z.literal(true) });
 
 /** POST /loading-manifests/:manifestId/add-batches */
-export const appendLoadingManifestBatchesBodySchema = z.object({
-  batchIds: z.array(z.string().min(1).max(200)).min(1),
-});
+export const appendLoadingManifestBatchesBodySchema = z
+  .object({
+    /** Все доступные кг по партиям (как раньше). */
+    batchIds: z.array(z.string().min(1).max(200)).min(1).optional(),
+    /** Явный объём догрузки по партиям (кг); приоритетнее batchIds. */
+    lines: z
+      .array(
+        z.object({
+          batchId: z.string().min(1).max(200),
+          kg: z.number().finite().gt(0).max(1_000_000),
+        }),
+      )
+      .min(1)
+      .optional(),
+  })
+  .superRefine((body, ctx) => {
+    if ((body.lines?.length ?? 0) === 0 && (body.batchIds?.length ?? 0) === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "lines_or_batchIds_required" });
+    }
+  });
 
 /** GET /loading-manifests/reserved-batch-ids?warehouseId= — партии, уже в строках ПН на этом складе. */
 export const loadingManifestReservedBatchIdsQuerySchema = z.object({

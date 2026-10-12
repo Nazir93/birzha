@@ -11,6 +11,7 @@ import {
   buildWriteOffItemsFromBatches,
   buildWriteOffItemsFromBatchesByPackages,
   buildWriteOffItemsFromInputs,
+  buildAppendItemsFromInputs,
   aggregateLoadingManifestLinesByCaliber,
   aggregateLoadingManifestLinesBySupplier,
   estimatedPackageCountOnShelf,
@@ -544,6 +545,42 @@ describe("buildWriteOffItemsFromInputs", () => {
   it("null при превышении остатка", () => {
     expect(buildWriteOffItemsFromInputs(batches, row, "50", "")).toBeNull();
     expect(buildWriteOffItemsFromInputs(batches, row, "", "10")).toBeNull();
+  });
+});
+
+describe("buildAppendItemsFromInputs", () => {
+  const batches = [
+    b({
+      id: "euro",
+      totalKg: 1148,
+      onWarehouseKg: 1148,
+      availableForLoadingKg: 1148,
+      nakladnaya: {
+        documentId: "d1",
+        warehouseId: "w1",
+        productGradeCode: "Евро Москва",
+        productGroup: "Огурцы",
+        documentNumber: "01",
+        linePackageCount: 130,
+      },
+    }),
+  ];
+  const row = { totalKg: 1148, totalPkg: 130, linesWithPkg: 1 };
+
+  it("пустое поле — весь остаток", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "", "")).toEqual([{ batchId: "euro", kg: 1148 }]);
+  });
+
+  it("частичная догрузка по кг", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "500", "")).toEqual([{ batchId: "euro", kg: 500 }]);
+  });
+
+  it("0 — пропуск строки", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "0", "")).toEqual([]);
+  });
+
+  it("null при превышении остатка", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "2000", "")).toBeNull();
   });
 });
 

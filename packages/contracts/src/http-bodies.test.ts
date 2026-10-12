@@ -360,11 +360,28 @@ describe("assignLoadingManifestTripBodySchema", () => {
 });
 
 describe("appendLoadingManifestBatchesBodySchema", () => {
-  it("requires at least one batch id", () => {
+  it("requires at least one batch id or lines", () => {
     expect(appendLoadingManifestBatchesBodySchema.parse({ batchIds: ["b1", "b2"] })).toEqual({
       batchIds: ["b1", "b2"],
     });
     expect(() => appendLoadingManifestBatchesBodySchema.parse({ batchIds: [] })).toThrow();
+    expect(() => appendLoadingManifestBatchesBodySchema.parse({})).toThrow();
+  });
+
+  it("принимает lines с кг", () => {
+    expect(
+      appendLoadingManifestBatchesBodySchema.parse({
+        lines: [
+          { batchId: "b1", kg: 500 },
+          { batchId: "b2", kg: 1148 },
+        ],
+      }),
+    ).toEqual({
+      lines: [
+        { batchId: "b1", kg: 500 },
+        { batchId: "b2", kg: 1148 },
+      ],
+    });
   });
 });
 
