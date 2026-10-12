@@ -244,14 +244,15 @@ describe.skipIf(!pgUrl)("возврат на склад ↔ догрузка в 
       expect(await lineGrams(derbentManifestId, derbentBatch)).toBe(80_000n);
       expect(await lineGrams(manasManifestId, manasBatch)).toBe(100_000n);
 
-      // Чужой склад в чужую ПН — отказ
+      // Догрузка с другого склада в ПН Манаса — разрешена
+      await returnKg(derbentBatch, 80);
       const cross = await app.inject({
         method: "POST",
         url: `/loading-manifests/${encodeURIComponent(manasManifestId)}/add-batches`,
         payload: { batchIds: [derbentBatch] },
       });
-      expect(cross.statusCode, cross.body).toBe(400);
-      expect(JSON.parse(cross.body).error).toBe("batch_not_in_warehouse");
+      expect(cross.statusCode, cross.body).toBe(200);
+      expect(await lineGrams(manasManifestId, derbentBatch)).toBe(80_000n);
     } finally {
       await app.close();
       await cleanup(db);

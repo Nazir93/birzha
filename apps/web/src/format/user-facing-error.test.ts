@@ -21,6 +21,8 @@ describe("humanizeErrorMessage", () => {
 
   it("переводит сырой код batch_not_found", () => {
     expect(humanizeErrorMessage(new Error("batch_not_found"))).toBe("Партия не найдена.");
+    expect(humanizeErrorMessage(new Error("batch_not_in_warehouse"))).toMatch(/не с выбранного склада/i);
+    expect(humanizeErrorMessage(new Error("batch_without_stock"))).toMatch(/нет свободного остатка/i);
   });
 
   it("поясняет конфликт кода калибра", () => {
