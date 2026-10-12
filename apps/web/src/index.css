@@ -1711,7 +1711,8 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-table-scroll,
 .birzha-cabinet-main,
 .birzha-cabinet-sidebar__nav-main,
-.birzha-cabinet-drawer__nav {
+.birzha-cabinet-drawer__nav,
+.birzha-select__menu {
   scrollbar-width: thin;
   scrollbar-color: var(--birzha-scrollbar-thumb) var(--birzha-scrollbar-track);
 }
@@ -1728,7 +1729,8 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-table-scroll::-webkit-scrollbar,
 .birzha-cabinet-main::-webkit-scrollbar,
 .birzha-cabinet-sidebar__nav-main::-webkit-scrollbar,
-.birzha-cabinet-drawer__nav::-webkit-scrollbar {
+.birzha-cabinet-drawer__nav::-webkit-scrollbar,
+.birzha-select__menu::-webkit-scrollbar {
   width: var(--birzha-scrollbar-size);
   height: var(--birzha-scrollbar-size);
 }
@@ -1736,7 +1738,8 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-table-scroll::-webkit-scrollbar-track,
 .birzha-cabinet-main::-webkit-scrollbar-track,
 .birzha-cabinet-sidebar__nav-main::-webkit-scrollbar-track,
-.birzha-cabinet-drawer__nav::-webkit-scrollbar-track {
+.birzha-cabinet-drawer__nav::-webkit-scrollbar-track,
+.birzha-select__menu::-webkit-scrollbar-track {
   background: var(--birzha-scrollbar-track);
   border-radius: 999px;
 }
@@ -1744,7 +1747,8 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-table-scroll::-webkit-scrollbar-thumb,
 .birzha-cabinet-main::-webkit-scrollbar-thumb,
 .birzha-cabinet-sidebar__nav-main::-webkit-scrollbar-thumb,
-.birzha-cabinet-drawer__nav::-webkit-scrollbar-thumb {
+.birzha-cabinet-drawer__nav::-webkit-scrollbar-thumb,
+.birzha-select__menu::-webkit-scrollbar-thumb {
   background: var(--birzha-scrollbar-thumb);
   border-radius: 999px;
   border: 2px solid var(--birzha-scrollbar-track);
@@ -1753,14 +1757,16 @@ a.birzha-kpi-tile--link:focus-visible {
 .birzha-table-scroll::-webkit-scrollbar-thumb:hover,
 .birzha-cabinet-main::-webkit-scrollbar-thumb:hover,
 .birzha-cabinet-sidebar__nav-main::-webkit-scrollbar-thumb:hover,
-.birzha-cabinet-drawer__nav::-webkit-scrollbar-thumb:hover {
+.birzha-cabinet-drawer__nav::-webkit-scrollbar-thumb:hover,
+.birzha-select__menu::-webkit-scrollbar-thumb:hover {
   background: var(--birzha-scrollbar-thumb-hover);
 }
 
 .birzha-table-scroll::-webkit-scrollbar-corner,
 .birzha-cabinet-main::-webkit-scrollbar-corner,
 .birzha-cabinet-sidebar__nav-main::-webkit-scrollbar-corner,
-.birzha-cabinet-drawer__nav::-webkit-scrollbar-corner {
+.birzha-cabinet-drawer__nav::-webkit-scrollbar-corner,
+.birzha-select__menu::-webkit-scrollbar-corner {
   background: var(--birzha-scrollbar-track);
 }
 
