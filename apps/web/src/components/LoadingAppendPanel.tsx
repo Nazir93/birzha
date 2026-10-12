@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { apiPostJson, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
 import { useAuth } from "../auth/auth-context.js";
@@ -21,7 +21,6 @@ import {
   AppendCandidatesTable,
   resolveAppendCandidateLines,
 } from "./distribution/AppendCandidatesTable.js";
-import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
@@ -30,7 +29,6 @@ import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 
 export function LoadingAppendPanel() {
   const { manifestId: routeManifestId = "" } = useParams();
-  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { meta, user } = useAuth();
   const canShip = canShipLoadingManifest(user);
@@ -41,14 +39,12 @@ export function LoadingAppendPanel() {
 
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
-  const [manifestFormOpen, setManifestFormOpen] = useState(false);
   const [manifestListPage, setManifestListPage] = useState(0);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
   const [rejectScrapPkgInput, setRejectScrapPkgInput] = useState<Record<string, string>>({});
   const [appendKgInput, setAppendKgInput] = useState<Record<string, string>>({});
   const [appendPkgInput, setAppendPkgInput] = useState<Record<string, string>>({});
   const [appendQtyError, setAppendQtyError] = useState<string | null>(null);
-  const [pendingAppendLines, setPendingAppendLines] = useState<{ batchId: string; kg: number }[]>([]);
   const [recentWriteOffs, setRecentWriteOffs] = useState<RecentWriteOffRow[]>([]);
   const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
   const [undoingWriteOffId, setUndoingWriteOffId] = useState<string | null>(null);
@@ -79,7 +75,6 @@ export function LoadingAppendPanel() {
     selectedWarehouseRow,
     batchesInWh,
     documentOptions,
-    manifestDocumentOptions,
     tableRows,
     tableRowsTotalKg,
     manifestListTotal,
@@ -88,7 +83,6 @@ export function LoadingAppendPanel() {
     allActiveManifestsSorted,
     tripNumberById,
     appendTargetManifest: appendTargetFromWorkspace,
-    appendMode,
     routeDetail,
     viewingArchivedManifest,
     warehouseName,
@@ -100,7 +94,6 @@ export function LoadingAppendPanel() {
     setAppendKgInput({});
     setAppendPkgInput({});
     setAppendQtyError(null);
-    setPendingAppendLines([]);
   }, []);
 
   const appendTargetManifest = useMemo(() => {
@@ -190,14 +183,13 @@ export function LoadingAppendPanel() {
       });
       return payload.appendToManifestId;
     },
-    onSuccess: (manifestId) => {
+    onSuccess: async () => {
       setLoadNaklSelection(new Set());
-      setManifestFormOpen(false);
       clearAppendQtyState();
-      setSelectedWarehouse("");
-      writePreferredWarehouseId(null);
-      void refreshDistributionLists(queryClient);
-      void navigate(`${appendBase}/${encodeURIComponent(manifestId)}`);
+      await refreshDistributionLists(queryClient);
+    },
+    onError: (e: unknown) => {
+      setAppendQtyError(humanizeErrorMessage(e));
     },
   });
 
@@ -217,7 +209,6 @@ export function LoadingAppendPanel() {
   }, [allocationWarehouseOptions, selectedWarehouse, appendTargetManifestId]);
 
   useEffect(() => {
-    setManifestFormOpen(false);
     setRejectScrapInput({});
     clearAppendQtyState();
     setRecentWriteOffs([]);
@@ -470,8 +461,12 @@ export function LoadingAppendPanel() {
                   <button
                     type="button"
                     className={btnClassSpaced}
-                    disabled={tableRows.length === 0}
+                    disabled={tableRows.length === 0 || appendManifest.isPending || !appendTargetManifest}
                     onClick={() => {
+                      if (!appendTargetManifest) {
+                        setAppendQtyError("Не выбрана погрузочная для догрузки.");
+                        return;
+                      }
                       const lines = resolveAppendCandidateLines(
                         tableRows,
                         labelDest,
@@ -487,11 +482,18 @@ export function LoadingAppendPanel() {
                         return;
                       }
                       setAppendQtyError(null);
-                      setPendingAppendLines(lines);
-                      setManifestFormOpen(true);
+                      /** Сразу в API — без второй формы внизу страницы. */
+                      appendManifest.mutate({
+                        appendToManifestId: appendTargetManifest.id,
+                        warehouseId: selectedWarehouse,
+                        destinationCode: appendTargetManifest.destinationCode,
+                        lines,
+                        docDate: appendTargetManifest.docDate,
+                        manifestNumber: appendTargetManifest.manifestNumber,
+                      });
                     }}
                   >
-                    Добавить в погрузочную
+                    {appendManifest.isPending ? "Добавление…" : "Добавить в погрузочную"}
                   </button>
                 ) : (
                   <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
@@ -557,45 +559,6 @@ export function LoadingAppendPanel() {
         </>
       ) : null}
 
-      {manifestFormOpen && selectedWarehouse && appendTargetManifest && canShip ? (
-        <DistributionCreateForm
-          appendMode={appendMode}
-          appendTargetManifest={appendTargetManifest}
-          onClose={() => {
-            setManifestFormOpen(false);
-            setPendingAppendLines([]);
-          }}
-          newManifestTripId=""
-          onNewManifestTripIdChange={() => undefined}
-          manifestDestinationCode={appendTargetManifest.destinationCode}
-          onManifestDestinationCodeChange={() => undefined}
-          manifestDate={appendTargetManifest.docDate}
-          onManifestDateChange={() => undefined}
-          destAllowed={[appendTargetManifest.destinationCode]}
-          labelDest={{ [appendTargetManifest.destinationCode]: appendTargetManifest.destinationName }}
-          openTripsForAssign={[]}
-          tripsPending={false}
-          selectedWarehouse={selectedWarehouse}
-          tableRows={tableRows.filter((b) => pendingAppendLines.some((l) => l.batchId === b.id))}
-          takenManifestNumbers={[]}
-          createPending={appendManifest.isPending}
-          createError={appendManifest.isError ? appendManifest.error : null}
-          tripsBase=""
-          onSave={(payload) => {
-            if (!payload.appendToManifestId || pendingAppendLines.length === 0) {
-              return;
-            }
-            appendManifest.mutate({
-              appendToManifestId: payload.appendToManifestId,
-              warehouseId: payload.warehouseId,
-              destinationCode: payload.destinationCode,
-              lines: pendingAppendLines,
-              docDate: payload.docDate,
-              manifestNumber: payload.manifestNumber,
-            });
-          }}
-        />
-      ) : null}
     </section>
   );
 }
