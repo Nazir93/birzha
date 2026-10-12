@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import type { BatchWarehouseWriteOffLedger, BatchWarehouseWriteOffAppend } from "../../application/ports/batch-warehouse-write-off-ledger.port.js";
 import type { DbClient } from "../../db/client.js";
-import { batchWarehouseWriteOffs } from "../../db/schema.js";
+import { batches, batchWarehouseWriteOffs } from "../../db/schema.js";
 
 export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteOffLedger {
   constructor(private readonly db: DbClient) {}
@@ -116,6 +116,25 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
         and(
           inArray(batchWarehouseWriteOffs.batchId, batchIds),
           eq(batchWarehouseWriteOffs.blocksLoading, true),
+        ),
+      );
+  }
+
+  async clearBlocksLoadingForWarehouse(warehouseId: string): Promise<void> {
+    const wh = warehouseId.trim();
+    if (!wh) {
+      return;
+    }
+    await this.db
+      .update(batchWarehouseWriteOffs)
+      .set({ blocksLoading: false })
+      .where(
+        and(
+          eq(batchWarehouseWriteOffs.blocksLoading, true),
+          inArray(
+            batchWarehouseWriteOffs.batchId,
+            this.db.select({ id: batches.id }).from(batches).where(eq(batches.warehouseId, wh)),
+          ),
         ),
       );
   }

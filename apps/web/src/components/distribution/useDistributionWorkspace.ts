@@ -10,7 +10,11 @@ import {
   buildAllocationWarehouseOptions,
   type AllocationWarehouseOption,
 } from "../../format/allocation-warehouse-option.js";
-import { batchAvailableForLoadingKg } from "../../format/batch-available-for-loading.js";
+import {
+  batchAvailableForLoadingKg,
+  batchesRemainingInSelection,
+  batchKgInSelectionRemainder,
+} from "../../format/batch-available-for-loading.js";
 import { batchWarehouseId, isEligibleForLoadingAllocation } from "../../format/batch-warehouse.js";
 import { activeShipDestinationsForSelect } from "../../format/ship-destination-options.js";
 import {
@@ -364,19 +368,26 @@ export function useDistributionWorkspace({
     [documentOptions],
   );
 
+  const isNewManifestSelection = workspaceMode === "default";
+
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
       return [];
     }
-    if (documentOptions.length === 0) {
-      return batchesInWh;
-    }
-    return filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
-  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
+    const picked =
+      documentOptions.length === 0
+        ? batchesInWh
+        : filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
+    return isNewManifestSelection ? batchesRemainingInSelection(picked) : picked;
+  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse, isNewManifestSelection]);
 
   const tableRowsTotalKg = useMemo(
-    () => tableRows.reduce((a, b) => a + batchAvailableForLoadingKg(b), 0),
-    [tableRows],
+    () =>
+      tableRows.reduce(
+        (a, b) => a + (isNewManifestSelection ? batchKgInSelectionRemainder(b) : batchAvailableForLoadingKg(b)),
+        0,
+      ),
+    [tableRows, isNewManifestSelection],
   );
 
   return {

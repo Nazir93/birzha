@@ -227,16 +227,21 @@ export function sumLoadingManifestTotals(
   let kg = 0;
   let pkg = 0;
   let linesWithPkg = 0;
+  let batchCount = 0;
   for (const b of included) {
     const avail = batchKgForAggregateMode(b, quantityMode);
+    if (avail <= 0) {
+      continue;
+    }
     kg += avail;
+    batchCount += 1;
     const e = batchPkgForAggregateMode(b, quantityMode);
     if (e != null) {
       pkg += e;
       linesWithPkg += 1;
     }
   }
-  return { kg, pkg, linesWithPkg, batchCount: included.length };
+  return { kg, pkg, linesWithPkg, batchCount };
 }
 
 /** Суммы по калибру/товарной строке (как в подписи партии), для свода «сколько веса и ящ. по каждому калибру». */
@@ -263,6 +268,9 @@ export function aggregateBatchesByCaliberLine(
     }
   >();
   for (const b of batches) {
+    if (quantityMode === "selection_remainder" && batchKgForAggregateMode(b, quantityMode) <= 0) {
+      continue;
+    }
     const lineLabel = formatNakladLineLabel(b);
     if (!m.has(lineLabel)) {
       m.set(lineLabel, { lineLabel, totalKg: 0, totalPkg: 0, linesWithPkg: 0, partCount: 0, batches: [] });
@@ -504,6 +512,9 @@ export function aggregateBatchesByPurchaseDocument(
   };
   const m = new Map<string, Acc>();
   for (const b of batches) {
+    if (quantityMode === "selection_remainder" && batchKgForAggregateMode(b, quantityMode) <= 0) {
+      continue;
+    }
     const docId = b.nakladnaya?.documentId?.trim();
     const docNum = b.nakladnaya?.documentNumber?.trim() ?? "";
     const rowKey = docId && docId.length > 0 ? docId : AGGREGATE_NO_PURCHASE_DOCUMENT_KEY;

@@ -48,7 +48,19 @@ describe("availableGramsForLoadingManifestLine", () => {
 });
 
 describe("batchIdsToReleaseLoadingBlocks", () => {
-  it("режим новой ПН: только available=0 при наличии склада", () => {
+  it("режим новой ПН: полностью возвращённую из отбора партию не разблокирует", () => {
+    expect(
+      batchIdsToReleaseLoadingBlocks(
+        [
+          { batchId: "kept", physicalFreeGrams: 1_148_000n, availableGrams: 1_148_000n },
+          { batchId: "returned", physicalFreeGrams: 1_148_000n, availableGrams: 0n },
+        ],
+        "never",
+      ),
+    ).toEqual([]);
+  });
+
+  it("when_available_zero: только available=0 при наличии склада", () => {
     expect(
       batchIdsToReleaseLoadingBlocks(
         [
@@ -60,7 +72,7 @@ describe("batchIdsToReleaseLoadingBlocks", () => {
     ).toEqual(["a"]);
   });
 
-  it("режим новой ПН: в смешанном отборе снимает только полностью заблокированные", () => {
+  it("when_available_zero: в смешанном отборе снимает только полностью заблокированные", () => {
     expect(
       batchIdsToReleaseLoadingBlocks(
         [

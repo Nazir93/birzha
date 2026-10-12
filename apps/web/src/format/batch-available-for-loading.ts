@@ -29,6 +29,11 @@ export function batchKgInSelectionRemainder(batch: BatchListItem): number {
   return batchAvailableForLoadingKg(batch);
 }
 
+/** Партии, которые реально уйдут в новую ПН: полностью возвращённые из отбора не включаем. */
+export function batchesRemainingInSelection(batches: readonly BatchListItem[]): BatchListItem[] {
+  return batches.filter((b) => batchKgInSelectionRemainder(b) > 0);
+}
+
 /**
  * Кг, которые ещё можно оформить как «вернуть на склад»:
  * склад + рейс минус журнал; ремонт по inTransit; если журнал полный, но склад есть —

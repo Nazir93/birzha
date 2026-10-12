@@ -6,9 +6,24 @@ import {
   batchQualityRejectReturnKg,
   batchReturnableToWarehouseKg,
   batchKgInSelectionRemainder,
+  batchesRemainingInSelection,
   estimatedPackageCountForLoading,
   estimatedPackageCountForWarehouseReturn,
 } from "./batch-available-for-loading.js";
+
+describe("batchesRemainingInSelection", () => {
+  it("полностью возвращённая из отбора партия в новую ПН не идёт", () => {
+    const kept = batch({ id: "kornishon", onWarehouseKg: 1148, availableForLoadingKg: 1148, blockingReturnKg: 0 });
+    const returned = batch({
+      id: "euro",
+      onWarehouseKg: 1148,
+      availableForLoadingKg: 1148,
+      qualityRejectWrittenOffKg: 1148,
+      blockingReturnKg: 1148,
+    });
+    expect(batchesRemainingInSelection([kept, returned]).map((b) => b.id)).toEqual(["kornishon"]);
+  });
+});
 
 describe("batchKgInSelectionRemainder", () => {
   it("без активной блокировки показывает склад к погрузке (журнал — история)", () => {

@@ -153,6 +153,16 @@ describe("sumLoadingManifestTotals", () => {
     expect(t.pkg).toBe(5);
   });
 
+  it("в остатке отбора не считает полностью возвращённую партию", () => {
+    const batches = [
+      b({ id: "kornishon", totalKg: 1148, onWarehouseKg: 1148, blockingReturnKg: 0 }),
+      b({ id: "euro", totalKg: 1148, onWarehouseKg: 1148, blockingReturnKg: 1148 }),
+    ];
+    const t = sumLoadingManifestTotals(batches, "selection_remainder");
+    expect(t.kg).toBe(1148);
+    expect(t.batchCount).toBe(1);
+  });
+
   it("журнал возвратов не уменьшает кг в сумме отбора", () => {
     const batches = [
       b({

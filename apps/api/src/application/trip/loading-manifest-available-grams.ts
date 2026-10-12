@@ -29,7 +29,9 @@ export function physicalFreeGramsForLoadingManifestLine(input: {
 }
 
 export type ReleaseLoadingBlocksMode =
-  /** Новая ПН: снять блокировку только если журнал обнулил доступность (available=0). */
+  /** Новая ПН: возврат из отбора уважаем всегда — полностью возвращённая партия в ПН не попадает. */
+  | "never"
+  /** Снять блокировку только если журнал обнулил доступность (available=0). */
   | "when_available_zero"
   /** Догрузка: снять, если блокировка режет свободный склад (чтобы вернуть кг в ту же ПН). */
   | "when_blocking_reduces_free";
@@ -46,6 +48,9 @@ export function batchIdsToReleaseLoadingBlocks(
   }[],
   mode: ReleaseLoadingBlocksMode = "when_available_zero",
 ): string[] {
+  if (mode === "never") {
+    return [];
+  }
   return rows
     .filter((r) => {
       if (r.physicalFreeGrams <= 0n) {

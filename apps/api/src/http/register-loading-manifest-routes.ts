@@ -54,6 +54,7 @@ import {
   availableGramsForLoadingManifestLine,
   batchIdsToReleaseLoadingBlocks,
   physicalFreeGramsForLoadingManifestLine,
+  type ReleaseLoadingBlocksMode,
 } from "../application/trip/loading-manifest-available-grams.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import {
@@ -121,7 +122,7 @@ async function resolveAvailableGramsForManifestBatches(
     onWarehouseGrams: bigint;
   }[],
   reservedSums: Map<string, bigint>,
-  releaseMode: "when_available_zero" | "when_blocking_reduces_free" = "when_available_zero",
+  releaseMode: ReleaseLoadingBlocksMode = "when_available_zero",
 ): Promise<Map<string, bigint>> {
   const batchIds = selected.map((r) => r.batchId);
   let blockingSums = await ledger.totalBlockingLoadingGramsByBatchIds(batchIds);
@@ -206,7 +207,7 @@ export function registerLoadingManifestRoutes(
       }
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
       const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
-      const availableByBatch = await resolveAvailableGramsForManifestBatches(ledger, selected, reservedSums);
+      const availableByBatch = await resolveAvailableGramsForManifestBatches(ledger, selected, reservedSums, "never");
       const withAvailable = selected.map((r) => ({
         ...r,
         availableGrams: availableByBatch.get(r.batchId) ?? 0n,
@@ -241,8 +242,10 @@ export function registerLoadingManifestRoutes(
           }
         }
         const ledger = new DrizzleBatchWarehouseWriteOffLedger(exec);
-        await ledger.clearBlocksLoadingByBatchIds(batchIds);
-        await ledger.deleteQualityRejectByBatchIds(batchIds);
+        const includedBatchIds = withStock.map((r) => r.batchId);
+        await ledger.deleteQualityRejectByBatchIds(includedBatchIds);
+        /** Отбор оформлен: возвращённое остаётся на складе и свободно для следующей ПН / догрузки. */
+        await ledger.clearBlocksLoadingForWarehouse(body.warehouseId);
       });
 
       return reply.code(201).send({ manifestId: id });
