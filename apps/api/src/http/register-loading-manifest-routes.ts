@@ -684,9 +684,16 @@ export function registerLoadingManifestRoutes(
           await assertTripAllowsWarehouseLoading(db, tripRead, { tripId: assignedTripId, warehouseId });
         }
       }
-      const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds, {
-        excludeManifestId: manifestId,
-      });
+      /**
+       * Резерв черновых ПН включает строки этой же накладной: «свободно на складе» =
+       * хвост после возврата (onWarehouse − строка ПН). Иначе planAppend прибавляет
+       * весь склад к уже загруженной строке и раздувает кг.
+       */
+      const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
+      const badWarehouse = selected.find((r) => r.warehouseId !== manifest.warehouseId);
+      if (badWarehouse) {
+        return reply.code(400).send({ error: "batch_not_in_warehouse", batchId: badWarehouse.batchId });
+      }
       const blockingLedger = new DrizzleBatchWarehouseWriteOffLedger(db);
       const availableByBatch = await resolveAvailableGramsForManifestBatches(
         blockingLedger,

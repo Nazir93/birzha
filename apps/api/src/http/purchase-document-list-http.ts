@@ -2,7 +2,13 @@ import { and, desc, eq, exists, gt, inArray, notExists, or, sql, type SQL } from
 import { z } from "zod";
 
 import type { DbClient } from "../db/client.js";
-import { batches, purchaseDocumentLines, purchaseDocuments, warehouses } from "../db/schema.js";
+import {
+  batches,
+  productGrades,
+  purchaseDocumentLines,
+  purchaseDocuments,
+  warehouses,
+} from "../db/schema.js";
 import { gramsToKg } from "../application/units/mass.js";
 
 export const purchaseDocumentsListQuerySchema = z.object({
@@ -152,8 +158,11 @@ export async function listPurchaseDocumentsForHttp(
             lineCount: sql<number>`count(*)::int`,
             linesTotalKopecks: sql<string>`coalesce(sum(${purchaseDocumentLines.lineTotalKopecks}), 0)::text`,
             totalGrams: sql<string>`coalesce(sum(${purchaseDocumentLines.quantityGrams}), 0)::text`,
+            /** Один товар на ЗН; min — стабильный снимок при смешанных строках (редко). */
+            productGroup: sql<string | null>`min(${productGrades.productGroup})`,
           })
           .from(purchaseDocumentLines)
+          .innerJoin(productGrades, eq(productGrades.id, purchaseDocumentLines.productGradeId))
           .where(inArray(purchaseDocumentLines.documentId, ids))
           .groupBy(purchaseDocumentLines.documentId);
 
@@ -164,6 +173,7 @@ export async function listPurchaseDocumentsForHttp(
         lineCount: r.lineCount,
         linesTotalKopecks: asBigInt(r.linesTotalKopecks),
         totalGrams: asBigInt(r.totalGrams),
+        productGroup: r.productGroup?.trim() || null,
       },
     ]),
   );
@@ -181,6 +191,7 @@ export async function listPurchaseDocumentsForHttp(
         warehouseName: d.warehouseName?.trim() || "—",
         supplierId: d.supplierId ?? null,
         supplierName: d.supplierName?.trim() || null,
+        productGroup: agg?.productGroup ?? null,
         lineCount: agg?.lineCount ?? 0,
         totalKg: gramsToKg(agg?.totalGrams ?? 0n),
         linesTotalKopecks: linesTotal.toString(),

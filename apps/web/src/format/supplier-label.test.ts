@@ -57,4 +57,38 @@ describe("suggestNextSupplierPurchaseNumber", () => {
     ];
     expect(suggestNextSupplierPurchaseNumber(docs, "s1")).toBe("03");
   });
+
+  it("отдельный счётчик по товару внутри тепличника", () => {
+    const docs = [
+      {
+        documentNumber: "01",
+        supplierId: "s-murad",
+        supplierName: "Мурад",
+        productGroup: "Помидоры",
+      },
+      {
+        documentNumber: "02",
+        supplierId: "s-murad",
+        supplierName: "Мурад",
+        productGroup: "Помидоры",
+      },
+      {
+        documentNumber: "01",
+        supplierId: "s-murad",
+        supplierName: "Мурад",
+        productGroup: "Огурцы",
+      },
+    ];
+    expect(suggestNextSupplierPurchaseNumber(docs, "s-murad", "Мурад", "Помидоры")).toBe("03");
+    expect(suggestNextSupplierPurchaseNumber(docs, "s-murad", "Мурад", "Огурцы")).toBe("02");
+  });
+
+  it("накладные без productGroup считаются помидорами", () => {
+    const docs = [
+      { documentNumber: "01", supplierId: "s1", supplierName: "Мурад" },
+      { documentNumber: "01", supplierId: "s1", supplierName: "Мурад", productGroup: "Огурцы" },
+    ];
+    expect(suggestNextSupplierPurchaseNumber(docs, "s1", "Мурад", "Помидоры")).toBe("02");
+    expect(suggestNextSupplierPurchaseNumber(docs, "s1", "Мурад", "Огурцы")).toBe("02");
+  });
 });

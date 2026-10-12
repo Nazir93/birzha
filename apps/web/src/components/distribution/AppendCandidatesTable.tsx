@@ -67,8 +67,8 @@ export function AppendCandidatesTable({
         Со склада «{warehouseName}» — свободный остаток
       </h4>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-        Здесь товар на складе (в т.ч. то, что вернули из погрузочной). Введите кг или ящики — сколько догрузить. Пусто =
-        весь остаток строки; «0» = не брать.
+        Свободный склад, в т.ч. возврат с этой ПН/рейса. Введите кг или ящики — сколько снова положить в эту же
+        погрузочную. Пусто = весь остаток строки; «0» = не брать.
       </p>
       {rows.length === 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">

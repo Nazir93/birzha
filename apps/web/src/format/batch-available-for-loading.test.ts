@@ -207,3 +207,80 @@ describe("estimatedPackageCountForWarehouseReturn", () => {
     ).toBe(20);
   });
 });
+
+describe("сценарии отображения: списание с рейса / догрузка / другой рейс", () => {
+  it("после возврата с рейса (без blocks_loading) — к погрузке весь склад, можно в другой рейс", () => {
+    const afterTripReturn = batch({
+      id: "b1",
+      totalKg: 200,
+      onWarehouseKg: 200,
+      inTransitKg: 0,
+      availableForLoadingKg: 200,
+      qualityRejectWrittenOffKg: 200,
+      blockingReturnKg: 0,
+    });
+    expect(batchAvailableForLoadingKg(afterTripReturn)).toBe(200);
+    expect(batchKgInSelectionRemainder(afterTripReturn)).toBe(200);
+    expect(batchesRemainingInSelection([afterTripReturn]).map((b) => b.id)).toEqual(["b1"]);
+    expect(estimatedPackageCountForLoading({
+      ...afterTripReturn,
+      nakladnaya: { linePackageCount: 20 } as BatchListItem["nakladnaya"],
+    })).toBe(20);
+  });
+
+  it("частичный возврат с рейса: на складе хвост к другому рейсу, в транзите остаток", () => {
+    const partial = batch({
+      id: "b1",
+      totalKg: 100,
+      onWarehouseKg: 40,
+      inTransitKg: 60,
+      availableForLoadingKg: 40,
+      qualityRejectWrittenOffKg: 40,
+      blockingReturnKg: 0,
+    });
+    expect(batchAvailableForLoadingKg(partial)).toBe(40);
+    expect(batchReturnableToWarehouseKg(partial)).toBe(60);
+    expect(batchKgInSelectionRemainder(partial)).toBe(40);
+  });
+
+  it("возврат из отбора: в новой ПН остаток без блокировки; списанное не в отборе", () => {
+    const fromSelection = batch({
+      id: "b1",
+      totalKg: 100,
+      onWarehouseKg: 100,
+      availableForLoadingKg: 100,
+      qualityRejectWrittenOffKg: 35,
+      blockingReturnKg: 35,
+    });
+    expect(batchAvailableForLoadingKg(fromSelection)).toBe(100);
+    expect(batchKgInSelectionRemainder(fromSelection)).toBe(65);
+    expect(batchReturnableToWarehouseKg(fromSelection)).toBe(65);
+  });
+
+  it("полный возврат из отбора — партия не попадает в новую погрузку", () => {
+    const full = batch({
+      id: "b1",
+      onWarehouseKg: 100,
+      availableForLoadingKg: 100,
+      qualityRejectWrittenOffKg: 100,
+      blockingReturnKg: 100,
+    });
+    expect(batchKgInSelectionRemainder(full)).toBe(0);
+    expect(batchesRemainingInSelection([full])).toEqual([]);
+    expect(batchReturnableToWarehouseKg(full)).toBe(0);
+  });
+
+  it("после догрузки журнал очищен — снова полный отбор и возврат", () => {
+    const afterAppend = batch({
+      id: "b1",
+      totalKg: 100,
+      onWarehouseKg: 100,
+      availableForLoadingKg: 100,
+      qualityRejectWrittenOffKg: 0,
+      blockingReturnKg: 0,
+    });
+    expect(batchAvailableForLoadingKg(afterAppend)).toBe(100);
+    expect(batchKgInSelectionRemainder(afterAppend)).toBe(100);
+    expect(batchReturnableToWarehouseKg(afterAppend)).toBe(100);
+  });
+});

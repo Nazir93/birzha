@@ -79,6 +79,7 @@ export function LoadingAppendPanel() {
     selectedWarehouseRow,
     batchesInWh,
     documentOptions,
+    manifestDocumentOptions,
     tableRows,
     tableRowsTotalKg,
     manifestListTotal,
@@ -94,6 +95,13 @@ export function LoadingAppendPanel() {
     activeManifestId,
     labelDest,
   } = workspace;
+
+  const clearAppendQtyState = useCallback(() => {
+    setAppendKgInput({});
+    setAppendPkgInput({});
+    setAppendQtyError(null);
+    setPendingAppendLines([]);
+  }, []);
 
   const appendTargetManifest = useMemo(() => {
     if (!appendTargetManifestId) {
@@ -185,10 +193,7 @@ export function LoadingAppendPanel() {
     onSuccess: (manifestId) => {
       setLoadNaklSelection(new Set());
       setManifestFormOpen(false);
-      setAppendKgInput({});
-      setAppendPkgInput({});
-      setAppendQtyError(null);
-      setPendingAppendLines([]);
+      clearAppendQtyState();
       setSelectedWarehouse("");
       writePreferredWarehouseId(null);
       void refreshDistributionLists(queryClient);
@@ -214,12 +219,9 @@ export function LoadingAppendPanel() {
   useEffect(() => {
     setManifestFormOpen(false);
     setRejectScrapInput({});
-    setAppendKgInput({});
-    setAppendPkgInput({});
-    setAppendQtyError(null);
-    setPendingAppendLines([]);
+    clearAppendQtyState();
     setRecentWriteOffs([]);
-  }, [selectedWarehouse, routeManifestId]);
+  }, [selectedWarehouse, routeManifestId, clearAppendQtyState]);
 
   const docIdKey = useMemo(
     () =>
@@ -398,8 +400,12 @@ export function LoadingAppendPanel() {
           {showWorkspace && selectedWarehouse ? (
             <>
               <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">
-                1. Отбор со склада — что догрузить
+                Догрузка на этот рейс — сколько взять со склада
               </h4>
+              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
+                В том числе товар, который вернули на склад с этой погрузочной. Укажите кг или ящики — сколько снова
+                положить в эту же ПН/рейс. Пусто = весь остаток строки; «0» = не брать.
+              </p>
               {documentOptions.length === 0 && batchesInWh.length > 0 ? (
                 <p className="birzha-callout-info" role="status">
                   На складе нет привязки к номеру накладной — показаны все партии с остатком.
@@ -498,11 +504,11 @@ export function LoadingAppendPanel() {
                 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step"
                 style={{ marginTop: "1.25rem" }}
               >
-                2. Уже в погрузочной — возврат на склад
+                Уже в погрузочной — возврат на склад
               </h4>
               <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-                Ниже — строки этой погрузочной. Возврат с вводом кг/ящ. убирает товар из ПН обратно на склад (для
-                другого рейса или новой догрузки).
+                Строки этой ПН. Возврат с вводом кг/ящ. убирает товар из ПН обратно на склад — потом его можно снова
+                догрузить выборочно выше.
               </p>
               <LoadingManifestBlock
                 documentOptions={[]}
@@ -517,7 +523,7 @@ export function LoadingAppendPanel() {
                 writeOff={
                   meta?.warehouseWriteOffApi === "enabled" &&
                   canReturn &&
-                  (writeOffTargetManifest?.lines.length ?? 0) > 0
+                  (batchesInWh.length > 0 || (writeOffTargetManifest?.lines.length ?? 0) > 0)
                     ? {
                         enabled: true,
                         isPending: writeOff.isPending,
@@ -526,8 +532,7 @@ export function LoadingAppendPanel() {
                         rejectInput: rejectScrapInput,
                         rejectPkgInput: rejectScrapPkgInput,
                         onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
-                        onRejectPkgInputChange: (key, value) =>
-                          setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
+                        onRejectPkgInputChange: (key, value) => setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
                         onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
                         recentWriteOffs,
                         undoingWriteOffId,
@@ -556,7 +561,10 @@ export function LoadingAppendPanel() {
         <DistributionCreateForm
           appendMode={appendMode}
           appendTargetManifest={appendTargetManifest}
-          onClose={() => setManifestFormOpen(false)}
+          onClose={() => {
+            setManifestFormOpen(false);
+            setPendingAppendLines([]);
+          }}
           newManifestTripId=""
           onNewManifestTripIdChange={() => undefined}
           manifestDestinationCode={appendTargetManifest.destinationCode}
@@ -568,7 +576,7 @@ export function LoadingAppendPanel() {
           openTripsForAssign={[]}
           tripsPending={false}
           selectedWarehouse={selectedWarehouse}
-          tableRows={tableRows}
+          tableRows={tableRows.filter((b) => pendingAppendLines.some((l) => l.batchId === b.id))}
           takenManifestNumbers={[]}
           createPending={appendManifest.isPending}
           createError={appendManifest.isError ? appendManifest.error : null}

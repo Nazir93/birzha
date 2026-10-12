@@ -309,6 +309,8 @@ export type PurchaseDocumentSummary = {
   /** Тепличник (снимок / справочник). */
   supplierId?: string | null;
   supplierName?: string | null;
+  /** Товар ЗН (Помидоры / Огурцы…); для счётчика № у тепличника. */
+  productGroup?: string | null;
   lineCount: number;
   /** Сумма нетто по строкам, кг. */
   totalKg?: number;

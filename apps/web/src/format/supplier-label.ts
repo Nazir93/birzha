@@ -52,29 +52,38 @@ export function formatSupplierPurchaseLabel(
 }
 
 /**
- * Следующий порядковый номер накладной для выбранного тепличника
- * (аналог `suggestNextTripNumber` по городу).
+ * Следующий порядковый номер накладной для тепличника и товара
+ * (аналог `suggestNextTripNumber` по городу и товару).
  */
 export function suggestNextSupplierPurchaseNumber(
   docs: readonly {
     documentNumber: string;
     supplierId?: string | null;
     supplierName?: string | null;
+    productGroup?: string | null;
   }[],
   supplierId?: string | null,
   supplierName?: string | null,
+  productGroup?: string | null,
 ): string {
   const sid = supplierId?.trim() || "";
   const name = (supplierName ?? "").trim().toLowerCase();
   if (!sid && !name) {
     return "";
   }
-  const scoped = docs.filter((d) => {
+  const product = productGroup?.trim() || "";
+  let scoped = docs.filter((d) => {
     if (sid) {
       return (d.supplierId?.trim() || "") === sid;
     }
     return (d.supplierName?.trim().toLowerCase() || "") === name;
   });
+  if (product) {
+    scoped = scoped.filter((d) => {
+      const g = d.productGroup?.trim() || "Помидоры";
+      return g === product;
+    });
+  }
   let maxNum = 0;
   for (const d of scoped) {
     const m = /^(\d+)/.exec(d.documentNumber.trim());

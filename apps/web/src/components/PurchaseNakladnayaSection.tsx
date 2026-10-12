@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -116,7 +116,7 @@ export function PurchaseNakladnayaSection() {
     enabled,
   });
 
-  /** Все накладные — для счётчика № по тепличнику (как рейсы по городу). */
+  /** Все накладные — для счётчика № по тепличнику и товару (как рейсы по городу). */
   const allDocsForNumberQ = useQuery({
     ...purchaseDocumentsPagedQueryOptions({
       limit: 500,
@@ -158,22 +158,30 @@ export function PurchaseNakladnayaSection() {
     if (!supplierId.trim() && !supplierName.trim()) {
       return "";
     }
+    if (!docProductGroup.trim()) {
+      return "";
+    }
     return suggestNextSupplierPurchaseNumber(
       allDocsForNumberQ.data?.purchaseDocuments ?? [],
       supplierId,
       supplierName,
+      docProductGroup,
     );
-  }, [allDocsForNumberQ.data?.purchaseDocuments, supplierId, supplierName]);
+  }, [allDocsForNumberQ.data?.purchaseDocuments, supplierId, supplierName, docProductGroup]);
 
   useEffect(() => {
     if (!supplierId.trim() && !supplierName.trim()) {
       setDocumentNumber("");
       return;
     }
+    if (!docProductGroup.trim()) {
+      setDocumentNumber("");
+      return;
+    }
     if (suggestedDocumentNumber) {
       setDocumentNumber(suggestedDocumentNumber);
     }
-  }, [supplierId, supplierName, suggestedDocumentNumber]);
+  }, [supplierId, supplierName, docProductGroup, suggestedDocumentNumber]);
 
   const submit = useMutation({
     mutationFn: async () => {
