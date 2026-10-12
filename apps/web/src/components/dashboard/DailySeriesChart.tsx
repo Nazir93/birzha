@@ -186,14 +186,15 @@ function CashStackChart({ rows, height }: { rows: DailyChartRow[]; height: numbe
 export function DailySeriesChart({ variant, height = 260, ...params }: DailySeriesChartProps) {
   const q = useQuery(accountingDailySeriesQueryOptions(params));
   const rows = useMemo(() => dailyChartRows(q.data?.days ?? []), [q.data]);
+  const hasRows = hasAnyDailyActivity(rows);
 
-  if (q.isPending) {
-    return <LoadingBlock label="Загружаем график…" />;
+  if (q.isPending && !q.data) {
+    return <LoadingBlock label="Загружаем график…" minHeight={height} skeleton skeletonRows={4} />;
   }
-  if (q.isError) {
+  if (q.isError && !q.data) {
     return <ErrorAlert error={q.error} />;
   }
-  if (!hasAnyDailyActivity(rows)) {
+  if (!hasRows) {
     return (
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
         За выбранный период операций нет — график появится после первых продаж или расходов.
@@ -201,7 +202,11 @@ export function DailySeriesChart({ variant, height = 260, ...params }: DailySeri
     );
   }
   return (
-    <div className="birzha-daily-chart" aria-label="График по дням">
+    <div
+      className="birzha-daily-chart"
+      aria-label="График по дням"
+      style={{ minHeight: height, opacity: q.isFetching ? 0.85 : 1, transition: "opacity 0.15s ease" }}
+    >
       {variant === "revenueMass" ? <RevenueMassChart rows={rows} height={height} /> : <CashStackChart rows={rows} height={height} />}
     </div>
   );

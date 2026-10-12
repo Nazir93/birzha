@@ -65,9 +65,9 @@ export function LoadingBlock({
         minHeight,
         padding: "1.25rem 1rem",
         margin: "0.5rem 0 1rem",
-        border: "1px dashed #d4d4d8",
+        border: "1px dashed var(--birzha-border-hairline, #d4d4d8)",
         borderRadius: 8,
-        background: "#fafafa",
+        background: "var(--birzha-surface-muted, var(--birzha-surface, transparent))",
       }}
     >
       <LoadingIndicator label={label} size="md" />

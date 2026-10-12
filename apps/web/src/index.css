@@ -7981,6 +7981,14 @@ html[data-birzha-theme="dark"] #root .birzha-admin-dash-modern__kpi .birzha-kpi-
 .birzha-daily-chart {
   margin-top: 0.35rem;
   min-width: 0;
+  background: transparent;
+}
+
+/* Recharts при пересчёте размера иначе даёт белую вспышку в тёмной теме */
+.birzha-daily-chart .recharts-responsive-container,
+.birzha-daily-chart .recharts-wrapper,
+.birzha-daily-chart .recharts-surface {
+  background: transparent !important;
 }
 
 .birzha-daily-chart .recharts-legend-item-text {

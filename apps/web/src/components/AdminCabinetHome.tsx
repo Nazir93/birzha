@@ -212,8 +212,9 @@ export function AdminCabinetHome() {
     ],
   );
 
-  const loading = summaryQ.isPending;
-  const summaryFailed = summaryQ.isError;
+  /** Не снимаем всю сводку (и графики) при refetch / смене периода — иначе белая вспышка. */
+  const loading = summaryQ.isPending && !summaryQ.data;
+  const summaryFailed = summaryQ.isError && !summaryQ.data;
   const tripsFailed = tripsQ.isError;
 
   const closeTripMut = useMutation({

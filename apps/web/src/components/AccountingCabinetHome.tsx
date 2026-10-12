@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -347,6 +347,7 @@ export function AccountingCabinetHome() {
       await assertOkResponse(res);
       return (await res.json()) as PeriodSummary;
     },
+    placeholderData: keepPreviousData,
   });
 
   const s = periodQ.data;
@@ -456,8 +457,10 @@ export function AccountingCabinetHome() {
         </div>
       </section>
 
-      {periodQ.isPending ? <LoadingBlock label="Сводка за период…" minHeight={72} skeleton skeletonRows={3} /> : null}
-      {periodQ.isError ? <ErrorAlert error={periodQ.error} title="Сводка за период" /> : null}
+      {periodQ.isPending && !periodQ.data ? (
+        <LoadingBlock label="Сводка за период…" minHeight={72} skeleton skeletonRows={3} />
+      ) : null}
+      {periodQ.isError && !periodQ.data ? <ErrorAlert error={periodQ.error} title="Сводка за период" /> : null}
 
       {s && hasScope && selected ? (
         <section style={{ marginBottom: "1.25rem" }} aria-labelledby="acc-scope-h">

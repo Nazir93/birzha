@@ -250,6 +250,7 @@ export const adminDashboardSummaryQueryOptions = (since?: string) =>
       return apiGetJson<AdminDashboardSummaryResponse>(`/api/admin/dashboard-summary${p}`);
     },
     staleTime: QUERY_STALE_LISTS_MS,
+    placeholderData: keepPreviousData,
   });
 
 export const purchaseByPurchaserReportQueryOptions = (from: string, to: string) =>
