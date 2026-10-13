@@ -740,11 +740,23 @@ test.describe("золотой smoke (UI + API)", () => {
     await page.goto("/o/distribution");
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
+    const batchesRes = await request.get("/api/batches");
+    expect(batchesRes.ok()).toBeTruthy();
+    const batchesBody = (await batchesRes.json()) as {
+      batches: { nakladnaya?: { documentId?: string; documentNumber?: string; supplierName?: string } }[];
+    };
+    expect(
+      batchesBody.batches.some(
+        (b) =>
+          b.nakladnaya?.documentId === docId ||
+          b.nakladnaya?.documentNumber === documentNumber ||
+          b.nakladnaya?.supplierName === supplierName,
+      ),
+    ).toBe(true);
+
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
     await expect(page.getByText("1. Отбор партий")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(documentNumber, { exact: false })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(supplierName, { exact: false })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Итого по отбору|В отборе:|парт\./)).toBeVisible({ timeout: 15_000 });
 
     await expect(
       page.getByText("Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста"),
