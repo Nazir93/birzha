@@ -7,8 +7,8 @@ import { LoadingBlock } from "../ui/LoadingIndicator.js";
 import { ErrorAlert } from "../ui/ErrorAlerts.js";
 import { tableStyle, thHead, thtd } from "../ui/styles.js";
 
-function warehouseLabel(name: string, code: string): string {
-  return `${name} (${code})`;
+function warehouseLabel(name: string): string {
+  return name.trim() || "—";
 }
 
 /** Остатки товара: кг на складе, погружено в рейс, оценка закупочной стоимости. */
@@ -88,7 +88,7 @@ export function AccountingStockBalances() {
             {byWarehouse.map((row) => (
               <tr key={row.warehouseId}>
                 <th scope="row" style={thtd}>
-                  {warehouseLabel(row.warehouseName, row.warehouseCode)}
+                  {warehouseLabel(row.warehouseName)}
                 </th>
                 <td style={{ ...thtd, textAlign: "right" }}>
                   {row.onWarehouseKg.toLocaleString("ru-RU", { maximumFractionDigits: 3 })}

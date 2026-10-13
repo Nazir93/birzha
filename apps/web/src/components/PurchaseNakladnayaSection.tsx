@@ -490,7 +490,7 @@ export function PurchaseNakladnayaSection() {
               { value: "", label: "— выберите —" },
               ...(warehousesQ.data?.warehouses ?? []).map((w) => ({
                 value: w.id,
-                label: `${w.name} (${w.code})`,
+                label: w.name,
               })),
             ]}
           />
@@ -836,13 +836,7 @@ function PurchaseNakladnayaDocTable({
                 </td>
                 <td className="birzha-data-table__emph">{formatPurchaseDocDateRu(d.docDate)}</td>
                 <td>
-                  {wh ? (
-                    <>
-                      {wh.name} <span className="birzha-text-muted">({wh.code})</span>
-                    </>
-                  ) : (
-                    <span className="birzha-text-muted">—</span>
-                  )}
+                  {wh ? wh.name : <span className="birzha-text-muted">—</span>}
                 </td>
                 <td>{d.lineCount}</td>
               </tr>

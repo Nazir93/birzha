@@ -304,7 +304,7 @@ export function PurchaseNakladnayaDetailSection() {
 
   const warehouseLabel = (wid: string) => {
     const w = warehousesQ.data?.warehouses.find((x) => x.id === wid);
-    return w ? `${w.name} (${w.code})` : wid;
+    return w ? w.name : wid;
   };
 
   if (!enabled) {

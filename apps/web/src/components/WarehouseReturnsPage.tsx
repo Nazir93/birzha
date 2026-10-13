@@ -87,7 +87,7 @@ export function WarehouseReturnsPage() {
                 .sort((a, b) => a.name.localeCompare(b.name, "ru"))
                 .map((w) => ({
                   value: w.id,
-                  label: `${w.name} (${w.code})`,
+                  label: w.name,
                 })),
             ]}
           />
@@ -150,14 +150,7 @@ export function WarehouseReturnsPage() {
                 {lines.map((r) => (
                   <tr key={r.id}>
                     <td style={thtd}>{new Date(r.createdAt).toLocaleString("ru-RU")}</td>
-                    <td style={thtd}>
-                      {r.warehouseName ?? "—"}
-                      {r.warehouseCode ? (
-                        <span className="birzha-text-muted birzha-text-muted--xs" style={{ marginLeft: 4 }}>
-                          ({r.warehouseCode})
-                        </span>
-                      ) : null}
-                    </td>
+                    <td style={thtd}>{r.warehouseName ?? "—"}</td>
                     <td style={thtd}>
                       <Link to={purchaseNakladnayaDocumentPathForPath(pathname, r.purchaseDocumentId)}>
                         {formatSupplierPurchaseLabel(r.documentNumber, r.supplierName, r.docDate)}
