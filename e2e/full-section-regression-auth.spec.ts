@@ -56,7 +56,7 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     await expect(page.getByRole("button", { name: "Зафиксировать недостачу" })).toBeVisible();
 
     await page.goto("/a/archive");
-    await expect(page.getByRole("heading", { name: "Архив" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Архив", exact: true })).toBeVisible();
 
     await page.goto("/a/settings/catalog");
     await expect(page.getByRole("button", { name: "Склады" })).toBeVisible();
