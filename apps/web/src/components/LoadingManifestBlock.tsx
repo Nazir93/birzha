@@ -13,7 +13,6 @@ import {
   buildWriteOffItemsFromInputs,
   filterBatchesForLoadingManifest,
   formatLoadingManifestCardHeader,
-  formatPurchaseDocumentDisplayLabel,
   sumLoadingManifestTotals,
 } from "../format/loading-manifest.js";
 import { purchaseNakladnayaDocumentPathForPath } from "../routes.js";
@@ -153,28 +152,6 @@ export function LoadingManifestBlock({
     [writeOffDocumentCaliberRows, writeOffDocumentRows],
   );
 
-  const uniqueDocuments = useMemo(() => {
-    const labelById = new Map(documentOptions.map((d) => [d.id, d.checkboxLabel]));
-    const m = new Map<string, { id: string; label: string }>();
-    for (const b of selectionRemainderBatches) {
-      const id = b.nakladnaya?.documentId?.trim();
-      if (!id) {
-        continue;
-      }
-      const fromOptions = labelById.get(id);
-      const label =
-        fromOptions ??
-        formatPurchaseDocumentDisplayLabel(
-          id,
-          b.nakladnaya?.documentNumber,
-          b.nakladnaya?.supplierName,
-          b.nakladnaya?.docDate,
-        );
-      m.set(id, { id, label });
-    }
-    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, "ru"));
-  }, [documentOptions, selectionRemainderBatches]);
-
   const stockTableLabelId = "loading-manifest-stock-table";
   const modeToggleId = "loading-manifest-mode";
 
@@ -227,19 +204,6 @@ export function LoadingManifestBlock({
         </div>
       )}
 
-      {uniqueDocuments.length > 0 && (
-        <p className="no-print" style={{ fontSize: "0.86rem", margin: "0 0 0.5rem" }}>
-          <span className="birzha-text-muted">Карточки накладных: </span>
-          {uniqueDocuments.map((d) => (
-            <span key={d.id} style={{ marginRight: 10 }}>
-              <Link to={purchaseNakladnayaDocumentPathForPath(pathname, d.id)} style={{ fontSize: "0.9rem" }}>
-                {d.label}
-              </Link>
-            </span>
-          ))}
-        </p>
-      )}
-
       <p style={{ margin: "0 0 0.4rem", fontSize: "0.92rem" }} role="status" aria-live="polite">
         <strong>Итого по отбору:</strong> {totals.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг,{" "}
         {totals.batchCount} парт.
@@ -264,13 +228,6 @@ export function LoadingManifestBlock({
         <div style={{ marginTop: "0.35rem" }}>
           {writeOff?.enabled ? (
             <div style={{ marginBottom: "0.85rem" }} className="no-print">
-              <h4 style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}>Возврат на склад</h4>
-              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-                По калибру: строка «накладная + калибр» — возврат только с выбранной накладной. По накладной:
-                видны все калибры документа; «Вернуть всё» — весь остаток по накладной. Можно указать кг или ящики
-                (если в накладной задано число ящиков по строке). Остаток на складе не уменьшается — товар доступен для
-                другого направления.
-              </p>
               <div
                 style={{
                   display: "flex",
@@ -281,7 +238,7 @@ export function LoadingManifestBlock({
                   fontSize: "0.86rem",
                 }}
               >
-                <span className="birzha-text-muted">Вернуть по:</span>
+                <span className="birzha-text-muted">Вернуть на склад по:</span>
                 <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <input
                     type="radio"
@@ -514,13 +471,8 @@ export function LoadingManifestBlock({
             style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}
             id={stockTableLabelId}
           >
-            Остаток в отборе (после возврата на склад)
+            Остаток в отборе
           </h4>
-          <p className="birzha-text-muted birzha-ui-sm no-print" style={{ margin: "0 0 0.45rem", maxWidth: "40rem" }}>
-            {manifest
-              ? "Сколько ещё числится в этой погрузочной накладной. Вернутый товар снова на складе и его можно погрузить в другой рейс."
-              : "Сколько ещё в текущем отборе. Вернутый товар снова на складе — для другого рейса смотрите свободный остаток при новой погрузке."}
-          </p>
           <div
             className="no-print"
             id={modeToggleId}

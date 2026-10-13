@@ -589,7 +589,7 @@ export function AllocationPanel() {
 
       {showWorkspace && selectedWarehouse && !viewingSaved ? (
         <>
-          <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">1. Возврат на склад и отбор партий</h4>
+          <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">1. Отбор партий</h4>
           {meta?.warehouseWriteOffApi !== "enabled" ? (
             <InfoAlert title="Возврат на склад недоступен">
               Возврат на склад работает при подключённой базе PostgreSQL. Пока можно только собрать погрузочную
