@@ -75,7 +75,6 @@ export function DistributionCreateForm({
     [openTripsForAssign, batchProducts],
   );
   const selectedTrip = tripsForProduct.find((t) => t.id === tripId);
-  const productLimited = tripsForProduct.length < openTripsForAssign.length;
   const destinationLockedByTrip = !appendMode && tripLocksManifestDestination(selectedTrip);
   const effectiveDestinationCode =
     destinationLockedByTrip && selectedTrip?.destinationCode?.trim()
@@ -185,11 +184,6 @@ export function DistributionCreateForm({
           <BirzhaDateField value={manifestDate} onChange={onManifestDateChange} style={fieldStyle} />
         </label>
       </div>
-      {productLimited ? (
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-          В списке только рейсы того же товара, что в отборе. Помидоры на рейс огурцов не попадают.
-        </p>
-      ) : null}
       {openTripsForAssign.length === 0 && !tripsPending ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
           Создайте рейс в разделе{" "}

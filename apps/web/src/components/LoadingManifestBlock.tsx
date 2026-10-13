@@ -152,7 +152,6 @@ export function LoadingManifestBlock({
     [writeOffDocumentCaliberRows, writeOffDocumentRows],
   );
 
-  const stockTableLabelId = "loading-manifest-stock-table";
   const modeToggleId = "loading-manifest-mode";
 
   return (
@@ -466,13 +465,6 @@ export function LoadingManifestBlock({
             </div>
           ) : null}
 
-          <h4
-            className="loading-print-subhead"
-            style={{ fontSize: "0.95rem", fontWeight: 600, margin: "0 0 0.35rem" }}
-            id={stockTableLabelId}
-          >
-            Остаток в отборе
-          </h4>
           <div
             className="no-print"
             id={modeToggleId}
@@ -509,9 +501,10 @@ export function LoadingManifestBlock({
           <div className="birzha-table-scroll birzha-table-scroll--sticky-head birzha-nakl-lines-card">
             <table
               className="birzha-data-table birzha-data-table--compact loading-manifest-table"
-              aria-labelledby={stockTableLabelId}
               aria-describedby={modeToggleId}
-              aria-label={stockTableMode === "caliber" ? "Остаток по калибрам" : "Остаток по накладным"}
+              aria-label={
+                stockTableMode === "caliber" ? "Остаток в отборе по калибрам" : "Остаток в отборе по накладным"
+              }
             >
               <thead>
                 <tr>
