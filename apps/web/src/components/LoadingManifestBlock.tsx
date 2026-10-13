@@ -98,7 +98,7 @@ export function LoadingManifestBlock({
   onSelectAllNakl,
   onClearNakl,
   batchesInWh,
-  warehouseName,
+  warehouseName: _warehouseName,
   labelDest,
   manifest = null,
   writeOff = null,
@@ -180,16 +180,9 @@ export function LoadingManifestBlock({
             );
           })()}
         </p>
-      ) : (
-        <p className="birzha-callout-info" style={{ margin: "0 0 0.75rem", lineHeight: 1.5 }}>
-          Склад: <strong>{warehouseName}</strong>.
-        </p>
-      )}
+      ) : null}
       {documentOptions.length > 0 && (
         <div className="no-print birzha-clean-ops-meta-grid birzha-distribution-doc-checkboxes" style={{ marginBottom: "0.75rem" }}>
-          <p className="birzha-callout-info" style={{ fontSize: "0.86rem", margin: "0 0 0.4rem", gridColumn: "1 / -1" }}>
-            Включить в отбор (один раз на документ)
-          </p>
           {documentOptions.map((d) => (
             <label key={d.id} className="birzha-form-label" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <input type="checkbox" checked={selectedDocIds.has(d.id)} onChange={() => onToggleNaklDoc(d.id)} />
