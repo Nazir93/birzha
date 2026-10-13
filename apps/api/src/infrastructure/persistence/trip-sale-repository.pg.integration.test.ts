@@ -89,6 +89,7 @@ describe.skipIf(!pgUrl)("DrizzleTripSaleRepository (PostgreSQL)", () => {
       {
         clientLabel: "",
         grams: 25_000n,
+        packageCount: 0n,
         revenueKopecks: 2500n,
         cashKopecks: 2500n,
         debtKopecks: 0n,

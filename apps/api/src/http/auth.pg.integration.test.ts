@@ -252,7 +252,7 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
       method: "POST",
       url: "/warehouses",
       headers: { authorization: `Bearer ${adminTok}`, "content-type": "application/json" },
-      payload: { name: "Склад админа", code: `A${randomUUID().slice(0, 4)}` },
+      payload: { name: "Склад админа", code: `A${randomUUID().replace(/-/g, "").slice(0, 12)}` },
     });
     expect(ok.statusCode).toBe(201);
 

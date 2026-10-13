@@ -169,7 +169,7 @@ describe.skipIf(!pgUrl)("возврат на склад ↔ догрузка в 
       const res = await app.inject({
         method: "POST",
         url: `/batches/${encodeURIComponent(batchId)}/warehouse-write-off`,
-        payload: { kg, reason: "quality_reject" },
+        payload: { kind: "quality_reject", kg },
       });
       expect(res.statusCode, res.body).toBe(200);
     }

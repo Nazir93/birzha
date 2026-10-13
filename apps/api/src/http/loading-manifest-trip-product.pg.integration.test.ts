@@ -2,6 +2,7 @@ import {
   numberToDecimalStringForKopecks,
   purchaseLineAmountKopecksFromDecimalStrings,
 } from "@birzha/contracts";
+import { tareGramsPerPackageForProductGroup } from "@birzha/domain";
 import { eq, inArray, like } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import path from "node:path";
@@ -141,7 +142,11 @@ describe.skipIf(!pgUrl)("погрузочная не принимает чужо
     const cucumberManifestId = `${PREFIX}lm-cuc`;
 
     try {
-      async function createPurchase(id: string, gradeId: string): Promise<string> {
+      async function createPurchase(id: string, gradeId: string, productGroup: string): Promise<string> {
+        const grossKg = 55;
+        const packageCount = 10;
+        const tareKg = Number(tareGramsPerPackageForProductGroup(productGroup)) / 1000;
+        const netKg = grossKg - packageCount * tareKg;
         const createDoc = await app.inject({
           method: "POST",
           url: "/purchase-documents",
@@ -154,10 +159,10 @@ describe.skipIf(!pgUrl)("погрузочная не принимает чужо
             lines: [
               {
                 productGradeId: gradeId,
-                grossKg: 55,
-                packageCount: 10,
+                grossKg,
+                packageCount,
                 pricePerKg: 40,
-                lineTotalKopecks: lineKop(50, 40),
+                lineTotalKopecks: lineKop(netKg, 40),
               },
             ],
           },
@@ -171,8 +176,8 @@ describe.skipIf(!pgUrl)("погрузочная не принимает чужо
         return batchId!;
       }
 
-      const tomatoBatchId = await createPurchase(`${PREFIX}pd-tom`, GRADE_TOMATO);
-      const cucumberBatchId = await createPurchase(`${PREFIX}pd-cuc`, GRADE_CUCUMBER);
+      const tomatoBatchId = await createPurchase(`${PREFIX}pd-tom`, GRADE_TOMATO, "Помидоры");
+      const cucumberBatchId = await createPurchase(`${PREFIX}pd-cuc`, GRADE_CUCUMBER, "Огурцы");
 
       const tripRes = await app.inject({
         method: "POST",
