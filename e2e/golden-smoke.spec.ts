@@ -739,7 +739,7 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
-    await expect(page.getByText("1. Возврат на склад и отбор партий")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("1. Отбор партий")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator(`a[href="/o/purchase-nakladnaya/${docId}"]`)).toBeVisible({
       timeout: 15_000,

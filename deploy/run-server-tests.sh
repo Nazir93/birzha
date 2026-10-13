@@ -54,6 +54,8 @@ if pnpm exec playwright --version >/dev/null 2>&1; then
   echo "==> playwright install (если нужно)"
   # Ubuntu 26.04 ещё не в списке Playwright — fallback на сборку 24.04.
   export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE="${PLAYWRIGHT_HOST_PLATFORM_OVERRIDE:-ubuntu24.04-x64}"
+  pnpm exec playwright install-deps chromium 2>/dev/null \
+    || echo "WARN: playwright install-deps — проверьте libatk и пр." >&2
   pnpm exec playwright install chromium --with-deps 2>/dev/null \
     || pnpm exec playwright install chromium \
     || echo "WARN: playwright install chromium не удался — пробуем уже скачанный браузер" >&2
