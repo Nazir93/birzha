@@ -756,7 +756,7 @@ test.describe("золотой smoke (UI + API)", () => {
 
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
     await expect(page.getByText("1. Отбор партий")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Итого по отбору|В отборе:|парт\./)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Итого по отбору", { exact: false }).first()).toBeVisible({ timeout: 15_000 });
 
     await expect(
       page.getByText("Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста"),
