@@ -248,13 +248,14 @@ describe.skipIf(!pgUrl)("auth HTTP (PostgreSQL)", () => {
     const adminTok = (JSON.parse(
       (await app.inject({ method: "POST", url: "/auth/login", payload: { login, password } })).body,
     ) as { token: string }).token;
+    const whCode = `A${randomUUID().replace(/-/g, "").slice(0, 12)}`;
     const ok = await app.inject({
       method: "POST",
       url: "/warehouses",
       headers: { authorization: `Bearer ${adminTok}`, "content-type": "application/json" },
-      payload: { name: "Склад админа", code: `A${randomUUID().replace(/-/g, "").slice(0, 12)}` },
+      payload: { name: `Склад админа ${whCode}`, code: whCode },
     });
-    expect(ok.statusCode).toBe(201);
+    expect(ok.statusCode, ok.body).toBe(201);
 
     await db.delete(schema.userRoles).where(eq(schema.userRoles.userId, whUserId));
     await db.delete(schema.users).where(eq(schema.users.id, whUserId));
