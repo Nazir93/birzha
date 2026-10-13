@@ -52,7 +52,11 @@ pnpm build
 
 if pnpm exec playwright --version >/dev/null 2>&1; then
   echo "==> playwright install (если нужно)"
-  pnpm exec playwright install chromium --with-deps 2>/dev/null || pnpm exec playwright install chromium
+  # Ubuntu 26.04 ещё не в списке Playwright — fallback на сборку 24.04.
+  export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE="${PLAYWRIGHT_HOST_PLATFORM_OVERRIDE:-ubuntu24.04-x64}"
+  pnpm exec playwright install chromium --with-deps 2>/dev/null \
+    || pnpm exec playwright install chromium \
+    || echo "WARN: playwright install chromium не удался — пробуем уже скачанный браузер" >&2
   # apps/api/.env часто задаёт PORT=3000 (prod API) — E2E поднимает свой сервер на 3099.
   unset PORT
   export PORT=3099
@@ -65,7 +69,7 @@ if pnpm exec playwright --version >/dev/null 2>&1; then
     echo "==> e2e roles (PostgreSQL, PORT=3099)"
     export E2E_DATABASE_URL="${E2E_PG_URL}"
     export E2E_JWT_SECRET="${E2E_PG_JWT}"
-    pnpm exec playwright test e2e/role-nav-auth.spec.ts
+    pnpm exec playwright test e2e/role-nav-auth.spec.ts e2e/full-section-regression-auth.spec.ts
   else
     echo "SKIP: E2E ролей — нужны E2E_DATABASE_URL и E2E_JWT_SECRET"
   fi
