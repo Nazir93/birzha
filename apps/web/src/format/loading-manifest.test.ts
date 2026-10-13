@@ -582,6 +582,18 @@ describe("buildAppendItemsFromInputs", () => {
   it("null при превышении остатка", () => {
     expect(buildAppendItemsFromInputs(batches, row, "2000", "")).toBeNull();
   });
+
+  it("кг и ящики вместе — ящики как ввели, без пересчёта от закупки", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "1000", "100")).toEqual([
+      { batchId: "euro", kg: 1000, packageCount: 100 },
+    ]);
+  });
+
+  it("только ящики — передаёт packageCount", () => {
+    expect(buildAppendItemsFromInputs(batches, row, "", "10")).toEqual([
+      { batchId: "euro", kg: expect.closeTo(1148 / 13, 5), packageCount: 10 },
+    ]);
+  });
 });
 
 describe("batchSnapshotForManifestLineRemainder / WriteOff", () => {

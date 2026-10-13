@@ -258,6 +258,8 @@ export const appendLoadingManifestBatchesBodySchema = z
         z.object({
           batchId: z.string().min(1).max(200),
           kg: z.number().finite().gt(0).max(1_000_000),
+          /** Ящики с UI; если заданы — пишем их, без пересчёта от закупки. */
+          packageCount: z.number().int().nonnegative().max(1_000_000).optional(),
         }),
       )
       .min(1)

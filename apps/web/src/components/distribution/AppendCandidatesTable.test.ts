@@ -72,7 +72,32 @@ describe("resolveAppendCandidateLines — выборочная догрузка 
     ];
     const key = rowKeyFor(batches);
     expect(resolveAppendCandidateLines(batches, undefined, {}, { [key]: "1" })).toEqual([
-      { batchId: "b1", kg: 10 },
+      { batchId: "b1", kg: 10, packageCount: 1 },
+    ]);
+  });
+
+  it("кг и ящики вместе — в API уходят оба", () => {
+    const batches = [
+      batch({
+        id: "b1",
+        totalKg: 8500,
+        onWarehouseKg: 8500,
+        availableForLoadingKg: 8500,
+        nakladnaya: {
+          documentId: "d1",
+          warehouseId: "w1",
+          productGradeCode: "№5",
+          productGroup: "Помидоры",
+          documentNumber: "01",
+          supplierName: "Мурад",
+          docDate: "2026-10-12",
+          linePackageCount: 1000,
+        },
+      }),
+    ];
+    const key = rowKeyFor(batches);
+    expect(resolveAppendCandidateLines(batches, undefined, { [key]: "1000" }, { [key]: "100" })).toEqual([
+      { batchId: "b1", kg: 1000, packageCount: 100 },
     ]);
   });
 });

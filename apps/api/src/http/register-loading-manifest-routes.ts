@@ -18,6 +18,7 @@ import type { PurchaserExpenseRepository } from "../application/ports/purchaser-
 import type { TripRepository } from "../application/ports/trip-repository.port.js";
 import { planLoadingManifestAssignTripShipment } from "../application/trip/loading-manifest-assign-trip-ship.plan.js";
 import { planAppendLoadingManifestLineGrams } from "../application/trip/plan-append-loading-manifest-line-grams.js";
+import { planAppendLoadingManifestLinePackages } from "../application/trip/plan-append-loading-manifest-line-packages.js";
 import { kgToGrams } from "../application/units/mass.js";
 import { classifyLoadingManifestAssignRequest } from "../application/trip/loading-manifest-assign-request.js";
 import { assertTripAllowsWarehouseLoading } from "../application/trip/assert-trip-warehouse-loading.js";
@@ -611,6 +612,7 @@ export function registerLoadingManifestRoutes(
       const body = appendLoadingManifestBatchesBodySchema.parse(req.body);
       const manifestId = params.manifestId;
       const requestedKgByBatch = new Map<string, number>();
+      const requestedPkgByBatch = new Map<string, number>();
       if (body.lines && body.lines.length > 0) {
         for (const line of body.lines) {
           const id = line.batchId.trim();
@@ -618,6 +620,9 @@ export function registerLoadingManifestRoutes(
             continue;
           }
           requestedKgByBatch.set(id, (requestedKgByBatch.get(id) ?? 0) + line.kg);
+          if (line.packageCount != null) {
+            requestedPkgByBatch.set(id, (requestedPkgByBatch.get(id) ?? 0) + line.packageCount);
+          }
         }
       }
       const batchIds: string[] =
@@ -709,7 +714,12 @@ export function registerLoadingManifestRoutes(
       }
 
       const existingRows = await db
-        .select({ batchId: loadingManifestLines.batchId, lineNo: loadingManifestLines.lineNo, grams: loadingManifestLines.grams })
+        .select({
+          batchId: loadingManifestLines.batchId,
+          lineNo: loadingManifestLines.lineNo,
+          grams: loadingManifestLines.grams,
+          packageCount: loadingManifestLines.packageCount,
+        })
         .from(loadingManifestLines)
         .where(eq(loadingManifestLines.manifestId, manifestId));
       const existingByBatch = new Map(existingRows.map((r) => [r.batchId, r]));
@@ -730,7 +740,15 @@ export function registerLoadingManifestRoutes(
           if (linePlan.kind === "skip") {
             continue;
           }
-          const packageCount = packageCountForPart(row.totalGrams, linePlan.targetGrams, row.linePackageCount);
+          const requestedPkg = requestedPkgByBatch.get(row.batchId);
+          const packageCount = planAppendLoadingManifestLinePackages({
+            kind: linePlan.kind === "increase" && already ? "increase" : "insert",
+            existingLinePackageCount: already ? toNullableBigInt(already.packageCount) : null,
+            ...(requestedPkg != null ? { requestedAddPackageCount: BigInt(requestedPkg) } : {}),
+            totalBatchGrams: row.totalGrams,
+            targetLineGrams: linePlan.targetGrams,
+            purchaseLinePackageCount: toNullableBigInt(row.linePackageCount),
+          });
           if (linePlan.kind === "increase" && already) {
             await exec
               .update(loadingManifestLines)

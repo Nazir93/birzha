@@ -511,12 +511,14 @@ function kgFromAppendPackageCount(batch: BatchListItem, packageCount: number): n
   return Math.min(Math.max(0, kg), batchAvailableForLoadingKg(batch));
 }
 
+export type AppendLineItem = { batchId: string; kg: number; packageCount?: number };
+
 function buildAppendItemsFromBatchesByPackages(
   batches: readonly BatchListItem[],
   totalPackages: number,
-): { batchId: string; kg: number }[] {
+): AppendLineItem[] {
   let remaining = Math.round(totalPackages);
-  const items: { batchId: string; kg: number }[] = [];
+  const items: AppendLineItem[] = [];
   for (const batch of batches) {
     if (remaining <= 0) {
       break;
@@ -528,26 +530,54 @@ function buildAppendItemsFromBatchesByPackages(
     const pkgFromBatch = Math.min(remaining, maxPkg);
     const kg = kgFromAppendPackageCount(batch, pkgFromBatch);
     if (kg > 0) {
-      items.push({ batchId: batch.id, kg });
+      items.push({ batchId: batch.id, kg, packageCount: pkgFromBatch });
       remaining -= pkgFromBatch;
     }
   }
   return items;
 }
 
+/** Распределяет указанные ящики по партиям пропорционально кг (остаток — на последнюю). */
+export function distributeAppendPackagesByKg(
+  items: readonly { batchId: string; kg: number }[],
+  totalPackages: number,
+): AppendLineItem[] {
+  if (items.length === 0) {
+    return [];
+  }
+  const rounded = Math.max(0, Math.round(totalPackages));
+  const totalKg = items.reduce((s, i) => s + i.kg, 0);
+  if (rounded <= 0 || totalKg <= 0) {
+    return items.map((i) => ({ batchId: i.batchId, kg: i.kg, packageCount: 0 }));
+  }
+  let remaining = rounded;
+  return items.map((item, idx) => {
+    if (idx === items.length - 1) {
+      return { batchId: item.batchId, kg: item.kg, packageCount: remaining };
+    }
+    const share = Math.floor((item.kg / totalKg) * rounded);
+    const pkg = Math.min(remaining, Math.max(0, share));
+    remaining -= pkg;
+    return { batchId: item.batchId, kg: item.kg, packageCount: pkg };
+  });
+}
+
 /**
  * Догрузка по вводу кг/ящ.: пусто = весь остаток строки; «0» = пропуск; иначе указанное количество.
+ * Если указаны и кг, и ящики — в API уходят оба (ящики не пересчитываются от закупки).
  */
 export function buildAppendItemsFromInputs(
   batches: readonly BatchListItem[],
   row: WriteOffQuantityRow,
   kgInput: string,
   pkgInput: string,
-): { batchId: string; kg: number }[] | null {
+): AppendLineItem[] | null {
   const kgStr = kgInput.trim().replace(",", ".");
   const pkgStr = pkgInput.trim().replace(",", ".");
   const kg = kgStr.length > 0 ? parseFloat(kgStr) : Number.NaN;
   const pkg = pkgStr.length > 0 ? parseFloat(pkgStr) : Number.NaN;
+  const hasPkg = pkgStr.length > 0 && Number.isFinite(pkg);
+  const roundedPkg = hasPkg ? Math.round(pkg) : Number.NaN;
 
   if (kgStr.length > 0 && Number.isFinite(kg)) {
     if (kg <= 0) {
@@ -557,11 +587,22 @@ export function buildAppendItemsFromInputs(
       return null;
     }
     const items = buildAppendItemsFromBatches(batches, kg);
-    return items.length > 0 ? items : null;
+    if (items.length === 0) {
+      return null;
+    }
+    if (hasPkg) {
+      if (roundedPkg < 0 || (row.totalPkg > 0 && roundedPkg > row.totalPkg)) {
+        return null;
+      }
+      if (row.linesWithPkg <= 0 && roundedPkg > 0) {
+        return null;
+      }
+      return distributeAppendPackagesByKg(items, roundedPkg);
+    }
+    return items;
   }
 
-  if (pkgStr.length > 0 && Number.isFinite(pkg)) {
-    const roundedPkg = Math.round(pkg);
+  if (hasPkg) {
     if (roundedPkg <= 0) {
       return [];
     }

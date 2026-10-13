@@ -17,7 +17,7 @@ type Props = {
   onPkgChange: (rowKey: string, value: string) => void;
 };
 
-export type AppendCandidateLine = { batchId: string; kg: number };
+export type AppendCandidateLine = { batchId: string; kg: number; packageCount?: number };
 
 /** Собирает строки догрузки по вводу кг/ящ. (пусто = весь остаток; 0 = пропуск). */
 export function resolveAppendCandidateLines(
@@ -27,7 +27,9 @@ export function resolveAppendCandidateLines(
   pkgInput: Record<string, string>,
 ): AppendCandidateLine[] | null {
   const rows = aggregateBatchesByDocumentCaliberLine(batches, "loading", labelDest).filter((r) => r.totalKg > 0);
-  const merged = new Map<string, number>();
+  const mergedKg = new Map<string, number>();
+  const mergedPkg = new Map<string, number>();
+  const hasPkg = new Set<string>();
   for (const row of rows) {
     const items = buildAppendItemsFromInputs(
       row.batches,
@@ -39,10 +41,19 @@ export function resolveAppendCandidateLines(
       return null;
     }
     for (const item of items) {
-      merged.set(item.batchId, (merged.get(item.batchId) ?? 0) + item.kg);
+      mergedKg.set(item.batchId, (mergedKg.get(item.batchId) ?? 0) + item.kg);
+      if (item.packageCount != null) {
+        hasPkg.add(item.batchId);
+        mergedPkg.set(item.batchId, (mergedPkg.get(item.batchId) ?? 0) + item.packageCount);
+      }
     }
   }
-  return [...merged.entries()].map(([batchId, kg]) => ({ batchId, kg }));
+  return [...mergedKg.entries()].map(([batchId, kg]) => {
+    if (!hasPkg.has(batchId)) {
+      return { batchId, kg };
+    }
+    return { batchId, kg, packageCount: mergedPkg.get(batchId) ?? 0 };
+  });
 }
 
 /** Догрузка: что уйдёт в ПН — с вводом кг/ящ. как у возврата сверху. */
@@ -67,8 +78,8 @@ export function AppendCandidatesTable({
         Со склада «{warehouseName}» — свободный остаток
       </h4>
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-        Свободный склад, в т.ч. возврат с этой ПН/рейса. Введите кг или ящики (если оба — берём кг). Пусто = весь
-        остаток строки; «0» = не брать. Кнопка сразу добавляет в эту погрузочную.
+        Свободный склад, в т.ч. возврат с этой ПН/рейса. Укажите кг и/или ящики — в погрузочную уйдёт то, что
+        ввели. Пусто = весь остаток строки; «0» = не брать. Кнопка сразу добавляет в эту погрузочную.
       </p>
       {rows.length === 0 ? (
         <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">

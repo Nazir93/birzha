@@ -280,18 +280,23 @@ export function useDistributionWorkspace({
     return trip ? effectiveTripProductGroup(trip.productGroup) : null;
   }, [loadingTripId, routeDetail?.tripId, openTripsForAssign]);
 
+  /** Весь свободный склад (все товары) — для подписей складов в select. */
+  const allBatchesWithStock = useMemo(
+    () => batchesMerged.filter((b) => batchAvailableForLoadingKg(b) > 0),
+    [batchesMerged],
+  );
+
+  /** Отбор/догрузка: только товар выбранного рейса (помидоры ≠ огурцы). */
   const batchesOnWarehouse = useMemo(
     () =>
-      batchesMerged
-        .filter((b) => batchAvailableForLoadingKg(b) > 0)
-        .filter((b) => {
-          if (!loadingTripProduct) {
-            return true;
-          }
-          const group = b.nakladnaya?.productGroup?.trim() ?? "";
-          return !group || group === loadingTripProduct;
-        }),
-    [batchesMerged, loadingTripProduct],
+      allBatchesWithStock.filter((b) => {
+        if (!loadingTripProduct) {
+          return true;
+        }
+        const group = b.nakladnaya?.productGroup?.trim() ?? "";
+        return !group || group === loadingTripProduct;
+      }),
+    [allBatchesWithStock, loadingTripProduct],
   );
 
   const list = useMemo(
@@ -307,31 +312,48 @@ export function useDistributionWorkspace({
     [batchesOnWarehouse],
   );
 
+  const eligibleAllProductsOnWarehouse = useMemo(
+    () => allBatchesWithStock.filter(isEligibleForLoadingAllocation),
+    [allBatchesWithStock],
+  );
+
+  const listAllProducts = useMemo(
+    () => eligibleAllProductsOnWarehouse.filter((b) => !reservedBatchIdSet.has(b.id)),
+    [eligibleAllProductsOnWarehouse, reservedBatchIdSet],
+  );
+
   const loading = batchesQueryPending;
   const refetching = batchesQueryFetching && !batchesQueryPending;
 
   const { byWarehouse, order: warehouseOrder } = useMemo(() => groupBatchesByWarehouse(list), [list]);
 
-  const { byWarehouse: eligibleByWarehouse, order: eligibleWarehouseOrder } = useMemo(
-    () => groupBatchesByWarehouse(eligibleBatchesOnWarehouse),
-    [eligibleBatchesOnWarehouse],
+  const { byWarehouse: eligibleByWarehouseAll, order: eligibleWarehouseOrderAll } = useMemo(
+    () => groupBatchesByWarehouse(eligibleAllProductsOnWarehouse),
+    [eligibleAllProductsOnWarehouse],
+  );
+
+  const { byWarehouse: availableByWarehouseAll, order: availableWarehouseOrderAll } = useMemo(
+    () => groupBatchesByWarehouse(listAllProducts),
+    [listAllProducts],
   );
 
   const allocationWarehouseOptions = useMemo((): AllocationWarehouseOption[] => {
     return buildAllocationWarehouseOptions({
       warehouseCatalog: warehousesQuery.data?.warehouses ?? [],
-      availableByWarehouse: byWarehouse,
-      eligibleByWarehouse,
-      extraWarehouseOrder: [...warehouseOrder, ...eligibleWarehouseOrder],
+      /** Подпись склада — по всем товарам, не только по товару рейса. */
+      availableByWarehouse: availableByWarehouseAll,
+      eligibleByWarehouse: eligibleByWarehouseAll,
+      extraWarehouseOrder: [...availableWarehouseOrderAll, ...eligibleWarehouseOrderAll, ...warehouseOrder],
       reservedBatchIds: reservedBatchIdSet,
       sumPackageEstimatesForWarehouse,
     });
   }, [
     warehousesQuery.data?.warehouses,
-    byWarehouse,
-    eligibleByWarehouse,
+    availableByWarehouseAll,
+    eligibleByWarehouseAll,
+    availableWarehouseOrderAll,
+    eligibleWarehouseOrderAll,
     warehouseOrder,
-    eligibleWarehouseOrder,
     reservedBatchIdSet,
   ]);
 

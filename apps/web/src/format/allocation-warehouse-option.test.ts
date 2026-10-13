@@ -61,6 +61,28 @@ describe("buildAllocationWarehouseOptions", () => {
   });
 });
 
+describe("buildAllocationWarehouseOptions — все товары на складе", () => {
+  it("в подписи склада учитывает и помидоры, и огурцы", () => {
+    const whId = "wh-1";
+    const tomato = batch("t1", whId, 1000);
+    tomato.nakladnaya = { warehouseId: whId, documentNumber: "01", productGroup: "Помидоры" };
+    const cucumber = batch("c1", whId, 500);
+    cucumber.nakladnaya = { warehouseId: whId, documentNumber: "02", productGroup: "Огурцы" };
+    const all = [tomato, cucumber];
+    const rows = buildAllocationWarehouseOptions({
+      warehouseCatalog: [{ id: whId, name: "Дербент" }],
+      availableByWarehouse: new Map([[whId, all]]),
+      eligibleByWarehouse: new Map([[whId, all]]),
+      extraWarehouseOrder: [],
+      reservedBatchIds: new Set(),
+      sumPackageEstimatesForWarehouse: sumPkg,
+    });
+    expect(rows[0]?.totalKgOnWarehouse).toBe(1500);
+    expect(rows[0]?.totalBatchCountOnWarehouse).toBe(2);
+    expect(formatAllocationWarehouseSelectLabel("Дербент", rows[0]!)).toMatch(/1[\s\u00a0]500 кг/);
+  });
+});
+
 describe("formatAllocationWarehouseSelectLabel", () => {
   it("добавляет пометку «в резерве ПН», если весь остаток зарезервирован", () => {
     const label = formatAllocationWarehouseSelectLabel("Каякент", {

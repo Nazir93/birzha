@@ -174,7 +174,7 @@ export function LoadingAppendPanel() {
       appendToManifestId: string;
       warehouseId: string;
       destinationCode: string;
-      lines: { batchId: string; kg: number }[];
+      lines: { batchId: string; kg: number; packageCount?: number }[];
       docDate: string;
       manifestNumber: string;
     }) => {

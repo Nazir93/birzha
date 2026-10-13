@@ -197,10 +197,6 @@ export function DistributionCreateForm({
           Город взят из рейса — изменить нельзя. Чтобы указать другой город, выберите другой рейс или «без
           рейса».
         </p>
-      ) : !appendMode ? (
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0.5rem 0 0" }}>
-          Рейс можно не выбирать — сохраните накладную и привяжите рейс в разделе «Смена рейса».
-        </p>
       ) : null}
       <p className="birzha-clean-ops-form-actions">
         <button

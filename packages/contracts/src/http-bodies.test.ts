@@ -383,6 +383,16 @@ describe("appendLoadingManifestBatchesBodySchema", () => {
       ],
     });
   });
+
+  it("принимает lines с кг и ящиками", () => {
+    expect(
+      appendLoadingManifestBatchesBodySchema.parse({
+        lines: [{ batchId: "b1", kg: 1000, packageCount: 100 }],
+      }),
+    ).toEqual({
+      lines: [{ batchId: "b1", kg: 1000, packageCount: 100 }],
+    });
+  });
 });
 
 describe("pushSubscribeBodySchema", () => {
