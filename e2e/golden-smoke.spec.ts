@@ -713,14 +713,16 @@ test.describe("золотой smoke (UI + API)", () => {
   test("погрузка: остаток после закупки → отбор (in-memory, просмотр)", async ({ page, request }) => {
     const suffix = `${Date.now()}`;
     const docId = `e2e-dist-nakl-${suffix}`;
+    const documentNumber = `НФ-DIST-${suffix.slice(-8)}`;
+    const supplierName = `E2E-Поставщик-${suffix.slice(-6)}`;
 
     const res = await request.post("/api/purchase-documents", {
       data: {
         id: docId,
-        documentNumber: `НФ-DIST-${suffix.slice(-8)}`,
+        documentNumber,
         docDate: "2026-06-07",
         warehouseId: "wh-manas",
-        supplierName: `E2E-Поставщик-${suffix.slice(-6)}`,
+        supplierName,
         extraCostKopecks: 0,
         lines: [
           {
@@ -741,9 +743,8 @@ test.describe("золотой smoke (UI + API)", () => {
     await pickBirzhaSelectByLabel(page, "#alloc-sel-warehouse", /Манас/);
     await expect(page.getByText("1. Отбор партий")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("В отборе:", { exact: false })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator(`a[href="/o/purchase-nakladnaya/${docId}"]`)).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByText(documentNumber, { exact: false })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(supplierName, { exact: false })).toBeVisible({ timeout: 15_000 });
 
     await expect(
       page.getByText("Сохранение погрузочной накладной и привязка к рейсу — у кладовщика или логиста"),
