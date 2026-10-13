@@ -515,9 +515,10 @@ describe("buildWriteOffItemsFromBatchesByPackages", () => {
       15,
     );
     expect(items).toHaveLength(2);
-    expect(items[0]).toEqual({ batchId: "b1", kg: 50 });
+    expect(items[0]).toEqual({ batchId: "b1", kg: 50, packageCount: 10 });
     expect(items[1]?.batchId).toBe("b2");
     expect(items[1]?.kg).toBe(25);
+    expect(items[1]?.packageCount).toBe(5);
   });
 });
 
@@ -532,14 +533,14 @@ describe("buildWriteOffItemsFromInputs", () => {
   ];
   const row = { totalKg: 40, totalPkg: 4, linesWithPkg: 1 };
 
-  it("приоритет кг над ящиками", () => {
-    const items = buildWriteOffItemsFromInputs(batches, row, "10", "99");
-    expect(items).toEqual([{ batchId: "b1", kg: 10 }]);
+  it("кг и ящики вместе — ящики как ввели", () => {
+    const items = buildWriteOffItemsFromInputs(batches, row, "10", "1");
+    expect(items).toEqual([{ batchId: "b1", kg: 10, packageCount: 1 }]);
   });
 
   it("списание по ящикам если кг не заданы", () => {
     const items = buildWriteOffItemsFromInputs(batches, row, "", "2");
-    expect(items).toEqual([{ batchId: "b1", kg: 20 }]);
+    expect(items).toEqual([{ batchId: "b1", kg: 20, packageCount: 2 }]);
   });
 
   it("null при превышении остатка", () => {

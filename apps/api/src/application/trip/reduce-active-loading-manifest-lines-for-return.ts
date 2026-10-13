@@ -44,7 +44,7 @@ function asGrams(value: bigint | string | number | null | undefined): bigint {
  */
 export async function reduceActiveLoadingManifestLinesForBatchReturn(
   db: DbClient,
-  input: { batchId: string; returnGrams: bigint },
+  input: { batchId: string; returnGrams: bigint; returnPackageCount?: bigint | null },
 ): Promise<void> {
   if (input.returnGrams <= 0n) {
     return;
@@ -135,6 +135,9 @@ export async function reduceActiveLoadingManifestLinesForBatchReturn(
 
   const plan = planLoadingManifestLinesReduceForReturn({
     returnGrams: input.returnGrams,
+    ...(input.returnPackageCount != null
+      ? { returnPackageCount: input.returnPackageCount }
+      : {}),
     lines: lineRows.map((r) => ({
       manifestId: r.manifestId,
       batchId: r.batchId,

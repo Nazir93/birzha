@@ -212,12 +212,17 @@ export async function patchBatchAllocation(
 export async function postBatchWarehouseWriteOffQualityReject(
   batchId: string,
   kg: number,
+  packageCount?: number,
 ): Promise<{ writeOffId: string }> {
   const url = `/api/batches/${encodeURIComponent(batchId)}/warehouse-write-off`;
   const res = await apiFetch(url, {
     method: "POST",
     headers: JSON_HEADERS,
-    body: JSON.stringify({ kind: "quality_reject", kg }),
+    body: JSON.stringify({
+      kind: "quality_reject",
+      kg,
+      ...(packageCount != null ? { packageCount } : {}),
+    }),
   });
   if (res.status === 503) {
     throw new Error("Нужна PostgreSQL (списание на складе не настроено).");

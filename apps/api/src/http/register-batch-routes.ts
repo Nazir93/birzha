@@ -504,6 +504,7 @@ export function registerBatchRoutes(
         const { writeOffId } = await recordWarehouseWriteOff.execute({
           batchId: params.batchId,
           kg: body.kg,
+          ...(body.packageCount != null ? { packageCount: body.packageCount } : {}),
           reason: "quality_reject",
         });
         return reply.code(200).send({ ok: true, writeOffId });

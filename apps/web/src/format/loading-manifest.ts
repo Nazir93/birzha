@@ -413,13 +413,15 @@ export function kgFromWriteOffPackageCount(batch: BatchListItem, packageCount: n
   return Math.min(Math.max(0, kg), batchReturnableToWarehouseKg(batch));
 }
 
+export type WriteOffLineItem = { batchId: string; kg: number; packageCount?: number };
+
 /** Распределить списание по ящикам (FIFO), перевести в кг для API. */
 export function buildWriteOffItemsFromBatchesByPackages(
   batches: readonly BatchListItem[],
   totalPackages: number,
-): { batchId: string; kg: number }[] {
+): WriteOffLineItem[] {
   let remaining = Math.round(totalPackages);
-  const items: { batchId: string; kg: number }[] = [];
+  const items: WriteOffLineItem[] = [];
   for (const batch of batches) {
     if (remaining <= 0) {
       break;
@@ -431,7 +433,7 @@ export function buildWriteOffItemsFromBatchesByPackages(
     const pkgFromBatch = Math.min(remaining, maxPkg);
     const kg = kgFromWriteOffPackageCount(batch, pkgFromBatch);
     if (kg > 0) {
-      items.push({ batchId: batch.id, kg });
+      items.push({ batchId: batch.id, kg, packageCount: pkgFromBatch });
       remaining -= pkgFromBatch;
     }
   }
@@ -444,32 +446,51 @@ export type WriteOffQuantityRow = {
   linesWithPkg: number;
 };
 
-/** Списание по вводу кг (приоритет) или ящиков. */
+/**
+ * Возврат по вводу кг и/или ящиков.
+ * Если указаны оба — в API уходят оба (ящики не пересчитываются от закупки).
+ */
 export function buildWriteOffItemsFromInputs(
   batches: readonly BatchListItem[],
   row: WriteOffQuantityRow,
   kgInput: string,
   pkgInput: string,
-): { batchId: string; kg: number }[] | null {
+): WriteOffLineItem[] | null {
   const kgStr = kgInput.trim().replace(",", ".");
   const pkgStr = pkgInput.trim().replace(",", ".");
   const kg = kgStr.length > 0 ? parseFloat(kgStr) : Number.NaN;
   const pkg = pkgStr.length > 0 ? parseFloat(pkgStr) : Number.NaN;
+  const hasPkg = pkgStr.length > 0 && Number.isFinite(pkg);
+  const roundedPkg = hasPkg ? Math.round(pkg) : Number.NaN;
 
-  if (Number.isFinite(kg) && kg > 0) {
+  if (kgStr.length > 0 && Number.isFinite(kg)) {
+    if (kg <= 0) {
+      return null;
+    }
     if (kg > row.totalKg) {
       return null;
     }
     const items = buildWriteOffItemsFromBatches(batches, kg);
-    return items.length > 0 ? items : null;
-  }
-
-  if (Number.isFinite(pkg) && pkg > 0) {
-    if (row.totalPkg <= 0 || row.linesWithPkg <= 0) {
+    if (items.length === 0) {
       return null;
     }
-    const roundedPkg = Math.round(pkg);
-    if (roundedPkg <= 0 || roundedPkg > row.totalPkg) {
+    if (hasPkg) {
+      if (roundedPkg < 0 || (row.totalPkg > 0 && roundedPkg > row.totalPkg)) {
+        return null;
+      }
+      if (row.linesWithPkg <= 0 && roundedPkg > 0) {
+        return null;
+      }
+      return distributeAppendPackagesByKg(items, roundedPkg);
+    }
+    return items;
+  }
+
+  if (hasPkg) {
+    if (roundedPkg <= 0) {
+      return null;
+    }
+    if (row.totalPkg <= 0 || row.linesWithPkg <= 0 || roundedPkg > row.totalPkg) {
       return null;
     }
     const items = buildWriteOffItemsFromBatchesByPackages(batches, roundedPkg);

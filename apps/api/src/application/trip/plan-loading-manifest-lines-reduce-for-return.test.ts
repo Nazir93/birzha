@@ -75,4 +75,26 @@ describe("planLoadingManifestLinesReduceForReturn", () => {
     expect(plan[1]?.newGrams).toBe(20_000n);
     expect(plan[1]?.unshipGrams).toBe(0n);
   });
+
+  it("при явных ящиках снимает их, а не пропорцию от закупки/массы", () => {
+    const plan = planLoadingManifestLinesReduceForReturn({
+      returnGrams: 1_000_000n,
+      returnPackageCount: 100n,
+      lines: [
+        {
+          manifestId: "m1",
+          batchId: "b1",
+          lineNo: 1,
+          grams: 1_140_000n,
+          packageCount: 150n,
+          tripId: "t1",
+          shipmentGramsOnTrip: 1_140_000n,
+        },
+      ],
+    });
+    expect(plan).toHaveLength(1);
+    expect(plan[0]?.newGrams).toBe(140_000n);
+    expect(plan[0]?.newPackageCount).toBe(50n);
+    expect(plan[0]?.unshipPackageCount).toBe(100n);
+  });
 });

@@ -15,6 +15,8 @@ export const postWarehouseWriteOffBodySchema = z.object({
     .finite()
     .positive()
     .max(1_000_000, "кг_слишком_много"),
+  /** Ящики с UI; если заданы — снимаем их с ПН/рейса, без пересчёта от закупки. */
+  packageCount: z.number().int().nonnegative().max(1_000_000).optional(),
 });
 
 export type PostWarehouseWriteOffBody = z.infer<typeof postWarehouseWriteOffBodySchema>;

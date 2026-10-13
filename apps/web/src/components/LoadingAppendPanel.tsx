@@ -126,12 +126,16 @@ export function LoadingAppendPanel() {
       label,
     }: {
       inputKey: string;
-      items: { batchId: string; kg: number }[];
+      items: { batchId: string; kg: number; packageCount?: number }[];
       label: string;
     }) => {
       const entries: RecentWriteOffRow[] = [];
       for (const item of items) {
-        const { writeOffId } = await postBatchWarehouseWriteOffQualityReject(item.batchId, item.kg);
+        const { writeOffId } = await postBatchWarehouseWriteOffQualityReject(
+          item.batchId,
+          item.kg,
+          item.packageCount,
+        );
         entries.push({ writeOffId, kg: item.kg, label });
       }
       return { entries };

@@ -32,7 +32,11 @@ export type LoadingManifestWriteOffProps = {
   rejectPkgInput: Record<string, string>;
   onRejectInputChange: (key: string, value: string) => void;
   onRejectPkgInputChange: (key: string, value: string) => void;
-  onSubmitWriteOff: (inputKey: string, items: { batchId: string; kg: number }[], label: string) => void;
+  onSubmitWriteOff: (
+    inputKey: string,
+    items: { batchId: string; kg: number; packageCount?: number }[],
+    label: string,
+  ) => void;
   recentWriteOffs: RecentWriteOffRow[];
   undoingWriteOffId: string | null;
   undoError: string | null;

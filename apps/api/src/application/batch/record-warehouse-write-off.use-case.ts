@@ -18,11 +18,17 @@ export type RecordWarehouseWriteOffInput = {
    * снимает кг с активных ПН и при необходимости возвращает отгрузку с открытого рейса.
    */
   kg: number;
+  /** Ящики с UI — снимаются с ПН/рейса без пересчёта от закупки. */
+  packageCount?: number;
   reason: BatchWarehouseWriteOffReason;
 };
 
 export type RecordWarehouseWriteOffSideEffects = {
-  reduceActiveLoadingManifestLines(batchId: string, grams: bigint): Promise<void>;
+  reduceActiveLoadingManifestLines(
+    batchId: string,
+    grams: bigint,
+    packageCount?: bigint | null,
+  ): Promise<void>;
 };
 
 export type RecordWarehouseWriteOffTransactionRunner = (
@@ -111,7 +117,11 @@ export class RecordWarehouseWriteOffUseCase {
       }
 
       // Сначала снимаем с ПН / рейса — иначе при inTransit лимит «только склад» ломает возврат.
-      await sideEffects.reduceActiveLoadingManifestLines(input.batchId, grams);
+      const returnPkg =
+        input.packageCount != null && Number.isFinite(input.packageCount) && input.packageCount >= 0
+          ? BigInt(Math.trunc(input.packageCount))
+          : null;
+      await sideEffects.reduceActiveLoadingManifestLines(input.batchId, grams, returnPkg);
 
       const after = (await loadBatchForUpdateOrThrow(batches, input.batchId)).toPersistenceState();
       const restoredPhysically =

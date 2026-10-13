@@ -299,10 +299,11 @@ export async function buildApp(options: {
         await db.transaction(async (tx) => {
           const exec = tx as unknown as DbClient;
           await fn(new DrizzleBatchRepository(exec), new DrizzleBatchWarehouseWriteOffLedger(exec), {
-            reduceActiveLoadingManifestLines: (batchId, grams) =>
+            reduceActiveLoadingManifestLines: (batchId, grams, packageCount) =>
               reduceActiveLoadingManifestLinesForBatchReturn(exec, {
                 batchId,
                 returnGrams: grams,
+                ...(packageCount != null ? { returnPackageCount: packageCount } : {}),
               }),
           });
         });

@@ -8,6 +8,15 @@ describe("postWarehouseWriteOffBodySchema", () => {
     expect(r.kg).toBe(1.5);
   });
 
+  it("принимает ящики с UI", () => {
+    const r = postWarehouseWriteOffBodySchema.parse({
+      kind: "quality_reject",
+      kg: 1000,
+      packageCount: 100,
+    });
+    expect(r.packageCount).toBe(100);
+  });
+
   it("отклоняет неположительный кг", () => {
     expect(() => postWarehouseWriteOffBodySchema.parse({ kind: "quality_reject", kg: 0 })).toThrow();
   });

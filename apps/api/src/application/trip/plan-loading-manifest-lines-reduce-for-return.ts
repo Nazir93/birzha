@@ -39,9 +39,13 @@ function proportionalPackageCount(
 
 export function planLoadingManifestLinesReduceForReturn(input: {
   returnGrams: bigint;
+  /** Ящики с UI; если заданы — снимаем их, без пропорции от массы. */
+  returnPackageCount?: bigint | null;
   lines: readonly LoadingManifestLineForReturnReduce[];
 }): LoadingManifestLineReducePlanItem[] {
   let remaining = input.returnGrams > 0n ? input.returnGrams : 0n;
+  let remainingPkg =
+    input.returnPackageCount != null && input.returnPackageCount > 0n ? input.returnPackageCount : null;
   const out: LoadingManifestLineReducePlanItem[] = [];
   if (remaining <= 0n) {
     return out;
@@ -53,15 +57,29 @@ export function planLoadingManifestLinesReduceForReturn(input: {
     }
     const reduceGrams = line.grams < remaining ? line.grams : remaining;
     const newGrams = line.grams - reduceGrams;
-    const newPackageCount =
-      newGrams <= 0n ? null : proportionalPackageCount(newGrams, line.grams, line.packageCount);
+    let newPackageCount: bigint | null;
+    let reducePkg: bigint | null = null;
+    if (remainingPkg != null) {
+      const linePkg = line.packageCount != null && line.packageCount > 0n ? line.packageCount : 0n;
+      const take = linePkg < remainingPkg ? linePkg : remainingPkg;
+      reducePkg = take;
+      remainingPkg -= take;
+      newPackageCount = newGrams <= 0n ? null : linePkg - take;
+      if (newPackageCount != null && newPackageCount <= 0n) {
+        newPackageCount = 0n;
+      }
+    } else {
+      newPackageCount =
+        newGrams <= 0n ? null : proportionalPackageCount(newGrams, line.grams, line.packageCount);
+    }
     const unshipCap = line.tripId ? line.shipmentGramsOnTrip : 0n;
     const unshipGrams = unshipCap < reduceGrams ? unshipCap : reduceGrams;
-    const unshipPackageCount = proportionalPackageCount(
-      unshipGrams,
-      line.grams,
-      line.packageCount,
-    );
+    const unshipPackageCount =
+      reducePkg != null
+        ? unshipGrams <= 0n
+          ? null
+          : proportionalPackageCount(unshipGrams, reduceGrams, reducePkg)
+        : proportionalPackageCount(unshipGrams, line.grams, line.packageCount);
     out.push({
       manifestId: line.manifestId,
       batchId: line.batchId,
