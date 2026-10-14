@@ -43,8 +43,8 @@ export type BatchJson = {
    */
   qualityRejectWrittenOffKg?: number;
   /**
-   * Кг для отбора в погрузку: физический остаток на складе.
-   * Возврат из отбора при создании ПН вычитается один раз (blocks_loading), список партий не прячет.
+   * Свободно на складе: onWarehouse − кг в черновых ПН (как на сервере при догрузке).
+   * Возврат из отбора (blocks_loading) здесь не вычитается — он лежит на складе.
    */
   availableForLoadingKg?: number;
   /**
@@ -73,10 +73,13 @@ export function batchToJson(
     blockingReturnKg?: number;
     packagesInLoadingManifests?: number;
     packagesInBlockingWriteOffs?: number;
+    /** Кг в черновых ПН (без рейса): ещё на складе, но уже не свободны. */
+    reservedOnDraftManifestsKg?: number;
   },
 ): BatchJson {
   const s = batch.toPersistenceState();
   const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
+  const reservedOnDraftManifestsKg = Math.max(0, extras?.reservedOnDraftManifestsKg ?? 0);
   const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
   const blockingReturnKg = extras?.blockingReturnKg ?? 0;
   const packagesInLoadingManifests = extras?.packagesInLoadingManifests;
@@ -97,8 +100,8 @@ export function batchToJson(
       ? {
           qualityRejectWrittenOffKg,
           blockingReturnKg,
-          // Список «Погрузка» показывает склад; блокировка только при расчёте строк ПН / остатка в отборе.
-          availableForLoadingKg: onWarehouseKg,
+          // Блокировка возврата из отбора — только в «остатке в отборе», не здесь.
+          availableForLoadingKg: Math.max(0, onWarehouseKg - reservedOnDraftManifestsKg),
           ...(packagesInLoadingManifests != null
             ? { packagesInLoadingManifests }
             : {}),

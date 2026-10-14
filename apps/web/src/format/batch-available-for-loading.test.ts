@@ -163,7 +163,38 @@ describe("estimatedPackageCountForLoading", () => {
     });
     expect(batchKgInSelectionRemainder(shamil)).toBe(275);
     expect(estimatedPackageCountInSelectionRemainder(shamil)).toBe(50);
-    expect(estimatedPackageCountForLoading(shamil)).toBe(50);
+    // Склад/догрузка: возвращённое лежит на складе.
+    expect(batchAvailableForLoadingKg(shamil)).toBe(1275);
+    expect(estimatedPackageCountForLoading(shamil)).toBe(150);
+  });
+
+  it("черновая ПН держит часть партии: свободно и в отборе — только хвост", () => {
+    const b = batch({
+      id: "draft",
+      totalKg: 1275,
+      onWarehouseKg: 1275,
+      availableForLoadingKg: 275,
+      packagesInLoadingManifests: 125,
+      nakladnaya: { linePackageCount: 150 } as BatchListItem["nakladnaya"],
+    });
+    expect(batchAvailableForLoadingKg(b)).toBe(275);
+    expect(batchKgInSelectionRemainder(b)).toBe(275);
+    expect(estimatedPackageCountForLoading(b)).toBe(25);
+    expect(estimatedPackageCountInSelectionRemainder(b)).toBe(25);
+  });
+
+  it("возврат без ящиков при факте ПН — ящики отбора уменьшаются долей по кг", () => {
+    const b = batch({
+      id: "partial",
+      totalKg: 1275,
+      onWarehouseKg: 275,
+      availableForLoadingKg: 275,
+      blockingReturnKg: 110,
+      packagesInLoadingManifests: 125,
+      nakladnaya: { linePackageCount: 150 } as BatchListItem["nakladnaya"],
+    });
+    expect(batchKgInSelectionRemainder(b)).toBe(165);
+    expect(estimatedPackageCountInSelectionRemainder(b)).toBe(15);
   });
 });
 

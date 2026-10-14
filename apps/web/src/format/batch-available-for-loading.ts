@@ -6,8 +6,8 @@ export function batchQualityRejectReturnKg(batch: BatchListItem): number {
 }
 
 /**
- * Кг для отбора в погрузку: физический остаток на складе.
- * Возврат из отбора при создании ПН учитывается на сервере один раз; в списке партии не прячутся.
+ * Свободно на складе (склад, список складов, догрузка): onWarehouse − черновые ПН.
+ * Возврат из отбора лежит на складе и здесь не вычитается.
  */
 export function batchAvailableForLoadingKg(batch: BatchListItem): number {
   if (batch.availableForLoadingKg != null && Number.isFinite(batch.availableForLoadingKg)) {
@@ -16,17 +16,17 @@ export function batchAvailableForLoadingKg(batch: BatchListItem): number {
   return Math.max(0, batch.onWarehouseKg);
 }
 
+function blockingReturnKg(batch: BatchListItem): number {
+  const blocking = batch.blockingReturnKg;
+  return blocking != null && Number.isFinite(blocking) && blocking > 0 ? blocking : 0;
+}
+
 /**
- * Остаток в отборе к погрузке/догрузке.
- * Вычитает только активную блокировку (blocks_loading), не всю историю журнала возвратов —
- * иначе после «вернуть на склад» в догрузке навсегда 0 кг при полном journal.
+ * Остаток в отборе новой ПН: свободный склад − активный возврат из отбора (blocks_loading).
+ * Так же сервер считает строки при создании ПН.
  */
 export function batchKgInSelectionRemainder(batch: BatchListItem): number {
-  const blocking = batch.blockingReturnKg;
-  if (blocking != null && Number.isFinite(blocking) && blocking > 0) {
-    return Math.max(0, batch.onWarehouseKg - blocking);
-  }
-  return batchAvailableForLoadingKg(batch);
+  return Math.max(0, batchAvailableForLoadingKg(batch) - blockingReturnKg(batch));
 }
 
 /** Партии, которые реально уйдут в новую ПН: полностью возвращённые из отбора не включаем. */
@@ -68,29 +68,31 @@ function estimatedPackagesForKg(b: BatchListItem, availKg: number): number | nul
   return Math.max(0, Math.round((availKg / b.totalKg) * linePk));
 }
 
+function explicitCount(n: number | undefined): number | null {
+  return n != null && Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 /**
- * Остаток ящиков к отбору по факту: закупка − ящики в ПН − ящики в возврате из отбора.
- * `null` — ни в ПН, ни в возврате ящики не заданы явно → пропорция по кг.
+ * Свободные ящики на складе по факту: закупка − ящики во всех строках ПН.
+ * `null` — в ПН ящики не заданы явно → пропорция по кг.
  */
 export function remainingPackagesOnShelfFromManifests(b: BatchListItem): number | null {
   const linePk = b.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0) {
     return null;
   }
-  const inLm = b.packagesInLoadingManifests;
-  const inReturn = b.packagesInBlockingWriteOffs;
-  const hasLm = inLm != null && Number.isFinite(inLm) && inLm >= 0;
-  const hasReturn = inReturn != null && Number.isFinite(inReturn) && inReturn >= 0;
-  if (!hasLm && !hasReturn) {
+  const inLm = explicitCount(b.packagesInLoadingManifests);
+  if (inLm == null) {
     return null;
   }
-  const lm = hasLm ? inLm : 0;
-  const ret = hasReturn ? inReturn : 0;
-  return Math.max(0, Math.round(linePk - lm - ret));
+  return Math.max(0, Math.round(linePk - inLm));
 }
 
-/** Ящики, доступные к отбору: факт ПН, иначе пропорция availableKg к totalKg. */
+/** Ящики свободного склада (склад, список складов, догрузка): факт ПН, иначе доля по кг. */
 export function estimatedPackageCountForLoading(b: BatchListItem): number | null {
+  if (batchAvailableForLoadingKg(b) <= 0) {
+    return estimatedPackagesForKg(b, 0);
+  }
   const fact = remainingPackagesOnShelfFromManifests(b);
   if (fact != null) {
     return fact;
@@ -98,13 +100,30 @@ export function estimatedPackageCountForLoading(b: BatchListItem): number | null
   return estimatedPackagesForKg(b, batchAvailableForLoadingKg(b));
 }
 
-/** Ящики в остатке отбора: факт ПН/возврата (уже без возвращённых ящ.), иначе пропорция по кг. */
+/**
+ * Ящики в остатке отбора: свободный склад − ящики, введённые при возврате из отбора.
+ * Если при возврате ящики не вводили — уменьшаем долей по кг.
+ */
 export function estimatedPackageCountInSelectionRemainder(b: BatchListItem): number | null {
-  const fact = remainingPackagesOnShelfFromManifests(b);
-  if (fact != null) {
-    return batchKgInSelectionRemainder(b) > 0 ? fact : 0;
+  const remKg = batchKgInSelectionRemainder(b);
+  const linePk = b.nakladnaya?.linePackageCount;
+  if (linePk == null || linePk <= 0) {
+    return null;
   }
-  return estimatedPackagesForKg(b, batchKgInSelectionRemainder(b));
+  if (remKg <= 0) {
+    return 0;
+  }
+  const returned = explicitCount(b.packagesInBlockingWriteOffs);
+  const shelfFact = remainingPackagesOnShelfFromManifests(b);
+  if (returned != null) {
+    const shelf = shelfFact ?? estimatedPackagesForKg(b, batchAvailableForLoadingKg(b)) ?? 0;
+    return Math.max(0, Math.round(shelf - returned));
+  }
+  if (shelfFact == null) {
+    return estimatedPackagesForKg(b, remKg);
+  }
+  const availKg = batchAvailableForLoadingKg(b);
+  return availKg > 0 && remKg < availKg ? Math.round((shelfFact * remKg) / availKg) : shelfFact;
 }
 
 /**

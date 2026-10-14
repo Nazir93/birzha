@@ -58,10 +58,12 @@ import {
   physicalFreeGramsForLoadingManifestLine,
   type ReleaseLoadingBlocksMode,
 } from "../application/trip/loading-manifest-available-grams.js";
+import { packagesForNewManifestLine } from "../application/trip/loading-manifest-line-packages.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
 import {
   listFullyReservedDraftManifestBatchIds,
   sumActiveLoadingManifestGramsByBatchIds,
+  sumLoadingManifestPackagesByBatchIds,
 } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { calendarYmdFromDate } from "../format/calendar-date.js";
 import { assertActiveShipDestination } from "./register-ship-destination-routes.js";
@@ -108,13 +110,6 @@ function toNullableBigInt(value: unknown): bigint | null {
     return null;
   }
   return toBigIntOrZero(value);
-}
-
-function packageCountForPart(totalGrams: bigint, partGrams: bigint, linePackageCount: bigint | null): bigint | null {
-  if (linePackageCount == null || linePackageCount <= 0n || totalGrams <= 0n || partGrams <= 0n) {
-    return null;
-  }
-  return (partGrams * linePackageCount + totalGrams / 2n) / totalGrams;
 }
 
 async function resolveAvailableGramsForManifestBatches(
@@ -210,10 +205,28 @@ export function registerLoadingManifestRoutes(
       const reservedSums = await sumActiveLoadingManifestGramsByBatchIds(db, batchIds);
       const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
       const availableByBatch = await resolveAvailableGramsForManifestBatches(ledger, selected, reservedSums, "never");
-      const withAvailable = selected.map((r) => ({
-        ...r,
-        availableGrams: availableByBatch.get(r.batchId) ?? 0n,
-      }));
+      const packagesInManifests = await sumLoadingManifestPackagesByBatchIds(db, batchIds);
+      const blockingReturnPackages = await ledger.totalBlockingLoadingPackagesByBatchIds(batchIds);
+      const withAvailable = selected.map((r) => {
+        const availableGrams = availableByBatch.get(r.batchId) ?? 0n;
+        const inManifests = packagesInManifests.get(r.batchId);
+        const returned = blockingReturnPackages.get(r.batchId);
+        return {
+          ...r,
+          availableGrams,
+          packageCount: packagesForNewManifestLine({
+            purchaseLinePackageCount: r.linePackageCount,
+            totalGrams: r.totalGrams,
+            lineGrams: availableGrams,
+            physicalFreeGrams: physicalFreeGramsForLoadingManifestLine({
+              onWarehouseGrams: r.onWarehouseGrams,
+              reservedOnOtherManifestsGrams: reservedSums.get(r.batchId) ?? 0n,
+            }),
+            packagesInManifests: inManifests != null ? BigInt(inManifests) : null,
+            blockingReturnPackages: returned != null ? BigInt(returned) : null,
+          }),
+        };
+      });
       const withStock = withAvailable.filter((r) => r.availableGrams > 0n);
       if (withStock.length === 0) {
         const first = withAvailable[0];
@@ -237,7 +250,7 @@ export function registerLoadingManifestRoutes(
             batchId: row.batchId,
             lineNo: i + 1,
             grams: row.availableGrams,
-            packageCount: packageCountForPart(row.totalGrams, row.availableGrams, row.linePackageCount),
+            packageCount: row.packageCount,
           });
           if (row.destination !== body.destinationCode) {
             await exec.update(batches).set({ destination: body.destinationCode }).where(eq(batches.id, row.batchId));

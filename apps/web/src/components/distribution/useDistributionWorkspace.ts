@@ -392,7 +392,7 @@ export function useDistributionWorkspace({
 
   const isNewManifestSelection = workspaceMode === "default";
 
-  /** И погрузка, и догрузка: свободный хвост без возврата из отбора (blocks_loading). */
+  /** Новая ПН — остаток в отборе (без возврата из отбора); догрузка — весь свободный склад. */
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
       return [];
@@ -401,12 +401,16 @@ export function useDistributionWorkspace({
       documentOptions.length === 0
         ? batchesInWh
         : filterBatchesForLoadingManifest(batchesInWh, documentOptions.length, loadNaklSelection);
-    return batchesRemainingInSelection(picked);
-  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse]);
+    return isNewManifestSelection ? batchesRemainingInSelection(picked) : picked;
+  }, [batchesInWh, documentOptions.length, loadNaklSelection, selectedWarehouse, isNewManifestSelection]);
 
   const tableRowsTotalKg = useMemo(
-    () => tableRows.reduce((a, b) => a + batchKgInSelectionRemainder(b), 0),
-    [tableRows],
+    () =>
+      tableRows.reduce(
+        (a, b) => a + (isNewManifestSelection ? batchKgInSelectionRemainder(b) : batchAvailableForLoadingKg(b)),
+        0,
+      ),
+    [tableRows, isNewManifestSelection],
   );
 
   return {

@@ -45,28 +45,21 @@ export function formatManifestWarehouseNames(names: readonly string[] | undefine
   return unique.join(", ");
 }
 
-/** Остаток в ящиках на полке: факт ПН, иначе доля onWarehouseKg к totalKg. */
+/** Свободные ящики на складе (подпись склада, страница складов) — как в догрузке. */
 export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
-  const fact = remainingPackagesOnShelfFromManifests(b);
-  if (fact != null) {
-    return b.onWarehouseKg > 0 ? fact : 0;
-  }
-  const linePk = b.nakladnaya?.linePackageCount;
-  if (linePk == null || linePk <= 0) {
-    return null;
-  }
-  if (b.totalKg <= 0) {
-    return null;
-  }
-  return Math.max(0, Math.round((b.onWarehouseKg / b.totalKg) * linePk));
+  return estimatedPackageCountForLoading(b);
 }
 
 /**
  * Снимок партии для возврата из черновика отбора (без открытой ПН):
- * только свободный хвост на складе, без inTransit — иначе «Остаток» выглядит как целая накладная.
+ * кг и ящики — ровно «остаток в отборе», без рейса и без уже возвращённого.
  */
 export function batchSnapshotForSelectionShelfWriteOff(live: BatchListItem): BatchListItem {
   const kg = batchKgInSelectionRemainder(live);
+  const pkg = estimatedPackageCountInSelectionRemainder(live);
+  const linePk = live.nakladnaya?.linePackageCount;
+  const packagesInLoadingManifests =
+    pkg != null && linePk != null && linePk > 0 ? Math.max(0, linePk - pkg) : undefined;
   return {
     ...live,
     onWarehouseKg: kg,
@@ -74,6 +67,8 @@ export function batchSnapshotForSelectionShelfWriteOff(live: BatchListItem): Bat
     availableForLoadingKg: kg,
     qualityRejectWrittenOffKg: 0,
     blockingReturnKg: 0,
+    packagesInLoadingManifests,
+    packagesInBlockingWriteOffs: undefined,
   };
 }
 
@@ -178,10 +173,12 @@ export function batchSnapshotForManifestLineRemainder(
 ): BatchListItem {
   const linePk = parseLinePackageCount(line.packageCount);
   const lineKg = Math.max(0, line.kg);
+  /** Ящики строки ПН относятся к кг строки; без них — доля от закупки. */
+  const totalKg = linePk != null || !(live?.totalKg && live.totalKg > 0) ? lineKg : live.totalKg;
   return {
     id: line.batchId,
     purchaseId: live?.purchaseId ?? "—",
-    totalKg: live?.totalKg && live.totalKg > 0 ? live.totalKg : lineKg,
+    totalKg,
     pricePerKg: live?.pricePerKg ?? 0,
     pendingInboundKg: 0,
     onWarehouseKg: lineKg,
@@ -234,7 +231,8 @@ export function batchSnapshotForManifestLineWriteOff(
     /** Потолок ящиков — из строки ПН, не «закупка − ПН/возврат». */
     packagesInLoadingManifests: undefined,
     packagesInBlockingWriteOffs: undefined,
-    totalKg: lineKg > 0 ? lineKg : base.totalKg,
+    blockingReturnKg: 0,
+    totalKg: lineKg > 0 && (linePk != null || !live) ? lineKg : base.totalKg,
     nakladnaya: {
       ...base.nakladnaya!,
       linePackageCount: linePk ?? base.nakladnaya?.linePackageCount ?? null,
@@ -537,7 +535,7 @@ export function buildWriteOffItemsFromInputs(
   return null;
 }
 
-/** Распределить кг догрузки по партиям (свободный хвост без возврата из отбора). */
+/** Распределить кг догрузки по партиям (свободный склад, в т.ч. возвращённое). */
 export function buildAppendItemsFromBatches(
   batches: readonly BatchListItem[],
   totalKg: number,
@@ -548,7 +546,7 @@ export function buildAppendItemsFromBatches(
     if (remaining <= 0) {
       break;
     }
-    const kgFromBatch = Math.min(remaining, batchKgInSelectionRemainder(batch));
+    const kgFromBatch = Math.min(remaining, batchAvailableForLoadingKg(batch));
     if (kgFromBatch > 0) {
       items.push({ batchId: batch.id, kg: kgFromBatch });
       remaining -= kgFromBatch;
@@ -561,7 +559,7 @@ function kgFromAppendPackageCount(batch: BatchListItem, packageCount: number): n
   if (packageCount <= 0) {
     return 0;
   }
-  const maxKg = batchKgInSelectionRemainder(batch);
+  const maxKg = batchAvailableForLoadingKg(batch);
   const factRem = remainingPackagesOnShelfFromManifests(batch);
   if (factRem != null && factRem > 0 && maxKg > 0) {
     return Math.min(Math.max(0, (packageCount / factRem) * maxKg), maxKg);
@@ -586,7 +584,7 @@ function buildAppendItemsFromBatchesByPackages(
     if (remaining <= 0) {
       break;
     }
-    const maxPkg = estimatedPackageCountInSelectionRemainder(batch);
+    const maxPkg = estimatedPackageCountForLoading(batch);
     if (maxPkg == null || maxPkg <= 0) {
       continue;
     }
