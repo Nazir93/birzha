@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import type { BatchWarehouseWriteOffLedger, BatchWarehouseWriteOffAppend } from "../../application/ports/batch-warehouse-write-off-ledger.port.js";
 import type { DbClient } from "../../db/client.js";
@@ -14,6 +14,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       grams: row.grams,
       reason: row.reason,
       blocksLoading: row.blocksLoading,
+      packageCount: row.packageCount ?? null,
     });
   }
 
@@ -25,6 +26,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
         grams: batchWarehouseWriteOffs.grams,
         reason: batchWarehouseWriteOffs.reason,
         blocksLoading: batchWarehouseWriteOffs.blocksLoading,
+        packageCount: batchWarehouseWriteOffs.packageCount,
       })
       .from(batchWarehouseWriteOffs)
       .where(eq(batchWarehouseWriteOffs.id, id))
@@ -38,6 +40,7 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       grams: row.grams,
       reason: row.reason as BatchWarehouseWriteOffAppend["reason"],
       blocksLoading: row.blocksLoading,
+      packageCount: row.packageCount,
     };
   }
 
@@ -103,6 +106,38 @@ export class DrizzleBatchWarehouseWriteOffLedger implements BatchWarehouseWriteO
       m.set(r.batchId, (m.get(r.batchId) ?? 0n) + r.grams);
     }
     return m;
+  }
+
+  async totalBlockingLoadingPackagesByBatchIds(batchIds: string[]): Promise<Map<string, number>> {
+    const ids = [...new Set(batchIds.map((id) => id.trim()).filter(Boolean))];
+    const out = new Map<string, number>();
+    if (ids.length === 0) {
+      return out;
+    }
+    const rows = await this.db
+      .select({
+        batchId: batchWarehouseWriteOffs.batchId,
+        sumPackages: sql<string>`coalesce(sum(${batchWarehouseWriteOffs.packageCount}), 0)`.mapWith(String),
+        explicitLines: sql<number>`count(${batchWarehouseWriteOffs.packageCount})::int`,
+      })
+      .from(batchWarehouseWriteOffs)
+      .where(
+        and(
+          inArray(batchWarehouseWriteOffs.batchId, ids),
+          eq(batchWarehouseWriteOffs.reason, "quality_reject"),
+          eq(batchWarehouseWriteOffs.blocksLoading, true),
+        ),
+      )
+      .groupBy(batchWarehouseWriteOffs.batchId);
+
+    for (const row of rows) {
+      if (row.explicitLines <= 0) {
+        continue;
+      }
+      const n = Number(row.sumPackages);
+      out.set(row.batchId, Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+    }
+    return out;
   }
 
   async clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {

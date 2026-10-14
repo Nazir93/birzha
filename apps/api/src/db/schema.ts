@@ -133,6 +133,11 @@ export const batchWarehouseWriteOffs = pgTable("batch_warehouse_write_offs", {
     .notNull()
     .references(() => batches.id, { onDelete: "cascade" }),
   grams: bigint("grams", { mode: "bigint" }).notNull(),
+  /**
+   * Ящики с UI при возврате (без пересчёта от закупки).
+   * Для возврата из отбора (blocks_loading) уменьшают «остаток, ящ.» в отборе.
+   */
+  packageCount: bigint("package_count", { mode: "bigint" }),
   reason: text("reason").notNull().default("quality_reject"),
   /** Блокирует доступность к новой погрузке (возврат из отбора без снятия с рейса). */
   /** true — не грузить снова в ПН (возврат из отбора / старые записи). false — возврат с рейса. */

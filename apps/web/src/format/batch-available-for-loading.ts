@@ -69,8 +69,8 @@ function estimatedPackagesForKg(b: BatchListItem, availKg: number): number | nul
 }
 
 /**
- * Остаток ящиков на складе по факту ПН: закупка − сумма ящиков в строках погрузочных.
- * `null` — в ПН ящики не заданы, нужна пропорция по кг.
+ * Остаток ящиков к отбору по факту: закупка − ящики в ПН − ящики в возврате из отбора.
+ * `null` — ни в ПН, ни в возврате ящики не заданы явно → пропорция по кг.
  */
 export function remainingPackagesOnShelfFromManifests(b: BatchListItem): number | null {
   const linePk = b.nakladnaya?.linePackageCount;
@@ -78,10 +78,15 @@ export function remainingPackagesOnShelfFromManifests(b: BatchListItem): number 
     return null;
   }
   const inLm = b.packagesInLoadingManifests;
-  if (inLm == null || !Number.isFinite(inLm) || inLm < 0) {
+  const inReturn = b.packagesInBlockingWriteOffs;
+  const hasLm = inLm != null && Number.isFinite(inLm) && inLm >= 0;
+  const hasReturn = inReturn != null && Number.isFinite(inReturn) && inReturn >= 0;
+  if (!hasLm && !hasReturn) {
     return null;
   }
-  return Math.max(0, Math.round(linePk - inLm));
+  const lm = hasLm ? inLm : 0;
+  const ret = hasReturn ? inReturn : 0;
+  return Math.max(0, Math.round(linePk - lm - ret));
 }
 
 /** Ящики, доступные к отбору: факт ПН, иначе пропорция availableKg к totalKg. */
@@ -93,16 +98,11 @@ export function estimatedPackageCountForLoading(b: BatchListItem): number | null
   return estimatedPackagesForKg(b, batchAvailableForLoadingKg(b));
 }
 
-/** Ящики в остатке отбора (черновик): факт ПН с учётом блокировки кг, иначе пропорция. */
+/** Ящики в остатке отбора: факт ПН/возврата (уже без возвращённых ящ.), иначе пропорция по кг. */
 export function estimatedPackageCountInSelectionRemainder(b: BatchListItem): number | null {
   const fact = remainingPackagesOnShelfFromManifests(b);
   if (fact != null) {
-    const avail = batchAvailableForLoadingKg(b);
-    const rem = batchKgInSelectionRemainder(b);
-    if (avail > 0 && rem < avail && fact > 0) {
-      return Math.max(0, Math.round((rem / avail) * fact));
-    }
-    return rem > 0 ? fact : 0;
+    return batchKgInSelectionRemainder(b) > 0 ? fact : 0;
   }
   return estimatedPackagesForKg(b, batchKgInSelectionRemainder(b));
 }

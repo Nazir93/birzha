@@ -81,11 +81,13 @@ export async function listBatchesForHttp(
 
   let rejectByBatch = new Map<string, bigint>();
   let blockingByBatch = new Map<string, bigint>();
+  let blockingPackagesByBatch = new Map<string, number>();
   if (db) {
     const ledger = new DrizzleBatchWarehouseWriteOffLedger(db);
     const ids0 = list.map((b) => b.getId());
     rejectByBatch = await ledger.totalQualityRejectGramsByBatchIds(ids0);
     blockingByBatch = await ledger.totalBlockingLoadingGramsByBatchIds(ids0);
+    blockingPackagesByBatch = await ledger.totalBlockingLoadingPackagesByBatchIds(ids0);
   }
 
   if (!db) {
@@ -155,6 +157,7 @@ export async function listBatchesForHttp(
     const rg = rejectByBatch.get(id) ?? 0n;
     const bg = blockingByBatch.get(id) ?? 0n;
     const packagesInLoadingManifests = packagesInLmByBatch.get(id);
+    const packagesInBlockingWriteOffs = blockingPackagesByBatch.get(id);
     return batchToJson(
       b,
       mergeNakladnyaForList(m, b),
@@ -163,6 +166,7 @@ export async function listBatchesForHttp(
         qualityRejectWrittenOffKg: gramsToKg(rg),
         blockingReturnKg: gramsToKg(bg),
         ...(packagesInLoadingManifests != null ? { packagesInLoadingManifests } : {}),
+        ...(packagesInBlockingWriteOffs != null ? { packagesInBlockingWriteOffs } : {}),
       },
     );
   });

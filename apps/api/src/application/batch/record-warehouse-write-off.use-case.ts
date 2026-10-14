@@ -141,6 +141,7 @@ export class RecordWarehouseWriteOffUseCase {
           grams: toAppend,
           reason: REASON,
           blocksLoading,
+          ...(returnPkg != null ? { packageCount: returnPkg } : {}),
         };
         await l.append(row);
         return;

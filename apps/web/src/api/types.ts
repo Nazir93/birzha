@@ -41,9 +41,14 @@ export type BatchListItem = {
   availableForLoadingKg?: number;
   /**
    * Ящики уже в строках ПН по этой партии (если в ПН ящики заданы явно).
-   * Остаток к отбору: linePackageCount − packagesInLoadingManifests.
+   * Остаток к отбору: linePackageCount − packagesInLoadingManifests − packagesInBlockingWriteOffs.
    */
   packagesInLoadingManifests?: number;
+  /**
+   * Ящики в возвратах из отбора (blocks_loading), если заданы явно.
+   * Остаток к отбору: linePackageCount − ПН − это поле.
+   */
+  packagesInBlockingWriteOffs?: number;
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
   allocation?: {
     qualityTier: string | null;

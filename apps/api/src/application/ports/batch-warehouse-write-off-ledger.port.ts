@@ -10,6 +10,8 @@ export type BatchWarehouseWriteOffAppend = {
    * false — возврат с рейса на склад: можно снова грузить.
    */
   blocksLoading: boolean;
+  /** Ящики с UI; для blocks_loading уменьшают остаток ящ. в отборе. */
+  packageCount?: bigint | null;
 };
 
 export interface BatchWarehouseWriteOffLedger {
@@ -22,6 +24,10 @@ export interface BatchWarehouseWriteOffLedger {
   totalQualityRejectGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
   /** Только записи с blocks_loading — вычитаются из строк ПН при создании. */
   totalBlockingLoadingGramsByBatchIds(batchIds: string[]): Promise<Map<string, bigint>>;
+  /**
+   * Сумма ящиков в возвратах из отбора (blocks_loading), если хотя бы у одной записи ящики заданы явно.
+   */
+  totalBlockingLoadingPackagesByBatchIds(batchIds: string[]): Promise<Map<string, number>>;
   /** После создания ПН: снять блокировку, чтобы возвращённое снова можно было грузить. */
   clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void>;
   /**

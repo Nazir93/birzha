@@ -190,8 +190,9 @@ export function batchSnapshotForManifestLineRemainder(
     writtenOffKg: 0,
     availableForLoadingKg: lineKg,
     qualityRejectWrittenOffKg: 0,
-    /** Строка ПН сама задаёт ящики — не вычитаем packagesInLoadingManifests повторно. */
+    /** Строка ПН сама задаёт ящики — не вычитаем ПН/возврат повторно. */
     packagesInLoadingManifests: undefined,
+    packagesInBlockingWriteOffs: undefined,
     nakladnaya: nakladnayaFromManifestLine(line, live, linePk),
     allocation: live?.allocation,
   };
@@ -230,8 +231,9 @@ export function batchSnapshotForManifestLineWriteOff(
     inTransitKg: 0,
     availableForLoadingKg: capped,
     qualityRejectWrittenOffKg: 0,
-    /** Потолок ящиков — из строки ПН, не «закупка − ПН». */
+    /** Потолок ящиков — из строки ПН, не «закупка − ПН/возврат». */
     packagesInLoadingManifests: undefined,
+    packagesInBlockingWriteOffs: undefined,
     totalKg: lineKg > 0 ? lineKg : base.totalKg,
     nakladnaya: {
       ...base.nakladnaya!,

@@ -150,6 +150,21 @@ describe("estimatedPackageCountForLoading", () => {
     // Пропорция дала бы ≈32 — её не используем, когда есть факт ПН.
     expect(Math.round((275 / 1275) * 150)).toBe(32);
   });
+
+  it("возврат из отбора с явными ящиками — остаток 150−100=50, не пропорция 275/1275≈32", () => {
+    const shamil = batch({
+      id: "shamil",
+      totalKg: 1275,
+      onWarehouseKg: 1275,
+      availableForLoadingKg: 1275,
+      blockingReturnKg: 1000,
+      packagesInBlockingWriteOffs: 100,
+      nakladnaya: { linePackageCount: 150 } as BatchListItem["nakladnaya"],
+    });
+    expect(batchKgInSelectionRemainder(shamil)).toBe(275);
+    expect(estimatedPackageCountInSelectionRemainder(shamil)).toBe(50);
+    expect(estimatedPackageCountForLoading(shamil)).toBe(50);
+  });
 });
 
 describe("batchQualityRejectReturnKg", () => {

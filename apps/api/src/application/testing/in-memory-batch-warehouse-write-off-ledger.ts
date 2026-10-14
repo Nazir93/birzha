@@ -58,6 +58,29 @@ export class InMemoryBatchWarehouseWriteOffLedger implements BatchWarehouseWrite
     return m;
   }
 
+  async totalBlockingLoadingPackagesByBatchIds(batchIds: string[]): Promise<Map<string, number>> {
+    const set = new Set(batchIds);
+    const out = new Map<string, number>();
+    const hasExplicit = new Set<string>();
+    for (const r of this.rows) {
+      if (r.reason !== "quality_reject" || !r.blocksLoading || !set.has(r.batchId)) {
+        continue;
+      }
+      if (r.packageCount == null) {
+        continue;
+      }
+      hasExplicit.add(r.batchId);
+      const n = Number(r.packageCount);
+      out.set(r.batchId, (out.get(r.batchId) ?? 0) + (Number.isFinite(n) && n > 0 ? Math.round(n) : 0));
+    }
+    for (const id of [...out.keys()]) {
+      if (!hasExplicit.has(id)) {
+        out.delete(id);
+      }
+    }
+    return out;
+  }
+
   async clearBlocksLoadingByBatchIds(batchIds: string[]): Promise<void> {
     const set = new Set(batchIds);
     for (const r of this.rows) {

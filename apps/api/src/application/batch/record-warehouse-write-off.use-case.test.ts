@@ -77,6 +77,30 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(blocking.get("b-w1") ?? 0n).toBe(15_000n);
   });
 
+  it("сохраняет ящики возврата из отбора в журнале", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-pkg",
+      purchaseId: "p-1",
+      totalKg: 1275,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await batches.save(b);
+    await uc.execute({
+      batchId: "b-pkg",
+      kg: 1000,
+      packageCount: 100,
+      reason: "quality_reject",
+    });
+    const pkgs = await ledger.totalBlockingLoadingPackagesByBatchIds(["b-pkg"]);
+    expect(pkgs.get("b-pkg")).toBe(100);
+    const row = await ledger.findById((await ledger.findLatestQualityRejectIdByBatchId("b-pkg"))!);
+    expect(row?.packageCount).toBe(100n);
+  });
+
   it("отказывает при слишком большой массе (остаток)", async () => {
     const batches = new InMemoryBatchRepository();
     const ledger = new InMemoryBatchWarehouseWriteOffLedger();
