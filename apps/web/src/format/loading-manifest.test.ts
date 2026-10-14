@@ -616,7 +616,9 @@ describe("buildAppendItemsFromInputs", () => {
   const row = { totalKg: 1148, totalPkg: 130, linesWithPkg: 1 };
 
   it("пустое поле — весь остаток", () => {
-    expect(buildAppendItemsFromInputs(batches, row, "", "")).toEqual([{ batchId: "euro", kg: 1148 }]);
+    expect(buildAppendItemsFromInputs(batches, row, "", "")).toEqual([
+      { batchId: "euro", kg: 1148, packageCount: 130 },
+    ]);
   });
 
   it("частичная догрузка по кг", () => {

@@ -30,7 +30,7 @@ function batch(p: Partial<BatchListItem> & Pick<BatchListItem, "id">): BatchList
 }
 
 function rowKeyFor(batches: BatchListItem[]): string {
-  const rows = aggregateBatchesByDocumentCaliberLine(batches, "loading");
+  const rows = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder");
   expect(rows.length).toBeGreaterThan(0);
   return rows[0]!.rowKey;
 }
@@ -38,7 +38,9 @@ function rowKeyFor(batches: BatchListItem[]): string {
 describe("resolveAppendCandidateLines — выборочная догрузка возврата на тот же рейс", () => {
   it("пустое поле — весь свободный остаток (весь возврат)", () => {
     const batches = [batch({ id: "b1", onWarehouseKg: 40, availableForLoadingKg: 40, totalKg: 100 })];
-    expect(resolveAppendCandidateLines(batches, undefined, {}, {})).toEqual([{ batchId: "b1", kg: 40 }]);
+    expect(resolveAppendCandidateLines(batches, undefined, {}, {})).toEqual([
+      { batchId: "b1", kg: 40, packageCount: 4 },
+    ]);
   });
 
   it("указать кг — догрузить только часть возвращённого", () => {
@@ -98,6 +100,36 @@ describe("resolveAppendCandidateLines — выборочная догрузка 
     const key = rowKeyFor(batches);
     expect(resolveAppendCandidateLines(batches, undefined, { [key]: "1000" }, { [key]: "100" })).toEqual([
       { batchId: "b1", kg: 1000, packageCount: 100 },
+    ]);
+  });
+
+  it("возврат из отбора уменьшает свободный остаток догрузки (как в погрузке)", () => {
+    const batches = [
+      batch({
+        id: "shamil",
+        totalKg: 1275,
+        onWarehouseKg: 1275,
+        availableForLoadingKg: 1275,
+        blockingReturnKg: 1000,
+        packagesInBlockingWriteOffs: 100,
+        nakladnaya: {
+          documentId: "d1",
+          warehouseId: "w1",
+          productGradeCode: "НС+",
+          productGroup: "Помидоры",
+          documentNumber: "01",
+          supplierName: "Шамил 500",
+          docDate: "2026-10-14",
+          linePackageCount: 150,
+        },
+      }),
+    ];
+    const rows = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.totalKg).toBe(275);
+    expect(rows[0]?.totalPkg).toBe(50);
+    expect(resolveAppendCandidateLines(batches, undefined, {}, {})).toEqual([
+      { batchId: "shamil", kg: 275, packageCount: 50 },
     ]);
   });
 });
