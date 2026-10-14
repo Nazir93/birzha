@@ -50,6 +50,29 @@ describe("maxWarehouseReturnGrams", () => {
       }),
     ).toBe(0n);
   });
+
+  it("частичный журнал без блокировки (возврат с ПН) — доступен весь незаблокированный склад", () => {
+    // Шамиль: на складе 1275, в журнале 1000 с blocks_loading=false после «вернул→догрузил→вернул».
+    expect(
+      maxWarehouseReturnGrams({
+        onWarehouseGrams: 1_275_000n,
+        inTransitGrams: 0n,
+        alreadyReturnedGrams: 1_000_000n,
+        alreadyBlockingGrams: 0n,
+      }),
+    ).toBe(1_275_000n);
+  });
+
+  it("частичный журнал с блокировкой — только хвост отбора", () => {
+    expect(
+      maxWarehouseReturnGrams({
+        onWarehouseGrams: 1_275_000n,
+        inTransitGrams: 0n,
+        alreadyReturnedGrams: 1_000_000n,
+        alreadyBlockingGrams: 1_000_000n,
+      }),
+    ).toBe(275_000n);
+  });
 });
 
 describe("RecordWarehouseWriteOffUseCase", () => {
@@ -252,6 +275,42 @@ describe("RecordWarehouseWriteOffUseCase", () => {
     expect(sums.get("b-reblock") ?? 0n).toBe(100_000n);
     const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-reblock"]);
     expect(blocking.get("b-reblock") ?? 0n).toBe(100_000n);
+  });
+
+  it("после возврата с ПН (частичный журнал без блокировки) снова можно вернуть из отбора 1000", async () => {
+    const batches = new InMemoryBatchRepository();
+    const ledger = new InMemoryBatchWarehouseWriteOffLedger();
+    await ledger.append({
+      id: "wo-trip-return",
+      batchId: "b-shamil",
+      grams: 1_000_000n,
+      packageCount: 100n,
+      reason: "quality_reject",
+      blocksLoading: false,
+    });
+    const uc = new RecordWarehouseWriteOffUseCase(batches, ledger);
+    const b = Batch.create({
+      id: "b-shamil",
+      purchaseId: "p-1",
+      totalKg: 1275,
+      pricePerKg: 1,
+      distribution: "on_hand",
+    });
+    await batches.save(b);
+
+    const { writeOffId } = await uc.execute({
+      batchId: "b-shamil",
+      kg: 1000,
+      packageCount: 100,
+      reason: "quality_reject",
+    });
+    expect(writeOffId).toBe("wo-trip-return");
+    const sums = await ledger.totalQualityRejectGramsByBatchIds(["b-shamil"]);
+    expect(sums.get("b-shamil") ?? 0n).toBe(1_000_000n);
+    const blocking = await ledger.totalBlockingLoadingGramsByBatchIds(["b-shamil"]);
+    expect(blocking.get("b-shamil") ?? 0n).toBe(1_000_000n);
+    const pkgs = await ledger.totalBlockingLoadingPackagesByBatchIds(["b-shamil"]);
+    expect(pkgs.get("b-shamil")).toBe(100);
   });
 
   it("при полном журнале из нескольких записей блокирует только до массы возврата", async () => {

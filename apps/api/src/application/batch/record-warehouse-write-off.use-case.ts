@@ -50,9 +50,11 @@ export type RecordWarehouseWriteOffResult = {
 };
 
 /**
- * Сколько кг ещё можно оформить как возврат: склад + в рейсе минус уже в журнале;
- * если журнал уже полный, но масса ещё в рейсе — разрешаем ремонт (снять с ПН/рейса);
- * если журнал полный, а на складе есть незаблокированные кг — снова «вернуть из отбора».
+ * Сколько кг ещё можно оформить как возврат.
+ * - место в журнале: (склад+рейс) − уже в журнале;
+ * - ремонт с рейса: вся масса inTransit;
+ * - повтор из отбора после возврата с ПН/рейса: незаблокированные кг на складе
+ *   (журнал с blocks_loading=false не должен «съедать» доступный возврат из отбора).
  */
 export function maxWarehouseReturnGrams(input: {
   onWarehouseGrams: bigint;
@@ -61,18 +63,21 @@ export function maxWarehouseReturnGrams(input: {
   alreadyBlockingGrams?: bigint;
 }): bigint {
   const physical = input.onWarehouseGrams + input.inTransitGrams;
-  const leftover = physical - input.alreadyReturnedGrams;
-  if (leftover > 0n) {
-    return leftover;
-  }
-  if (input.inTransitGrams > 0n) {
-    return input.inTransitGrams;
-  }
+  const leftover = physical > input.alreadyReturnedGrams ? physical - input.alreadyReturnedGrams : 0n;
   const blocking =
     input.alreadyBlockingGrams != null && input.alreadyBlockingGrams > 0n
       ? input.alreadyBlockingGrams
       : 0n;
-  return input.onWarehouseGrams > blocking ? input.onWarehouseGrams - blocking : 0n;
+  const unblockedOnWarehouse =
+    input.onWarehouseGrams > blocking ? input.onWarehouseGrams - blocking : 0n;
+  let available = leftover;
+  if (input.inTransitGrams > available) {
+    available = input.inTransitGrams;
+  }
+  if (unblockedOnWarehouse > available) {
+    available = unblockedOnWarehouse;
+  }
+  return available;
 }
 
 export class RecordWarehouseWriteOffUseCase {
@@ -132,29 +137,48 @@ export class RecordWarehouseWriteOffUseCase {
 
       const sumsAfter = await l.totalQualityRejectGramsByBatchIds([input.batchId]);
       const alreadyAfter = sumsAfter.get(input.batchId) ?? 0n;
-      const roomForJournal = after.onWarehouseGrams - alreadyAfter;
+      const roomForJournal =
+        after.onWarehouseGrams > alreadyAfter ? after.onWarehouseGrams - alreadyAfter : 0n;
+
+      // Возврат из отбора: сначала снова включить blocks_loading на записи журнала
+      // после возврата с ПН/рейса (иначе «доступно 275» при остатке 1275 на экране).
+      if (blocksLoading && after.onWarehouseGrams > 0n) {
+        await l.enableBlocksLoadingUpToGrams(input.batchId, grams);
+        const blockingAfter =
+          (await l.totalBlockingLoadingGramsByBatchIds([input.batchId])).get(input.batchId) ?? 0n;
+        const newlyBlocked =
+          blockingAfter > alreadyBlockingGrams ? blockingAfter - alreadyBlockingGrams : 0n;
+        const stillNeed = grams > newlyBlocked ? grams - newlyBlocked : 0n;
+        if (stillNeed > 0n && roomForJournal > 0n) {
+          const toAppend = stillNeed < roomForJournal ? stillNeed : roomForJournal;
+          await l.append({
+            id: writeOffId,
+            batchId: input.batchId,
+            grams: toAppend,
+            reason: REASON,
+            blocksLoading: true,
+            ...(returnPkg != null ? { packageCount: returnPkg } : {}),
+          });
+          return;
+        }
+        const existingId = await l.findLatestQualityRejectIdByBatchId(input.batchId);
+        if (existingId) {
+          writeOffId = existingId;
+          return;
+        }
+      }
+
       if (roomForJournal > 0n) {
         const toAppend = grams < roomForJournal ? grams : roomForJournal;
-        const row: BatchWarehouseWriteOffAppend = {
+        await l.append({
           id: writeOffId,
           batchId: input.batchId,
           grams: toAppend,
           reason: REASON,
           blocksLoading,
           ...(returnPkg != null ? { packageCount: returnPkg } : {}),
-        };
-        await l.append(row);
+        });
         return;
-      }
-
-      // Журнал уже полный: повторный возврат из отбора только включает blocks_loading на массу возврата.
-      if (blocksLoading && after.onWarehouseGrams > 0n) {
-        await l.enableBlocksLoadingUpToGrams(input.batchId, grams);
-        const existingId = await l.findLatestQualityRejectIdByBatchId(input.batchId);
-        if (existingId) {
-          writeOffId = existingId;
-          return;
-        }
       }
 
       const existingId = await l.findLatestQualityRejectIdByBatchId(input.batchId);
