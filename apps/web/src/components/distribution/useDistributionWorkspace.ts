@@ -390,8 +390,6 @@ export function useDistributionWorkspace({
     [documentOptions],
   );
 
-  const isNewManifestSelection = workspaceMode === "default";
-
   /** Погрузка и догрузка — один остаток: свободный склад минус возврат из отбора. */
   const tableRows: BatchListItem[] = useMemo(() => {
     if (!selectedWarehouse) {
