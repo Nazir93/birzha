@@ -77,7 +77,7 @@ describeAuth("полный регресс разделов (REQUIRE_API_AUTH + P
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav.getByRole("link", { name: "Закупка товара" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Погрузка на машину" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Догрузка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Догрузка" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Смена рейса" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Рейсы" })).toBeVisible();
     // Закрепление продавца — только admin/manager, не закупщик.

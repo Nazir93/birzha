@@ -13,11 +13,23 @@ import { accounting, adminRoutes, ops, prefix, sales } from "../routes.js";
 
 export type CabinetNavEntry = { to: string; label: string; key: string };
 
+/** Догрузка — вкладка внутри «Погрузка на машину»; маршрут и права остаются. */
+const SIDEBAR_HIDDEN_PANELS: ReadonlySet<string> = new Set(["loadingAppend"]);
+
+/** Пункт меню подсвечен и на вложенных вкладках раздела (догрузка → «Погрузка на машину»). */
+export function cabinetNavLinkActiveForPath(to: string, pathname: string): boolean {
+  const isDistributionLink = to === ops.distribution || to === adminRoutes.distribution;
+  if (!isDistributionLink) {
+    return false;
+  }
+  const appendRoot = to === adminRoutes.distribution ? adminRoutes.loadingAppend : ops.loadingAppend;
+  return pathname === appendRoot || pathname.startsWith(`${appendRoot}/`);
+}
+
 const ANON_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: ops.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "trips", to: ops.trips, label: NAV_PANEL_LABELS.trips },
   { key: "dist", to: ops.distribution, label: NAV_PANEL_LABELS.distribution },
-  { key: "append", to: ops.loadingAppend, label: NAV_PANEL_LABELS.loadingAppend },
   { key: "trip", to: ops.loadingTrip, label: NAV_PANEL_LABELS.loadingTrip },
   { key: "rep", to: ops.reports, label: NAV_PANEL_LABELS.reports },
   { key: "op", to: ops.operations, label: NAV_PANEL_LABELS.operations },
@@ -28,7 +40,6 @@ const ANON_ADMIN_OPS: CabinetNavEntry[] = [
   { key: "nakl", to: adminRoutes.purchaseNakladnaya, label: NAV_PANEL_LABELS.nakladnaya },
   { key: "trips", to: adminRoutes.trips, label: NAV_PANEL_LABELS.trips },
   { key: "dist", to: adminRoutes.distribution, label: NAV_PANEL_LABELS.distribution },
-  { key: "append", to: adminRoutes.loadingAppend, label: NAV_PANEL_LABELS.loadingAppend },
   { key: "trip", to: adminRoutes.loadingTrip, label: NAV_PANEL_LABELS.loadingTrip },
   { key: "assign", to: adminRoutes.assignSeller, label: NAV_PANEL_LABELS.assignSeller },
   { key: "rep", to: adminRoutes.reports, label: NAV_PANEL_LABELS.reports },
@@ -108,6 +119,9 @@ export function buildCabinetNavEntries(
   }
   const panelOrder = cabinet === "admin" ? adminSidebarPanelOrder(user) : operationsPanelOrder(user);
   for (const p of panelOrder) {
+    if (SIDEBAR_HIDDEN_PANELS.has(p)) {
+      continue;
+    }
     const to = hrefForPanelInCabinet(user, p, cabinet);
     if (to) {
       const label =

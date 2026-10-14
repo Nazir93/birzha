@@ -929,7 +929,8 @@ test.describe("золотой smoke (UI + API)", () => {
     const nav = page.getByRole("navigation", { name: "Разделы приложения" });
     await expect(nav).toBeVisible({ timeout: 15_000 });
     await expect(nav.getByRole("link", { name: "Сводка" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Догрузка" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Погрузка на машину" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Догрузка" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Смена рейса" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Отчёты и рейсы" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Продавец и продажи" })).toBeVisible();
@@ -1094,9 +1095,13 @@ test.describe("золотой smoke (UI + API)", () => {
     await expect(page).toHaveURL(/\/o\/distribution$/);
     await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
-    await nav.getByRole("link", { name: "Догрузка" }).click();
+    const loadingTabs = page.getByRole("navigation", { name: "Погрузка: новая или догрузка" });
+    await loadingTabs.getByRole("link", { name: "Догрузка в существующую" }).click();
     await expect(page).toHaveURL(/\/o\/loading-append$/);
     await expect(page.getByRole("region", { name: "Догрузка" })).toBeVisible({ timeout: 15_000 });
+    await loadingTabs.getByRole("link", { name: "Новая погрузочная" }).click();
+    await expect(page).toHaveURL(/\/o\/distribution$/);
+    await expect(page.getByRole("region", { name: "Погрузка на машину" })).toBeVisible({ timeout: 15_000 });
 
     await nav.getByRole("link", { name: "Смена рейса" }).click();
     await expect(page).toHaveURL(/\/o\/loading-trip$/);

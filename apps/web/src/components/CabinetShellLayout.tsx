@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import {
   buildCabinetNavEntries,
+  cabinetNavLinkActiveForPath,
   cabinetNavLinkUsesEnd,
   splitCabinetNavForSidebar,
   type CabinetNavEntry,
@@ -211,7 +212,9 @@ export function CabinetShellLayout({ cabinetId, title, accent }: CabinetShellLay
         to={to}
         end={cabinetNavLinkUsesEnd(cabinetId, to)}
         className={({ isActive }) =>
-          `birzha-cabinet-sidebar__link${isActive ? " birzha-cabinet-sidebar__link--active" : ""}`
+          `birzha-cabinet-sidebar__link${
+            isActive || cabinetNavLinkActiveForPath(to, pathname) ? " birzha-cabinet-sidebar__link--active" : ""
+          }`
         }
         title={!mobile && sidebarCollapsed ? label : undefined}
         aria-label={label}

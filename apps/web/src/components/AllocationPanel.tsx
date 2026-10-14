@@ -33,6 +33,7 @@ import { LoadingManifestAccordion } from "./loading-manifest/LoadingManifestAcco
 import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
+import { LoadingSectionTabs } from "./distribution/LoadingSectionTabs.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -533,6 +534,7 @@ export function AllocationPanel() {
           </div>
         }
       >
+      <LoadingSectionTabs />
       {focusTripId ? (
         <InfoAlert title="Операции по рейсу">
           Показаны погрузочные и форма для рейса{" "}

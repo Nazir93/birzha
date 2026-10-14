@@ -22,6 +22,7 @@ import {
   resolveAppendCandidateLines,
 } from "./distribution/AppendCandidatesTable.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
+import { LoadingSectionTabs } from "./distribution/LoadingSectionTabs.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { loadingSummaryFromDetail } from "./loading-manifest/loading-summary-from-detail.js";
@@ -272,9 +273,10 @@ export function LoadingAppendPanel() {
           </h3>
         </div>
       </div>
+      <LoadingSectionTabs />
       <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.85rem" }}>
-        Выберите сохранённую погрузочную накладную и добавьте партии с любого склада. Первая погрузка — в разделе{" "}
-        <Link to={distributionBase}>«Погрузка на машину»</Link>.
+        Выберите сохранённую погрузочную накладную и добавьте партии с любого склада. Новая погрузочная — вкладка{" "}
+        <Link to={distributionBase}>«Новая погрузочная»</Link>.
       </p>
 
       {loading && <LoadingBlock label="Загрузка…" minHeight={80} skeleton skeletonRows={4} />}
@@ -304,7 +306,7 @@ export function LoadingAppendPanel() {
             title="Нет погрузочных для догрузки"
             description={
               <>
-                Сначала создайте погрузочную в разделе <Link to={distributionBase}>«Погрузка на машину»</Link>.
+                Сначала создайте погрузочную во вкладке <Link to={distributionBase}>«Новая погрузочная»</Link>.
               </>
             }
           />
