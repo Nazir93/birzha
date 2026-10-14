@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -18,7 +18,8 @@ import {
   writePreferredLoadingTripId,
 } from "../preferences/ops-preferred-loading-trip.js";
 import { tripLocksManifestDestination } from "../format/loading-manifest-trip-destination.js";
-import { queryRoots } from "../query/core-list-queries.js";
+import { queryRoots, selectionReturnsQueryOptions } from "../query/core-list-queries.js";
+import { selectionReturnRowsFromLedger } from "../format/selection-return-rows.js";
 import { refreshDistributionLists } from "../query/domain-list-refresh.js";
 import {
   adminAwarePathForPath,
@@ -80,6 +81,15 @@ export function AllocationPanel() {
   const [recentWriteOffs, setRecentWriteOffs] = useState<RecentWriteOffRow[]>([]);
   const [writeOffUndoError, setWriteOffUndoError] = useState<string | null>(null);
   const [undoingWriteOffId, setUndoingWriteOffId] = useState<string | null>(null);
+  const selectionReturnsQuery = useQuery({
+    ...selectionReturnsQueryOptions(selectedWarehouse),
+    enabled: selectedWarehouse.trim().length > 0 && meta?.warehouseWriteOffApi === "enabled",
+  });
+  const returnRows = useMemo((): RecentWriteOffRow[] => {
+    const fromServer = selectionReturnRowsFromLedger(selectionReturnsQuery.data?.lines ?? []);
+    const serverIds = new Set(fromServer.map((r) => r.writeOffId));
+    return [...fromServer, ...recentWriteOffs.filter((r) => !serverIds.has(r.writeOffId))];
+  }, [selectionReturnsQuery.data, recentWriteOffs]);
 
   const workspace = useDistributionWorkspace({
     routeManifestId,
@@ -224,7 +234,7 @@ export function AllocationPanel() {
           item.kg,
           item.packageCount,
         );
-        entries.push({ writeOffId, kg: item.kg, label });
+        entries.push({ writeOffId, kg: item.kg, packageCount: item.packageCount ?? null, label });
       }
       return { entries };
     },
@@ -643,7 +653,8 @@ export function AllocationPanel() {
                     onRejectInputChange: (key, value) => setRejectScrapInput((prev) => ({ ...prev, [key]: value })),
                     onRejectPkgInputChange: (key, value) => setRejectScrapPkgInput((prev) => ({ ...prev, [key]: value })),
                     onSubmitWriteOff: (inputKey, items, label) => writeOff.mutate({ inputKey, items, label }),
-                    recentWriteOffs,
+                    recentWriteOffs: returnRows,
+                    recentWriteOffsTitle: "Возвраты на склад (можно отменить)",
                     undoingWriteOffId,
                     undoError: writeOffUndoError,
                     onUndoWriteOff: (writeOffId) => void undoWriteOff.mutate(writeOffId),

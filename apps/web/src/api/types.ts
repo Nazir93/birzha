@@ -100,6 +100,8 @@ export type WarehouseWriteOffsRecentResponse = {
     warehouseName: string | null;
     warehouseCode: string | null;
     packageCount: number | null;
+    /** true — возврат из отбора (кг не идут в новую ПН). */
+    blocksLoading?: boolean;
   }[];
 };
 

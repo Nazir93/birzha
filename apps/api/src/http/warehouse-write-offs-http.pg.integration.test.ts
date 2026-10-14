@@ -25,6 +25,7 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
   const docId = `wo_doc_${randomUUID().slice(0, 8)}`;
   const lineId = `wo_line_${randomUUID().slice(0, 8)}`;
   const writeOffId = `wo_off_${randomUUID().slice(0, 8)}`;
+  const tripReturnWriteOffId = `wo_off_t_${randomUUID().slice(0, 8)}`;
 
   beforeAll(async () => {
     const created = createDb(pgUrl!);
@@ -74,19 +75,29 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
       lineTotalKopecks: BigInt(0),
       batchId,
     });
-    await db.insert(schema.batchWarehouseWriteOffs).values({
-      id: writeOffId,
-      batchId,
-      grams: BigInt(10_000),
-      reason: "quality_reject",
-    });
+    await db.insert(schema.batchWarehouseWriteOffs).values([
+      {
+        id: writeOffId,
+        batchId,
+        grams: BigInt(10_000),
+        packageCount: BigInt(3),
+        reason: "quality_reject",
+      },
+      {
+        id: tripReturnWriteOffId,
+        batchId,
+        grams: BigInt(5_000),
+        reason: "quality_reject",
+        blocksLoading: false,
+      },
+    ]);
   }, 60_000);
 
   afterAll(async () => {
     if (!db) {
       return;
     }
-    await db.delete(schema.batchWarehouseWriteOffs).where(eq(schema.batchWarehouseWriteOffs.id, writeOffId));
+    await db.delete(schema.batchWarehouseWriteOffs).where(eq(schema.batchWarehouseWriteOffs.batchId, batchId));
     await db.delete(schema.purchaseDocumentLines).where(eq(schema.purchaseDocumentLines.id, lineId));
     await db.delete(schema.purchaseDocuments).where(eq(schema.purchaseDocuments.id, docId));
     await db.delete(schema.batches).where(eq(schema.batches.id, batchId));
@@ -115,7 +126,7 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
       lines: { kg: number; batchId: string; productGradeCode: string | null }[];
     };
     expect(body.documentId).toBe(docId);
-    expect(body.totalKg).toBe(10);
+    expect(body.totalKg).toBe(15);
     expect(body.lines.some((l) => l.batchId === batchId && l.kg === 10)).toBe(true);
     await app.close();
   });
@@ -198,6 +209,28 @@ describe.skipIf(!pgUrl)("GET /warehouse-write-offs (PostgreSQL)", () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as { lines: { id: string }[] };
     expect(body.lines.some((l) => l.id === writeOffId)).toBe(true);
+    await app.close();
+  });
+
+  it("blocksLoading=1 — только возвраты из отбора, ящики как ввели", async () => {
+    const env = loadEnv({
+      NODE_ENV: "test",
+      DATABASE_URL: pgUrl,
+      JWT_SECRET: "k".repeat(32),
+      REQUIRE_API_AUTH: "false",
+    });
+    const app = await buildApp({ env, db });
+    const res = await app.inject({
+      method: "GET",
+      url: `/warehouse-write-offs?warehouseId=${encodeURIComponent(whId)}&blocksLoading=1&limit=100`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      lines: { id: string; packageCount: number | null; blocksLoading: boolean }[];
+    };
+    expect(body.lines.map((l) => l.id)).toEqual([writeOffId]);
+    expect(body.lines[0]!.packageCount).toBe(3);
+    expect(body.lines[0]!.blocksLoading).toBe(true);
     await app.close();
   });
 

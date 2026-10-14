@@ -382,6 +382,18 @@ export const warehouseWriteOffsLedgerQueryOptions = (opts: {
     staleTime: QUERY_STALE_LISTS_MS,
   });
 
+/** Возвраты из отбора (`blocks_loading`) по складу — переживают перезагрузку страницы. */
+export const selectionReturnsQueryOptions = (warehouseId: string) =>
+  queryOptions({
+    queryKey: [...queryRoots.warehouseWriteOffsLedger, "selection", warehouseId] as const,
+    queryFn: () => {
+      const p = new URLSearchParams({ limit: "500", offset: "0", warehouseId, blocksLoading: "1" });
+      return apiGetJson<WarehouseWriteOffsRecentResponse>(`/api/warehouse-write-offs?${p}`);
+    },
+    enabled: warehouseId.trim().length > 0,
+    staleTime: QUERY_STALE_LISTS_MS,
+  });
+
 /** После мутаций остатков: партии, сводка складов, резерв в погрузке. */
 export function invalidateStockQueries(queryClient: { invalidateQueries: (opts: { queryKey: readonly unknown[] }) => void }): void {
   queryClient.invalidateQueries({ queryKey: queryRoots.batches });

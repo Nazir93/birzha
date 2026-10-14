@@ -39,6 +39,7 @@ export type LoadingManifestWriteOffProps = {
     label: string,
   ) => void;
   recentWriteOffs: RecentWriteOffRow[];
+  recentWriteOffsTitle?: string;
   undoingWriteOffId: string | null;
   undoError: string | null;
   onUndoWriteOff: (writeOffId: string) => void;
@@ -462,6 +463,7 @@ export function LoadingManifestBlock({
               ) : null}
               <WriteOffRecentList
                 rows={writeOff.recentWriteOffs}
+                title={writeOff.recentWriteOffsTitle}
                 undoingWriteOffId={writeOff.undoingWriteOffId}
                 onUndo={writeOff.onUndoWriteOff}
               />

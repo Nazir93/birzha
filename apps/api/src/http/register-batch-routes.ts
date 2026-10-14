@@ -12,7 +12,7 @@ import {
   postWarehouseWriteOffBodySchema,
   updateBatchAllocationBodySchema,
 } from "@birzha/contracts";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { RecordWarehouseWriteOffUseCase } from "../application/batch/record-warehouse-write-off.use-case.js";
@@ -544,6 +544,10 @@ export function registerBatchRoutes(
           limit: z.coerce.number().int().min(1).max(500).optional(),
           offset: z.coerce.number().int().min(0).optional(),
           warehouseId: z.string().min(1).optional(),
+          blocksLoading: z
+            .enum(["1", "true", "0", "false"])
+            .optional()
+            .transform((v) => v === "1" || v === "true"),
         });
         const parsed = q.parse(req.query);
 
@@ -595,9 +599,12 @@ export function registerBatchRoutes(
 
         const limit = parsed.limit ?? 200;
         const offset = parsed.offset ?? 0;
-        const conditions = [eq(batchWarehouseWriteOffs.reason, "quality_reject")];
+        const conditions: SQL[] = [eq(batchWarehouseWriteOffs.reason, "quality_reject")];
         if (parsed.warehouseId) {
           conditions.push(eq(batchesTable.warehouseId, parsed.warehouseId));
+        }
+        if (parsed.blocksLoading) {
+          conditions.push(eq(batchWarehouseWriteOffs.blocksLoading, true));
         }
         const where = and(...conditions);
 
@@ -625,6 +632,8 @@ export function registerBatchRoutes(
             id: batchWarehouseWriteOffs.id,
             batchId: batchWarehouseWriteOffs.batchId,
             grams: batchWarehouseWriteOffs.grams,
+            writeOffPackageCount: batchWarehouseWriteOffs.packageCount,
+            blocksLoading: batchWarehouseWriteOffs.blocksLoading,
             createdAt: batchWarehouseWriteOffs.createdAt,
             purchaseDocumentId: purchaseDocuments.id,
             documentNumber: purchaseDocuments.documentNumber,
@@ -670,11 +679,15 @@ export function registerBatchRoutes(
             id: r.id,
             batchId: r.batchId,
             kg: gramsToKg(r.grams),
-            packageCount: estimateReturnPackageCount({
-              returnGrams: r.grams,
-              lineQuantityGrams: r.lineQuantityGrams,
-              linePackageCount: r.linePackageCount,
-            }),
+            packageCount:
+              r.writeOffPackageCount != null
+                ? Number(r.writeOffPackageCount)
+                : estimateReturnPackageCount({
+                    returnGrams: r.grams,
+                    lineQuantityGrams: r.lineQuantityGrams,
+                    linePackageCount: r.linePackageCount,
+                  }),
+            blocksLoading: r.blocksLoading,
             createdAt: r.createdAt.toISOString(),
             purchaseDocumentId: r.purchaseDocumentId,
             documentNumber: r.documentNumber,
