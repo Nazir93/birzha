@@ -9,6 +9,7 @@ import {
   estimatedPackageCountForLoading,
   estimatedPackageCountForWarehouseReturn,
   estimatedPackageCountInSelectionRemainder,
+  remainingPackagesOnShelfFromManifests,
 } from "./batch-available-for-loading.js";
 import { formatNakladLineLabel } from "./batch-label.js";
 import { escapeCsvField } from "./csv.js";
@@ -44,8 +45,12 @@ export function formatManifestWarehouseNames(names: readonly string[] | undefine
   return unique.join(", ");
 }
 
-/** Остаток в ящиках: доля onWarehouseKg к totalKg, × ящиков по строке накладной. */
+/** Остаток в ящиках на полке: факт ПН, иначе доля onWarehouseKg к totalKg. */
 export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
+  const fact = remainingPackagesOnShelfFromManifests(b);
+  if (fact != null) {
+    return b.onWarehouseKg > 0 ? fact : 0;
+  }
   const linePk = b.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0) {
     return null;
@@ -54,6 +59,22 @@ export function estimatedPackageCountOnShelf(b: BatchListItem): number | null {
     return null;
   }
   return Math.max(0, Math.round((b.onWarehouseKg / b.totalKg) * linePk));
+}
+
+/**
+ * Снимок партии для возврата из черновика отбора (без открытой ПН):
+ * только свободный хвост на складе, без inTransit — иначе «Остаток» выглядит как целая накладная.
+ */
+export function batchSnapshotForSelectionShelfWriteOff(live: BatchListItem): BatchListItem {
+  const kg = batchKgInSelectionRemainder(live);
+  return {
+    ...live,
+    onWarehouseKg: kg,
+    inTransitKg: 0,
+    availableForLoadingKg: kg,
+    qualityRejectWrittenOffKg: 0,
+    blockingReturnKg: 0,
+  };
 }
 
 /**
@@ -169,6 +190,8 @@ export function batchSnapshotForManifestLineRemainder(
     writtenOffKg: 0,
     availableForLoadingKg: lineKg,
     qualityRejectWrittenOffKg: 0,
+    /** Строка ПН сама задаёт ящики — не вычитаем packagesInLoadingManifests повторно. */
+    packagesInLoadingManifests: undefined,
     nakladnaya: nakladnayaFromManifestLine(line, live, linePk),
     allocation: live?.allocation,
   };
@@ -207,6 +230,8 @@ export function batchSnapshotForManifestLineWriteOff(
     inTransitKg: 0,
     availableForLoadingKg: capped,
     qualityRejectWrittenOffKg: 0,
+    /** Потолок ящиков — из строки ПН, не «закупка − ПН». */
+    packagesInLoadingManifests: undefined,
     totalKg: lineKg > 0 ? lineKg : base.totalKg,
     nakladnaya: {
       ...base.nakladnaya!,
@@ -400,17 +425,27 @@ export function buildWriteOffItemsFromBatches(
   return items;
 }
 
-/** Кг списания по числу ящиков одной партии (пропорция к строке накладной). */
+/** Кг списания по числу ящиков одной партии (факт остатка на полке или пропорция к закупке). */
 export function kgFromWriteOffPackageCount(batch: BatchListItem, packageCount: number): number {
   if (packageCount <= 0) {
     return 0;
+  }
+  const maxKg = batchReturnableToWarehouseKg(batch);
+  const factRem = remainingPackagesOnShelfFromManifests(batch);
+  if (factRem != null && factRem > 0) {
+    const shelfKg =
+      Math.max(0, batch.inTransitKg) <= 0 ? batchKgInSelectionRemainder(batch) : maxKg;
+    if (shelfKg <= 0) {
+      return 0;
+    }
+    return Math.min(Math.max(0, (packageCount / factRem) * shelfKg), maxKg);
   }
   const linePk = batch.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0 || batch.totalKg <= 0) {
     return 0;
   }
   const kg = (packageCount / linePk) * batch.totalKg;
-  return Math.min(Math.max(0, kg), batchReturnableToWarehouseKg(batch));
+  return Math.min(Math.max(0, kg), maxKg);
 }
 
 export type WriteOffLineItem = { batchId: string; kg: number; packageCount?: number };
@@ -524,12 +559,17 @@ function kgFromAppendPackageCount(batch: BatchListItem, packageCount: number): n
   if (packageCount <= 0) {
     return 0;
   }
+  const maxKg = batchAvailableForLoadingKg(batch);
+  const factRem = remainingPackagesOnShelfFromManifests(batch);
+  if (factRem != null && factRem > 0 && maxKg > 0) {
+    return Math.min(Math.max(0, (packageCount / factRem) * maxKg), maxKg);
+  }
   const linePk = batch.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0 || batch.totalKg <= 0) {
     return 0;
   }
   const kg = (packageCount / linePk) * batch.totalKg;
-  return Math.min(Math.max(0, kg), batchAvailableForLoadingKg(batch));
+  return Math.min(Math.max(0, kg), maxKg);
 }
 
 export type AppendLineItem = { batchId: string; kg: number; packageCount?: number };

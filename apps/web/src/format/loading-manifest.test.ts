@@ -8,6 +8,7 @@ import {
   aggregateBatchesByPurchaseDocument,
   batchSnapshotForManifestLineRemainder,
   batchSnapshotForManifestLineWriteOff,
+  batchSnapshotForSelectionShelfWriteOff,
   buildWriteOffItemsFromBatches,
   buildWriteOffItemsFromBatchesByPackages,
   buildWriteOffItemsFromInputs,
@@ -63,6 +64,52 @@ describe("estimatedPackageCountOnShelf", () => {
   it("без linePackageCount — null", () => {
     const row = b({ id: "3", totalKg: 10, onWarehouseKg: 5, nakladnaya: { productGradeCode: "x" } as BatchListItem["nakladnaya"] });
     expect(estimatedPackageCountOnShelf(row)).toBeNull();
+  });
+
+  it("факт ящиков ПН важнее пропорции кг", () => {
+    const row = b({
+      id: "nizam",
+      totalKg: 1275,
+      onWarehouseKg: 275,
+      packagesInLoadingManifests: 125,
+      nakladnaya: { linePackageCount: 150 } as BatchListItem["nakladnaya"],
+    });
+    expect(estimatedPackageCountOnShelf(row)).toBe(25);
+  });
+});
+
+describe("частичная погрузка Низам: отбор и возврат без открытой ПН", () => {
+  const nizam = b({
+    id: "nizam",
+    totalKg: 1275,
+    onWarehouseKg: 275,
+    inTransitKg: 1000,
+    availableForLoadingKg: 275,
+    packagesInLoadingManifests: 125,
+    nakladnaya: {
+      documentId: "doc-nizam",
+      documentNumber: "01",
+      productGradeCode: "№5",
+      productGroup: "помидоры",
+      linePackageCount: 150,
+      supplierName: "Низам Н",
+    } as BatchListItem["nakladnaya"],
+  });
+
+  it("в отборе — хвост 275 кг и 25 ящ., не целая накладная", () => {
+    const totals = sumLoadingManifestTotals([nizam], "selection_remainder");
+    expect(totals.kg).toBe(275);
+    expect(totals.pkg).toBe(25);
+  });
+
+  it("возврат из черновика отбора — тот же хвост, не склад+рейс 1275/150", () => {
+    const shelf = batchSnapshotForSelectionShelfWriteOff(nizam);
+    expect(shelf.onWarehouseKg).toBe(275);
+    expect(shelf.inTransitKg).toBe(0);
+    const rows = aggregateBatchesByDocumentCaliberLine([shelf], "selection_remainder");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.totalKg).toBe(275);
+    expect(rows[0]?.totalPkg).toBe(25);
   });
 });
 

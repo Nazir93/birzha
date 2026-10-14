@@ -9,6 +9,7 @@ import {
   aggregateBatchesByPurchaseDocument,
   batchSnapshotForManifestLineRemainder,
   batchSnapshotForManifestLineWriteOff,
+  batchSnapshotForSelectionShelfWriteOff,
   buildWriteOffItemsFromBatches,
   buildWriteOffItemsFromInputs,
   filterBatchesForLoadingManifest,
@@ -120,14 +121,19 @@ export function LoadingManifestBlock({
     return manifest.lines.map((line) => batchSnapshotForManifestLineRemainder(line, byId.get(line.batchId)));
   }, [batchesInWh, includedBatchesFromSelection, manifest]);
 
-  /** Партии для возврата: returnable с потолком по строке ПН. */
+  /**
+   * Партии для возврата: без ПН — только хвост на складе (как в «В отборе»);
+   * с ПН — returnable с потолком по строке накладной.
+   */
   const writeOffBatches = useMemo(() => {
     if (!manifest) {
-      return includedBatchesFromSelection;
+      return includedBatchesFromSelection.map(batchSnapshotForSelectionShelfWriteOff);
     }
     const byId = new Map(batchesInWh.map((b) => [b.id, b]));
     return manifest.lines.map((line) => batchSnapshotForManifestLineWriteOff(line, byId.get(line.batchId)));
   }, [batchesInWh, includedBatchesFromSelection, manifest]);
+
+  const writeOffQuantityMode = manifest ? "warehouse_return" : "selection_remainder";
 
   const totals = useMemo(
     () => sumLoadingManifestTotals(selectionRemainderBatches, "selection_remainder"),
@@ -142,12 +148,12 @@ export function LoadingManifestBlock({
     [selectionRemainderBatches, labelDest],
   );
   const writeOffDocumentCaliberRows = useMemo(
-    () => aggregateBatchesByDocumentCaliberLine(writeOffBatches, "warehouse_return", labelDest),
-    [writeOffBatches, labelDest],
+    () => aggregateBatchesByDocumentCaliberLine(writeOffBatches, writeOffQuantityMode, labelDest),
+    [writeOffBatches, writeOffQuantityMode, labelDest],
   );
   const writeOffDocumentRows = useMemo(
-    () => aggregateBatchesByPurchaseDocument(writeOffBatches, "warehouse_return", labelDest),
-    [writeOffBatches, labelDest],
+    () => aggregateBatchesByPurchaseDocument(writeOffBatches, writeOffQuantityMode, labelDest),
+    [writeOffBatches, writeOffQuantityMode, labelDest],
   );
   const writeOffShowsPackages = useMemo(
     () =>

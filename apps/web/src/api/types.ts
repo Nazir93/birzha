@@ -19,7 +19,11 @@ export type BatchListItem = {
     /** Вид товара из справочника (помидоры, огурцы…). */
     productGroup: string | null;
     documentNumber: string | null;
-    /** Ящиков по строке накладной; остаток в ящиках в UI — доля onWarehouse к totalKg. */
+    /**
+     * Ящиков по строке закупочной накладной.
+     * Если задано `packagesInLoadingManifests` — остаток ящиков = это число минус факт ПН;
+     * иначе оценка долей onWarehouse/totalKg.
+     */
     linePackageCount?: number | null;
     /** Тепличник с закупочной накладной. */
     supplierName?: string | null;
@@ -35,6 +39,11 @@ export type BatchListItem = {
   blockingReturnKg?: number;
   /** Кг для отбора в погрузку (= физический остаток на складе). */
   availableForLoadingKg?: number;
+  /**
+   * Ящики уже в строках ПН по этой партии (если в ПН ящики заданы явно).
+   * Остаток к отбору: linePackageCount − packagesInLoadingManifests.
+   */
+  packagesInLoadingManifests?: number;
   /** Качество и направление (MVP) — `PATCH /api/batches/:id/allocation` при PostgreSQL. */
   allocation?: {
     qualityTier: string | null;

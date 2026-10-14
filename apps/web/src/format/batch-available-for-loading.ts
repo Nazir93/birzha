@@ -68,17 +68,55 @@ function estimatedPackagesForKg(b: BatchListItem, availKg: number): number | nul
   return Math.max(0, Math.round((availKg / b.totalKg) * linePk));
 }
 
-/** Ящики, доступные к отбору: пропорция availableKg к totalKg × ящиков по строке накладной. */
+/**
+ * Остаток ящиков на складе по факту ПН: закупка − сумма ящиков в строках погрузочных.
+ * `null` — в ПН ящики не заданы, нужна пропорция по кг.
+ */
+export function remainingPackagesOnShelfFromManifests(b: BatchListItem): number | null {
+  const linePk = b.nakladnaya?.linePackageCount;
+  if (linePk == null || linePk <= 0) {
+    return null;
+  }
+  const inLm = b.packagesInLoadingManifests;
+  if (inLm == null || !Number.isFinite(inLm) || inLm < 0) {
+    return null;
+  }
+  return Math.max(0, Math.round(linePk - inLm));
+}
+
+/** Ящики, доступные к отбору: факт ПН, иначе пропорция availableKg к totalKg. */
 export function estimatedPackageCountForLoading(b: BatchListItem): number | null {
+  const fact = remainingPackagesOnShelfFromManifests(b);
+  if (fact != null) {
+    return fact;
+  }
   return estimatedPackagesForKg(b, batchAvailableForLoadingKg(b));
 }
 
-/** Ящики в остатке отбора (черновик): по selection remainder. */
+/** Ящики в остатке отбора (черновик): факт ПН с учётом блокировки кг, иначе пропорция. */
 export function estimatedPackageCountInSelectionRemainder(b: BatchListItem): number | null {
+  const fact = remainingPackagesOnShelfFromManifests(b);
+  if (fact != null) {
+    const avail = batchAvailableForLoadingKg(b);
+    const rem = batchKgInSelectionRemainder(b);
+    if (avail > 0 && rem < avail && fact > 0) {
+      return Math.max(0, Math.round((rem / avail) * fact));
+    }
+    return rem > 0 ? fact : 0;
+  }
   return estimatedPackagesForKg(b, batchKgInSelectionRemainder(b));
 }
 
-/** Ящики, доступные к возврату на склад (та же пропорция, но по returnable кг). */
+/**
+ * Ящики к возврату на склад.
+ * Если в транзите ничего нет — остаток на полке (факт ПН); иначе пропорция по returnable кг.
+ */
 export function estimatedPackageCountForWarehouseReturn(b: BatchListItem): number | null {
+  if (Math.max(0, b.inTransitKg) <= 0) {
+    const fact = remainingPackagesOnShelfFromManifests(b);
+    if (fact != null) {
+      return batchReturnableToWarehouseKg(b) > 0 ? fact : 0;
+    }
+  }
   return estimatedPackagesForKg(b, batchReturnableToWarehouseKg(b));
 }

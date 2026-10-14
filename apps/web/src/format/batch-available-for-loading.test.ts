@@ -9,6 +9,7 @@ import {
   batchesRemainingInSelection,
   estimatedPackageCountForLoading,
   estimatedPackageCountForWarehouseReturn,
+  estimatedPackageCountInSelectionRemainder,
 } from "./batch-available-for-loading.js";
 
 describe("batchesRemainingInSelection", () => {
@@ -132,6 +133,22 @@ describe("estimatedPackageCountForLoading", () => {
         }),
       ),
     ).toBe(20);
+  });
+
+  it("после частичной погрузки с явными ящиками ПН — остаток 150−125, не пропорция 275/1275", () => {
+    const nizam = batch({
+      id: "nizam",
+      totalKg: 1275,
+      onWarehouseKg: 275,
+      inTransitKg: 1000,
+      availableForLoadingKg: 275,
+      packagesInLoadingManifests: 125,
+      nakladnaya: { linePackageCount: 150 } as BatchListItem["nakladnaya"],
+    });
+    expect(estimatedPackageCountForLoading(nizam)).toBe(25);
+    expect(estimatedPackageCountInSelectionRemainder(nizam)).toBe(25);
+    // Пропорция дала бы ≈32 — её не используем, когда есть факт ПН.
+    expect(Math.round((275 / 1275) * 150)).toBe(32);
   });
 });
 

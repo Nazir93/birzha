@@ -54,6 +54,40 @@ export function isBatchFullyReservedOnDraftManifests(input: {
   return reserved > 0n && reserved >= input.onWarehouseGrams;
 }
 
+/**
+ * Ящики уже в строках ПН (черновик и с рейсом): сумма `packageCount` по партии.
+ * В Map только партии, у которых хотя бы у одной строки ящики заданы явно —
+ * тогда UI считает остаток на складе как «закупка − факт ПН», а не пропорцию кг.
+ */
+export async function sumLoadingManifestPackagesByBatchIds(
+  db: DbClient,
+  batchIds: readonly string[],
+): Promise<Map<string, number>> {
+  const ids = [...new Set(batchIds.map((id) => id.trim()).filter(Boolean))];
+  const out = new Map<string, number>();
+  if (ids.length === 0) {
+    return out;
+  }
+  const rows = await db
+    .select({
+      batchId: loadingManifestLines.batchId,
+      sumPackages: sql<string>`coalesce(sum(${loadingManifestLines.packageCount}), 0)`.mapWith(String),
+      explicitLines: sql<number>`count(${loadingManifestLines.packageCount})::int`,
+    })
+    .from(loadingManifestLines)
+    .where(inArray(loadingManifestLines.batchId, ids))
+    .groupBy(loadingManifestLines.batchId);
+
+  for (const row of rows) {
+    if (row.explicitLines <= 0) {
+      continue;
+    }
+    const n = Number(row.sumPackages);
+    out.set(row.batchId, Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+  }
+  return out;
+}
+
 /** ID партий склада, у которых весь остаток уже в черновых ПН (без рейса). */
 export async function listFullyReservedDraftManifestBatchIds(
   db: DbClient,

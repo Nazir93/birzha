@@ -4,6 +4,7 @@ import type { BatchListFilter, BatchRepository } from "../application/ports/batc
 import type { DbClient } from "../db/client.js";
 import { gramsToKg } from "../application/units/mass.js";
 import { DrizzleBatchWarehouseWriteOffLedger } from "../infrastructure/persistence/drizzle-batch-warehouse-write-off-ledger.js";
+import { sumLoadingManifestPackagesByBatchIds } from "../infrastructure/persistence/drizzle-loading-manifest-reserved-grams.js";
 import { batches as batchesTable, productGrades, purchaseDocumentLines, purchaseDocuments } from "../db/schema.js";
 
 import type { Batch } from "@birzha/domain";
@@ -145,17 +146,24 @@ export async function listBatchesForHttp(
     alloc.set(r.id, { qualityTier: r.qualityTier, destination: r.destination });
   }
 
+  const packagesInLmByBatch = await sumLoadingManifestPackagesByBatchIds(db, ids);
+
   return list.map((b) => {
     const id = b.getId();
     const m = meta.get(id);
     const a = alloc.get(id);
     const rg = rejectByBatch.get(id) ?? 0n;
     const bg = blockingByBatch.get(id) ?? 0n;
+    const packagesInLoadingManifests = packagesInLmByBatch.get(id);
     return batchToJson(
       b,
       mergeNakladnyaForList(m, b),
       a ? { qualityTier: a.qualityTier, destination: a.destination } : undefined,
-      { qualityRejectWrittenOffKg: gramsToKg(rg), blockingReturnKg: gramsToKg(bg) },
+      {
+        qualityRejectWrittenOffKg: gramsToKg(rg),
+        blockingReturnKg: gramsToKg(bg),
+        ...(packagesInLoadingManifests != null ? { packagesInLoadingManifests } : {}),
+      },
     );
   });
 }

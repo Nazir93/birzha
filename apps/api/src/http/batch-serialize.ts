@@ -52,18 +52,28 @@ export type BatchJson = {
    * Не путать с qualityRejectWrittenOffKg (вся история журнала).
    */
   blockingReturnKg?: number;
+  /**
+   * Сумма ящиков в строках погрузочных накладных по этой партии (если в ПН ящики заданы явно).
+   * Остаток ящиков на складе в UI: linePackageCount − это поле.
+   */
+  packagesInLoadingManifests?: number;
 };
 
 export function batchToJson(
   batch: Batch,
   nakladnaya?: BatchJson["nakladnaya"],
   allocation?: BatchJson["allocation"],
-  extras?: { qualityRejectWrittenOffKg: number; blockingReturnKg?: number },
+  extras?: {
+    qualityRejectWrittenOffKg: number;
+    blockingReturnKg?: number;
+    packagesInLoadingManifests?: number;
+  },
 ): BatchJson {
   const s = batch.toPersistenceState();
   const onWarehouseKg = gramsToKg(s.onWarehouseGrams);
   const qualityRejectWrittenOffKg = extras?.qualityRejectWrittenOffKg ?? 0;
   const blockingReturnKg = extras?.blockingReturnKg ?? 0;
+  const packagesInLoadingManifests = extras?.packagesInLoadingManifests;
   return {
     id: s.id,
     purchaseId: s.purchaseId,
@@ -82,6 +92,9 @@ export function batchToJson(
           blockingReturnKg,
           // Список «Погрузка» показывает склад; блокировка только при расчёте строк ПН / остатка в отборе.
           availableForLoadingKg: onWarehouseKg,
+          ...(packagesInLoadingManifests != null
+            ? { packagesInLoadingManifests }
+            : {}),
         }
       : {}),
   };
