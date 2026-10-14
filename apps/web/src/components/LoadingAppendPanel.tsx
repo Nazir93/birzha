@@ -259,6 +259,42 @@ export function LoadingAppendPanel() {
     routeDetailQuery.isError &&
     isLoadingManifestNotFoundError(routeDetailQuery.error);
 
+  const submitAppend = () => {
+    if (!appendTargetManifest) {
+      setAppendQtyError("Не выбрана погрузочная для догрузки.");
+      return;
+    }
+    const lines = resolveAppendCandidateLines(tableRows, labelDest, appendKgInput, appendPkgInput);
+    if (lines == null) {
+      setAppendQtyError("Проверьте кг/ящики: нельзя больше остатка на складе.");
+      return;
+    }
+    if (lines.length === 0) {
+      setAppendQtyError("Укажите количество больше нуля хотя бы по одной строке.");
+      return;
+    }
+    setAppendQtyError(null);
+    appendManifest.mutate({
+      appendToManifestId: appendTargetManifest.id,
+      warehouseId: selectedWarehouse,
+      destinationCode: appendTargetManifest.destinationCode,
+      lines,
+      docDate: appendTargetManifest.docDate,
+      manifestNumber: appendTargetManifest.manifestNumber,
+    });
+  };
+
+  const appendSubmitButton = (
+    <button
+      type="button"
+      className={btnClassSpaced}
+      disabled={tableRows.length === 0 || appendManifest.isPending || !appendTargetManifest}
+      onClick={submitAppend}
+    >
+      {appendManifest.isPending ? "Добавление…" : "Добавить в погрузочную"}
+    </button>
+  );
+
   if (batchesQueryError) {
     return <ErrorAlert message={batchesQueryErrorMessage ?? "Не удалось загрузить партии."} title="Партии" />;
   }
@@ -465,43 +501,7 @@ export function LoadingAppendPanel() {
                 ) : null}
                 {appendQtyError ? <ErrorAlert message={appendQtyError} title="Догрузка" /> : null}
                 {canShip ? (
-                  <button
-                    type="button"
-                    className={btnClassSpaced}
-                    disabled={tableRows.length === 0 || appendManifest.isPending || !appendTargetManifest}
-                    onClick={() => {
-                      if (!appendTargetManifest) {
-                        setAppendQtyError("Не выбрана погрузочная для догрузки.");
-                        return;
-                      }
-                      const lines = resolveAppendCandidateLines(
-                        tableRows,
-                        labelDest,
-                        appendKgInput,
-                        appendPkgInput,
-                      );
-                      if (lines == null) {
-                        setAppendQtyError("Проверьте кг/ящики: нельзя больше остатка на складе.");
-                        return;
-                      }
-                      if (lines.length === 0) {
-                        setAppendQtyError("Укажите количество больше нуля хотя бы по одной строке.");
-                        return;
-                      }
-                      setAppendQtyError(null);
-                      /** Сразу в API — без второй формы внизу страницы. */
-                      appendManifest.mutate({
-                        appendToManifestId: appendTargetManifest.id,
-                        warehouseId: selectedWarehouse,
-                        destinationCode: appendTargetManifest.destinationCode,
-                        lines,
-                        docDate: appendTargetManifest.docDate,
-                        manifestNumber: appendTargetManifest.manifestNumber,
-                      });
-                    }}
-                  >
-                    {appendManifest.isPending ? "Добавление…" : "Добавить в погрузочную"}
-                  </button>
+                  appendSubmitButton
                 ) : (
                   <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
                     Догрузка — у кладовщика или логиста.
@@ -551,6 +551,12 @@ export function LoadingAppendPanel() {
                     : null
                 }
               />
+              {canShip && tableRows.length > 0 ? (
+                <p className="birzha-clean-ops-form-actions no-print" style={{ marginTop: "1rem" }}>
+                  {appendQtyError ? <ErrorAlert message={appendQtyError} title="Догрузка" /> : null}
+                  {appendSubmitButton}
+                </p>
+              ) : null}
             </>
           ) : null}
 
