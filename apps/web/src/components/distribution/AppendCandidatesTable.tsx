@@ -26,7 +26,9 @@ export function resolveAppendCandidateLines(
   kgInput: Record<string, string>,
   pkgInput: Record<string, string>,
 ): AppendCandidateLine[] | null {
-  const rows = aggregateBatchesByDocumentCaliberLine(batches, "loading", labelDest).filter((r) => r.totalKg > 0);
+  const rows = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder", labelDest).filter(
+    (r) => r.totalKg > 0,
+  );
   const mergedKg = new Map<string, number>();
   const mergedPkg = new Map<string, number>();
   const hasPkg = new Set<string>();
@@ -67,7 +69,8 @@ export function AppendCandidatesTable({
   onPkgChange,
 }: Props) {
   const rows = useMemo(
-    () => aggregateBatchesByDocumentCaliberLine(batches, "loading", labelDest).filter((r) => r.totalKg > 0),
+    () =>
+      aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder", labelDest).filter((r) => r.totalKg > 0),
     [batches, labelDest],
   );
   const showsPackages = rows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0);

@@ -30,7 +30,7 @@ function batch(p: Partial<BatchListItem> & Pick<BatchListItem, "id">): BatchList
 }
 
 function rowKeyFor(batches: BatchListItem[]): string {
-  const rows = aggregateBatchesByDocumentCaliberLine(batches, "loading");
+  const rows = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder");
   expect(rows.length).toBeGreaterThan(0);
   return rows[0]!.rowKey;
 }
@@ -103,7 +103,7 @@ describe("resolveAppendCandidateLines — выборочная догрузка 
     ]);
   });
 
-  it("возврат из отбора лежит на складе — догрузка видит весь свободный склад", () => {
+  it("возврат из отбора — догрузка и погрузка показывают один остаток (275/50)", () => {
     const batches = [
       batch({
         id: "shamil",
@@ -124,19 +124,17 @@ describe("resolveAppendCandidateLines — выборочная догрузка 
         },
       }),
     ];
-    const rows = aggregateBatchesByDocumentCaliberLine(batches, "loading");
+    const rows = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder");
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.totalKg).toBe(1275);
-    expect(rows[0]?.totalPkg).toBe(150);
+    expect(rows[0]?.totalKg).toBe(275);
+    expect(rows[0]?.totalPkg).toBe(50);
     expect(resolveAppendCandidateLines(batches, undefined, {}, {})).toEqual([
-      { batchId: "shamil", kg: 1275, packageCount: 150 },
+      { batchId: "shamil", kg: 275, packageCount: 50 },
     ]);
     const key = rows[0]!.rowKey;
-    expect(resolveAppendCandidateLines(batches, undefined, { [key]: "1000" }, { [key]: "100" })).toEqual([
-      { batchId: "shamil", kg: 1000, packageCount: 100 },
+    expect(resolveAppendCandidateLines(batches, undefined, { [key]: "1000" }, { [key]: "100" })).toBeNull();
+    expect(resolveAppendCandidateLines(batches, undefined, { [key]: "200" }, { [key]: "20" })).toEqual([
+      { batchId: "shamil", kg: 200, packageCount: 20 },
     ]);
-    const selection = aggregateBatchesByDocumentCaliberLine(batches, "selection_remainder");
-    expect(selection[0]?.totalKg).toBe(275);
-    expect(selection[0]?.totalPkg).toBe(50);
   });
 });

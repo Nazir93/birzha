@@ -163,7 +163,7 @@ describe("estimatedPackageCountForLoading", () => {
     });
     expect(batchKgInSelectionRemainder(shamil)).toBe(275);
     expect(estimatedPackageCountInSelectionRemainder(shamil)).toBe(50);
-    // Склад/догрузка: возвращённое лежит на складе.
+    // Физически на складе возвращённое лежит (страница складов); в погрузке/догрузке — остаток отбора.
     expect(batchAvailableForLoadingKg(shamil)).toBe(1275);
     expect(estimatedPackageCountForLoading(shamil)).toBe(150);
   });
@@ -284,11 +284,25 @@ describe("сценарии отображения: списание с рейс�
     });
     expect(batchAvailableForLoadingKg(afterTripReturn)).toBe(200);
     expect(batchKgInSelectionRemainder(afterTripReturn)).toBe(200);
+    expect(batchReturnableToWarehouseKg(afterTripReturn)).toBe(200);
     expect(batchesRemainingInSelection([afterTripReturn]).map((b) => b.id)).toEqual(["b1"]);
     expect(estimatedPackageCountForLoading({
       ...afterTripReturn,
       nakladnaya: { linePackageCount: 20 } as BatchListItem["nakladnaya"],
     })).toBe(20);
+  });
+
+  it("частичный журнал без блокировки (вернул→догрузил→вернул) — снова можно вернуть до всего склада", () => {
+    const shamil = batch({
+      id: "shamil",
+      totalKg: 1275,
+      onWarehouseKg: 1275,
+      availableForLoadingKg: 1275,
+      qualityRejectWrittenOffKg: 1000,
+      blockingReturnKg: 0,
+    });
+    expect(batchKgInSelectionRemainder(shamil)).toBe(1275);
+    expect(batchReturnableToWarehouseKg(shamil)).toBe(1275);
   });
 
   it("частичный возврат с рейса: на складе хвост к другому рейсу, в транзите остаток", () => {

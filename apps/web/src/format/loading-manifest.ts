@@ -83,7 +83,8 @@ export function filterBatchesForLoadingManifest(
   selectedDocumentIds: ReadonlySet<string>,
 ): BatchListItem[] {
   return batches.filter((b) => {
-    if (batchAvailableForLoadingKg(b) <= 0) {
+    // И погрузка, и догрузка: только то, что реально уйдёт в ПН (свободный склад − возврат из отбора).
+    if (batchKgInSelectionRemainder(b) <= 0) {
       return false;
     }
     if (documentOptionCount === 0) {
@@ -535,7 +536,7 @@ export function buildWriteOffItemsFromInputs(
   return null;
 }
 
-/** Распределить кг догрузки по партиям (свободный склад, в т.ч. возвращённое). */
+/** Распределить кг догрузки по партиям — тот же остаток, что в отборе погрузки. */
 export function buildAppendItemsFromBatches(
   batches: readonly BatchListItem[],
   totalKg: number,
@@ -546,7 +547,7 @@ export function buildAppendItemsFromBatches(
     if (remaining <= 0) {
       break;
     }
-    const kgFromBatch = Math.min(remaining, batchAvailableForLoadingKg(batch));
+    const kgFromBatch = Math.min(remaining, batchKgInSelectionRemainder(batch));
     if (kgFromBatch > 0) {
       items.push({ batchId: batch.id, kg: kgFromBatch });
       remaining -= kgFromBatch;
@@ -559,10 +560,10 @@ function kgFromAppendPackageCount(batch: BatchListItem, packageCount: number): n
   if (packageCount <= 0) {
     return 0;
   }
-  const maxKg = batchAvailableForLoadingKg(batch);
-  const factRem = remainingPackagesOnShelfFromManifests(batch);
-  if (factRem != null && factRem > 0 && maxKg > 0) {
-    return Math.min(Math.max(0, (packageCount / factRem) * maxKg), maxKg);
+  const maxKg = batchKgInSelectionRemainder(batch);
+  const remPkg = estimatedPackageCountInSelectionRemainder(batch);
+  if (remPkg != null && remPkg > 0 && maxKg > 0) {
+    return Math.min(Math.max(0, (packageCount / remPkg) * maxKg), maxKg);
   }
   const linePk = batch.nakladnaya?.linePackageCount;
   if (linePk == null || linePk <= 0 || batch.totalKg <= 0) {
@@ -584,7 +585,7 @@ function buildAppendItemsFromBatchesByPackages(
     if (remaining <= 0) {
       break;
     }
-    const maxPkg = estimatedPackageCountForLoading(batch);
+    const maxPkg = estimatedPackageCountInSelectionRemainder(batch);
     if (maxPkg == null || maxPkg <= 0) {
       continue;
     }
