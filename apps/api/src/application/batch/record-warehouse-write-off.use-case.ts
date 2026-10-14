@@ -5,7 +5,6 @@ import { InsufficientStockError, InvalidKgError } from "@birzha/domain";
 import { loadBatchForUpdateOrThrow } from "../load-batch.js";
 import type { BatchRepository } from "../ports/batch-repository.port.js";
 import type {
-  BatchWarehouseWriteOffAppend,
   BatchWarehouseWriteOffLedger,
   BatchWarehouseWriteOffReason,
 } from "../ports/batch-warehouse-write-off-ledger.port.js";
