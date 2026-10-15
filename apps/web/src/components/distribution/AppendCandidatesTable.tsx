@@ -75,82 +75,77 @@ export function AppendCandidatesTable({
   );
   const showsPackages = rows.some((r) => r.linesWithPkg > 0 && r.totalPkg > 0);
 
+  if (rows.length === 0) {
+    return null;
+  }
+
   return (
-    <section className="no-print" aria-labelledby="append-candidates-h" style={{ margin: "0.85rem 0 0.5rem" }}>
-      <h4 id="append-candidates-h" style={{ fontSize: "0.95rem", margin: "0 0 0.4rem" }}>
-        Со склада «{warehouseName}» — свободный остаток
-      </h4>
-      <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.5rem" }}>
-        Свободный склад, в т.ч. возврат с этой ПН/рейса. Укажите кг и/или ящики — в погрузочную уйдёт то, что
-        ввели. Пусто = весь остаток строки; «0» = не брать. Кнопка сразу добавляет в эту погрузочную.
-      </p>
-      {rows.length === 0 ? (
-        <p className="birzha-text-muted birzha-ui-sm" style={{ margin: 0 }} role="status">
-          На этом складе нет свободных партий этого товара для догрузки.
-        </p>
-      ) : (
-        <div className="birzha-table-scroll birzha-nakl-lines-card">
-          <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 560 }}>
-            <thead>
-              <tr>
-                <th scope="col">Накладная</th>
-                <th scope="col">Калибр</th>
+    <section
+      className="no-print"
+      aria-label={`Догрузка со склада ${warehouseName}`}
+      style={{ margin: "0.85rem 0 0.5rem" }}
+    >
+      <div className="birzha-table-scroll birzha-nakl-lines-card">
+        <table className="birzha-data-table birzha-data-table--compact" style={{ minWidth: 560 }}>
+          <thead>
+            <tr>
+              <th scope="col">Накладная</th>
+              <th scope="col">Калибр</th>
+              <th scope="col" className="birzha-data-table__num">
+                На складе, кг
+              </th>
+              {showsPackages ? (
                 <th scope="col" className="birzha-data-table__num">
-                  На складе, кг
+                  Ящ.
                 </th>
+              ) : null}
+              <th scope="col">Догрузить, кг</th>
+              {showsPackages ? <th scope="col">Догрузить, ящ.</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.rowKey}>
+                <td>{r.documentDisplayLabel}</td>
+                <td>{r.lineLabel}</td>
+                <td className="birzha-data-table__num">
+                  {r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                </td>
                 {showsPackages ? (
-                  <th scope="col" className="birzha-data-table__num">
-                    Ящ.
-                  </th>
-                ) : null}
-                <th scope="col">Догрузить, кг</th>
-                {showsPackages ? <th scope="col">Догрузить, ящ.</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.rowKey}>
-                  <td>{r.documentDisplayLabel}</td>
-                  <td>{r.lineLabel}</td>
                   <td className="birzha-data-table__num">
-                    {r.totalKg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}
+                    {r.linesWithPkg > 0 ? r.totalPkg.toLocaleString("ru-RU") : "—"}
                   </td>
-                  {showsPackages ? (
-                    <td className="birzha-data-table__num">
-                      {r.linesWithPkg > 0 ? r.totalPkg.toLocaleString("ru-RU") : "—"}
-                    </td>
-                  ) : null}
+                ) : null}
+                <td>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="всё"
+                    value={kgInput[r.rowKey] ?? ""}
+                    onChange={(ev) => onKgChange(r.rowKey, ev.target.value)}
+                    aria-label={`Догрузить кг, ${r.documentDisplayLabel} · ${r.lineLabel}`}
+                    style={{ ...fieldStyle, width: "5rem" }}
+                  />
+                </td>
+                {showsPackages ? (
                   <td>
                     <input
                       type="text"
-                      inputMode="decimal"
-                      placeholder="всё"
-                      value={kgInput[r.rowKey] ?? ""}
-                      onChange={(ev) => onKgChange(r.rowKey, ev.target.value)}
-                      aria-label={`Догрузить кг, ${r.documentDisplayLabel} · ${r.lineLabel}`}
-                      style={{ ...fieldStyle, width: "5rem" }}
+                      inputMode="numeric"
+                      placeholder="ящ."
+                      value={pkgInput[r.rowKey] ?? ""}
+                      onChange={(ev) => onPkgChange(r.rowKey, ev.target.value)}
+                      aria-label={`Догрузить ящики, ${r.documentDisplayLabel} · ${r.lineLabel}`}
+                      style={{ ...fieldStyle, width: "4.5rem" }}
+                      disabled={r.linesWithPkg <= 0 || r.totalPkg <= 0}
                     />
                   </td>
-                  {showsPackages ? (
-                    <td>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="ящ."
-                        value={pkgInput[r.rowKey] ?? ""}
-                        onChange={(ev) => onPkgChange(r.rowKey, ev.target.value)}
-                        aria-label={`Догрузить ящики, ${r.documentDisplayLabel} · ${r.lineLabel}`}
-                        style={{ ...fieldStyle, width: "4.5rem" }}
-                        disabled={r.linesWithPkg <= 0 || r.totalPkg <= 0}
-                      />
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

@@ -482,14 +482,6 @@ export function LoadingAppendPanel() {
 
           {showWorkspace && selectedWarehouse ? (
             <>
-              <h4 className="birzha-clean-ops-list__title birzha-clean-ops-list__title--step">
-                Догрузка на этот рейс — сколько взять со склада
-              </h4>
-              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-                Те же цифры, что в «Погрузке»: остаток после возврата из отбора. Товар с этой ПН после возврата
-                снова здесь. Если вернули в «Погрузке» — сначала «Отменить» в списке возвратов. Пусто = весь
-                остаток строки; «0» = не брать.
-              </p>
               {documentOptions.length === 0 && batchesInWh.length > 0 ? (
                 <p className="birzha-callout-info" role="status">
                   На складе нет привязки к номеру накладной — показаны все партии с остатком.
@@ -565,10 +557,6 @@ export function LoadingAppendPanel() {
               >
                 Уже в погрузочной — возврат на склад
               </h4>
-              <p className="birzha-text-muted birzha-ui-sm" style={{ margin: "0 0 0.65rem" }}>
-                Строки этой ПН. Возврат с вводом кг/ящ. убирает товар из ПН обратно на склад — потом его можно снова
-                догрузить выборочно выше.
-              </p>
               <LoadingManifestBlock
                 documentOptions={[]}
                 selectedDocIds={new Set()}

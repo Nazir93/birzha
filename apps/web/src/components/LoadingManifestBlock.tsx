@@ -207,14 +207,6 @@ export function LoadingManifestBlock({
         </div>
       )}
 
-      <p style={{ margin: "0 0 0.4rem", fontSize: "0.92rem" }} role="status" aria-live="polite">
-        <strong>Итого по отбору:</strong> {totals.kg.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} кг,{" "}
-        {totals.batchCount} парт.
-        {totals.linesWithPkg > 0 ? (
-          <> · ящ. ≈ {totals.pkg.toLocaleString("ru-RU")} (оценка с накл.)</>
-        ) : null}
-      </p>
-
       {selectionRemainderBatches.length === 0 && writeOffBatches.every((b) => b.onWarehouseKg <= 0) && (
         <BirzhaEmptyState
           compact
