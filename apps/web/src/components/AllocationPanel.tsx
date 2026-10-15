@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { apiGetJson, apiPostJson, deleteLoadingManifestById, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
@@ -34,6 +34,7 @@ import { LoadingManifestBlock } from "./LoadingManifestBlock.js";
 import { DistributionCreateForm } from "./distribution/DistributionCreateForm.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
 import { LoadingSectionTabs } from "./distribution/LoadingSectionTabs.js";
+import { productGroupSelectOptions } from "../format/loading-product-group-filter.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { LoadingBlock, StaleDataNotice } from "../ui/LoadingIndicator.js";
@@ -67,6 +68,7 @@ export function AllocationPanel() {
   const [appendTargetManifestId, setAppendTargetManifestId] = useState<string | null>(null);
 
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
+  const [selectedProductGroup, setSelectedProductGroup] = useState<string>("");
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
   const [manifestDate, setManifestDate] = useState(todayDateOnly);
   const [manifestDestinationCode, setManifestDestinationCode] = useState<string>("");
@@ -102,6 +104,7 @@ export function AllocationPanel() {
     distributionBase,
     filterTripId: focusTripId,
     loadingTripId: newManifestTripId || focusTripId,
+    productGroupFilter: selectedProductGroup,
   });
 
   const {
@@ -145,7 +148,36 @@ export function AllocationPanel() {
     warehouseName,
     viewingSaved,
     activeManifestId,
+    loadingTripProduct,
+    productGroupsOnSelectedWarehouse,
   } = workspace;
+
+  const productGroupOptions = useMemo(
+    () => productGroupSelectOptions(productGroupsOnSelectedWarehouse),
+    [productGroupsOnSelectedWarehouse],
+  );
+
+  /** При смене товара рейса подставляем вид в select; ручной выбор пользователя не затираем. */
+  const prevLoadingTripProductRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingTripProduct && loadingTripProduct !== prevLoadingTripProductRef.current) {
+      setSelectedProductGroup(loadingTripProduct);
+    }
+    prevLoadingTripProductRef.current = loadingTripProduct;
+  }, [loadingTripProduct]);
+
+  /** Сменили склад — если выбранного товара там нет, сбросить фильтр. */
+  useEffect(() => {
+    if (!selectedProductGroup.trim()) {
+      return;
+    }
+    if (productGroupsOnSelectedWarehouse.length === 0) {
+      return;
+    }
+    if (!productGroupsOnSelectedWarehouse.includes(selectedProductGroup)) {
+      setSelectedProductGroup("");
+    }
+  }, [selectedWarehouse, productGroupsOnSelectedWarehouse, selectedProductGroup]);
 
   useEffect(() => {
     if (!focusTripId) {
@@ -369,6 +401,7 @@ export function AllocationPanel() {
 
   const clearWarehouseSelection = useCallback(() => {
     setSelectedWarehouse("");
+    setSelectedProductGroup("");
     writePreferredWarehouseId(null);
     setManifestFormOpen(false);
     setLoadNaklSelection(new Set());
@@ -573,6 +606,7 @@ export function AllocationPanel() {
               onChange={(v) => {
                 setSelectedWarehouse(v);
                 writePreferredWarehouseId(v === "" ? null : v);
+                setSelectedProductGroup(loadingTripProduct ?? "");
                 setRecentWriteOffs([]);
                 if (routeManifestId.trim()) {
                   void navigate(distributionScopedHref);
@@ -589,10 +623,35 @@ export function AllocationPanel() {
               ]}
             />
           </label>
+          {selectedWarehouse && productGroupsOnSelectedWarehouse.length > 0 ? (
+            <label htmlFor="alloc-sel-product" className="birzha-form-label">
+              Вид товара
+              <BirzhaSelect
+                id="alloc-sel-product"
+                value={selectedProductGroup}
+                onChange={(v) => {
+                  setSelectedProductGroup(v);
+                  if (v && loadingTripProduct && v !== loadingTripProduct) {
+                    setNewManifestTripId("");
+                    writePreferredLoadingTripId(null);
+                  }
+                }}
+                style={selectFieldStyle}
+                placeholder="— все товары —"
+                options={productGroupOptions}
+              />
+            </label>
+          ) : null}
           {selectedWarehouse ? (
             <div className="birzha-distribution-warehouse-meta birzha-form-label">
               <span className="birzha-text-muted birzha-ui-sm">
                 Выбран: <strong>{warehouseName(selectedWarehouse)}</strong>
+                {selectedProductGroup ? (
+                  <>
+                    {" "}
+                    · <strong>{selectedProductGroup}</strong>
+                  </>
+                ) : null}
                 {selectedWarehouseRow != null ? ` · ${selectedWarehouseRow.batchCount} парт. для отбора` : null}
               </span>
               <button type="button" className={btnClassSpaced} onClick={clearWarehouseSelection}>

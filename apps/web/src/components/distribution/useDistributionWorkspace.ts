@@ -21,6 +21,10 @@ import {
   estimatedPackageCountOnShelf,
   filterBatchesForLoadingManifest,
 } from "../../format/loading-manifest.js";
+import {
+  batchMatchesProductGroupFilter,
+  productGroupsPresentOnBatches,
+} from "../../format/loading-product-group-filter.js";
 import { sortLoadingManifestsByCreatedAtDesc } from "../../format/loading-manifest-list.js";
 import { formatTripSelectLabel } from "../../format/trip-label.js";
 import { humanizeErrorMessage } from "../../format/user-facing-error.js";
@@ -93,8 +97,10 @@ export type UseDistributionWorkspaceParams = {
   workspaceMode?: "default" | "append" | "trip";
   /** Фильтр списка ПН и контекст «к операциям» с конкретного рейса (`?trip=`). */
   filterTripId?: string;
-  /** Рейс, на который грузят: в отборе только партии этого товара. */
+  /** Рейс, на который грузят: в отборе только партии этого товара (если нет явного фильтра). */
   loadingTripId?: string;
+  /** Явный вид товара (Помидоры / Огурцы) рядом со складом; сильнее товара рейса. */
+  productGroupFilter?: string;
 };
 
 export function useDistributionWorkspace({
@@ -108,6 +114,7 @@ export function useDistributionWorkspace({
   workspaceMode = "default",
   filterTripId = "",
   loadingTripId = "",
+  productGroupFilter = "",
 }: UseDistributionWorkspaceParams) {
   const { meta } = useAuth();
   const queryClient = useQueryClient();
@@ -286,17 +293,28 @@ export function useDistributionWorkspace({
     [batchesMerged],
   );
 
-  /** Отбор/догрузка: только товар выбранного рейса (помидоры ≠ огурцы). */
+  /** Виды товара на выбранном складе (или на всех, пока склад не выбран). */
+  const productGroupsOnSelectedWarehouse = useMemo(() => {
+    const scope = selectedWarehouse
+      ? allBatchesWithStock.filter((b) => batchWarehouseId(b) === selectedWarehouse)
+      : allBatchesWithStock;
+    return productGroupsPresentOnBatches(scope);
+  }, [allBatchesWithStock, selectedWarehouse]);
+
+  /** Явный выбор вида товара, иначе товар рейса (как раньше). */
+  const effectiveProductGroupFilter = useMemo(() => {
+    const explicit = productGroupFilter.trim();
+    if (explicit) {
+      return explicit;
+    }
+    return loadingTripProduct;
+  }, [productGroupFilter, loadingTripProduct]);
+
+  /** Отбор/догрузка: выбранный вид товара (или товар рейса). */
   const batchesOnWarehouse = useMemo(
     () =>
-      allBatchesWithStock.filter((b) => {
-        if (!loadingTripProduct) {
-          return true;
-        }
-        const group = b.nakladnaya?.productGroup?.trim() ?? "";
-        return !group || group === loadingTripProduct;
-      }),
-    [allBatchesWithStock, loadingTripProduct],
+      allBatchesWithStock.filter((b) => batchMatchesProductGroupFilter(b, effectiveProductGroupFilter)),
+    [allBatchesWithStock, effectiveProductGroupFilter],
   );
 
   const list = useMemo(
@@ -448,5 +466,8 @@ export function useDistributionWorkspace({
     warehouseName,
     viewingSaved,
     activeManifestId,
+    loadingTripProduct,
+    productGroupsOnSelectedWarehouse,
+    effectiveProductGroupFilter,
   };
 }

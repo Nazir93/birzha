@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import { apiPostJson, deleteWarehouseWriteOffById, postBatchWarehouseWriteOffQualityReject } from "../api/fetch-api.js";
@@ -23,6 +23,7 @@ import {
 } from "./distribution/AppendCandidatesTable.js";
 import { DistributionManifestListTable } from "./distribution/DistributionManifestListTable.js";
 import { LoadingSectionTabs } from "./distribution/LoadingSectionTabs.js";
+import { productGroupSelectOptions } from "../format/loading-product-group-filter.js";
 import type { RecentWriteOffRow } from "./distribution/WriteOffRecentList.js";
 import { useDistributionWorkspace } from "./distribution/useDistributionWorkspace.js";
 import { loadingSummaryFromDetail } from "./loading-manifest/loading-summary-from-detail.js";
@@ -39,6 +40,7 @@ export function LoadingAppendPanel() {
   const queryClient = useQueryClient();
 
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
+  const [selectedProductGroup, setSelectedProductGroup] = useState<string>("");
   const [loadNaklSelection, setLoadNaklSelection] = useState<Set<string>>(() => new Set());
   const [manifestListPage, setManifestListPage] = useState(0);
   const [rejectScrapInput, setRejectScrapInput] = useState<Record<string, string>>({});
@@ -61,6 +63,7 @@ export function LoadingAppendPanel() {
     loadNaklSelection,
     distributionBase: appendBase,
     workspaceMode: "append",
+    productGroupFilter: selectedProductGroup,
   });
 
   const {
@@ -89,7 +92,34 @@ export function LoadingAppendPanel() {
     warehouseName,
     activeManifestId,
     labelDest,
+    loadingTripProduct,
+    productGroupsOnSelectedWarehouse,
   } = workspace;
+
+  const productGroupOptions = useMemo(
+    () => productGroupSelectOptions(productGroupsOnSelectedWarehouse),
+    [productGroupsOnSelectedWarehouse],
+  );
+
+  const prevLoadingTripProductRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingTripProduct && loadingTripProduct !== prevLoadingTripProductRef.current) {
+      setSelectedProductGroup(loadingTripProduct);
+    }
+    prevLoadingTripProductRef.current = loadingTripProduct;
+  }, [loadingTripProduct]);
+
+  useEffect(() => {
+    if (!selectedProductGroup.trim()) {
+      return;
+    }
+    if (productGroupsOnSelectedWarehouse.length === 0) {
+      return;
+    }
+    if (!productGroupsOnSelectedWarehouse.includes(selectedProductGroup)) {
+      setSelectedProductGroup("");
+    }
+  }, [selectedWarehouse, productGroupsOnSelectedWarehouse, selectedProductGroup]);
 
   const clearAppendQtyState = useCallback(() => {
     setAppendKgInput({});
@@ -217,7 +247,7 @@ export function LoadingAppendPanel() {
     setRejectScrapInput({});
     clearAppendQtyState();
     setRecentWriteOffs([]);
-  }, [selectedWarehouse, routeManifestId, clearAppendQtyState]);
+  }, [selectedWarehouse, selectedProductGroup, routeManifestId, clearAppendQtyState]);
 
   const docIdKey = useMemo(
     () =>
@@ -407,6 +437,7 @@ export function LoadingAppendPanel() {
                   onChange={(v) => {
                     setSelectedWarehouse(v);
                     writePreferredWarehouseId(v === "" ? null : v);
+                    setSelectedProductGroup(loadingTripProduct ?? "");
                   }}
                   style={selectFieldStyle}
                   placeholder="— выберите склад —"
@@ -419,10 +450,29 @@ export function LoadingAppendPanel() {
                   ]}
                 />
               </label>
+              {selectedWarehouse && productGroupsOnSelectedWarehouse.length > 0 ? (
+                <label htmlFor="append-sel-product" className="birzha-form-label">
+                  Вид товара
+                  <BirzhaSelect
+                    id="append-sel-product"
+                    value={selectedProductGroup}
+                    onChange={setSelectedProductGroup}
+                    style={selectFieldStyle}
+                    placeholder="— все товары —"
+                    options={productGroupOptions}
+                  />
+                </label>
+              ) : null}
               {selectedWarehouse ? (
                 <div className="birzha-distribution-warehouse-meta birzha-form-label">
                   <span className="birzha-text-muted birzha-ui-sm">
                     Выбран: <strong>{warehouseName(selectedWarehouse)}</strong>
+                    {selectedProductGroup ? (
+                      <>
+                        {" "}
+                        · <strong>{selectedProductGroup}</strong>
+                      </>
+                    ) : null}
                     {selectedWarehouseRow != null ? ` · ${selectedWarehouseRow.batchCount} парт.` : null}
                   </span>
                 </div>
