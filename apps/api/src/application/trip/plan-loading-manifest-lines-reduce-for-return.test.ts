@@ -97,4 +97,26 @@ describe("planLoadingManifestLinesReduceForReturn", () => {
     expect(plan[0]?.newPackageCount).toBe(50n);
     expect(plan[0]?.unshipPackageCount).toBe(100n);
   });
+
+  it("возврат без ящиков: остаток + снятие = исходные ящики (1152 кг / 120 ящ.)", () => {
+    const plan = planLoadingManifestLinesReduceForReturn({
+      returnGrams: 1_000_000n,
+      lines: [
+        {
+          manifestId: "m1",
+          batchId: "b1",
+          lineNo: 1,
+          grams: 1_152_000n,
+          packageCount: 120n,
+          tripId: "t1",
+          shipmentGramsOnTrip: 1_152_000n,
+        },
+      ],
+    });
+    expect(plan).toHaveLength(1);
+    expect(plan[0]?.newGrams).toBe(152_000n);
+    expect(plan[0]?.newPackageCount).toBe(15n);
+    expect(plan[0]?.unshipPackageCount).toBe(105n);
+    expect((plan[0]?.newPackageCount ?? 0n) + (plan[0]?.unshipPackageCount ?? 0n)).toBe(120n);
+  });
 });

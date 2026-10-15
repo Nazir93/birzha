@@ -41,12 +41,16 @@ export function planLoadingManifestAssignTripShipment(input: {
   const pkgDelta = linePkg - input.ledgerPackageCountForTripBatch;
   const fromWh = delta < availableWh ? delta : availableWh;
   if (fromWh > 0n) {
-    const pkgByMass = proportionalPackageCount(fromWh, input.lineGrams, input.linePackageCount);
-    const pkgPlanned = pkgByMass == null ? null : pkgDelta > 0n ? (pkgByMass < pkgDelta ? pkgByMass : pkgDelta) : null;
     return {
       kind: "ship_from_warehouse",
       grams: fromWh,
-      packageCount: pkgPlanned,
+      packageCount: packageCountForShipDelta({
+        deltaGrams: fromWh,
+        lineGrams: input.lineGrams,
+        linePackageCount: input.linePackageCount,
+        ledgerGrams: input.ledgerGramsForTripBatch,
+        pkgDelta,
+      }),
     };
   }
   const onlyBase = delta < input.inTransitGrams ? delta : input.inTransitGrams;
@@ -56,13 +60,39 @@ export function planLoadingManifestAssignTripShipment(input: {
       : 0n;
   const only = onlyBase < unallocatedInTransit ? onlyBase : unallocatedInTransit;
   if (only > 0n) {
-    const pkgByMass = proportionalPackageCount(only, input.lineGrams, input.linePackageCount);
-    const pkgPlanned = pkgByMass == null ? null : pkgDelta > 0n ? (pkgByMass < pkgDelta ? pkgByMass : pkgDelta) : null;
     return {
       kind: "ledger_append_in_transit",
       grams: only,
-      packageCount: pkgPlanned,
+      packageCount: packageCountForShipDelta({
+        deltaGrams: only,
+        lineGrams: input.lineGrams,
+        linePackageCount: input.linePackageCount,
+        ledgerGrams: input.ledgerGramsForTripBatch,
+        pkgDelta,
+      }),
     };
   }
   return { kind: "none" };
+}
+
+/** Догрузка до полной строки ПН — ровно оставшиеся ящики; иначе доля по массе. */
+function packageCountForShipDelta(input: {
+  deltaGrams: bigint;
+  lineGrams: bigint;
+  linePackageCount: bigint | null;
+  ledgerGrams: bigint;
+  pkgDelta: bigint;
+}): bigint | null {
+  if (input.pkgDelta <= 0n) {
+    return null;
+  }
+  const completesLine = input.ledgerGrams + input.deltaGrams >= input.lineGrams;
+  if (completesLine) {
+    return input.pkgDelta;
+  }
+  const pkgByMass = proportionalPackageCount(input.deltaGrams, input.lineGrams, input.linePackageCount);
+  if (pkgByMass == null) {
+    return null;
+  }
+  return pkgByMass < input.pkgDelta ? pkgByMass : input.pkgDelta;
 }

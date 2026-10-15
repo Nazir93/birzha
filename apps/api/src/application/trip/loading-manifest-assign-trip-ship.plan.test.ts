@@ -59,7 +59,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
     ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
   });
 
-  it("часть уже в журнале рейса — дельта по строке ПН", () => {
+  it("часть уже в журнале рейса — догрузка до полной строки даёт оставшиеся ящики", () => {
     expect(
       planLoadingManifestAssignTripShipment({
         lineGrams: 10_000n,
@@ -70,7 +70,21 @@ describe("planLoadingManifestAssignTripShipment", () => {
         inTransitGrams: 5000n,
         shipmentGramsOtherTrips: 0n,
       }),
-    ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
+    ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 250n });
+  });
+
+  it("догрузка до полной строки ПН — ровно оставшиеся ящики (не пропорция с потерей)", () => {
+    expect(
+      planLoadingManifestAssignTripShipment({
+        lineGrams: 1_152_000n,
+        linePackageCount: 120n,
+        ledgerGramsForTripBatch: 152_000n,
+        ledgerPackageCountForTripBatch: 15n,
+        onWarehouseGrams: 1_000_000n,
+        inTransitGrams: 0n,
+        shipmentGramsOtherTrips: 0n,
+      }),
+    ).toEqual({ kind: "ship_from_warehouse", grams: 1_000_000n, packageCount: 105n });
   });
 
   it("не начисляет лишние ящики, если часть уже в журнале рейса", () => {
@@ -84,7 +98,7 @@ describe("planLoadingManifestAssignTripShipment", () => {
         inTransitGrams: 5_000n,
         shipmentGramsOtherTrips: 0n,
       }),
-    ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 100n });
+    ).toEqual({ kind: "ledger_append_in_transit", grams: 4000n, packageCount: 110n });
   });
 
   it("если по ПН ящики уже полностью в журнале — добавляет только граммы", () => {
